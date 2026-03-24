@@ -255,6 +255,44 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
+/**
+ * bbl_ppp_tx
+ *
+ * Generic PPP transmit helper — the TX counterpart of bbl_ppp_rx().
+ * Wraps a PPP payload in the framing appropriate for this session type
+ * and queues or writes the resulting packet.
+ *
+ * Currently handles ACCESS_TYPE_PPPOE: builds an Ethernet + PPPoE session
+ * header and writes the complete frame to session->write_buf via
+ * encode_ethernet(). Support for additional transports (e.g. PPPoL2TP)
+ * will be added here without touching the individual protocol encoders.
+ *
+ * @param session  the PPP session
+ * @param protocol PPP protocol number (PROTOCOL_LCP, PROTOCOL_IPCP, ...)
+ * @param payload  pointer to the protocol-specific payload struct
+ */
+static protocol_error_t
+bbl_ppp_tx(bbl_session_s *session, uint16_t protocol, void *payload)
+{
+    bbl_ethernet_header_s eth  = {0};
+    bbl_pppoe_session_s   pppoe = {0};
+
+    eth.dst = session->server_mac;
+    eth.src = session->client_mac;
+    eth.qinq = session->access_config->qinq;
+    eth.vlan_outer = session->vlan_key.outer_vlan_id;
+    eth.vlan_inner = session->vlan_key.inner_vlan_id;
+    eth.vlan_three = session->access_third_vlan;
+    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
+    eth.vlan_inner_priority = eth.vlan_outer_priority;
+    eth.type = ETH_TYPE_PPPOE_SESSION;
+    eth.next = &pppoe;
+    pppoe.session_id = session->pppoe_session_id;
+    pppoe.protocol = protocol;
+    pppoe.next = payload;
+    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+}
+
 void
 bbl_tx_pap_timeout(timer_s *timer)
 {
@@ -273,25 +311,7 @@ bbl_tx_pap_timeout(timer_s *timer)
 static protocol_error_t
 bbl_tx_encode_packet_pap_request(bbl_session_s *session)
 {
-    bbl_access_interface_s *access_interface = session->access_interface;
-
-    bbl_ethernet_header_s eth = {0};
-    bbl_pppoe_session_s pppoe = {0};
     bbl_pap_s pap = {0};
-
-    eth.dst = session->server_mac;
-    eth.src = session->client_mac;
-    eth.qinq = session->access_config->qinq;
-    eth.vlan_outer = session->vlan_key.outer_vlan_id;
-    eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
-    eth.type = ETH_TYPE_PPPOE_SESSION;
-    eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;
-    pppoe.protocol = PROTOCOL_PAP;
-    pppoe.next = &pap;
 
     pap.code = PAP_CODE_REQUEST;
     pap.identifier = 1;
@@ -303,8 +323,8 @@ bbl_tx_encode_packet_pap_request(bbl_session_s *session)
     timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout",
               g_ctx->config.authentication_timeout, 0, session, &bbl_tx_pap_timeout);
 
-    access_interface->stats.pap_tx++;
-    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+    session->access_interface->stats.pap_tx++;
+    return bbl_ppp_tx(session, PROTOCOL_PAP, &pap);
 }
 
 void
@@ -325,27 +345,8 @@ bbl_tx_chap_timeout(timer_s *timer)
 static protocol_error_t
 bbl_tx_encode_packet_chap_response(bbl_session_s *session)
 {
-    bbl_access_interface_s *access_interface = session->access_interface;
-
-    bbl_ethernet_header_s eth = {0};
-    bbl_pppoe_session_s pppoe = {0};
     bbl_chap_s chap = {0};
 
-    access_interface->stats.chap_tx++;
-
-    eth.dst = session->server_mac;
-    eth.src = session->client_mac;
-    eth.qinq = session->access_config->qinq;
-    eth.vlan_outer = session->vlan_key.outer_vlan_id;
-    eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
-    eth.type = ETH_TYPE_PPPOE_SESSION;
-    eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;
-    pppoe.protocol = PROTOCOL_CHAP;
-    pppoe.next = &chap;
     chap.code = CHAP_CODE_RESPONSE;
     chap.identifier = session->chap_identifier;
     chap.challenge = session->chap_response;
@@ -356,8 +357,8 @@ bbl_tx_encode_packet_chap_response(bbl_session_s *session)
     timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout", 
               g_ctx->config.authentication_timeout, 0, session, &bbl_tx_chap_timeout);
 
-    access_interface->stats.chap_tx++;
-    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+    session->access_interface->stats.chap_tx++;
+    return bbl_ppp_tx(session, PROTOCOL_CHAP, &chap);
 }
 
 void
@@ -705,29 +706,11 @@ bbl_tx_ip6cp_timeout(timer_s *timer)
 static protocol_error_t
 bbl_tx_encode_packet_ip6cp_request(bbl_session_s *session)
 {
-    bbl_access_interface_s *access_interface = session->access_interface;
-
-    bbl_ethernet_header_s eth = {0};
-    bbl_pppoe_session_s pppoe = {0};
     bbl_ip6cp_s ip6cp = {0};
 
     if(session->ip6cp_state == BBL_PPP_CLOSED || session->ip6cp_state == BBL_PPP_OPENED) {
         return WRONG_PROTOCOL_STATE;
     }
-
-    eth.dst = session->server_mac;
-    eth.src = session->client_mac;
-    eth.qinq = session->access_config->qinq;
-    eth.vlan_outer = session->vlan_key.outer_vlan_id;
-    eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
-    eth.type = ETH_TYPE_PPPOE_SESSION;
-    eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;
-    pppoe.protocol = PROTOCOL_IP6CP;
-    pppoe.next = &ip6cp;
 
     ip6cp.code = session->ip6cp_request_code;
     ip6cp.identifier = ++session->ip6cp_identifier;
@@ -737,32 +720,14 @@ bbl_tx_encode_packet_ip6cp_request(bbl_session_s *session)
     timer_add(&g_ctx->timer_root, &session->timer_ip6cp, "IP6CP timeout",
               g_ctx->config.ip6cp_conf_request_timeout, 0, session, &bbl_tx_ip6cp_timeout);
 
-    access_interface->stats.ip6cp_tx++;
-    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+    session->access_interface->stats.ip6cp_tx++;
+    return bbl_ppp_tx(session, PROTOCOL_IP6CP, &ip6cp);
 }
 
 static protocol_error_t
 bbl_tx_encode_packet_ip6cp_response(bbl_session_s *session)
 {
-    bbl_access_interface_s *access_interface = session->access_interface;
-
-    bbl_ethernet_header_s eth = {0};
-    bbl_pppoe_session_s pppoe = {0};
     bbl_ip6cp_s ip6cp = {0};
-
-    eth.dst = session->server_mac;
-    eth.src = session->client_mac;
-    eth.qinq = session->access_config->qinq;
-    eth.vlan_outer = session->vlan_key.outer_vlan_id;
-    eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
-    eth.type = ETH_TYPE_PPPOE_SESSION;
-    eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;
-    pppoe.protocol = PROTOCOL_IP6CP;
-    pppoe.next = &ip6cp;
 
     ip6cp.code = session->ip6cp_response_code;
     ip6cp.identifier = session->ip6cp_peer_identifier;
@@ -773,8 +738,8 @@ bbl_tx_encode_packet_ip6cp_response(bbl_session_s *session)
         ip6cp.ipv6_identifier = session->ip6cp_ipv6_identifier;
     }
 
-    access_interface->stats.ip6cp_tx++;
-    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+    session->access_interface->stats.ip6cp_tx++;
+    return bbl_ppp_tx(session, PROTOCOL_IP6CP, &ip6cp);
 }
 
 void
@@ -801,29 +766,11 @@ bbl_ipcp_timeout(timer_s *timer)
 static protocol_error_t
 bbl_tx_encode_packet_ipcp_request(bbl_session_s *session)
 {
-    bbl_access_interface_s *access_interface = session->access_interface;
-
-    bbl_ethernet_header_s eth = {0};
-    bbl_pppoe_session_s pppoe = {0};
     bbl_ipcp_s ipcp = {0};
 
     if(session->ipcp_state == BBL_PPP_CLOSED || session->ipcp_state == BBL_PPP_OPENED) {
         return WRONG_PROTOCOL_STATE;
     }
-
-    eth.dst = session->server_mac;
-    eth.src = session->client_mac;
-    eth.qinq = session->access_config->qinq;
-    eth.vlan_outer = session->vlan_key.outer_vlan_id;
-    eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
-    eth.type = ETH_TYPE_PPPOE_SESSION;
-    eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;
-    pppoe.protocol = PROTOCOL_IPCP;
-    pppoe.next = &ipcp;
 
     ipcp.code = session->ipcp_request_code;
     ipcp.identifier = ++session->ipcp_identifier;
@@ -845,32 +792,14 @@ bbl_tx_encode_packet_ipcp_request(bbl_session_s *session)
     timer_add(&g_ctx->timer_root, &session->timer_ipcp, "IPCP timeout",
               g_ctx->config.ipcp_conf_request_timeout, 0, session, &bbl_ipcp_timeout);
 
-    access_interface->stats.ipcp_tx++;
-    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+    session->access_interface->stats.ipcp_tx++;
+    return bbl_ppp_tx(session, PROTOCOL_IPCP, &ipcp);
 }
 
 static protocol_error_t
 bbl_tx_encode_packet_ipcp_response(bbl_session_s *session)
 {
-    bbl_access_interface_s *access_interface = session->access_interface;
-
-    bbl_ethernet_header_s eth = {0};
-    bbl_pppoe_session_s pppoe = {0};
     bbl_ipcp_s ipcp = {0};
-
-    eth.dst = session->server_mac;
-    eth.src = session->client_mac;
-    eth.qinq = session->access_config->qinq;
-    eth.vlan_outer = session->vlan_key.outer_vlan_id;
-    eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
-    eth.type = ETH_TYPE_PPPOE_SESSION;
-    eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;
-    pppoe.protocol = PROTOCOL_IPCP;
-    pppoe.next = &ipcp;
 
     ipcp.code = session->ipcp_response_code;
     ipcp.identifier = session->ipcp_peer_identifier;
@@ -879,8 +808,8 @@ bbl_tx_encode_packet_ipcp_response(bbl_session_s *session)
         ipcp.options_len = session->ipcp_options_len;
     }
 
-    access_interface->stats.ipcp_tx++;
-    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+    session->access_interface->stats.ipcp_tx++;
+    return bbl_ppp_tx(session, PROTOCOL_IPCP, &ipcp);
 }
 
 void
@@ -919,26 +848,8 @@ bbl_lcp_timeout(timer_s *timer)
 static protocol_error_t
 bbl_tx_encode_packet_lcp_request(bbl_session_s *session)
 {
-    bbl_access_interface_s *access_interface = session->access_interface;
-
-    bbl_ethernet_header_s eth = {0};
-    bbl_pppoe_session_s pppoe = {0};
     bbl_lcp_s lcp = {0};
     uint16_t timeout = 1; /* default timeout 1 second */
-
-    eth.dst = session->server_mac;
-    eth.src = session->client_mac;
-    eth.qinq = session->access_config->qinq;
-    eth.vlan_outer = session->vlan_key.outer_vlan_id;
-    eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
-    eth.type = ETH_TYPE_PPPOE_SESSION;
-    eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;
-    pppoe.protocol = PROTOCOL_LCP;
-    pppoe.next = &lcp;
 
     lcp.code = session->lcp_request_code;
     lcp.identifier = ++session->lcp_identifier;
@@ -956,32 +867,14 @@ bbl_tx_encode_packet_lcp_request(bbl_session_s *session)
                   timeout, 0, session, &bbl_lcp_timeout);
     }
 
-    access_interface->stats.lcp_tx++;
-    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+    session->access_interface->stats.lcp_tx++;
+    return bbl_ppp_tx(session, PROTOCOL_LCP, &lcp);
 }
 
 static protocol_error_t
 bbl_tx_encode_packet_lcp_response(bbl_session_s *session)
 {
-    bbl_access_interface_s *access_interface = session->access_interface;
-
-    bbl_ethernet_header_s eth = {0};
-    bbl_pppoe_session_s pppoe = {0};
     bbl_lcp_s lcp = {0};
-
-    eth.dst = session->server_mac;
-    eth.src = session->client_mac;
-    eth.qinq = session->access_config->qinq;
-    eth.vlan_outer = session->vlan_key.outer_vlan_id;
-    eth.vlan_inner = session->vlan_key.inner_vlan_id;
-    eth.vlan_three = session->access_third_vlan;
-    eth.vlan_outer_priority = g_ctx->config.pppoe_vlan_priority;
-    eth.vlan_inner_priority = eth.vlan_outer_priority;
-    eth.type = ETH_TYPE_PPPOE_SESSION;
-    eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;
-    pppoe.protocol = PROTOCOL_LCP;
-    pppoe.next = &lcp;
 
     lcp.code = session->lcp_response_code;
     lcp.identifier = session->lcp_peer_identifier;
@@ -999,8 +892,8 @@ bbl_tx_encode_packet_lcp_response(bbl_session_s *session)
         }
     }
 
-    access_interface->stats.lcp_tx++;
-    return encode_ethernet(session->write_buf, &session->write_idx, &eth);
+    session->access_interface->stats.lcp_tx++;
+    return bbl_ppp_tx(session, PROTOCOL_LCP, &lcp);
 }
 
 void
