@@ -1108,6 +1108,17 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
     }
 
     l2tp_session->stats.data_rx++;
+
+    /* LAC mode: route received PPP packets to the generic PPP client RX path. */
+    if(l2tp_session->tunnel->is_lac) {
+        bbl_session_s *session = l2tp_session->pppoe_session;
+        if(session) {
+            bbl_ppp_rx(session->access_interface, session, NULL,
+                       l2tp->protocol, l2tp->next);
+        }
+        return;
+    }
+
     switch(l2tp->protocol) {
         case PROTOCOL_LCP:
             lcp_rx = (bbl_lcp_s*)l2tp->next;
