@@ -785,8 +785,11 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                     session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
 
                 stream->tx_a10nsp_interface = interface;
-                stream->io->update_streams = true;
                 stream->update_pps = true;
+
+                if(stream->io) {
+                    stream->io->update_streams = true;
+                }
 
                 if(stream->lag) {
                     /* Remove stream from LAG interface */
@@ -819,7 +822,7 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                     lag->stream_head = stream;
                     lag->stream_count++;
                     if(lag->active_count) {
-                        key = stream->flow_id % lag->active_count;
+                        key = rand() % lag->active_count;
                         member = lag->active_list[key];
                     } else {
                         member = CIRCLEQ_FIRST(&lag->lag_member_qhead);

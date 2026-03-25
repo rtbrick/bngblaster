@@ -166,7 +166,7 @@ bbl_lag_select(bbl_lag_s *lag)
         /* Distribute streams */
         stream = lag->stream_head;
         while(stream) {
-            key = stream->flow_id % active_count;
+            key = rand() % active_count;
             io = lag->active_list[key]->interface->io.tx;
             io_stream_add(io, stream);
             stream = stream->lag_next;
