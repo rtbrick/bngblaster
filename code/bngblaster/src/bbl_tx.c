@@ -121,7 +121,8 @@ static protocol_error_t
 bbl_session_tx(bbl_session_s *session, uint8_t *dst_mac_ipoe,
                uint16_t ppp_protocol, void *ip_payload)
 {
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
+    if(session->access_type == ACCESS_TYPE_PPPOE ||
+       session->access_type == ACCESS_TYPE_PPPOL2TP) {
         return bbl_ppp_tx(session, ppp_protocol, ip_payload);
     }
     uint16_t eth_type = (ppp_protocol == PROTOCOL_IPV6) ? ETH_TYPE_IPV6 : ETH_TYPE_IPV4;
@@ -435,7 +436,9 @@ bbl_tx_encode_packet_icmpv6_rs(bbl_session_s *session)
     bbl_icmpv6_s icmpv6 = {0};
     uint8_t mac[ETH_ADDR_LEN];
 
-    if(session->access_type == ACCESS_TYPE_PPPOE && session->ip6cp_state != BBL_PPP_OPENED) {
+    if((session->access_type == ACCESS_TYPE_PPPOE ||
+        session->access_type == ACCESS_TYPE_PPPOL2TP) &&
+       session->ip6cp_state != BBL_PPP_OPENED) {
         return WRONG_PROTOCOL_STATE;
     }
 
@@ -574,7 +577,9 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
         udp.src = DHCPV6_UDP_CLIENT;
     }
 
-    if(session->access_type == ACCESS_TYPE_PPPOE && session->ip6cp_state != BBL_PPP_OPENED) {
+    if((session->access_type == ACCESS_TYPE_PPPOE ||
+        session->access_type == ACCESS_TYPE_PPPOL2TP) &&
+       session->ip6cp_state != BBL_PPP_OPENED) {
         return WRONG_PROTOCOL_STATE;
     }
     ipv6.dst = (void*)ipv6_multicast_all_dhcp;
@@ -672,7 +677,8 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     session->dhcpv6_retry++;
     session->stats.dhcpv6_tx++;
     access_interface->stats.dhcpv6_tx++;
-    if(session->access_type == ACCESS_TYPE_PPPOE) {
+    if(session->access_type == ACCESS_TYPE_PPPOE ||
+       session->access_type == ACCESS_TYPE_PPPOL2TP) {
         return bbl_ppp_tx(session, PROTOCOL_IPV6, &ipv6);
     } else {
         ipv6_multicast_mac(ipv6_multicast_all_dhcp, mac);
