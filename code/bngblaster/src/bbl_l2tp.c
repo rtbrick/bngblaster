@@ -356,6 +356,15 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
     while(q != (const void *)(&l2tp_tunnel->tx_qhead)) {
         if(L2TP_SEQ_LT(q->ns, l2tp_tunnel->peer_nr)) {
             /* Delete acknowledged messages from queue. */
+            /* If this entry was the ICCN for a PPP session, start the PPP
+             * state machine now that the LNS has acknowledged the ICCN.
+             * Waiting for the ACK gives the LNS time to complete its
+             * socket(AF_PPPOX)+connect() setup before the first PPP packet
+             * arrives, avoiding the kernel race where l2tp_session_find()
+             * returns NULL and silently drops the packet. */
+            if(q->ppp_session) {
+                bbl_session_tx_qnode_insert(q->ppp_session);
+            }
             q_del = q;
             q = CIRCLEQ_NEXT(q, tunnel_tx_qnode);
             bbl_l2tp_tunnel_txq_remove(l2tp_tunnel, q_del);
@@ -1490,14 +1499,26 @@ bbl_l2tp_icrp_rx(bbl_network_interface_s *interface,
             l2tp_tunnel->peer_name,
             format_ipv4_address(&l2tp_tunnel->peer_ip),
             l2tp_session->key.session_id);
-        /* Start the PPP state machine for the associated LAC session. */
+        /* Prepare the PPP state machine but defer the TX insert until the ICCN
+         * has actually been submitted to the network interface TX queue.
+         * bbl_l2tp_tunnel_tx_job() will call bbl_session_tx_qnode_insert() once
+         * it appends the ICCN, guaranteeing ICCN is queued before the first LCP
+         * packet in network_interface->l2tp_tx_qhead. */
         if(l2tp_session->pppoe_session) {
             bbl_session_s *session = l2tp_session->pppoe_session;
             bbl_session_update_state(session, BBL_PPP_LINK);
             session->lcp_state        = BBL_PPP_INIT;
             session->lcp_request_code = PPP_CODE_CONF_REQUEST;
             session->send_requests   |= BBL_SEND_LCP_REQUEST;
-            bbl_session_tx_qnode_insert(session);
+            /* Tag the ICCN queue entry so that PPP is started only after the
+             * LNS acknowledges the ICCN, giving it time to complete its
+             * socket(AF_PPPOX)+connect() setup before the first PPP packet arrives.
+             * bbl_l2tp_tunnel_tx_job() removes the entry from tx_qhead when the
+             * ACK is received, so the PPP session is started exactly once. */
+            bbl_l2tp_queue_s *iccn_q = CIRCLEQ_LAST(&l2tp_tunnel->tx_qhead);
+            if(iccn_q != (void *)&l2tp_tunnel->tx_qhead) {
+                iccn_q->ppp_session = session;
+            }
         }
     }
 }

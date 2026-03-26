@@ -153,6 +153,7 @@ typedef struct bbl_l2tp_queue_
     uint16_t packet_len;
     struct timespec last_tx_time;
     struct bbl_l2tp_tunnel_ *tunnel;
+    struct bbl_session_ *ppp_session; /* If set, start PPP when this ctrl pkt is acknowledged by the peer */
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) tunnel_tx_qnode; /* Tunnel TX queue (ctrl packets only) */
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) interface_tx_qnode; /* Interface TX queue */
 } bbl_l2tp_queue_s;
