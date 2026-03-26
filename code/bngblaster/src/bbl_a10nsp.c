@@ -771,6 +771,7 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
 
     bbl_lag_s *lag;
     bbl_lag_member_s *member;
+    io_handle_s *io_new;
     uint8_t key;
 
     while(stream) {
@@ -784,13 +785,6 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                 LOG(DEBUG, "A10NSP (ID: %u) Change TX interface of stream %lu from %s to %s\n",
                     session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
 
-                stream->tx_a10nsp_interface = interface;
-                stream->update_pps = true;
-
-                if(stream->io) {
-                    stream->io->update_streams = true;
-                }
-
                 if(stream->lag) {
                     /* Remove stream from LAG interface */
                     lag = stream->tx_a10nsp_interface->interface->lag;
@@ -798,11 +792,11 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                     stream_prev = NULL;
                     while(stream_next) {
                         if(stream_next == stream) {
-                            lag->stream_count--;
+                            if(lag->stream_count) lag->stream_count--;
                             if(stream_prev) {
                                 stream_prev->lag_next = stream->lag_next;
                             } else {
-                                lag->stream_head = stream_next;
+                                lag->stream_head = stream->lag_next;
                             }
                             stream->lag = false;
                             stream->lag_next = NULL;
@@ -813,6 +807,7 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                         }
                     }
                 }
+                stream->tx_a10nsp_interface = interface;
 
                 /* Move stream */
                 if(interface->interface->type == LAG_INTERFACE) {
@@ -827,11 +822,17 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                     } else {
                         member = CIRCLEQ_FIRST(&lag->lag_member_qhead);
                     }
-                    stream->io = member->interface->io.tx;
-                    stream->tx_interface = member->interface;
+                    io_new = member->interface->io.tx;
+                    stream->tx_interface = lag->interface;
                 } else {
-                    stream->io = interface->interface->io.tx;
+                    io_new = interface->interface->io.tx;
                     stream->tx_interface = interface->interface;
+                }
+                if(stream->io) {
+                    stream->update_pps = true;
+                    stream->io->update_streams = true;
+                } else {
+                    io_stream_add(io_new, stream);
                 }
             }
         }

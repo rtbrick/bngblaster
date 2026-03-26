@@ -105,6 +105,10 @@ bbl_rx_handler(bbl_interface_s *interface,
         return;
     }
 
+    if(interface->state == INTERFACE_DOWN) {
+        return;
+    }
+
     /* Traffic for emulated A10NSP switches (over network interfaces). */
     if(interface->a10nsp && eth->mpls && eth->type == ETH_TYPE_ETH) {
         ((bbl_ethernet_header_s*)eth->next)->mpls = eth->mpls;
