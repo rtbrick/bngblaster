@@ -806,6 +806,14 @@ bbl_interactive_init()
     noecho();
     keypad(stdscr, TRUE);
 
+    start_color();
+    use_default_colors();
+
+    init_pair(1, COLOR_RED, -1);
+    init_pair(2, COLOR_GREEN, -1);
+    init_pair(3, COLOR_BLACK, COLOR_CYAN);
+    init_pair(4, COLOR_BLACK, COLOR_BLUE);
+    
     /* Stats window */
     stats_win = newwin(LINES, STATS_WIN_SIZE, 0, 0);
     stats_win_postion = 0;
@@ -813,12 +821,7 @@ bbl_interactive_init()
     /* Log window */
     log_win = newwin(LINES, COLS-STATS_WIN_SIZE, 0, STATS_WIN_SIZE);
     scrollok(log_win, TRUE);
-
-    start_color();
-    init_pair(1, COLOR_RED, COLOR_BLACK);
-    init_pair(2, COLOR_GREEN, COLOR_BLACK);
-    init_pair(3, COLOR_BLACK, COLOR_CYAN);
-    init_pair(4, COLOR_BLACK, COLOR_BLUE);
+    idlok(log_win, TRUE);
 
     curs_set(0); /* cursor off */
     refresh();
