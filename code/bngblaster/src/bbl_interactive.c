@@ -163,14 +163,8 @@ void
 bbl_interactive_read_key_job(timer_s *timer)
 {
     int ch;
-    static bool show_li = false;
 
     UNUSED(timer);
-
-    if(!show_li && dict_count(g_ctx->li_flow_dict)) {
-        show_li = true;
-        bbl_interactive_init_window();
-    }
 
     ch = getch();
     switch (ch) {
