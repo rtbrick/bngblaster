@@ -78,6 +78,7 @@ extern uint8_t g_log_buf_cur;
         if(g_interactive) { \
             if (log_id[log_id_].enable) { \
                 wprintw(log_win, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
+                wrefresh(log_win); \
             } \
         } else { \
             if (log_id[log_id_].enable) { \
@@ -102,7 +103,7 @@ extern uint8_t g_log_buf_cur;
         if(g_interactive) { \
             if (log_id[log_id_].enable) { \
                 wprintw(log_win, "%s "fmt_, log_format_timestamp()); \
-                wrefresh(log_win);  \
+                wrefresh(log_win); \
             } \
         } else { \
             if (log_id[log_id_].enable) { \
