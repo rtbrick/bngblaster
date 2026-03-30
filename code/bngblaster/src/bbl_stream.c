@@ -3081,7 +3081,7 @@ bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments,
                 stream = bbl_stream_index_get(json_number_value(jobj));
                 if(stream && stream->session_traffic == false && 
                    stream->type != BBL_TYPE_MULTICAST) {
-                    args.stream->enabled = enabled;
+                    stream->enabled = enabled;
                 }
             }
         }
@@ -3097,7 +3097,7 @@ bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments,
             if(stream->session_traffic == false && 
                stream->type != BBL_TYPE_MULTICAST && 
                bbl_stream_ctrl_args_match(stream, &args)) {
-                args.stream->enabled = enabled;
+                stream->enabled = enabled;
             }
             if(args.session) {
                 stream = stream->session_next;
