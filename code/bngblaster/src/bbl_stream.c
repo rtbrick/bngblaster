@@ -1956,16 +1956,18 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
 
     if(config->direction & BBL_DIRECTION_UP) {
         if(config->type == BBL_SUB_TYPE_IPV4) {
-            if(!((network_interface && network_interface->ip.address) ||
-                 config->ipv4_destination_address || 
+            if(!(session->access_config->access_type == ACCESS_TYPE_PPPOL2TP ||
+                 (network_interface && network_interface->ip.address) ||
+                 config->ipv4_destination_address ||
                  config->ipv4_network_address ||
                  a10nsp_interface)) {
                 LOG(ERROR, "Failed to add stream %s (upstream) because of missing IPv4 destination address\n", config->name);
                 return false;
             }
         } else {
-            if(!((network_interface && *(uint64_t*)network_interface->ip6.address) ||
-                 *(uint64_t*)config->ipv6_destination_address || 
+            if(!(session->access_config->access_type == ACCESS_TYPE_PPPOL2TP ||
+                 (network_interface && *(uint64_t*)network_interface->ip6.address) ||
+                 *(uint64_t*)config->ipv6_destination_address ||
                  *(uint64_t*)config->ipv6_network_address ||
                  a10nsp_interface)) {
                 LOG(ERROR, "Failed to add stream %s (upstream) because of missing IPv6 destination address\n", config->name);
