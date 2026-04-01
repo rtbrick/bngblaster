@@ -533,10 +533,6 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
 {
     bbl_icmpv6_s *icmpv6 = (bbl_icmpv6_s*)ipv6->next;
 
-    if(!eth) {
-        return false;
-    }
-
     if(session->access_type == ACCESS_TYPE_PPPOE &&
        session->ip6cp_state != BBL_PPP_OPENED) {
         return false;
@@ -551,7 +547,8 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                     memcpy(&session->ipv6_prefix, &icmpv6->prefix, sizeof(ipv6_prefix));
                     *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
                     *(uint64_t*)&session->ipv6_address[8] = session->ip6cp_ipv6_identifier;
-                    if(session->access_type == ACCESS_TYPE_PPPOE) {
+                    if(session->access_type == ACCESS_TYPE_PPPOE ||
+                       session->access_type == ACCESS_TYPE_PPPOL2TP) {
                         ACTIVATE_ENDPOINT(session->endpoint.ipv6);
                     }
                     session->version++;
@@ -585,7 +582,7 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                 }
             }
         }
-    } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
+    } else if(eth && icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {
         if(memcmp(icmpv6->prefix.address, session->ipv6_address, IPV6_ADDR_LEN) == 0) {
             if(bbl_access_icmpv6_na(session, eth, ipv6, icmpv6) == BBL_TXQ_OK) {
                 return true;
@@ -595,19 +592,19 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
                 return true;
             }
         }
-    } else if(icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
+    } else if(eth && icmpv6->type == IPV6_ICMPV6_ECHO_REQUEST) {
         if(bbl_access_icmpv6_echo_reply(session, eth, ipv6, icmpv6) == BBL_TXQ_OK) {
             return true;
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT) {
-        if(ipv6_addr_not_zero(&session->icmpv6_ns_request) && 
+        if(ipv6_addr_not_zero(&session->icmpv6_ns_request) &&
            memcmp(icmpv6->prefix.address, session->icmpv6_ns_request, IPV6_ADDR_LEN) == 0) {
             memset(session->icmpv6_ns_request, 0x0, IPV6_ADDR_LEN);
             if(memcmp(icmpv6->prefix.address, session->access_config->static_gateway6, IPV6_ADDR_LEN) == 0) {
                 if(!session->icmpv6_ra_received) {
                     session->icmpv6_ra_received = true;
                 }
-                if(!session->arp_resolved) {
+                if(eth && !session->arp_resolved) {
                     memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
                 }
                 bbl_access_rx_established_ipoe(interface, session, eth);
