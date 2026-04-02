@@ -1428,6 +1428,25 @@ bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client)
         return NULL;
     }
 
+    /* Register client_address for ARP replies if distinct from the interface address */
+    if(l2tp_client->client_address && l2tp_client->client_address != network_interface->ip.address) {
+        bbl_secondary_ip_s *secondary_ip = network_interface->secondary_ip_addresses;
+        bool already_registered = false;
+        while(secondary_ip) {
+            if(secondary_ip->ip == l2tp_client->client_address) {
+                already_registered = true;
+                break;
+            }
+            secondary_ip = secondary_ip->next;
+        }
+        if(!already_registered) {
+            secondary_ip = calloc(1, sizeof(bbl_secondary_ip_s));
+            secondary_ip->ip = l2tp_client->client_address;
+            secondary_ip->next = network_interface->secondary_ip_addresses;
+            network_interface->secondary_ip_addresses = secondary_ip;
+        }
+    }
+
     /* Create tunnel */
     l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_s));
     g_ctx->l2tp_tunnels++;
