@@ -395,6 +395,15 @@ bbl_ctrl_job(timer_s *timer)
     }
 }
 
+void
+logfile_fflush_job(timer_s *timer)
+{
+    UNUSED(timer);
+    if(g_log_fp) {
+        fflush(g_log_fp);
+    }
+}
+
 /**
  * @brief BNG BLASTER MAIN FUNCTION
  *
@@ -520,6 +529,11 @@ main(int argc, char *argv[])
 
     /* Open logfile. */
     log_open();
+    if(g_log_fp) {
+        timer_add_periodic(&g_ctx->timer_root, &g_ctx->logfile_fflush_timer, 
+                    "logfile fflush()", 0, 100 * MSEC, g_ctx, 
+                    &logfile_fflush_job);
+    }
 
     /* Init config. */
     bbl_config_init_defaults();
