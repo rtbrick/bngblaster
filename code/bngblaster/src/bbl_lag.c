@@ -341,15 +341,13 @@ static json_t *
 bbl_lag_json(bbl_lag_s *lag)
 {
     bbl_lag_member_s *member;
-    io_handle_s *io;
     json_t *jobj_lag, *jobj_member, *jobj_lacp, *jobj_array;
 
     jobj_array = json_array();
 
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         if(member->lacp_state) {
-            io = member->interface->io.tx;
-            jobj_lacp = json_pack("{si si si ss* si si si si si ss* si si si si si si sf}",
+            jobj_lacp = json_pack("{si si si ss* si si si si si ss* si si si si si }",
                 "bpdu-rx", member->stats.lacp_rx,
                 "bpdu-tx", member->stats.lacp_tx,
                 "bpdu-dropped", member->stats.lacp_dropped,
@@ -364,19 +362,19 @@ bbl_lag_json(bbl_lag_s *lag)
                 "partner-key", member->partner_key,
                 "partner-port-priority", member->partner_port_priority,
                 "partner-port-id", member->partner_port_id,
-                "partner-state", member->partner_state,
-                "stream-count", io->stream_count,
-                "stream-pps", io->stream_pps
+                "partner-state", member->partner_state
                 );
         } else {
             jobj_lacp = NULL;
         }
-        jobj_member = json_pack("{ss* ss* si sI sI ss* so*}",
+        jobj_member = json_pack("{ss* ss* si sI sI si sf ss* so*}",
             "interface", member->interface->name,
             "state", interface_state_string(member->interface->state),
             "state-transitions", member->interface->state_transitions,
             "packets-rx", member->interface->io.rx->stats.packets,
             "packets-tx", member->interface->io.tx->stats.packets,
+            "stream-count", member->interface->io.tx->stream_count,
+            "stream-pps", member->interface->io.tx->stream_pps,
             "lacp-state", lacp_state_string(member->lacp_state),
             "lacp", jobj_lacp);
         if(jobj_member) {

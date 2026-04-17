@@ -828,10 +828,19 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                     io_new = interface->interface->io.tx;
                     stream->tx_interface = interface->interface;
                 }
-                if(stream->io) {
+
+                if(io_new && stream->io && io_new != stream->io) {
+                    /* IO changed. */
+                    stream->io->update_streams = true;
+                    stream->io = io_new;
+                    stream->update_pps = true;
+                } else if(stream->io) {
+                    /* IO unchanged. */
                     stream->update_pps = true;
                     stream->io->update_streams = true;
-                } else {
+                } else if(io_new) {
+                    /* IO was not assigned before. */
+                    stream->io = io_new;
                     io_stream_add(io_new, stream);
                 }
             }

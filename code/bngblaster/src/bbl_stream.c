@@ -2292,6 +2292,7 @@ void
 bbl_stream_reset(bbl_stream_s *stream)
 {
     if(!stream) return;
+    if(stream->reset) return;
     stream->tx_first_seq = UINT64_MAX;
 
     stream->reset_packets_tx = stream->tx_packets;
