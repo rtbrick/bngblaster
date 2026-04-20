@@ -569,6 +569,10 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
                 clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_established);
             }
             bbl_tun_session_up(session);
+        } else if(new_state == BBL_PPPOE_INIT) {
+            if(old_state == BBL_PPPOE_REQUEST) {
+                bbl_session_reset(session);
+            }
         } else if(new_state == BBL_PPP_TERMINATING) {
             if(session->ipcp_state > BBL_PPP_DISABLED) {
                 session->ipcp_state = BBL_PPP_CLOSED;
