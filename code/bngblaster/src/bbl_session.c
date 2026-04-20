@@ -415,6 +415,9 @@ bbl_session_reset(bbl_session_s *session) {
     session->ipv6_prefix.len = 0;
     session->delegated_ipv6_prefix.len = 0;
     session->arp_resolved = false;
+    if(session->dhcp_state > BBL_DHCP_DISABLED) {
+        session->dhcp_state = BBL_DHCP_INIT;
+    }
     session->icmpv6_ra_received = false;
     if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
         session->dhcpv6_state = BBL_DHCP_INIT;
@@ -1179,20 +1182,22 @@ bbl_session_substate_pppoe(bbl_session_s *session)
 const char *
 bbl_session_substate_ipoe(bbl_session_s *session)
 {
-    if(session->access_config->ipv4_enable) {
-        if(session->dhcp_state > BBL_DHCP_DISABLED && session->dhcp_state < BBL_DHCP_BOUND) {
-            return "DHCPv4 pending";
+    if(session->session_state == BBL_IPOE_SETUP) {
+        if(session->access_config->ipv4_enable) {
+            if(session->dhcp_state > BBL_DHCP_DISABLED && session->dhcp_state < BBL_DHCP_BOUND) {
+                return "DHCPv4 pending";
+            }
+            if(!session->arp_resolved) {
+                return "ARP not resolved";
+            }
         }
-        if(!session->arp_resolved) {
-            return "ARP not resolved";
-        }
-    }
-    if(session->access_config->ipv6_enable) {
-        if (session->dhcpv6_state > BBL_DHCP_DISABLED && session->dhcpv6_state < BBL_DHCP_BOUND) {
-            return "DHCPv6 pending";
-        }
-        if(!session->icmpv6_ra_received) {
-            return "Wait for ICMPv6 RA";
+        if(session->access_config->ipv6_enable) {
+            if (session->dhcpv6_state > BBL_DHCP_DISABLED && session->dhcpv6_state < BBL_DHCP_BOUND) {
+                return "DHCPv6 pending";
+            }
+            if(!session->icmpv6_ra_received) {
+                return "Wait for ICMPv6 RA";
+            }
         }
     }
     return NULL;
