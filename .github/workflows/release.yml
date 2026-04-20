@@ -21,7 +21,7 @@ jobs:
           echo "SOURCE_BRANCH=${GITHUB_REF#refs/heads/}" >> $GITHUB_OUTPUT
           echo "SOURCE_TAG=${GITHUB_REF#refs/tags/}" >> $GITHUB_OUTPUT
 
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
     - uses: ncipollo/release-action@v1
       with:
         tag: ${{ steps.ref_name.outputs.SOURCE_TAG }}
@@ -36,7 +36,7 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Download RtBrick libdict
       shell: bash
@@ -106,7 +106,7 @@ jobs:
         os: [bookworm, trixie]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install dependencies
       shell: bash
