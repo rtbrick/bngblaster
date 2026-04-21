@@ -551,7 +551,15 @@ main(int argc, char *argv[])
 
     if(username) g_ctx->config.username = username;
     if(password) g_ctx->config.password = password;
-    if(sessions) g_ctx->config.sessions = atoi(sessions);
+    if(sessions) {
+        ch = atoi(sessions);
+        if(ch < 0 || ch > 100000000) {
+            fprintf(stderr, "Error: invalid session count: %s\n", sessions);
+            goto CLEANUP;
+        }
+        g_ctx->config.sessions = ch;
+    }
+
     if(igmp_group) {
         inet_pton(AF_INET, igmp_group, &ipv4);
         g_ctx->config.igmp_group = ipv4;
