@@ -1192,7 +1192,7 @@ bbl_stats_json(bbl_stats_s * stats)
         for(i = 0; i < g_ctx->sessions; i++) {
             session = &g_ctx->session_list[i];
             if(session) {
-                jobj_sub = bbl_session_json(session);
+                jobj_sub = bbl_session_json(session, false);
                 if(jobj_sub) {
                     json_array_append_new(jobj_array, jobj_sub);
                 }

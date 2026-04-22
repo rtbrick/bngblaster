@@ -1208,7 +1208,7 @@ bbl_session_substate_ipoe(bbl_session_s *session)
 }
 
 json_t *
-bbl_session_json(bbl_session_s *session)
+bbl_session_json(bbl_session_s *session, bool debug)
 {
     json_t *root = NULL;
     json_t *session_traffic = NULL;
@@ -1501,6 +1501,22 @@ bbl_session_json(bbl_session_s *session)
     if(!root) {
         if(a10nsp_session) json_decref(a10nsp_session);
         if(session_traffic) json_decref(session_traffic);
+    } else if (debug) {
+        /* Add debug informations. */
+        json_object_set_new(root, "debug-idle-queue", json_boolean(CIRCLEQ_PREV(session, session_idle_qnode)));
+        json_object_set_new(root, "debug-teardown-queue", json_boolean(CIRCLEQ_PREV(session, session_teardown_qnode)));
+        json_object_set_new(root, "debug-tx-access-queue", json_boolean(CIRCLEQ_PREV(session, session_tx_qnode)));
+        json_object_set_new(root, "debug-tx-network-queue", json_boolean(CIRCLEQ_PREV(session, session_network_tx_qnode)));
+        json_object_set_new(root, "debug-tx-a10nsp-queue", json_boolean(CIRCLEQ_PREV(session, session_a10nsp_tx_qnode)));
+        if(!session->reconnect_disabled && 
+            ((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
+            (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect))) {
+            json_object_set_new(root, "debug-reconnect", json_boolean(true));
+        } else {
+            json_object_set_new(root, "debug-reconnect", json_boolean(false));
+        }
+        json_object_set_new(root, "debug-reconnect-disabled", json_boolean(session->reconnect_disabled));
+        json_object_set_new(root, "debug-reconnect-delay", json_integer(session->reconnect_delay));
     }
     return root;
 }
@@ -1643,6 +1659,8 @@ int
 bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
 {
     int result = 0;
+    int debug = 0;
+
     json_t *root;
     json_t *session_json;
     bbl_session_s *session;
@@ -1651,10 +1669,12 @@ bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute
         /* session-id is mandatory */
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
+    /* Unpack further arguments */
+    json_unpack(arguments, "{s:b}", "debug", &debug);
 
     session = bbl_session_get(session_id);
     if(session) {
-        session_json = bbl_session_json(session);
+        session_json = bbl_session_json(session, debug);
         if(!session_json) {
             return bbl_ctrl_status(fd, "error", 500, "internal error");
         }

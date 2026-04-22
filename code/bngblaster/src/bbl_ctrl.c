@@ -39,6 +39,9 @@ const char *schema_interface[] = {
 const char *schema_session_id[] = {
     "session-id", NULL
 };
+const char *schema_session_id_debug[] = {
+    "session-id", "debug", NULL
+};
 const char *schema_session_group_id[] = {
     "session-id", "session-group-id", NULL
 };
@@ -312,7 +315,7 @@ static const struct action actions[] = {
     {"interface-enable", bbl_interface_ctrl_enable, schema_interface, false},
     {"interface-disable", bbl_interface_ctrl_disable, schema_interface, false},
     {"sessions-pending", bbl_session_ctrl_pending, schema_no_args, true},
-    {"session-info", bbl_session_ctrl_info, schema_session_id, true},
+    {"session-info", bbl_session_ctrl_info, schema_session_id_debug, true},
     {"session-counters", bbl_session_ctrl_counters, schema_no_args, true},
     {"session-start", bbl_session_ctrl_start, schema_session_group_id, false},
     {"session-stop", bbl_session_ctrl_stop, schema_session_group_id, false},

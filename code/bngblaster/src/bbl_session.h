@@ -389,7 +389,7 @@ bool
 bbl_sessions_init();
 
 json_t *
-bbl_session_json(bbl_session_s *session);
+bbl_session_json(bbl_session_s *session, bool debug);
 
 int
 bbl_session_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
