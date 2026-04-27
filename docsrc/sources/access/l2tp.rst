@@ -1,7 +1,7 @@
 .. _l2tp:
 
-L2TP
-----
+L2TP (LNS Mode)
+---------------
 
 The BNG Blaster can emulate L2TPv2 (RFC2661) LNS servers to
 be able to test the L2TPv2 LAC functionality of the BNG device under
@@ -397,4 +397,181 @@ of a given tunnel.
 It is also possible to display a single session.
 
 ``$ sudo bngblaster-cli run.sock l2tp-sessions tunnel-id 1 session-id 1``
+
+.. _l2tp-lac:
+
+L2TP (LAC Mode)
+---------------
+
+The BNG Blaster can also act as an L2TPv2 LAC (L2TP Access Concentrator),
+generating PPP sessions encapsulated in L2TP tunnels toward a real LNS device
+under test. This makes it possible to test LNS functionality directly.
+
+Each access interface section with ``"type": "pppol2tp"`` creates PPP sessions
+that are tunnelled through the L2TP clients specified in the ``"l2tp-client"``
+list. The L2TP sessions are spread accross multiple tunnels (the ones whose
+``"group-id"`` field match the ``"l2tp-client-group-id"`` field of the access
+interface).
+
+Configuration
+~~~~~~~~~~~~~
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "network": {
+                "interface": "eth1",
+                "address": "10.0.0.1/24",
+                "gateway": "10.0.0.2"
+            },
+            "access": [
+                {
+                    "interface": "eth1",
+                    "type": "pppol2tp",
+                    "l2tp-client-group-id": 1,
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 1000,
+                    "inner-vlan": 7,
+                    "authentication-protocol": "PAP"
+                }
+            ]
+        },
+        "ppp": {
+            "mru": 1492,
+            "authentication": {
+                "username": "user{session}@example.com",
+                "password": "test"
+            },
+            "lcp": {
+                "conf-request-timeout": 5,
+                "conf-request-retry": 30
+            },
+            "ipcp": {
+                "enable": true
+            },
+            "ip6cp": {
+                "enable": true
+            }
+        },
+        "l2tp-client": [
+            {
+                "group-id": 1,
+                "name": "LAC1",
+                "network-interface": "eth1",
+                "client-address": "10.0.1.1",
+                "server-address": "10.0.0.100",
+                "secret": "test",
+                "receive-window-size": 16
+            },
+            {
+                "group-id": 1,
+                "name": "LAC2",
+                "network-interface": "eth1",
+                "client-address": "10.0.1.2",
+                "server-address": "10.0.0.100",
+                "secret": "test",
+                "receive-window-size": 16
+            }
+        ]
+    }
+
+.. include:: ../configuration/lac.rst
+
+LAC vs LNS Self-test
+~~~~~~~~~~~~~~~~~~~~
+
+The LAC and LNS roles can be tested locally without external network
+devices using a pair of virtual ethernet interfaces.
+
+.. code-block:: none
+
+    sudo ip link add veth-lac type veth peer name veth-lns
+    sudo ip link set veth-lac up
+    sudo ip link set veth-lns up
+
+Start the LNS instance first (terminal 1):
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "network": {
+                "interface": "veth-lns",
+                "address": "10.0.0.2",
+                "gateway": "10.0.0.1"
+            }
+        },
+        "l2tp-server": [
+            {
+                "name": "bbl-lns",
+                "address": "10.0.0.2",
+                "secret": "test"
+            }
+        ],
+        "ppp": {
+            "authentication": {
+                "username": "user@test",
+                "password": "password"
+            },
+            "ipcp": {
+                "enable": true,
+                "request-ip": true,
+                "request-dns1": true,
+                "request-dns2": true
+            }
+        }
+    }
+
+``sudo bngblaster -C lns.json -l info -l l2tp``
+
+Then start the LAC instance (terminal 2):
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "network": {
+                "interface": "veth-lac",
+                "address": "10.0.0.1",
+                "gateway": "10.0.0.2"
+            },
+            "access": [
+                {
+                    "interface": "veth-lac",
+                    "type": "pppol2tp",
+                    "l2tp-client-group-id": 1
+                }
+            ]
+        },
+        "l2tp-client": [
+            {
+                "group-id": 1,
+                "name": "LAC1",
+                "network-interface": "veth-lac",
+                "server-address": "10.0.0.2",
+                "secret": "test",
+                "max-retry": 10,
+                "receive-window-size": 4
+            }
+        ],
+        "sessions": {
+            "count": 1
+        },
+        "ppp": {
+            "authentication": {
+                "username": "user@test",
+                "password": "password"
+            },
+            "lcp": {
+                "conf-request-timeout": 1,
+                "conf-request-retry": 10
+            },
+            "ipcp": {
+                "enable": true
+            }
+        }
+    }
+
+``sudo bngblaster -C lac.json -l info -l l2tp``
 

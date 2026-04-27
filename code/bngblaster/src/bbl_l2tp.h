@@ -91,6 +91,38 @@ typedef struct bbl_l2tp_server_
     CIRCLEQ_HEAD(tunnel_, bbl_l2tp_tunnel_) tunnel_qhead;
 } bbl_l2tp_server_s;
 
+/* L2TP Client Configuration (LAC) */
+typedef struct bbl_l2tp_client_
+{
+    uint16_t group_id;   /* l2tp-client-group-id: ties this entry to access interfaces */
+    uint32_t server_ip;      /* LNS address used for outer L2TP/UDP packets */
+    uint32_t client_address; /* LAC address used for outer L2TP/UDP packets */
+    uint16_t hello_interval;
+    uint16_t receive_window;
+    uint16_t max_retry;
+    uint16_t lcp_padding;
+
+    bool data_control_priority;
+    bool data_length;
+    bool data_offset;
+
+    uint8_t control_tos;
+    uint8_t data_control_tos;
+
+    l2tp_congestion_mode_t congestion_mode;
+
+    char *name;
+    char *secret;
+    char *network_interface;
+    char *calling_number; /* Optional ICRQ Calling Number (AVP 22) */
+    char *called_number;  /* Optional ICRQ Called Number (AVP 21) */
+
+    void *next; /* Pointer to next L2TP client configuration */
+
+    /* List of L2TP tunnel instances for the corresponding client */
+    CIRCLEQ_HEAD(client_tunnel_, bbl_l2tp_tunnel_) tunnel_qhead;
+} bbl_l2tp_client_s;
+
 /* L2TP Session Key */
 typedef struct l2tp_key_ {
     uint16_t tunnel_id;
@@ -121,6 +153,7 @@ typedef struct bbl_l2tp_queue_
     uint16_t packet_len;
     struct timespec last_tx_time;
     struct bbl_l2tp_tunnel_ *tunnel;
+    struct bbl_session_ *ppp_session; /* If set, start PPP when this ctrl pkt is acknowledged by the peer */
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) tunnel_tx_qnode; /* Tunnel TX queue (ctrl packets only) */
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) interface_tx_qnode; /* Interface TX queue */
 } bbl_l2tp_queue_s;
@@ -131,13 +164,17 @@ typedef struct bbl_l2tp_tunnel_
     CIRCLEQ_ENTRY(bbl_l2tp_tunnel_) tunnel_qnode;
 
     CIRCLEQ_HEAD(session_, bbl_l2tp_session_) session_qhead;
+    CIRCLEQ_HEAD(pending_session_, bbl_session_) pending_session_qhead;
     CIRCLEQ_HEAD(txq_, bbl_l2tp_queue_) tx_qhead;
 
     /* Pointer to corresponding network interface */
     bbl_network_interface_s *interface;
 
-    /* Pointer to L2TP server configuration */
+    bool is_lac;
+    /* Pointer to L2TP server configuration (LNS mode) */
     bbl_l2tp_server_s *server;
+    /* Pointer to L2TP client configuration (LAC mode) */
+    bbl_l2tp_client_s *client;
 
     /* RFC5515 CSURQ */
     uint16_t *csurq_requests;
@@ -248,6 +285,7 @@ typedef struct bbl_l2tp_session_
     uint16_t proxy_auth_challenge_len;
     uint16_t proxy_auth_response_len;
 
+    uint8_t lcp_state;
     uint8_t ipcp_state;
     uint8_t ip6cp_state;
 
@@ -273,6 +311,9 @@ typedef struct bbl_l2tp_session_
     char *peer_ari;
     char *peer_aci;
 } bbl_l2tp_session_s;
+
+const char*
+l2tp_tunnel_hostname(bbl_l2tp_tunnel_s *l2tp_tunnel);
 
 const char* 
 l2tp_message_string(l2tp_message_t type);
@@ -301,6 +342,9 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *e
 void 
 bbl_l2tp_stop_all_tunnel();
 
+bbl_l2tp_tunnel_s *
+bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client);
+
 json_t *
 l2tp_session_json(bbl_l2tp_session_s *l2tp_session);
 
@@ -318,5 +362,14 @@ bbl_l2tp_ctrl_session_terminate(int fd, uint32_t session_id, json_t *arguments);
 
 int
 bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+bbl_l2tp_tunnel_s *
+bbl_l2tp_client_session_get_tunnel(bbl_session_s *session);
+
+void
+bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next);
+
+void
+bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *session);
 
 #endif

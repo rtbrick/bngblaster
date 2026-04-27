@@ -118,13 +118,13 @@ void
 bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4);
 
 void
-bbl_tcp_ipv4_rx_session(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4);
+bbl_tcp_ipv4_rx_session(bbl_session_s *session, bbl_ipv4_s *ipv4);
 
 void
 bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6);
 
 void
-bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv6_s *ipv6);
+bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ipv6_s *ipv6);
 
 bool
 bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len);

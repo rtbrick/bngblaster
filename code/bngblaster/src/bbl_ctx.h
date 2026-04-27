@@ -35,6 +35,7 @@ typedef struct bbl_ctx_
     uint32_t interfaces;
     uint32_t sessions;
     uint32_t sessions_pppoe;
+    uint32_t sessions_pppol2tp;
     uint32_t sessions_ipoe;
     uint32_t sessions_established;
     uint32_t sessions_established_max;
@@ -374,6 +375,9 @@ typedef struct bbl_ctx_
 
         /* L2TP Server Config (LNS) */
         bbl_l2tp_server_s *l2tp_server;
+
+        /* L2TP Client Config (LAC) */
+        struct bbl_l2tp_client_ *l2tp_client;
     } config;
 } bbl_ctx_s;
 

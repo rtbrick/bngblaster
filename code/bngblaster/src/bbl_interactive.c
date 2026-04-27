@@ -314,7 +314,8 @@ bbl_interactive_window_job(timer_s *timer)
 
     if(g_view_selected == UI_VIEW_DEFAULT) {
         VISIBLE((g_ctx->sessions)) {
-            wprintw(stats_win, "\nSessions      %10u (%u PPPoE / %u IPoE)\n", g_ctx->sessions, g_ctx->sessions_pppoe, g_ctx->sessions_ipoe);
+            wprintw(stats_win, "\nSessions      %10u (%u PPPoE / %u PPPoL2TP / %u IPoE)\n",
+                    g_ctx->sessions, g_ctx->sessions_pppoe, g_ctx->sessions_pppol2tp, g_ctx->sessions_ipoe);
 
             /* Progress bar established sessions */
             wprintw(stats_win, "  Established %10u [", g_ctx->sessions_established);
@@ -388,8 +389,8 @@ bbl_interactive_window_job(timer_s *timer)
                 wprintw(stats_win, "  RX Packets                %10lu (%7lu PPS)\n",
                     g_network_if->stats.li_rx, g_network_if->stats.rate_li_rx.avg);
             }
-            VISIBLE((g_ctx->config.l2tp_server)) {
-                wprintw(stats_win, "\nL2TP LNS Statistics\n");
+            VISIBLE((g_ctx->config.l2tp_server  || g_ctx->config.l2tp_client)) {
+                wprintw(stats_win, "\nL2TP LNS/LAC Statistics\n");
                 wprintw(stats_win, "  Tunnels     %10u\n", g_ctx->l2tp_tunnels);
                 wprintw(stats_win, "  Established %10u\n", g_ctx->l2tp_tunnels_established);
                 wprintw(stats_win, "  Sessions    %10u\n", g_ctx->l2tp_sessions);
