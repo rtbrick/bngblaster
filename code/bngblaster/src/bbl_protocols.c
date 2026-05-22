@@ -16,6 +16,8 @@
 static protocol_error_t decode_l2tp(uint8_t *buf, uint16_t len, uint8_t *sp, uint16_t sp_len, bbl_ethernet_header_s *eth, bbl_l2tp_s **_l2tp);
 static protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_s *l2tp);
 
+uint16_t g_li_udp_port = QMX_LI_UDP_PORT;
+
 /** 
  * This function searches for the BNG Blaster data
  * traffic signature and returns true if found.
@@ -3427,10 +3429,6 @@ decode_udp(uint8_t *buf, uint16_t len,
             udp->protocol = UDP_PROTOCOL_DHCP;
             ret_val = decode_dhcp(buf, len, sp, sp_len, (bbl_dhcp_s**)&udp->next);
             break;
-        case QMX_LI_UDP_PORT:
-            udp->protocol = UDP_PROTOCOL_QMX_LI;
-            ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_s**)&udp->next);
-            break;
         case LDP_PORT:
             if(udp->src == LDP_PORT) {
                 udp->protocol = UDP_PROTOCOL_LDP;
@@ -3438,26 +3436,25 @@ decode_udp(uint8_t *buf, uint16_t len,
             }
             break;
         default:
+            if(udp->dst == g_li_udp_port || udp->src == g_li_udp_port) {
+                udp->protocol = UDP_PROTOCOL_QMX_LI;
+                ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_s**)&udp->next);
+            }
             break;
     }
 
     if(ret_val == UNKNOWN_PROTOCOL) {
-        if(udp->src == QMX_LI_UDP_PORT) {
-            udp->protocol = UDP_PROTOCOL_QMX_LI;
-            ret_val = decode_qmx_li(buf, len, sp, sp_len, (bbl_qmx_li_s**)&udp->next);
+        /* Try if payload could be decoded as BBL! 
+         * This fails fast if the 64 bit magic number 
+         * is not found on the expected position. */
+        ret_val = decode_bbl(buf, len, sp, sp_len, (bbl_bbl_s**)&udp->next);
+        if(ret_val == PROTOCOL_SUCCESS) {
+            udp->protocol = UDP_PROTOCOL_BBL;
+            eth->bbl = udp->next;
         } else {
-            /* Try if payload could be decoded as BBL! 
-             * This fails fast if the 64 bit magic number 
-             * is not found on the expected position. */
-            ret_val = decode_bbl(buf, len, sp, sp_len, (bbl_bbl_s**)&udp->next);
-            if(ret_val == PROTOCOL_SUCCESS) {
-                udp->protocol = UDP_PROTOCOL_BBL;
-                eth->bbl = udp->next;
-            } else {
-                ret_val = PROTOCOL_SUCCESS;
-                udp->protocol = 0;
-                udp->next = NULL;
-            }
+            ret_val = PROTOCOL_SUCCESS;
+            udp->protocol = 0;
+            udp->next = NULL;
         }
     }
 

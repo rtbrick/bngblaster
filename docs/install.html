@@ -231,7 +231,7 @@ Total Test time (real) =   0.00 sec
 <a class="reference internal" href="performance.html#dpdk-usage"><span class="std std-ref">DPDK</span></a> support.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Tested with DPDK version 22.11.5 and Ubuntu 22.04 (LTS)!</p>
+<p>Tested with DPDK version 25.11.0 and Ubuntu 22.04 (LTS)!</p>
 </div>
 <p>Download and install DPDK:
 <a class="reference external" href="https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html">https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html</a></p>
@@ -239,9 +239,9 @@ Total Test time (real) =   0.00 sec
 sudo apt install meson ninja-build
 
 # download DPDK
-wget https://fast.dpdk.org/rel/dpdk-22.11.5.tar.xz
-tar xJf dpdk-22.11.5.tar.xz
-cd dpdk-stable-22.11.5
+wget https://fast.dpdk.org/rel/dpdk-25.11.tar.xz
+tar xJf dpdk-25.11.tar.xz
+cd dpdk-25.11
 
 # build with driver SDK
 meson -Denable_driver_sdk=true build
@@ -262,7 +262,7 @@ the additional cmake argument <code class="docutils literal notranslate"><span c
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>-- Build bngblaster with DPDK support
 -- Found PkgConfig: /usr/bin/pkg-config (found version &quot;1.8.0&quot;)
 -- Checking for module &#39;libdpdk&#39;
---   Found libdpdk, version 22.11.5
+--   Found libdpdk, version 25.11.0
 -- Found DPDK via pkg-config
 </pre></div>
 </div>

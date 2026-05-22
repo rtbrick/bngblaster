@@ -50,3 +50,7 @@
 | **tun-name**                      | | TUN interface name prefix (`<tun-name><session-id>`).              |
 |                                   | | Default: bbl (bbl1, bbl2, ...)                                     |
 +-----------------------------------+----------------------------------------------------------------------+
+| **a10nsp-dynamic**                | | Move streams to dynamically learned A10NSP interface.              |
+|                                   | | This feature is only supported without threading enabled           |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+

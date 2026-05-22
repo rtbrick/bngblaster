@@ -19,6 +19,7 @@ typedef struct bbl_ctx_
     struct timer_ *smear_timer;
     struct timer_ *stats_timer;
     struct timer_ *keyboard_timer;
+    struct timer_ *logfile_fflush_timer;
 
     struct timer_ *tcp_timer;
     struct timer_ *fragmentation_timer;

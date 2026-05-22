@@ -20,7 +20,7 @@ jobs:
         os: [ubuntu-22.04, ubuntu-24.04]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Download RtBrick libdict
       shell: bash
@@ -62,7 +62,7 @@ jobs:
       run: cpack -G DEB
 
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: bngblaster-${{matrix.os}}
         path: ${{ github.workspace }}/build/*.deb
@@ -80,7 +80,7 @@ jobs:
         os: [bookworm, trixie]
 
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v6
 
     - name: Install dependencies
       shell: bash
@@ -122,7 +122,7 @@ jobs:
       run: cpack -G DEB
 
     - name: Upload Build Artifact
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: bngblaster-${{matrix.os}}
         path: ${{ github.workspace }}/build/*.deb

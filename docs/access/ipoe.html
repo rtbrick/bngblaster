@@ -229,6 +229,16 @@ statically as shown in the example below.</p>
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>vlan-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">VLAN PBIT for generic IPoE control traffic.</div>
+<div class="line">Used for ARP and ICMPv6 ND/RS/NS control traffic.</div>
+<div class="line">Default master value for IPoE traffic (including DHCP and DHCPv6)</div>
+<div class="line">unless overridden by protocol-specific settings.</div>
+<div class="line">Default: 0</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -296,6 +306,7 @@ statically as shown in the example below.</p>
 <tr class="row-odd"><td><p><strong>vlan-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">VLAN PBIT for all DHCP control traffic.</div>
+<div class="line">Overrides IPoE vlan-priority for DHCP packets only.</div>
 <div class="line">Default: 0</div>
 </div>
 </td>
@@ -357,24 +368,39 @@ statically as shown in the example below.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>rapid-commit</strong></p></td>
+<tr class="row-odd"><td><p><strong>ia-separate</strong></p></td>
+<td><div class="line-block">
+<div class="line">Send seperate requests for IA_NA and IA_PD.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>rapid-commit</strong></p></td>
 <td><div class="line-block">
 <div class="line">DHCPv6 rapid commit (2-way handshake).</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>timeout</strong></p></td>
+<tr class="row-odd"><td><p><strong>timeout</strong></p></td>
 <td><div class="line-block">
 <div class="line">DHCPv6 timeout in seconds.</div>
 <div class="line">Default: 5</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>retry</strong></p></td>
+<tr class="row-even"><td><p><strong>retry</strong></p></td>
 <td><div class="line-block">
 <div class="line">DHCPv6 retry.</div>
 <div class="line">Default: 10</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>vlan-priority</strong></p></td>
+<td><div class="line-block">
+<div class="line">VLAN PBIT for all DHCPv6 control traffic.</div>
+<div class="line">Overrides IPoE vlan-priority for DHCPv6 packets only.</div>
+<div class="line">Default: 0</div>
 </div>
 </td>
 </tr>

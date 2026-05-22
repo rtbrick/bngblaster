@@ -18,7 +18,7 @@
 |                                   | | reports. This option allows the combination of leave and join      |
 |                                   | | records within a single IGMPv3 report using multiple group records.|
 |                                   | | This option applies to the IGMP version 3 only!                    |
-|                                   | | Default: true                                                      |
+|                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **group**                         | | Multicast group base address (e.g. 239.0.0.1).                     |
 |                                   | | If group is set to 293.0.0.1 with group-iter of 0.0.0.2,           |
@@ -54,15 +54,21 @@
 |                                   | | the measured join delay is above this threshold.                   |
 |                                   | | Default: 0 (disabled)                                              |
 +-----------------------------------+----------------------------------------------------------------------+
+| **robustness-interval**           | | IGMP robustness interval in milliseconds.                          |
+|                                   | | Default: 1000                                                      |
++-----------------------------------+----------------------------------------------------------------------+
 | **send-multicast-traffic**        | | If enabled, the BNG Blaster generates multicast traffic on the     |
 |                                   | | network interface based on the specified  group and source         |
 |                                   | | attributes mentioned before. This traffic includes some special    |
 |                                   | | signatures for faster processing and more detailed analysis.       |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
+| **multicast-traffic-autostart**   | | Multicast traffic autostart.                                       |
+|                                   | | Default: true                                                      |
++-----------------------------------+----------------------------------------------------------------------+
 | **multicast-traffic-length**      | | Multicast traffic IP length.                                       |
 |                                   | | Only applicable with **send-multicast-traffic** enabled!           |
-|                                   | | Default: 76                                                        |
+|                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **multicast-traffic-tos**         | | Multicast traffic TOS priority.                                    |
 |                                   | | Only applicable with **send-multicast-traffic** enabled!           |

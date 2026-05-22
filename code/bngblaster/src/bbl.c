@@ -395,6 +395,15 @@ bbl_ctrl_job(timer_s *timer)
     }
 }
 
+void
+logfile_fflush_job(timer_s *timer)
+{
+    UNUSED(timer);
+    if(g_log_fp) {
+        fflush(g_log_fp);
+    }
+}
+
 /**
  * @brief BNG BLASTER MAIN FUNCTION
  *
@@ -520,6 +529,11 @@ main(int argc, char *argv[])
 
     /* Open logfile. */
     log_open();
+    if(g_log_fp) {
+        timer_add_periodic(&g_ctx->timer_root, &g_ctx->logfile_fflush_timer, 
+                    "logfile fflush()", 0, 100 * MSEC, g_ctx, 
+                    &logfile_fflush_job);
+    }
 
     /* Init config. */
     bbl_config_init_defaults();
@@ -537,7 +551,15 @@ main(int argc, char *argv[])
 
     if(username) g_ctx->config.username = username;
     if(password) g_ctx->config.password = password;
-    if(sessions) g_ctx->config.sessions = atoi(sessions);
+    if(sessions) {
+        ch = atoi(sessions);
+        if(ch < 0 || ch > 100000000) {
+            fprintf(stderr, "Error: invalid session count: %s\n", sessions);
+            goto CLEANUP;
+        }
+        g_ctx->config.sessions = ch;
+    }
+
     if(igmp_group) {
         inet_pton(AF_INET, igmp_group, &ipv4);
         g_ctx->config.igmp_group = ipv4;

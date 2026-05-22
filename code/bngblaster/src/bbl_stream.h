@@ -13,6 +13,7 @@ typedef enum {
     STREAM_STATE_ANY         = 0,
     STREAM_STATE_VERIFIED    = 1,
     STREAM_STATE_BIVERIFIED  = 2,
+    STREAM_STATE_PENDING     = 3,
 } stream_state_t;
 
 typedef struct bbl_stream_config_
@@ -92,6 +93,26 @@ typedef struct bbl_stream_group_
     struct timer_ *timer;
     bbl_stream_group_s *next;
 } bbl_stream_group_s;
+
+typedef struct bbl_stream_args_
+{
+    const char *name;
+    const char *interface;
+    
+    bbl_stream_s *stream;
+    bbl_session_s *session;
+
+    json_t *flows;
+    uint64_t flow_id;
+    uint64_t flow_id_min;
+    uint64_t flow_id_max;
+    
+    stream_state_t state;
+
+    int flows_array_len;
+    int session_group_id;
+    uint8_t direction;
+} bbl_stream_args_s;
 
 /**
  * In the architecture of BNG Blaster, every traffic stream 

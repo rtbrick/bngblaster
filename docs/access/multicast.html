@@ -321,7 +321,7 @@ for a typical zapping test.</p>
 <div class="line">reports. This option allows the combination of leave and join</div>
 <div class="line">records within a single IGMPv3 report using multiple group records.</div>
 <div class="line">This option applies to the IGMP version 3 only!</div>
-<div class="line">Default: true</div>
+<div class="line">Default: false</div>
 </div>
 </td>
 </tr>
@@ -395,7 +395,14 @@ for a typical zapping test.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>send-multicast-traffic</strong></p></td>
+<tr class="row-odd"><td><p><strong>robustness-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">IGMP robustness interval in milliseconds.</div>
+<div class="line">Default: 1000</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>send-multicast-traffic</strong></p></td>
 <td><div class="line-block">
 <div class="line">If enabled, the BNG Blaster generates multicast traffic on the</div>
 <div class="line">network interface based on the specified  group and source</div>
@@ -405,11 +412,18 @@ for a typical zapping test.</p>
 </div>
 </td>
 </tr>
+<tr class="row-odd"><td><p><strong>multicast-traffic-autostart</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multicast traffic autostart.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
+</tr>
 <tr class="row-even"><td><p><strong>multicast-traffic-length</strong></p></td>
 <td><div class="line-block">
 <div class="line">Multicast traffic IP length.</div>
 <div class="line">Only applicable with <strong>send-multicast-traffic</strong> enabled!</div>
-<div class="line">Default: 76</div>
+<div class="line">Default: 0</div>
 </div>
 </td>
 </tr>

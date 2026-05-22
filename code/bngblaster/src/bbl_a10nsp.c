@@ -771,6 +771,7 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
 
     bbl_lag_s *lag;
     bbl_lag_member_s *member;
+    io_handle_s *io_new;
     uint8_t key;
 
     while(stream) {
@@ -784,10 +785,6 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                 LOG(DEBUG, "A10NSP (ID: %u) Change TX interface of stream %lu from %s to %s\n",
                     session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
 
-                stream->tx_a10nsp_interface = interface;
-                stream->io->update_streams = true;
-                stream->update_pps = true;
-
                 if(stream->lag) {
                     /* Remove stream from LAG interface */
                     lag = stream->tx_a10nsp_interface->interface->lag;
@@ -795,11 +792,11 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                     stream_prev = NULL;
                     while(stream_next) {
                         if(stream_next == stream) {
-                            lag->stream_count--;
+                            if(lag->stream_count) lag->stream_count--;
                             if(stream_prev) {
                                 stream_prev->lag_next = stream->lag_next;
                             } else {
-                                lag->stream_head = stream_next;
+                                lag->stream_head = stream->lag_next;
                             }
                             stream->lag = false;
                             stream->lag_next = NULL;
@@ -810,6 +807,7 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                         }
                     }
                 }
+                stream->tx_a10nsp_interface = interface;
 
                 /* Move stream */
                 if(interface->interface->type == LAG_INTERFACE) {
@@ -819,16 +817,31 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                     lag->stream_head = stream;
                     lag->stream_count++;
                     if(lag->active_count) {
-                        key = stream->flow_id % lag->active_count;
+                        key = rand() % lag->active_count;
                         member = lag->active_list[key];
                     } else {
                         member = CIRCLEQ_FIRST(&lag->lag_member_qhead);
                     }
-                    stream->io = member->interface->io.tx;
-                    stream->tx_interface = member->interface;
+                    io_new = member->interface->io.tx;
+                    stream->tx_interface = lag->interface;
                 } else {
-                    stream->io = interface->interface->io.tx;
+                    io_new = interface->interface->io.tx;
                     stream->tx_interface = interface->interface;
+                }
+
+                if(io_new && stream->io && io_new != stream->io) {
+                    /* IO changed. */
+                    stream->io->update_streams = true;
+                    stream->io = io_new;
+                    stream->update_pps = true;
+                } else if(stream->io) {
+                    /* IO unchanged. */
+                    stream->update_pps = true;
+                    stream->io->update_streams = true;
+                } else if(io_new) {
+                    /* IO was not assigned before. */
+                    stream->io = io_new;
+                    io_stream_add(io_new, stream);
                 }
             }
         }

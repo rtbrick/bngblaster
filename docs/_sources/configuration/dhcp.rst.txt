@@ -27,6 +27,7 @@
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **vlan-priority**                 | | VLAN PBIT for all DHCP control traffic.                            |
+|                                   | | Overrides IPoE vlan-priority for DHCP packets only.                |
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **access-line**                   | | Add access-line attributes like Agent-Remote/Circuit-Id.           |

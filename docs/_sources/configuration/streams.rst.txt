@@ -18,15 +18,32 @@
 | **autostart**                  | | Enable stream autostart.                                       |
 |                                | | Default: true                                                  |
 +--------------------------------+------------------------------------------------------------------+
+| **count**                      | | Increment the source port for each instance of this stream.    |
+|                                | | Default: 1 Range: 1 - 65535                                    |
++--------------------------------+------------------------------------------------------------------+
 | **source-port**                | | Overwrite the default source port.                             |
 |                                | | For bidirectional streams (direction `both`), this is applied  |
 |                                | | as source port in upstream and destination port in downstream. |
 |                                | | Default: 65056 Range: 0 - 65535                                |
 +--------------------------------+------------------------------------------------------------------+
+| **source-port-step**           | | Increment the source port for each instance of this stream.    |
+|                                | | See chapter Stream Iterators for details.                      |
+|                                | | Default: 0 Range: 0 - 65535                                    |
++--------------------------------+------------------------------------------------------------------+
+| **source-port-max**            | | Max source port before reset to `destination-port`.            |
+|                                | | Default: 65535 Range: 0 - 65535                                |
++--------------------------------+------------------------------------------------------------------+
 | **destination-port**           | | Overwrite the default destination port.                        |
 |                                | | For bidirectional streams (direction `both`), this is applied  |
 |                                | | as destination port in upstream and source port in downstream. |
 |                                | | Default: 65056 Range: 0 - 65535                                |
++--------------------------------+------------------------------------------------------------------+
+| **destination-port-step**      | | Increment the destination port for each instance of this       |
+|                                | | stream. See chapter Stream Iterators for details.              |
+|                                | | Default: 0 Range: 0 - 65535                                    |
++--------------------------------+------------------------------------------------------------------+
+| **destination-port-max**.      | | Max destination port before reset to `destination-port`.       |
+|                                | | Default: 65535 Range: 0 - 65535                                |
 +--------------------------------+------------------------------------------------------------------+
 | **ipv4-df**                    | | Set IPv4 DF bit.                                               |
 |                                | | Default: true                                                  |

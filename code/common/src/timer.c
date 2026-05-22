@@ -423,6 +423,7 @@ timer_add(timer_root_s *root, timer_s **ptimer, char *name,
 
     /* This timer already is enqueued. Requeue. */
     if(timer) {
+        timer->delete = false; /* Stop a pending deferred deletion */
         clock_gettime(CLOCK_MONOTONIC, &timer->expire);
         timer_requeue(timer, sec, nsec);
         /* Update data and cb if there was a change.

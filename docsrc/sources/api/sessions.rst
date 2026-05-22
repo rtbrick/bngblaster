@@ -56,3 +56,11 @@
 |                                   | | ``agent-circuit-id`` update agent-circuit-id                       |
 |                                   | | ``ipv6-link-local`` update IPv6 link-local address                 |
 +-----------------------------------+----------------------------------------------------------------------+
+| **session-summary**               | | Display session summary information.                               |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``session-id``                                                     |
+|                                   | | ``session-group-id`` (ignored if session-id is present)            |
+|                                   | | ``session-id-min`` session range                                   |
+|                                   | | ``session-id-max``                                                 |
++-----------------------------------+----------------------------------------------------------------------+
