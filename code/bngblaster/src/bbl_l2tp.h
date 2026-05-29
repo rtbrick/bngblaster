@@ -319,4 +319,7 @@ bbl_l2tp_ctrl_session_terminate(int fd, uint32_t session_id, json_t *arguments);
 int
 bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
 
+int
+bbl_l2tp_ctrl_lcp_restart(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
+
 #endif

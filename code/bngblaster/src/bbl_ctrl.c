@@ -336,6 +336,7 @@ static const struct action actions[] = {
     {"l2tp-csurq", bbl_l2tp_ctrl_csurq, schema_l2tp, false},
     {"l2tp-tunnel-terminate", bbl_l2tp_ctrl_tunnel_terminate, schema_l2tp, false},
     {"l2tp-session-terminate", bbl_l2tp_ctrl_session_terminate, schema_l2tp, false},
+    {"l2tp-lcp-restart", bbl_l2tp_ctrl_lcp_restart, schema_session_id, false},
     {"ipcp-open", bbl_session_ctrl_ipcp_open, schema_session_group_id, false},
     {"ipcp-close", bbl_session_ctrl_ipcp_close, schema_session_group_id, false},
     {"ip6cp-open", bbl_session_ctrl_ip6cp_open, schema_session_group_id, false},

@@ -1343,6 +1343,86 @@ bbl_access_lcp_echo(timer_s *timer)
 }
 
 static void
+bbl_access_lcp_restart(bbl_session_s *session)
+{
+    LOG(PPPOE, "LCP RESTART (ID: %u) PPP session reset to link phase\n", 
+        session->session_id);
+
+    /* Stop upper layer session timers */
+    timer_del(session->timer_auth);
+    timer_del(session->timer_lcp_echo);
+    timer_del(session->timer_ipcp);
+    timer_del(session->timer_ip6cp);
+
+    /* Reset reset upper layer session states */
+    session->lcp_state = BBL_PPP_PEER_ACK;
+    session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+    session->lcp_retries = 0;
+    session->auth_retries = 0;
+    session->auth_protocol = 0;
+    session->ipcp_retries = 0;
+    session->ipcp_request_dns1 = g_ctx->config.ipcp_request_dns1;
+    session->ipcp_request_dns2 = g_ctx->config.ipcp_request_dns2;
+    session->ip6cp_retries = 0;
+
+    session->mru = session->access_config->ppp_mru;
+    session->peer_mru = 0;
+    session->peer_magic_number = 0;
+
+    if (session->ipcp_state > BBL_PPP_DISABLED) {
+        session->ipcp_state = BBL_PPP_CLOSED;
+        session->ip_address = 0;
+        session->peer_ip_address = 0;
+        session->dns1 = 0;
+        session->dns2 = 0;
+        ENABLE_ENDPOINT(session->endpoint.ipv4);
+        bbl_stream_reset(session->session_traffic.ipv4_up);
+        bbl_stream_reset(session->session_traffic.ipv4_down);
+    }
+    
+    if (session->ip6cp_state > BBL_PPP_DISABLED) {
+        session->ip6cp_state = BBL_PPP_CLOSED;
+        session->ipv6_prefix.len = 0;
+        session->delegated_ipv6_prefix.len = 0;
+        session->icmpv6_ra_received = false;
+        memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+        memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
+        memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
+        if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
+            session->dhcpv6_state = BBL_DHCP_INIT;
+            if(session->dhcpv6_established) {
+                session->dhcpv6_established = false;
+                g_ctx->dhcpv6_established--;
+            }
+            if(session->dhcpv6_requested) {
+                session->dhcpv6_requested = false;
+                g_ctx->dhcpv6_requested--;
+            }
+            session->dhcpv6_ia_na_option_len = 0;
+            session->dhcpv6_ia_pd_option_len = 0;
+            memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
+            memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
+            memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
+        }
+        ENABLE_ENDPOINT(session->endpoint.ipv6);
+        ENABLE_ENDPOINT(session->endpoint.ipv6pd);
+        bbl_stream_reset(session->session_traffic.ipv6_up);
+        bbl_stream_reset(session->session_traffic.ipv6_down);
+        bbl_stream_reset(session->session_traffic.ipv6pd_up);
+        bbl_stream_reset(session->session_traffic.ipv6pd_down);
+    }
+
+    /* Session traffic */
+    if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic.flows_verified) {
+        g_ctx->stats.session_traffic_flows_verified -= session->session_traffic.flows_verified;
+    }
+    session->session_traffic.flows_verified = 0;
+
+    bbl_session_update_state(session, BBL_PPP_LINK);
+    session->send_requests = BBL_SEND_LCP_REQUEST;
+}
+
+static void
 bbl_access_lcp_opened(bbl_session_s *session)
 {
     session->lcp_state = BBL_PPP_OPENED;
@@ -1445,6 +1525,13 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                 bbl_access_rx_lcp_conf_reject(session, lcp);
                 return;
             }
+            if(session->lcp_state == BBL_PPP_OPENED) {
+                /* LAC/LNS handoff case:
+                 * The peer starts a fresh LCP negotiation after an earlier
+                 * PPP phase already reached OPENED on the PPPoE side. */
+                bbl_access_lcp_restart(session);
+            }
+
             if(lcp->auth || session->access_config->authentication_protocol) {
                 /* Negotiate authentication protocol */
                 if(lcp->auth == PROTOCOL_CHAP && lcp->alg != PROTOCOL_CHAP_ALG_MD5) {

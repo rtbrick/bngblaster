@@ -1079,7 +1079,10 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                 l2tp_session->disconnect_direction = 1;
                 bbl_l2tp_send(l2tp_session->tunnel, l2tp_session, L2TP_MESSAGE_CDN);
                 bbl_l2tp_session_delete(l2tp_session);
-            } 
+            } else if(lcp_rx->code == PPP_CODE_CONF_REQUEST) {
+                lcp_rx->code = PPP_CODE_CONF_ACK;
+                bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
+            }
             break;
         case PROTOCOL_PAP:
             memset(&pap_tx, 0x0, sizeof(bbl_pap_s));
@@ -1709,4 +1712,37 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
         json_decref(tunnels);
     }
     return result;
+}
+
+int
+bbl_l2tp_ctrl_lcp_restart(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    bbl_session_s *session;
+    bbl_l2tp_session_s *l2tp_session;
+    bbl_lcp_s lcp = {0};
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(session_id);
+    if(session) {
+        l2tp_session = session->l2tp_session;
+        if(!l2tp_session) {
+            return bbl_ctrl_status(fd, "error", 400, "no L2TP session");
+        }
+        if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
+            return bbl_ctrl_status(fd, "warning", 400, "session not established");
+        }
+        lcp.code = PPP_CODE_CONF_REQUEST;
+        lcp.identifier = rand();
+        lcp.auth = PROTOCOL_PAP;
+        lcp.mru = PPPOE_DEFAULT_MRU;
+        lcp.magic = rand();
+        bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp);
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
 }
