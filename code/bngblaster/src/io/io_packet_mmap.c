@@ -426,7 +426,13 @@ io_packet_mmap_init(io_handle_s *io)
 void
 io_packet_mmap_set_max_stream_len()
 {
-    uint16_t len = getpagesize() - BBL_MAX_STREAM_OVERHEAD - (TPACKET2_HDRLEN - sizeof(struct sockaddr_ll));
+    uint16_t len;
+
+    if(g_ctx->config.jumbo_frames) {
+        len = IO_JUMBO_BLOCK_SIZE - BBL_MAX_STREAM_OVERHEAD - (TPACKET2_HDRLEN - sizeof(struct sockaddr_ll));
+    } else {
+        len = getpagesize() - BBL_MAX_STREAM_OVERHEAD - (TPACKET2_HDRLEN - sizeof(struct sockaddr_ll));
+    }
 
     if(len < g_ctx->config.io_max_stream_len) {
         LOG(DEBUG, "Set max allowed stream length to %u because of packet_mmap limitations\n", len);

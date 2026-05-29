@@ -155,6 +155,7 @@ typedef struct bbl_ctx_
 
         bool qdisc_bypass;
         bool a10nsp_dynamic;
+        bool jumbo_frames;
 
         uint64_t tx_interval; /* TX interval in nsec */
         uint64_t rx_interval; /* RX interval in nsec */

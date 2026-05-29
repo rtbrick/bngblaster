@@ -9,7 +9,7 @@
 #ifndef __BBL_IO_DEF_H__
 #define __BBL_IO_DEF_H__
 
-#define IO_TOKENS_PER_PACKET 1000
+#define IO_JUMBO_BLOCK_SIZE 12288
 
 typedef struct io_handle_ io_handle_s;
 typedef struct io_thread_ io_thread_s;

@@ -4160,7 +4160,7 @@ json_parse_config(json_t *root)
     if(json_is_object(section)) {
 
         const char *schema[] = {
-            "io-mode", "io-slots", "io-burst", "qdisc-bypass",
+            "io-mode", "io-slots", "io-burst", "qdisc-bypass", "jumbo-frames",
             "tx-interval", "rx-interval", "tx-threads", "tun-name",
             "rx-threads", "capture-include-streams", "mac-modifier",
             "lag", "network", "access", "a10nsp", "links", "a10nsp-dynamic"
@@ -4169,7 +4169,10 @@ json_parse_config(json_t *root)
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
-        
+        JSON_OBJ_GET_BOOL(section, value, "interfaces", "jumbo-frames");
+        if(value) {
+            g_ctx->config.jumbo_frames = json_boolean_value(value);
+        }
         if(json_unpack(section, "{s:s}", "io-mode", &s) == 0) {
             if(strcmp(s, "packet_mmap_raw") == 0) {
                 g_ctx->config.io_mode = IO_MODE_PACKET_MMAP_RAW;
