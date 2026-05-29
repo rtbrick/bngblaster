@@ -8,9 +8,7 @@
  */
 #include "io.h"
 
-#define BBL_CPU_ID_MAX 4096
-
-static bool g_io_cpu_reserved[BBL_CPU_ID_MAX];
+static bool g_io_cpu_reserved[CPU_SETSIZE];
 
 /** 
  * This function redirects the packet in the
@@ -254,7 +252,7 @@ io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io)
     start = *cursor % interface->local_cpuset_count;
     for(index = 0; index < interface->local_cpuset_count; index++) {
         cpu = interface->local_cpuset[(start + index) % interface->local_cpuset_count];
-        if(cpu < BBL_CPU_ID_MAX && !g_io_cpu_reserved[cpu]) {
+        if(cpu < CPU_SETSIZE && !g_io_cpu_reserved[cpu]) {
             CPU_SET(cpu, &thread->cpuset);
             thread->selected_cpu = cpu;
             g_io_cpu_reserved[cpu] = true;
@@ -333,7 +331,14 @@ io_thread_init(io_handle_s *io)
         thread->set_cpu_affinity = true;
         CPU_ZERO(&thread->cpuset);
         thread->selected_cpu = config->rx_cpuset[config->rx_cpuset_cur++];
-        CPU_SET(thread->selected_cpu, &thread->cpuset);
+        
+        if(thread->selected_cpu < CPU_SETSIZE) {
+            CPU_SET(thread->selected_cpu, &thread->cpuset);
+        }
+        if(thread->selected_cpu < CPU_SETSIZE) {
+            g_io_cpu_reserved[thread->selected_cpu] = true;
+        }
+
         if(config->rx_cpuset_cur >= config->rx_cpuset_count) {
             config->rx_cpuset_cur = 0;
         }
@@ -342,7 +347,14 @@ io_thread_init(io_handle_s *io)
         thread->set_cpu_affinity = true;
         CPU_ZERO(&thread->cpuset);
         thread->selected_cpu = config->tx_cpuset[config->tx_cpuset_cur++];
-        CPU_SET(thread->selected_cpu, &thread->cpuset);
+        
+        if(thread->selected_cpu < CPU_SETSIZE) {
+            CPU_SET(thread->selected_cpu, &thread->cpuset);
+        }
+        if(thread->selected_cpu < CPU_SETSIZE) {
+            g_io_cpu_reserved[thread->selected_cpu] = true;
+        }
+
         if(config->tx_cpuset_cur >= config->tx_cpuset_count) {
             config->tx_cpuset_cur = 0;
         }

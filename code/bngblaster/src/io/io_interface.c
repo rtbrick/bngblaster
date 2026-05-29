@@ -9,8 +9,6 @@
 #include "io.h"
 #include "ifaddrs.h"
 
-#define BBL_CPU_ID_MAX 4096
-
 static bool
 read_first_line(const char *path, char *buf, size_t len)
 {
@@ -57,7 +55,7 @@ parse_cpuset(char *input, uint16_t **cpuset, uint16_t *count)
 
     max_cpu = sysconf(_SC_NPROCESSORS_CONF);
     if(max_cpu <= 0) {
-        max_cpu = 1024;
+        max_cpu = CPU_SETSIZE;
     }
 
     buf = strdup(input);
@@ -131,14 +129,14 @@ append_cpu(uint16_t *cpuset, uint16_t *count, uint16_t max, uint16_t cpu)
 static void
 order_cpuset_physical_first(uint16_t **cpuset, uint16_t count)
 {
-    uint16_t *ordered;
+    uint16_t *ordered = NULL;;
     uint16_t ordered_count = 0;
     uint16_t i;
     uint16_t j;
     int package_id;
     int core_id;
-    int seen_package[BBL_CPU_ID_MAX];
-    int seen_core[BBL_CPU_ID_MAX];
+    int *seen_package = NULL;
+    int *seen_core = NULL;
     uint16_t seen_count = 0;
     bool sibling_added;
 
@@ -147,7 +145,12 @@ order_cpuset_physical_first(uint16_t **cpuset, uint16_t count)
     }
 
     ordered = calloc(count, sizeof(uint16_t));
-    if(!ordered) {
+    seen_package = calloc(CPU_SETSIZE, sizeof(int));
+    seen_core = calloc(CPU_SETSIZE, sizeof(int));
+    if(!ordered || !seen_package || !seen_core) {
+        free(ordered);
+        free(seen_package);
+        free(seen_core);
         return;
     }
 
@@ -165,7 +168,7 @@ order_cpuset_physical_first(uint16_t **cpuset, uint16_t count)
         }
         if(!sibling_added) {
             append_cpu(ordered, &ordered_count, count, (*cpuset)[i]);
-            if(seen_count < BBL_CPU_ID_MAX) {
+            if(seen_count < CPU_SETSIZE) {
                 seen_package[seen_count] = package_id;
                 seen_core[seen_count] = core_id;
                 seen_count++;
@@ -181,13 +184,15 @@ order_cpuset_physical_first(uint16_t **cpuset, uint16_t count)
         memcpy(*cpuset, ordered, count * sizeof(uint16_t));
     }
     free(ordered);
+    free(seen_package);
+    free(seen_core);
 }
 
 bool
 io_interface_init_topology(bbl_interface_s *interface, int numa_node_hint)
 {
     char path[256];
-    char buf[256];
+    char buf[4096];
     uint16_t *cpuset = NULL;
     uint16_t count = 0;
     int numa_node = -1;
