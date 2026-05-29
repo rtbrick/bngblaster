@@ -116,7 +116,7 @@ def main():
             for thread in interface["tx-threads"]:
                 print("  tx-thread id=%s cpu=%s source=%s queue=%s active=%s stopped=%s" % (
                     thread["id"], thread["selected-cpu"], thread["cpu-source"],
-                    thread.get("queue", "-"), thread["thread-active"], thread["thread-stopped"]))
+                    thread.get("queue", "N/A"), thread["thread-active"], thread["thread-stopped"]))
     else:
         print(json.dumps(data, indent=4))
 
