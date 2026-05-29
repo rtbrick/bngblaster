@@ -280,6 +280,7 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
 
         /* Validate DHCPv6 IA */
         if(!bbl_dhcpv6_validate_ia(session, dhcpv6)) {
+            bbl_dhcpv6_restart(session);
             return;
         }
 
