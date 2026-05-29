@@ -173,6 +173,7 @@ bbl_dhcpv6_validate_ia(bbl_session_s *session, bbl_dhcpv6_s *dhcpv6)
     switch (session->dhcpv6_state) {
         case BBL_DHCP_SELECTING:
         case BBL_DHCP_REQUESTING:
+        case BBL_DHCP_RENEWING:
             ia_na = true;
             ia_pd = true;
             break;
