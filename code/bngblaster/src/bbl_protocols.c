@@ -2750,6 +2750,7 @@ decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
 {
     uint16_t ia_option;
     uint16_t ia_option_len;
+    uint32_t valid_lifetime;
 
     if(len < 12) {
         return DECODE_ERROR;
@@ -2775,9 +2776,12 @@ decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
                 if(ia_option_len < 24) {
                     return DECODE_ERROR;
                 }
-                dhcpv6->ia_na_address = (ipv6addr_t*)(buf);
-                dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
-                dhcpv6->ia_na_valid_lifetime = be32toh(*(uint32_t*)(buf+20));
+                valid_lifetime = be32toh(*(uint32_t*)(buf+20));
+                if(valid_lifetime >= dhcpv6->ia_na_valid_lifetime) {
+                    dhcpv6->ia_na_address = (ipv6addr_t*)(buf);
+                    dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
+                    dhcpv6->ia_na_valid_lifetime = valid_lifetime;
+                }
                 break;
             case DHCPV6_OPTION_STATUS_CODE:
                 if(ia_option_len < 2) {
