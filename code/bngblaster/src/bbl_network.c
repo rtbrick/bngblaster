@@ -67,7 +67,7 @@ bbl_network_interfaces_add()
             LOG(ERROR, "Failed to add network interface %s (duplicate)\n", ifname);
             return false;
         }
-        if(interface->access && network_config->vlan == 0) {
+        if(interface->access && interface->access->access_type != ACCESS_TYPE_PPPOL2TP && network_config->vlan == 0) {
             LOG(ERROR, "Failed to add network interface %s (untagged not allowed on access interfaces)\n", ifname);
             return false;
         }

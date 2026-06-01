@@ -18,6 +18,7 @@
 #include "bbl_stream.h"
 #include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
+#include "bbl_l2tp.h"
 
 static unsigned int ctrl_job_period_ns = MSEC100;
 
@@ -239,6 +240,7 @@ bbl_ctrl_job(timer_s *timer)
     bbl_session_s *session;
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
 
     uint32_t i;
 
@@ -270,6 +272,7 @@ bbl_ctrl_job(timer_s *timer)
         g_init_phase = false;
         LOG_NOARG(INFO, "All network interfaces resolved\n");
         clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_resolved);
+
     }
 
     if(g_teardown) {
@@ -377,6 +380,14 @@ bbl_ctrl_job(timer_s *timer)
                                         session->send_requests |= BBL_SEND_ICMPV6_RS;
                                     }
                                 }
+                            }
+                            break;
+                        case ACCESS_TYPE_PPPOL2TP:
+                            /* PPP over L2TP (LAC) */
+                            session->session_state = BBL_L2TP_WAIT;
+                            l2tp_tunnel = bbl_l2tp_client_session_get_tunnel(session);
+                            if(l2tp_tunnel) {
+                                bbl_l2tp_client_session_connect(l2tp_tunnel, session);
                             }
                             break;
                     }

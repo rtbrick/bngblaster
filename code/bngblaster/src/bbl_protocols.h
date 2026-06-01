@@ -324,6 +324,7 @@ static const uint8_t all_dr_routers_mac[ETH_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x00,
 
 typedef enum protocol_error_ {
     PROTOCOL_SUCCESS = 0,
+    PROTOCOL_QUEUED,  /* packet enqueued internally; caller must not transmit write_buf */
     SEND_ERROR,
     DECODE_ERROR,
     ENCODE_ERROR,

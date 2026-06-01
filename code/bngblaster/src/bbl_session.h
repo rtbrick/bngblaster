@@ -34,6 +34,7 @@ typedef struct bbl_session_
     CIRCLEQ_ENTRY(bbl_session_) session_tx_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_network_tx_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_a10nsp_tx_qnode;
+    CIRCLEQ_ENTRY(bbl_session_) session_l2tp_qnode;
 
     bbl_access_config_s *access_config;
     bbl_access_interface_s *access_interface; /* where this session is attached to */

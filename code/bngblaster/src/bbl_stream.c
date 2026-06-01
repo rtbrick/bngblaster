@@ -854,6 +854,153 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     return true;
 }
 
+/* Build an upstream L2TP data stream packet (LAC -> LNS).
+ * Used for ACCESS_TYPE_PPPOL2TP sessions: the LAC is the sender,
+ * so the outer IP source is the LAC's network interface address and
+ * the inner PPP payload flows from the client toward the LNS. */
+static bool
+bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream)
+{
+    bbl_session_s *session = stream->session;
+    bbl_stream_config_s *config = stream->config;
+
+    bbl_l2tp_session_s *l2tp_session = session->l2tp_session;
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_network_interface_s *network_interface = l2tp_tunnel->interface;
+
+    uint16_t buf_len = 0;
+    uint16_t tx_len = 0;
+
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv4_s l2tp_ipv4 = {0};
+    bbl_udp_s l2tp_udp = {0};
+    bbl_l2tp_s l2tp = {0};
+    bbl_ipv4_s ipv4 = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_bbl_s bbl = {0};
+
+    eth.dst = network_interface->gateway_mac;
+    eth.src = network_interface->mac;
+    eth.vlan_outer = network_interface->vlan;
+    eth.vlan_inner = 0;
+    eth.type = ETH_TYPE_IPV4;
+    eth.next = &l2tp_ipv4;
+    l2tp_ipv4.src = network_interface->ip.address;
+    l2tp_ipv4.dst = l2tp_tunnel->peer_ip;
+    l2tp_ipv4.ttl = config->ttl;
+    l2tp_ipv4.tos = config->priority;
+    l2tp_ipv4.protocol = PROTOCOL_IPV4_UDP;
+    l2tp_ipv4.next = &l2tp_udp;
+    l2tp_udp.src = L2TP_UDP_PORT;
+    l2tp_udp.dst = L2TP_UDP_PORT;
+    l2tp_udp.protocol = UDP_PROTOCOL_L2TP;
+    l2tp_udp.next = &l2tp;
+    l2tp.type = L2TP_MESSAGE_DATA;
+    l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
+    l2tp.session_id = l2tp_session->peer_session_id;
+    l2tp.with_length = l2tp_tunnel->client->data_length;
+    l2tp.with_offset = l2tp_tunnel->client->data_offset;
+    udp.src = config->src_port;
+    udp.dst = config->dst_port;
+    udp.protocol = UDP_PROTOCOL_BBL;
+    udp.next = &bbl;
+    bbl.type = BBL_TYPE_UNICAST;
+    bbl.sub_type = stream->sub_type;
+    bbl.session_id = session->session_id;
+    bbl.ifindex = session->vlan_key.ifindex;
+    bbl.outer_vlan_id = session->vlan_key.outer_vlan_id;
+    bbl.inner_vlan_id = session->vlan_key.inner_vlan_id;
+    bbl.flow_id = stream->flow_id;
+    bbl.tos = config->priority;
+    bbl.direction = BBL_DIRECTION_UP;
+
+    switch(stream->sub_type) {
+        case BBL_SUB_TYPE_IPV4:
+            l2tp.protocol = PROTOCOL_IPV4;
+            l2tp.next = &ipv4;
+            if(stream->config->ipv4_access_src_address) {
+                ipv4.src = stream->config->ipv4_access_src_address;
+            } else {
+                ipv4.src = session->ip_address;
+            }
+            if(stream->config->ipv4_destination_address) {
+                ipv4.dst = stream->config->ipv4_destination_address;
+            } else if(stream->config->ipv4_network_address) {
+                ipv4.dst = stream->config->ipv4_network_address;
+            } else {
+                ipv4.dst = MOCK_IP_LOCAL;
+            }
+            if(config->ipv4_df) {
+                ipv4.offset = IPV4_DF;
+            }
+            ipv4.ttl = config->ttl;
+            ipv4.tos = config->priority;
+            if(stream->tcp) {
+                ipv4.protocol = PROTOCOL_IPV4_TCP;
+            } else {
+                ipv4.protocol = PROTOCOL_IPV4_UDP;
+            }
+            ipv4.next = &udp;
+            if(config->length > 76) {
+                bbl.padding = config->length - 76;
+            }
+            stream->ipv4_src = ipv4.src;
+            stream->ipv4_dst = ipv4.dst;
+            break;
+        case BBL_SUB_TYPE_IPV6:
+        case BBL_SUB_TYPE_IPV6PD:
+            l2tp.protocol = PROTOCOL_IPV6;
+            l2tp.next = &ipv6;
+            if(*(uint64_t*)stream->config->ipv6_access_src_address) {
+                ipv6.src = stream->config->ipv6_access_src_address;
+            } else if(stream->sub_type == BBL_SUB_TYPE_IPV6) {
+                ipv6.src = session->ipv6_address;
+            } else {
+                ipv6.src = session->delegated_ipv6_address;
+            }
+            if(*(uint64_t*)stream->config->ipv6_destination_address) {
+                ipv6.dst = stream->config->ipv6_destination_address;
+            } else if(*(uint64_t*)stream->config->ipv6_network_address) {
+                ipv6.dst = stream->config->ipv6_network_address;
+            } else {
+                ipv6.dst = (void*)mock_ipv6_local;
+            }
+            ipv6.ttl = config->ttl;
+            ipv6.tos = config->priority;
+            if(stream->tcp) {
+                ipv6.protocol = IPV6_NEXT_HEADER_TCP;
+            } else {
+                ipv6.protocol = IPV6_NEXT_HEADER_UDP;
+            }
+            ipv6.next = &udp;
+            if(config->length > 96) {
+                bbl.padding = config->length - 96;
+            }
+            stream->ipv6_src = ipv6.src;
+            stream->ipv6_dst = ipv6.dst;
+            break;
+        default:
+            return false;
+    }
+
+    buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
+    if(buf_len < 256) buf_len = 256;
+    stream->tx_buf = malloc(buf_len);
+    stream->tx_bbl_hdr_len = bbl.padding+BBL_HEADER_LEN;
+    if(encode_ethernet(stream->tx_buf, &tx_len, &eth) != PROTOCOL_SUCCESS) {
+        free(stream->tx_buf);
+        stream->tx_buf = NULL;
+        return false;
+    }
+    stream->tx_len = tx_len;
+    return true;
+}
+
+/* Build a downstream L2TP data stream packet (LNS -> LAC -> client).
+ * Used for ACCESS_TYPE_PPPOE sessions that are tunnelled via an LNS:
+ * the LNS is the sender, so the outer IP source is the LNS server address
+ * and the inner PPP payload flows from the LNS toward the client. */
 static bool
 bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
 {
@@ -1028,6 +1175,10 @@ bbl_stream_build_packet(bbl_stream_s *stream)
                 } else {
                     return bbl_stream_build_network_packet(stream);
                 }
+            }
+        } else if(stream->session->access_type == ACCESS_TYPE_PPPOL2TP) {
+            if(stream->session->l2tp_session && stream->direction == BBL_DIRECTION_UP) {
+                return bbl_stream_build_pppol2tp_packet(stream);
             }
         }
     }
@@ -1805,16 +1956,18 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
 
     if(config->direction & BBL_DIRECTION_UP) {
         if(config->type == BBL_SUB_TYPE_IPV4) {
-            if(!((network_interface && network_interface->ip.address) ||
-                 config->ipv4_destination_address || 
+            if(!(session->access_config->access_type == ACCESS_TYPE_PPPOL2TP ||
+                 (network_interface && network_interface->ip.address) ||
+                 config->ipv4_destination_address ||
                  config->ipv4_network_address ||
                  a10nsp_interface)) {
                 LOG(ERROR, "Failed to add stream %s (upstream) because of missing IPv4 destination address\n", config->name);
                 return false;
             }
         } else {
-            if(!((network_interface && *(uint64_t*)network_interface->ip6.address) ||
-                 *(uint64_t*)config->ipv6_destination_address || 
+            if(!(session->access_config->access_type == ACCESS_TYPE_PPPOL2TP ||
+                 (network_interface && *(uint64_t*)network_interface->ip6.address) ||
+                 *(uint64_t*)config->ipv6_destination_address ||
                  *(uint64_t*)config->ipv6_network_address ||
                  a10nsp_interface)) {
                 LOG(ERROR, "Failed to add stream %s (upstream) because of missing IPv6 destination address\n", config->name);
@@ -1851,8 +2004,14 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         if(stream_up->config->raw_tcp) {
             stream_up->tcp = true;
         }
-        stream_up->tx_access_interface = access_interface;
-        stream_up->tx_interface = access_interface->interface;
+        if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
+            /* PPPoL2TP upstream goes through the L2TP tunnel's network interface */
+            stream_up->tx_network_interface = network_interface;
+            stream_up->tx_interface = network_interface->interface;
+        } else {
+            stream_up->tx_access_interface = access_interface;
+            stream_up->tx_interface = access_interface->interface;
+        }
         if(session->streams.tail) {
             session->streams.tail->session_next = stream_up;
         } else {
