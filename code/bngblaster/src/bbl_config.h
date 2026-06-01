@@ -209,6 +209,8 @@ typedef struct bbl_link_config_
 
     uint8_t tx_threads;
     uint8_t rx_threads;
+    bool tx_auto_cpuset;
+    bool rx_auto_cpuset;
 
     uint16_t *tx_cpuset;
     uint16_t  tx_cpuset_count;

@@ -39,6 +39,9 @@ const char *schema_interface[] = {
 const char *schema_session_id[] = {
     "session-id", NULL
 };
+const char *schema_session_id_debug[] = {
+    "session-id", "debug", NULL
+};
 const char *schema_session_group_id[] = {
     "session-id", "session-group-id", NULL
 };
@@ -306,13 +309,14 @@ static const struct action actions[] = {
     {"session-traffic", bbl_session_ctrl_traffic_stats, schema_no_args, true},
     {"session-traffic-reset", bbl_session_ctrl_traffic_reset, schema_session_group_id, false},
     {"interfaces", bbl_interface_ctrl, schema_no_args, true},
+    {"interface-topology", bbl_interface_ctrl_topology, schema_interface, true},
     {"access-interfaces", bbl_access_ctrl_interfaces, schema_no_args, true},
     {"network-interfaces", bbl_network_ctrl_interfaces, schema_no_args, true},
     {"a10nsp-interfaces", bbl_a10nsp_ctrl_interfaces, schema_no_args, true},
     {"interface-enable", bbl_interface_ctrl_enable, schema_interface, false},
     {"interface-disable", bbl_interface_ctrl_disable, schema_interface, false},
     {"sessions-pending", bbl_session_ctrl_pending, schema_no_args, true},
-    {"session-info", bbl_session_ctrl_info, schema_session_id, true},
+    {"session-info", bbl_session_ctrl_info, schema_session_id_debug, true},
     {"session-counters", bbl_session_ctrl_counters, schema_no_args, true},
     {"session-start", bbl_session_ctrl_start, schema_session_group_id, false},
     {"session-stop", bbl_session_ctrl_stop, schema_session_group_id, false},
@@ -333,6 +337,7 @@ static const struct action actions[] = {
     {"l2tp-csurq", bbl_l2tp_ctrl_csurq, schema_l2tp, false},
     {"l2tp-tunnel-terminate", bbl_l2tp_ctrl_tunnel_terminate, schema_l2tp, false},
     {"l2tp-session-terminate", bbl_l2tp_ctrl_session_terminate, schema_l2tp, false},
+    {"l2tp-lcp-restart", bbl_l2tp_ctrl_lcp_restart, schema_session_id, false},
     {"ipcp-open", bbl_session_ctrl_ipcp_open, schema_session_group_id, false},
     {"ipcp-close", bbl_session_ctrl_ipcp_close, schema_session_group_id, false},
     {"ip6cp-open", bbl_session_ctrl_ip6cp_open, schema_session_group_id, false},

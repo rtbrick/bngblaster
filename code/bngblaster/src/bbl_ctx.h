@@ -156,12 +156,15 @@ typedef struct bbl_ctx_
 
         bool qdisc_bypass;
         bool a10nsp_dynamic;
+        bool jumbo_frames;
 
         uint64_t tx_interval; /* TX interval in nsec */
         uint64_t rx_interval; /* RX interval in nsec */
 
         uint8_t tx_threads;
         uint8_t rx_threads;
+        bool tx_auto_cpuset;
+        bool rx_auto_cpuset;
 
         char *tun_name;
         char *json_report_filename;

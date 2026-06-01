@@ -2296,3 +2296,36 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
     }
     return result;
 }
+
+int
+bbl_l2tp_ctrl_lcp_restart(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
+{
+    bbl_session_s *session;
+    bbl_l2tp_session_s *l2tp_session;
+    bbl_lcp_s lcp = {0};
+
+    if(session_id == 0) {
+        /* session-id is mandatory */
+        return bbl_ctrl_status(fd, "error", 400, "missing session-id");
+    }
+
+    session = bbl_session_get(session_id);
+    if(session) {
+        l2tp_session = session->l2tp_session;
+        if(!l2tp_session) {
+            return bbl_ctrl_status(fd, "error", 400, "no L2TP session");
+        }
+        if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
+            return bbl_ctrl_status(fd, "warning", 400, "session not established");
+        }
+        lcp.code = PPP_CODE_CONF_REQUEST;
+        lcp.identifier = rand();
+        lcp.auth = PROTOCOL_PAP;
+        lcp.mru = PPPOE_DEFAULT_MRU;
+        lcp.magic = rand();
+        bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp);
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    } else {
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
+    }
+}

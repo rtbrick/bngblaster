@@ -1250,7 +1250,7 @@ bbl_session_substate_ipoe(bbl_session_s *session)
 }
 
 json_t *
-bbl_session_json(bbl_session_s *session)
+bbl_session_json(bbl_session_s *session, bool debug)
 {
     json_t *root = NULL;
     json_t *session_traffic = NULL;
@@ -1402,9 +1402,10 @@ bbl_session_json(bbl_session_s *session)
     }
 
     if(session->access_type == ACCESS_TYPE_PPPOE) {
-        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si so* so* so*}",
+        root = json_pack("{ss si si ss ss* si si ss si si ss ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si so* so* so*}",
             "type", "pppoe",
             "session-id", session->session_id,
+            "pppoe-session-id", session->pppoe_session_id,
             "session-state", session_state_string(session->session_state),
             "session-substate", bbl_session_substate_pppoe(session),
             "session-version", session->version,
@@ -1413,6 +1414,7 @@ bbl_session_json(bbl_session_s *session)
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
             "mac", format_mac_address(session->client_mac),
+            "server-mac", format_mac_address(session->server_mac),
             "username", session->username,
             "agent-circuit-id", session->agent_circuit_id,
             "agent-remote-id", session->agent_remote_id,
@@ -1467,7 +1469,7 @@ bbl_session_json(bbl_session_s *session)
         if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
         if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
 
-        root = json_pack("{ss si ss ss* si si ss si si ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
+        root = json_pack("{ss si ss ss* si si ss si si ss ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
@@ -1478,6 +1480,7 @@ bbl_session_json(bbl_session_s *session)
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
             "mac", format_mac_address(session->client_mac),
+            "server-mac", format_mac_address(session->server_mac),
             "agent-circuit-id", session->agent_circuit_id,
             "agent-remote-id", session->agent_remote_id,
             "ipv4-address", ipv4,
@@ -1543,6 +1546,22 @@ bbl_session_json(bbl_session_s *session)
     if(!root) {
         if(a10nsp_session) json_decref(a10nsp_session);
         if(session_traffic) json_decref(session_traffic);
+    } else if (debug) {
+        /* Add debug informations. */
+        json_object_set_new(root, "debug-idle-queue", json_boolean(CIRCLEQ_PREV(session, session_idle_qnode)));
+        json_object_set_new(root, "debug-teardown-queue", json_boolean(CIRCLEQ_PREV(session, session_teardown_qnode)));
+        json_object_set_new(root, "debug-tx-access-queue", json_boolean(CIRCLEQ_PREV(session, session_tx_qnode)));
+        json_object_set_new(root, "debug-tx-network-queue", json_boolean(CIRCLEQ_PREV(session, session_network_tx_qnode)));
+        json_object_set_new(root, "debug-tx-a10nsp-queue", json_boolean(CIRCLEQ_PREV(session, session_a10nsp_tx_qnode)));
+        if(!session->reconnect_disabled && 
+            ((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
+            (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect))) {
+            json_object_set_new(root, "debug-reconnect", json_boolean(true));
+        } else {
+            json_object_set_new(root, "debug-reconnect", json_boolean(false));
+        }
+        json_object_set_new(root, "debug-reconnect-disabled", json_boolean(session->reconnect_disabled));
+        json_object_set_new(root, "debug-reconnect-delay", json_integer(session->reconnect_delay));
     }
     return root;
 }
@@ -1686,6 +1705,8 @@ int
 bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)))
 {
     int result = 0;
+    int debug = 0;
+
     json_t *root;
     json_t *session_json;
     bbl_session_s *session;
@@ -1694,10 +1715,12 @@ bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute
         /* session-id is mandatory */
         return bbl_ctrl_status(fd, "error", 400, "missing session-id");
     }
+    /* Unpack further arguments */
+    json_unpack(arguments, "{s:b}", "debug", &debug);
 
     session = bbl_session_get(session_id);
     if(session) {
-        session_json = bbl_session_json(session);
+        session_json = bbl_session_json(session, debug);
         if(!session_json) {
             return bbl_ctrl_status(fd, "error", 500, "internal error");
         }

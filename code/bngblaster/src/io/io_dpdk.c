@@ -566,6 +566,15 @@ io_dpdk_interface_init(bbl_interface_s *interface)
         return false;
     }
 
+    if((config->rx_auto_cpuset && !config->rx_cpuset_count) ||
+       (config->tx_auto_cpuset && !config->tx_cpuset_count)) {
+        if(!io_interface_init_topology(interface, rte_eth_dev_socket_id(port_id))) {
+            LOG(ERROR, "DPDK: failed to discover local CPU topology for interface %s (%u)\n",
+                interface->name, port_id);
+            return false;
+        }
+    }
+
     /* Get MAC address */
     if(*(uint32_t*)config->mac) {
         memcpy(interface->mac, config->mac, ETH_ADDR_LEN);

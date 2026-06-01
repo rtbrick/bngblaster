@@ -337,6 +337,9 @@ void
 bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, l2tp_message_t l2tp_type);
 
 void
+bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next);
+
+void
 bbl_l2tp_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp);
 
 void 
@@ -367,9 +370,9 @@ bbl_l2tp_tunnel_s *
 bbl_l2tp_client_session_get_tunnel(bbl_session_s *session);
 
 void
-bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next);
-
-void
 bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *session);
+
+int
+bbl_l2tp_ctrl_lcp_restart(int fd, uint32_t session_id, json_t *arguments __attribute__((unused)));
 
 #endif

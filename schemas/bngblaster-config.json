@@ -66,6 +66,16 @@
                     "minimum": 0,
                     "maximum": 255
                 },
+                "tx-auto-cpuset": {
+                    "type": "boolean",
+                    "description": "Automatically pin TX threads to CPUs local to the interface",
+                    "default": false
+                },
+                "rx-auto-cpuset": {
+                    "type": "boolean",
+                    "description": "Automatically pin RX threads to CPUs local to the interface",
+                    "default": false
+                },
                 "capture-include-streams": {
                     "type": "boolean",
                     "description": "Include traffic streams in the capture",
@@ -2246,6 +2256,11 @@
                     "uniqueItems": true,
                     "minItems": 1
                 },
+                "tx-auto-cpuset": {
+                    "type": "boolean",
+                    "description": "Automatically pin TX threads to CPUs local to this interface",
+                    "default": false
+                },
                 "rx-cpuset": {
                     "type": "array",
                     "description": "Pin RX threads to CPU cores (cpuset)",
@@ -2256,6 +2271,11 @@
                     },
                     "uniqueItems": true,
                     "minItems": 1
+                },
+                "rx-auto-cpuset": {
+                    "type": "boolean",
+                    "description": "Automatically pin RX threads to CPUs local to this interface",
+                    "default": false
                 },
                 "io-mode": {
                     "type": "string",

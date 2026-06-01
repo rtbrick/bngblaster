@@ -78,7 +78,12 @@ set_ring(io_handle_s *io, int slots)
     } else {
         flag = PACKET_TX_RING;
     }
-    io->req.tp_block_size = getpagesize(); /* 4096 */
+    if(g_ctx->config.jumbo_frames) {
+        io->req.tp_block_size = IO_JUMBO_BLOCK_SIZE;
+    } else {
+        io->req.tp_block_size = getpagesize(); /* 4096 */
+    }
+
     io->req.tp_frame_size = io->req.tp_block_size;
     io->req.tp_block_nr = slots;
     io->req.tp_frame_nr = slots;
