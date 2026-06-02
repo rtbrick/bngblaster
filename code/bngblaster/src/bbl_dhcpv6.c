@@ -57,10 +57,14 @@ bbl_dhcpv6_stop(bbl_session_s *session)
     timer_del(session->timer_dhcpv6_t2);
     session->version++;
     session->dhcpv6_state = BBL_DHCP_INIT;
-    session->dhcpv6_ia_na_option_len = 0;
-    session->dhcpv6_ia_pd_option_len = 0;
-    session->dhcpv6_t1 = 0;
-    session->dhcpv6_t2 = 0;
+    session->dhcpv6_ia_na_t1 = 0;
+    session->dhcpv6_ia_na_t2 = 0;
+    session->dhcpv6_ia_na_preferred_lifetime = 0;
+    session->dhcpv6_ia_na_valid_lifetime = 0;
+    session->dhcpv6_ia_pd_t1 = 0;
+    session->dhcpv6_ia_pd_t2 = 0;
+    session->dhcpv6_ia_pd_preferred_lifetime = 0;
+    session->dhcpv6_ia_pd_valid_lifetime = 0;
     memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
     memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
     memset(session->dhcpv6_server_duid, 0x0, DHCPV6_BUFFER);
@@ -229,6 +233,8 @@ void
 bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *dhcpv6)
 {
     bbl_access_interface_s *interface = session->access_interface;
+    uint32_t t1 = 0;
+    uint32_t t2 = 0;
 
     /* Ignore packets received in wrong state */
     if(session->dhcpv6_state <= BBL_DHCP_INIT) {
@@ -256,14 +262,6 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
     if(dhcpv6->server_duid_len && dhcpv6->server_duid_len < DHCPV6_BUFFER) {
         memcpy(session->dhcpv6_server_duid, dhcpv6->server_duid, dhcpv6->server_duid_len);
         session->dhcpv6_server_duid_len = dhcpv6->server_duid_len;
-    }
-    if(dhcpv6->ia_na_address && dhcpv6->ia_na_option_len && dhcpv6->ia_na_option_len < DHCPV6_BUFFER) {
-        memcpy(session->dhcpv6_ia_na_option, dhcpv6->ia_na_option, dhcpv6->ia_na_option_len);
-        session->dhcpv6_ia_na_option_len = dhcpv6->ia_na_option_len;
-    }
-    if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len && dhcpv6->ia_pd_option_len && dhcpv6->ia_pd_option_len < DHCPV6_BUFFER) {
-        memcpy(session->dhcpv6_ia_pd_option, dhcpv6->ia_pd_option, dhcpv6->ia_pd_option_len);
-        session->dhcpv6_ia_pd_option_len = dhcpv6->ia_pd_option_len;
     }
 
     if(dhcpv6->type == DHCPV6_MESSAGE_REPLY) {
@@ -299,11 +297,15 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                 memcpy(&session->dhcpv6_dns2, dhcpv6->dns2, IPV6_ADDR_LEN);
             }
         }
-        if(session->access_type == ACCESS_TYPE_IPOE && dhcpv6->ia_na_address) {
+        if(session->access_type == ACCESS_TYPE_IPOE && dhcpv6->ia_na_address && dhcpv6->ia_na_valid_lifetime) {
             /* IA_NA */
-            if(dhcpv6->ia_na_valid_lifetime) session->dhcpv6_lease_time = dhcpv6->ia_na_valid_lifetime;
-            if(dhcpv6->ia_na_t1) session->dhcpv6_t1 = dhcpv6->ia_na_t1;
-            if(dhcpv6->ia_na_t2) session->dhcpv6_t2 = dhcpv6->ia_na_t2;
+            t1 = dhcpv6->ia_na_t1;
+            t2 = dhcpv6->ia_na_t2;
+            session->dhcpv6_ia_na_t1 = t1;
+            session->dhcpv6_ia_na_t2 = t2;
+            session->dhcpv6_ia_na_preferred_lifetime = dhcpv6->ia_na_preferred_lifetime;
+            session->dhcpv6_ia_na_valid_lifetime = dhcpv6->ia_na_valid_lifetime;
+            session->dhcpv6_lease_time = dhcpv6->ia_na_valid_lifetime;
             if(memcmp(&session->ipv6_address, dhcpv6->ia_na_address, sizeof(ipv6addr_t)) != 0) {
                 memcpy(&session->ipv6_address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
                 memcpy(&session->ipv6_prefix.address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
@@ -313,11 +315,17 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                     format_ipv6_address(&session->ipv6_address));
             }
         }
-        if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len) {
+        if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len && dhcpv6->ia_pd_valid_lifetime) {
             /* IA_PD */
-            if(dhcpv6->ia_pd_valid_lifetime) session->dhcpv6_lease_time = dhcpv6->ia_pd_valid_lifetime;
-            if(dhcpv6->ia_pd_t1) session->dhcpv6_t1 = dhcpv6->ia_pd_t1;
-            if(dhcpv6->ia_pd_t2) session->dhcpv6_t2 = dhcpv6->ia_pd_t2;
+            if(!t1) t1 = dhcpv6->ia_pd_t1;
+            if(!t2) t1 = dhcpv6->ia_pd_t2;
+            session->dhcpv6_ia_pd_t1 = dhcpv6->ia_pd_t1;
+            session->dhcpv6_ia_pd_t2 = dhcpv6->ia_pd_t2;
+            session->dhcpv6_ia_pd_preferred_lifetime = dhcpv6->ia_pd_preferred_lifetime;
+            session->dhcpv6_ia_pd_valid_lifetime = dhcpv6->ia_pd_valid_lifetime;
+            if(!session->dhcpv6_lease_time) {
+                session->dhcpv6_lease_time = dhcpv6->ia_pd_valid_lifetime;
+            }
             if(memcmp(&session->delegated_ipv6_prefix, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix)) != 0) {
                 memcpy(&session->delegated_ipv6_prefix, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix));
                 *(uint64_t*)&session->delegated_ipv6_address[0] = *(uint64_t*)session->delegated_ipv6_prefix.address;
@@ -342,14 +350,13 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
             session->dhcpv6_state = BBL_DHCP_BOUND;
         }
 
-        if(session->dhcpv6_t1) {
-            timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t1, "DHCPv6 T1", 
-                      session->dhcpv6_t1, 0, session, &bbl_dhcpv6_s1);
-        }
-        if(session->dhcpv6_t2) {
-            timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t2, "DHCPv6 T2", 
-                      session->dhcpv6_t2, 0, session, &bbl_dhcpv6_s2);
-        }
+        if(!t1) t1 = 180;
+        timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t1, "DHCPv6 T1", 
+                  t1, 0, session, &bbl_dhcpv6_s1);
+        if(!t2) t2 = 300;
+        timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t2, "DHCPv6 T2", 
+                  t2, 0, session, &bbl_dhcpv6_s2);
+
         if(session->access_type == ACCESS_TYPE_IPOE) {
             bbl_access_rx_established_ipoe(interface, session, eth);
             if(ipv6_addr_not_zero(&session->access_config->static_gateway6)) {

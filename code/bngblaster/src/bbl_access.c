@@ -1398,8 +1398,6 @@ bbl_access_lcp_restart(bbl_session_s *session)
                 session->dhcpv6_requested = false;
                 g_ctx->dhcpv6_requested--;
             }
-            session->dhcpv6_ia_na_option_len = 0;
-            session->dhcpv6_ia_pd_option_len = 0;
             memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
             memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
             memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);

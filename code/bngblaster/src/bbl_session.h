@@ -237,14 +237,16 @@ typedef struct bbl_session_
     ipv6addr_t dhcpv6_dns2;
     uint32_t dhcpv6_xid;
     uint32_t dhcpv6_lease_time;
-    uint32_t dhcpv6_t1;
-    uint32_t dhcpv6_t2;
     uint32_t dhcpv6_ia_na_iaid;
+    uint32_t dhcpv6_ia_na_t1;
+    uint32_t dhcpv6_ia_na_t2;
+    uint32_t dhcpv6_ia_na_preferred_lifetime;
+    uint32_t dhcpv6_ia_na_valid_lifetime;
     uint32_t dhcpv6_ia_pd_iaid;
-    uint8_t dhcpv6_ia_na_option[DHCPV6_BUFFER];
-    uint8_t dhcpv6_ia_na_option_len;
-    uint8_t dhcpv6_ia_pd_option[DHCPV6_BUFFER];
-    uint8_t dhcpv6_ia_pd_option_len;
+    uint32_t dhcpv6_ia_pd_t1;
+    uint32_t dhcpv6_ia_pd_t2;
+    uint32_t dhcpv6_ia_pd_preferred_lifetime;
+    uint32_t dhcpv6_ia_pd_valid_lifetime;
     struct timespec dhcpv6_lease_timestamp;
     struct timespec dhcpv6_request_timestamp;
 

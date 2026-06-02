@@ -424,8 +424,17 @@ bbl_session_reset(bbl_session_s *session) {
     }
     session->dhcpv6_requested = false;
     session->dhcpv6_established = false;
-    session->dhcpv6_ia_na_option_len = 0;
-    session->dhcpv6_ia_pd_option_len = 0;
+
+    session->dhcpv6_lease_time = 0;
+    session->dhcpv6_ia_na_t1 = 0;
+    session->dhcpv6_ia_na_t2 = 0;
+    session->dhcpv6_ia_na_t2 = 0;
+    session->dhcpv6_ia_na_preferred_lifetime = 0;
+    session->dhcpv6_ia_na_valid_lifetime = 0;
+    session->dhcpv6_ia_pd_t1 = 0;
+    session->dhcpv6_ia_pd_t2 = 0;
+    session->dhcpv6_ia_pd_preferred_lifetime = 0;
+    session->dhcpv6_ia_pd_valid_lifetime = 0;
 
     if(!ipv6_addr_not_zero(&session->access_config->static_ip6)) {
         memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
@@ -1424,8 +1433,13 @@ bbl_session_json(bbl_session_s *session, bool debug)
             seconds = now.tv_sec - session->dhcpv6_lease_timestamp.tv_sec;
         }
         if(seconds <= session->dhcpv6_lease_time) dhcpv6_lease_expire = session->dhcpv6_lease_time - seconds;
-        if(seconds <= session->dhcpv6_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_t1 - seconds;
-        if(seconds <= session->dhcpv6_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_t2 - seconds;
+        if(session->dhcpv6_ia_na_valid_lifetime) {
+            if(seconds <= session->dhcpv6_ia_na_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_ia_na_t1 - seconds;
+            if(seconds <= session->dhcpv6_ia_na_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_ia_na_t2 - seconds;
+        } else {
+            if(seconds <= session->dhcpv6_ia_pd_t1) dhcpv6_lease_expire_t1 = session->dhcpv6_ia_pd_t1 - seconds;
+            if(seconds <= session->dhcpv6_ia_pd_t2) dhcpv6_lease_expire_t2 = session->dhcpv6_ia_pd_t2 - seconds;
+        }
 
         root = json_pack("{ss si ss ss* si si ss si si ss ss ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* si si si si si si si si si si si si ss* si si si si si si si si si si si si ss* ss* sI sI si sI sI sI sI sI sI si si si si si si si si so* so*}",
             "type", "ipoe",

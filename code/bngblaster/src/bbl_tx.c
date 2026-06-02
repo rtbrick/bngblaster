@@ -522,6 +522,8 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     time_t elapsed = 0;
 
     uint8_t mac[ETH_ADDR_LEN];
+    bool ia_na = true;
+    bool ia_pd = true;
 
     if(session->dhcpv6_state == BBL_DHCP_INIT ||
        session->dhcpv6_state == BBL_DHCP_BOUND) {
@@ -611,11 +613,7 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
     dhcpv6.server_duid = session->dhcpv6_server_duid;
     dhcpv6.server_duid_len = session->dhcpv6_server_duid_len;
     dhcpv6.ia_na_iaid = session->dhcpv6_ia_na_iaid;
-    dhcpv6.ia_na_option = session->dhcpv6_ia_na_option;
-    dhcpv6.ia_na_option_len = session->dhcpv6_ia_na_option_len;
     dhcpv6.ia_pd_iaid = session->dhcpv6_ia_pd_iaid;
-    dhcpv6.ia_pd_option = session->dhcpv6_ia_pd_option;
-    dhcpv6.ia_pd_option_len = session->dhcpv6_ia_pd_option_len;
     dhcpv6.oro = true;
     switch (session->dhcpv6_state) {
         case BBL_DHCP_SELECTING:
@@ -625,8 +623,8 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
             session->stats.dhcpv6_tx_solicit++;
             dhcpv6.rapid = g_ctx->config.dhcpv6_rapid_commit;
             dhcpv6.server_duid_len = 0;
-            dhcpv6.ia_na_option_len = 0;
-            dhcpv6.ia_pd_option_len = 0;
+            ia_na = false;
+            ia_pd = false;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Solicit send\n", session->session_id);
             if(!g_ctx->stats.first_session_tx.tv_sec) {
                 g_ctx->stats.first_session_tx.tv_sec = now.tv_sec;
@@ -659,17 +657,30 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
         case BBL_DHCP_SELECTING_IA_NA:
         case BBL_DHCP_REQUESTING_IA_NA:
             dhcpv6.ia_pd_iaid = 0;
-            dhcpv6.ia_pd_option = NULL;
-            dhcpv6.ia_pd_option_len = 0;
+            ia_pd = false;
             break;
         case BBL_DHCP_SELECTING_IA_PD:
         case BBL_DHCP_REQUESTING_IA_PD:
             dhcpv6.ia_na_iaid = 0;
-            dhcpv6.ia_na_option = NULL;
-            dhcpv6.ia_na_option_len = 0;
+            ia_na = false;
             break;
         default:
             break;
+    }
+
+    if(ia_na) {
+        dhcpv6.ia_na_t1 = session->dhcpv6_ia_na_t1;
+        dhcpv6.ia_na_t2 = session->dhcpv6_ia_na_t2;
+        dhcpv6.ia_na_preferred_lifetime = session->dhcpv6_ia_na_preferred_lifetime;
+        dhcpv6.ia_na_valid_lifetime = session->dhcpv6_ia_na_valid_lifetime;
+        dhcpv6.ia_na_address = &session->ipv6_address;
+    }
+    if(ia_pd) {
+        dhcpv6.ia_pd_t1 = session->dhcpv6_ia_pd_t1;
+        dhcpv6.ia_pd_t2 = session->dhcpv6_ia_pd_t2;
+        dhcpv6.ia_pd_preferred_lifetime = session->dhcpv6_ia_pd_preferred_lifetime;
+        dhcpv6.ia_pd_valid_lifetime = session->dhcpv6_ia_pd_valid_lifetime;
+        dhcpv6.ia_pd_prefix = &session->delegated_ipv6_prefix;
     }
 
     timer_add(&g_ctx->timer_root, &session->timer_dhcpv6, "DHCPv6",

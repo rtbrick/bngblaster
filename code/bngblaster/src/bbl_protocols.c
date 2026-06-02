@@ -376,7 +376,6 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
             *(uint32_t*)buf = dhcpv6->ia_na_valid_lifetime;
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         }
-
     }
     /* IA_PD */
     if(dhcpv6->ia_pd_option_len) {
