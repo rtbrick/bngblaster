@@ -1421,6 +1421,7 @@ bbl_tx_encode_packet_arp_request(bbl_session_s *session)
     }
 
     access_interface->stats.arp_tx++;
+    session->stats.arp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }
 
@@ -1446,6 +1447,7 @@ bbl_tx_encode_packet_arp_reply(bbl_session_s *session)
     arp.target = session->server_mac;
     arp.target_ip = session->peer_ip_address;
 
+    session->stats.arp_tx++;
     session->access_interface->stats.arp_tx++;
     return encode_ethernet(session->write_buf, &session->write_idx, &eth);
 }

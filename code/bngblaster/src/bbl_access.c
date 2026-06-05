@@ -1890,6 +1890,7 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
         arp->sender = session->client_mac;
         arp->sender_ip = session->ip_address;
         if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
+            session->stats.arp_tx++;
             session->access_interface->stats.arp_tx++;
         }
     }
@@ -2000,6 +2001,7 @@ bbl_access_rx_handler_broadcast(bbl_access_interface_s *interface,
                 session->stats.bytes_rx += eth->length;
                 switch(eth->type) {
                     case ETH_TYPE_ARP:
+                        session->stats.arp_rx++;
                         interface->stats.arp_rx++;
                         bbl_access_rx_arp(interface, session, eth);
                         break;
@@ -2083,6 +2085,7 @@ bbl_access_rx_handler(bbl_access_interface_s *interface,
                 case ACCESS_TYPE_IPOE:
                     switch(eth->type) {
                         case ETH_TYPE_ARP:
+                            session->stats.arp_rx++;
                             interface->stats.arp_rx++;
                             bbl_access_rx_arp(interface, session, eth);
                             break;
