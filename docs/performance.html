@@ -202,21 +202,55 @@ NUMA node0 CPU(s):     0-17,36-53
 NUMA node1 CPU(s):     18-35,54-71
 </pre></div>
 </div>
-<p>Folowing an example configuration.</p>
+<p>BNG Blaster supports two approaches:</p>
+<ul class="simple">
+<li><p>Manual pinning with <code class="docutils literal notranslate"><span class="pre">rx-cpuset</span></code> and <code class="docutils literal notranslate"><span class="pre">tx-cpuset</span></code>.</p></li>
+<li><p>Automatic pinning with <code class="docutils literal notranslate"><span class="pre">rx-auto-cpuset</span></code> and <code class="docutils literal notranslate"><span class="pre">tx-auto-cpuset</span></code>.</p></li>
+</ul>
+<p>When automatic pinning is enabled, BNG Blaster derives the local CPU list from the interface and tries to
+optimize placement as follows:</p>
+<ul class="simple">
+<li><p>Prefer CPUs local to the NIC.</p></li>
+<li><p>Prefer one hardware thread per physical core before using SMT siblings.</p></li>
+<li><p>Avoid reusing the same CPU across interfaces until the local CPU pool is exhausted.</p></li>
+<li><p>Fall back to the NUMA node CPU list and finally to the system online CPU list if no local CPU list is exposed.</p></li>
+</ul>
+<p>Following an example configuration using automatic CPU placement.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Following an example configuration with manual pinning.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">      </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">          </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">              </span><span class="p">{</span>
 <span class="w">                  </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span>
 <span class="w">                  </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
-<span class="w">                  </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">36</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">37</span><span class="p">]</span>
+<span class="w">                  </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">36</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">37</span><span class="p">],</span>
 <span class="w">                  </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
 <span class="w">                  </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">38</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">39</span><span class="p">]</span>
 <span class="w">              </span><span class="p">},</span>
 <span class="w">              </span><span class="p">{</span>
 <span class="w">                  </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
 <span class="w">                  </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
-<span class="w">                  </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="w"> </span><span class="mi">54</span><span class="p">,</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span><span class="w"> </span><span class="mi">55</span><span class="p">]</span>
+<span class="w">                  </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="w"> </span><span class="mi">54</span><span class="p">,</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span><span class="w"> </span><span class="mi">55</span><span class="p">],</span>
 <span class="w">                  </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
 <span class="w">                  </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">56</span><span class="p">,</span><span class="w"> </span><span class="mi">21</span><span class="p">,</span><span class="w"> </span><span class="mi">57</span><span class="p">]</span>
 <span class="w">              </span><span class="p">}</span>
@@ -270,25 +304,29 @@ in the corresponding <a class="reference internal" href="install.html#install-dp
 <p>The official BNG Blaster Debian release packages do not support
 <a class="reference external" href="https://www.dpdk.org/">DPDK</a>!</p>
 </div>
+<p>For DPDK interfaces, the same automatic CPU placement options are available.
+The DPDK backend derives the NIC socket from <code class="docutils literal notranslate"><span class="pre">rte_eth_dev_socket_id()</span></code> and
+applies the same locality and physical-core-first policy. Manual DPDK pinning
+remains available if you need exact CPU control.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span><span class="p">,</span>
 <span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">            </span><span class="p">{</span>
 <span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="p">,</span>
 <span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span>
 <span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">4</span><span class="p">,</span><span class="mi">5</span><span class="p">,</span><span class="mi">6</span><span class="p">,</span><span class="mi">7</span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
 <span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="mi">2</span><span class="p">,</span><span class="mi">3</span><span class="p">]</span>
+<span class="w">                </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">            </span><span class="p">},</span>
 <span class="w">            </span><span class="p">{</span>
 <span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span>
 <span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span>
 <span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">12</span><span class="p">,</span><span class="mi">13</span><span class="p">,</span><span class="mi">14</span><span class="p">,</span><span class="mi">15</span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
 <span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">9</span><span class="p">,</span><span class="mi">10</span><span class="p">,</span><span class="mi">11</span><span class="p">]</span>
+<span class="w">                </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
 <span class="w">            </span><span class="p">}</span>
 <span class="w">        </span><span class="p">],</span>
 <span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>

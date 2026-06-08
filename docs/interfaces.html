@@ -362,15 +362,29 @@ for interface links referenced by interface functions.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>tx-cpuset</strong></p></td>
 <td><div class="line-block">
-<div class="line">Optionally pin TX threads to CPU cores (cpuset). This is required</div>
-<div class="line">for DPDK only.</div>
+<div class="line">Optionally pin TX threads to CPU cores (cpuset). Manual pinning</div>
+<div class="line">overrides automatic CPU placement.</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>rx-cpuset</strong></p></td>
 <td><div class="line-block">
-<div class="line">Optionally pin RX threads to CPU cores (cpuset). This is required</div>
-<div class="line">for DPDK only.</div>
+<div class="line">Optionally pin RX threads to CPU cores (cpuset). Manual pinning</div>
+<div class="line">overrides automatic CPU placement.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>tx-auto-cpuset</strong></p></td>
+<td><div class="line-block">
+<div class="line">Automatically pin TX threads to CPUs local to the interface.</div>
+<div class="line">BNG Blaster prefers local physical cores before SMT siblings.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>rx-auto-cpuset</strong></p></td>
+<td><div class="line-block">
+<div class="line">Automatically pin RX threads to CPUs local to the interface.</div>
+<div class="line">BNG Blaster prefers local physical cores before SMT siblings.</div>
 </div>
 </td>
 </tr>
