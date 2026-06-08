@@ -23,8 +23,7 @@ templates_path = ['_templates']
 
 html_theme = 'sphinx_rtd_theme'
 html_theme_options = {
-    'logo_only': False,
-    'display_version': False,
+    'logo_only': False
 }
 html_static_path = ['_static']
 html_css_files = [

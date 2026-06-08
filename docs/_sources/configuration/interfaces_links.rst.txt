@@ -21,17 +21,11 @@ for interface links referenced by interface functions.
 | **lacp-priority**                 | | LACP interface priority.                                           |
 |                                   | | Default: 32768                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-| **tx-cpuset**                     | | Optionally pin TX threads to CPU cores (cpuset). Manual pinning    |
-|                                   | | overrides automatic CPU placement.                                 |
+| **tx-cpuset**                     | | Optionally pin TX threads to CPU cores (cpuset). This is required  |
+|                                   | | for DPDK only.                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-| **rx-cpuset**                     | | Optionally pin RX threads to CPU cores (cpuset). Manual pinning    |
-|                                   | | overrides automatic CPU placement.                                 |
-+-----------------------------------+----------------------------------------------------------------------+
-| **tx-auto-cpuset**                | | Automatically pin TX threads to CPUs local to the interface.       |
-|                                   | | BNG Blaster prefers local physical cores before SMT siblings.      |
-+-----------------------------------+----------------------------------------------------------------------+
-| **rx-auto-cpuset**                | | Automatically pin RX threads to CPUs local to the interface.       |
-|                                   | | BNG Blaster prefers local physical cores before SMT siblings.      |
+| **rx-cpuset**                     | | Optionally pin RX threads to CPU cores (cpuset). This is required  |
+|                                   | | for DPDK only.                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **io-mode**                       | | Overwrite the IO mode.                                             |
 +-----------------------------------+----------------------------------------------------------------------+
