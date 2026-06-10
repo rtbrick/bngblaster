@@ -31,7 +31,7 @@ bbl_interface_ctrl_topology_threads(io_handle_s *io, bool auto_cpuset, bool manu
     json_t *jobj;
     const char *source;
 
-    if(!jarray) {
+    if(!(jarray && io)) {
         return NULL;
     }
     while(io) {
@@ -429,6 +429,9 @@ bbl_interface_ctrl_topology(int fd, uint32_t session_id __attribute__((unused)),
 
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         if(name && strcmp(name, interface->name) != 0) {
+            continue;
+        }
+        if(!interface->config) {
             continue;
         }
 
