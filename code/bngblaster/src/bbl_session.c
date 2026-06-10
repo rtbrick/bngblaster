@@ -422,8 +422,23 @@ bbl_session_reset(bbl_session_s *session) {
     if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
         session->dhcpv6_state = BBL_DHCP_INIT;
     }
-    session->dhcpv6_requested = false;
-    session->dhcpv6_established = false;
+
+    if(session->dhcp_established) {
+        session->dhcp_established = false;
+        g_ctx->dhcp_established--;
+    }
+    if(session->dhcp_requested) {
+        session->dhcp_requested = false;
+        g_ctx->dhcp_requested--;
+    }
+    if(session->dhcpv6_established) {
+        session->dhcpv6_established = false;
+        g_ctx->dhcpv6_established--;
+    }
+    if(session->dhcpv6_requested) {
+        session->dhcpv6_requested = false;
+        g_ctx->dhcpv6_requested--;
+    }
 
     session->dhcpv6_lease_time = 0;
     session->dhcpv6_ia_na_t1 = 0;
