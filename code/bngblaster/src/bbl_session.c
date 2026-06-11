@@ -1765,6 +1765,12 @@ bbl_session_ctrl_stop_restart(int fd, uint32_t session_id, json_t *arguments, bo
                 }
             } else {
                 session->reconnect_disabled = true;
+                timer_del(session->timer_reconnect);
+                if(CIRCLEQ_PREV(session, session_idle_qnode)) {
+                    CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+                    CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
+                    CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
+                }
                 bbl_session_clear(session);
             }
             return bbl_ctrl_status(fd, "ok", 200, NULL);
@@ -1790,6 +1796,12 @@ bbl_session_ctrl_stop_restart(int fd, uint32_t session_id, json_t *arguments, bo
                     }
                 } else {
                     session->reconnect_disabled = true;
+                    timer_del(session->timer_reconnect);
+                    if(CIRCLEQ_PREV(session, session_idle_qnode)) {
+                        CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+                        CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
+                        CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
+                    }
                     bbl_session_clear(session);
                 }
             }
