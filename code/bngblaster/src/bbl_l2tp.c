@@ -454,6 +454,8 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
+    eth.vlan_inner = interface->inner_vlan;
+    eth.qinq = interface->qinq;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ipv4;
     ipv4.dst = l2tp_tunnel->peer_ip;
@@ -540,6 +542,8 @@ bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *ne
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
+    eth.vlan_inner = interface->inner_vlan;
+    eth.qinq = interface->qinq;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &ipv4;
     ipv4.dst = l2tp_tunnel->peer_ip;

@@ -24,6 +24,12 @@
 | **vlan**                          | | Network interface VLAN.                                            |
 |                                   | | Default: 0 (untagged)                                              |
 +-----------------------------------+----------------------------------------------------------------------+
+| **inner-vlan**                    | | Network interface inner VLAN.                                      |
+|                                   | | Default: 0 (single/untagged)                                       |
++-----------------------------------+----------------------------------------------------------------------+
+| **qinq**                          | | Set outer VLAN ethertype to QinQ (0x88a8).                         |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
 | **gateway-mac**                   | | Optional set default gateway MAC address manually. Per default     |
 |                                   | | this MAC address is resolved via ARP/ND.                           |
 +-----------------------------------+----------------------------------------------------------------------+

@@ -1647,6 +1647,8 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
 
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
+    eth.vlan_inner = interface->inner_vlan;
+    eth.qinq = interface->qinq;
     if(interface->send_requests & BBL_IF_SEND_ARP_REQUEST) {
         interface->send_requests &= ~BBL_IF_SEND_ARP_REQUEST;
         eth.type = ETH_TYPE_ARP;

@@ -71,6 +71,10 @@ bbl_network_interfaces_add()
             LOG(ERROR, "Failed to add network interface %s (untagged not allowed on access interfaces)\n", ifname);
             return false;
         }
+        if(interface->network_vlan[network_config->vlan]) {
+            LOG(ERROR, "Failed to add network interface %s (outer VLAN must be unique)\n", ifname);
+            return false;
+        }
 
         network_interface = calloc(1, sizeof(bbl_network_interface_s));
         network_interface->next = interface->network;
@@ -93,6 +97,8 @@ bbl_network_interfaces_add()
 
         /* Init ethernet */
         network_interface->vlan = network_config->vlan;
+        network_interface->inner_vlan = network_config->inner_vlan;
+        network_interface->qinq = network_config->qinq;
         network_interface->mtu = network_config->mtu;
 
         if(*(uint32_t*)network_config->mac) {
@@ -306,7 +312,8 @@ bbl_network_update_eth(bbl_network_interface_s *interface,
     eth->dst = eth->src;
     eth->src = interface->mac;
     eth->vlan_outer = interface->vlan;
-    eth->vlan_inner = 0;
+    eth->vlan_inner = interface->inner_vlan;
+    eth->qinq = interface->qinq;
     eth->vlan_three = 0;
     if(interface->tx_label.label) {
         eth->mpls = &interface->tx_label;

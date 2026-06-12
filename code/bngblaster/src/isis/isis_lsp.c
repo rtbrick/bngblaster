@@ -347,8 +347,10 @@ isis_lsp_tx_job(timer_s *timer)
     isis_adjacency_s *adjacency = timer->data;
     isis_flood_entry_s *entry;
     isis_lsp_s *lsp;
+
     uint16_t window = adjacency->window_size;
 
+    bbl_network_interface_s *interface = adjacency->interface;
     bbl_ethernet_header_s eth = {0};
     bbl_isis_s isis = {0};
 
@@ -364,8 +366,10 @@ isis_lsp_tx_job(timer_s *timer)
 
     eth.type = ISIS_PROTOCOL_IDENTIFIER;
     eth.next = &isis;
-    eth.src = adjacency->interface->mac;
-    eth.vlan_outer = adjacency->interface->vlan;
+    eth.src = interface->mac;
+    eth.vlan_outer = interface->vlan;
+    eth.vlan_inner = interface->inner_vlan;
+    eth.qinq = interface->qinq;
     if(adjacency->level == ISIS_LEVEL_1) {
         eth.dst = g_isis_mac_all_l1;
         isis.type = ISIS_PDU_L1_LSP;
@@ -427,6 +431,7 @@ isis_lsp_tx_p2p_job(timer_s *timer)
     bool next;
     uint16_t window = adjacency->window_size;
 
+    bbl_network_interface_s *interface = adjacency->interface;
     bbl_ethernet_header_s eth = {0};
     bbl_isis_s isis = {0};
 
@@ -438,8 +443,10 @@ isis_lsp_tx_p2p_job(timer_s *timer)
 
     eth.type = ISIS_PROTOCOL_IDENTIFIER;
     eth.next = &isis;
-    eth.src = adjacency->interface->mac;
-    eth.vlan_outer = adjacency->interface->vlan;
+    eth.src = interface->mac;
+    eth.vlan_outer = interface->vlan;
+    eth.vlan_inner = interface->inner_vlan;
+    eth.qinq = interface->qinq;
     if(adjacency->level == ISIS_LEVEL_1) {
         eth.dst = g_isis_mac_all_l1;
         isis.type = ISIS_PDU_L1_LSP;

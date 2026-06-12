@@ -711,7 +711,8 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     eth.src = network_interface->mac;
     eth.vlan_outer = network_interface->vlan;
     eth.vlan_outer_priority = config->vlan_priority;
-    eth.vlan_inner = 0;
+    eth.vlan_inner = network_interface->inner_vlan;
+    eth.qinq = network_interface->qinq;
 
     /* Add MPLS labels */
     if(config->tx_mpls1 || stream->ldp_entry) {
@@ -880,7 +881,8 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     eth.dst = network_interface->gateway_mac;
     eth.src = network_interface->mac;
     eth.vlan_outer = network_interface->vlan;
-    eth.vlan_inner = 0;
+    eth.vlan_inner = network_interface->inner_vlan;
+    eth.qinq = network_interface->qinq;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &l2tp_ipv4;
     l2tp_ipv4.dst = l2tp_tunnel->peer_ip;

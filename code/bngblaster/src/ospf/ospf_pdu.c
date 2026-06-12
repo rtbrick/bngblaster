@@ -426,7 +426,6 @@ ospf_pdu_tx(ospf_pdu_s *pdu,
             ospf_neighbor_s *ospf_neighbor)
 {
     bbl_network_interface_s *interface = ospf_interface->interface;
-
     bbl_ethernet_header_s eth = {0};
     bbl_ipv4_s ipv4 = {0};
     bbl_ipv6_s ipv6 = {0};
@@ -438,6 +437,8 @@ ospf_pdu_tx(ospf_pdu_s *pdu,
 
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
+    eth.vlan_inner = interface->inner_vlan;
+    eth.qinq = interface->qinq;
     if(ospf_interface->version == OSPF_VERSION_2) {
         eth.type = ETH_TYPE_IPV4;
         eth.next = &ipv4;

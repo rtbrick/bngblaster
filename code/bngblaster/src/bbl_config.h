@@ -135,7 +135,9 @@ typedef struct bbl_network_config_
     uint8_t mac[ETH_ADDR_LEN];
     uint8_t gateway_mac[ETH_ADDR_LEN];
     bool gateway_resolve_wait;
+    bool qinq; /* use ethertype 0x88a8 */
     uint16_t vlan;
+    uint16_t inner_vlan;
     uint16_t mtu;
     
     ipv4_prefix ip;
