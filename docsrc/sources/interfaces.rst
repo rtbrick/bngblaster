@@ -277,6 +277,15 @@ in the configuration to distinguish between them.
     }
 
 
+Double-tagged or QinQ configurations for network interfaces are partially supported, 
+allowing for an additional inner VLAN and optional QinQ when an outer VLAN is already 
+in place. However, a key constraint remains: the outer VLAN must be unique for each link. 
+While you can configure VLAN pairs such as ``100:1`` and ``101:2``, you cannot assign 
+both ``100:1`` and ``100:2`` to the same link interface. Additionally, network interface 
+referencing continues to be based solely on the name and outer VLAN; for example, ``eth1`` 
+with outer VLAN ``200`` and inner VLAN ``1`` is still referenced as ``eth1:200``.
+
+
 .. _access-interface:
 
 Access Interfaces

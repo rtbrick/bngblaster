@@ -36,6 +36,7 @@ isis_csnp_job(timer_s *timer)
     isis_tlv_s *tlv;
     isis_lsp_entry_s *entry;
 
+    bbl_network_interface_s *interface = adjacency->interface;
     bbl_ethernet_header_s eth = {0};
     bbl_isis_s isis = {0};
 
@@ -156,8 +157,10 @@ isis_csnp_job(timer_s *timer)
     /* Send packet ... */
     eth.type = ISIS_PROTOCOL_IDENTIFIER;
     eth.next = &isis;
-    eth.src = adjacency->interface->mac;
-    eth.vlan_outer = adjacency->interface->vlan;
+    eth.src = interface->mac;
+    eth.vlan_outer = interface->vlan;
+    eth.vlan_inner = interface->inner_vlan;
+    eth.qinq = interface->qinq;
     if(adjacency->level == ISIS_LEVEL_1) {
         eth.dst = g_isis_mac_all_l1;
         isis.type = ISIS_PDU_L1_CSNP;
@@ -167,14 +170,14 @@ isis_csnp_job(timer_s *timer)
     }
     isis.pdu = pdu.pdu;
     isis.pdu_len = pdu.pdu_len;
-    if(bbl_txq_to_buffer(adjacency->interface->txq, &eth) == BBL_TXQ_OK) {
+    if(bbl_txq_to_buffer(interface->txq, &eth) == BBL_TXQ_OK) {
         LOG(PACKET, "ISIS TX %s on interface %s\n",
-            isis_pdu_type_string(isis.type), adjacency->interface->name);
+            isis_pdu_type_string(isis.type), interface->name);
         adjacency->stats.csnp_tx++;
-        adjacency->interface->stats.isis_tx++;
+        interface->stats.isis_tx++;
     } else {
         LOG(ERROR, "Failed to send ISIS %s on interface %s\n",
-            isis_pdu_type_string(isis.type), adjacency->interface->name);
+            isis_pdu_type_string(isis.type), interface->name);
     }
     return;
 }

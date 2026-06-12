@@ -65,7 +65,8 @@ bbl_icmp_client_tx(bbl_icmp_client_s *client, bbl_icmp_s *icmp)
         eth.dst = network_interface->gateway_mac;
         eth.src = network_interface->mac;
         eth.vlan_outer = network_interface->vlan;
-        eth.vlan_inner = 0;
+        eth.vlan_inner = network_interface->inner_vlan;
+        eth.qinq = network_interface->qinq;
         ipv4.src = client->src;
     }
 

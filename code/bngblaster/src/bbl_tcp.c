@@ -1075,6 +1075,8 @@ bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t 
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
+    eth.vlan_inner = interface->inner_vlan;
+    eth.qinq = interface->qinq;
     eth.type = ETH_TYPE_IPV4;
     eth.lwip = true;
     eth.next = p;
@@ -1144,6 +1146,8 @@ bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t 
     eth.dst = interface->gateway6_mac;
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
+    eth.vlan_inner = interface->inner_vlan;
+    eth.qinq = interface->qinq;
     eth.type = ETH_TYPE_IPV6;
     eth.lwip = true;
     eth.next = p;

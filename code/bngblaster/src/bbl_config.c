@@ -840,8 +840,9 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     const char *schema[] = {
         "interface", "address", "gateway",
         "address-ipv6", "gateway-ipv6", "ipv6-router-advertisement",
-        "gateway-mac", "vlan", "mtu", "gateway-resolve-wait", 
-        "isis-instance-id", "isis-level", "isis-p2p", 
+        "gateway-mac", "vlan", "inner-vlan", "qinq", "mtu", 
+        "gateway-resolve-wait",
+        "isis-instance-id", "isis-level", "isis-p2p",
         "isis-l1-metric", "isis-l2-metric",
         "isis-l1-priority", "isis-l2-priority",
         "ospfv2-instance-id", "ospfv2-metric", "ospfv2-type",
@@ -912,6 +913,23 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     if(value) {
         network_config->vlan = json_number_value(value);
         network_config->vlan &= 4095;
+    }
+    JSON_OBJ_GET_NUMBER(network_interface, value, "access", "inner-vlan", 0, 4095);
+    if(value) {
+        network_config->inner_vlan = json_number_value(value);
+        network_config->inner_vlan &= 4095;
+        if(network_config->inner_vlan && network_config->vlan == 0) {
+            fprintf(stderr, "JSON config error: Network interface with inner-vlan but no vlan (outer)\n");
+            return false;
+        }
+    }
+    JSON_OBJ_GET_BOOL(network_interface, value, "access", "qinq");
+    if(value) {
+        network_config->qinq = json_boolean_value(value);
+        if(network_config->qinq && network_config->inner_vlan == 0) {
+            fprintf(stderr, "JSON config error: Enabling qinq on network interfaces requires an inner-vlan\n");
+            return false;
+        }
     }
     JSON_OBJ_GET_NUMBER(network_interface, value, "network", "mtu", 64, 9000);
     if(value) {

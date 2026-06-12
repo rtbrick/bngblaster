@@ -29,6 +29,8 @@ typedef struct bbl_network_interface_
 
     uint16_t mtu;
     uint16_t vlan;
+    uint16_t inner_vlan;
+
     bbl_mpls_s tx_label;
     
     uint8_t mac[ETH_ADDR_LEN];
@@ -41,6 +43,7 @@ typedef struct bbl_network_interface_
     ipv4addr_t  gateway;
 
     bool ipv6_ra;
+    bool qinq;
 
     ipv6_prefix ip6; /* global IPv6 address */
     ipv6addr_t  ip6_ll; /* link-local IPv6 address */
