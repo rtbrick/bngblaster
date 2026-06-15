@@ -1,5 +1,3 @@
-
-
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -8,15 +6,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Interfaces &mdash; BNG Blaster 0.9 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
+      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=411f5019" />
 
   
-      <script src="_static/jquery.js?v=5d32c60e"></script>
-      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=049aceee"></script>
-      <script src="_static/doctools.js?v=fd6eb6e6"></script>
-      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+  <!--[if lt IE 9]>
+    <script src="_static/js/html5shiv.min.js"></script>
+  <![endif]-->
+  
+        <script src="_static/jquery.js?v=5d32c60e"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=049aceee"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -36,6 +39,9 @@
             BNG Blaster
               <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
           </a>
+              <div class="version">
+                0.9.X
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -649,6 +655,20 @@ interfaces without any access interface defined for non-BNG testing.</p>
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>inner-vlan</strong></p></td>
+<td><div class="line-block">
+<div class="line">Network interface inner VLAN.</div>
+<div class="line">Default: 0 (single/untagged)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>qinq</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set outer VLAN ethertype to QinQ (0x88a8).</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
 <tr class="row-even"><td><p><strong>gateway-mac</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optional set default gateway MAC address manually. Per default</div>
@@ -927,6 +947,13 @@ in the configuration to distinguish between them.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
+<p>Double-tagged or QinQ configurations for network interfaces are partially supported,
+allowing for an additional inner VLAN and optional QinQ when an outer VLAN is already
+in place. However, a key constraint remains: the outer VLAN must be unique for each link.
+While you can configure VLAN pairs such as <code class="docutils literal notranslate"><span class="pre">100:1</span></code> and <code class="docutils literal notranslate"><span class="pre">101:2</span></code>, you cannot assign
+both <code class="docutils literal notranslate"><span class="pre">100:1</span></code> and <code class="docutils literal notranslate"><span class="pre">100:2</span></code> to the same link interface. Additionally, network interface
+referencing continues to be based solely on the name and outer VLAN; for example, <code class="docutils literal notranslate"><span class="pre">eth1</span></code>
+with outer VLAN <code class="docutils literal notranslate"><span class="pre">200</span></code> and inner VLAN <code class="docutils literal notranslate"><span class="pre">1</span></code> is still referenced as <code class="docutils literal notranslate"><span class="pre">eth1:200</span></code>.</p>
 </section>
 <section id="access-interfaces">
 <span id="access-interface"></span><h3>Access Interfaces<a class="headerlink" href="#access-interfaces" title="Link to this heading"></a></h3>
