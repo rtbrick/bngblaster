@@ -838,7 +838,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             return false;
     }
 
-    if(config->destination_mac_set) {
+    if(config->destination_mac_overwrite) {
         eth.dst = config->destination_mac;
     }
 

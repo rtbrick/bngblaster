@@ -2869,7 +2869,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             fprintf(stderr, "JSON config error: Invalid value for stream->destination-mac\n");
             return false;
         }
-        stream_config->destination_mac_set = true;
+        stream_config->destination_mac_overwrite = true;
     }
 
     /* Set DF bit for IPv4 traffic (default true) */

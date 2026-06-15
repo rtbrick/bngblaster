@@ -97,7 +97,7 @@
 +--------------------------------+------------------------------------------------------------------+
 | **network-interface**          | | Select the corresponding network interface for this stream.    |
 +--------------------------------+------------------------------------------------------------------+
-| **destination-mac**            | | Overwrite network interface MAC address.                       |
+| **destination-mac**            | | Overwrite destination MAC address (downstream only).           |
 +--------------------------------+------------------------------------------------------------------+
 | **network-ipv4-address**       | | Overwrite network interface IPv4 address.                      |
 +--------------------------------+------------------------------------------------------------------+
