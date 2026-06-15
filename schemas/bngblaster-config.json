@@ -1419,6 +1419,18 @@
                     "minimum": 0,
                     "maximum": 4095
                 },
+                "inner-vlan": {
+                    "type": "integer",
+                    "description": "Network interface inner VLAN (0 = single/untagged)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 4095
+                },
+                "qinq": {
+                    "type": "boolean",
+                    "description": "Set outer VLAN ethertype to QinQ (0x88a8)",
+                    "default": false
+                },
                 "gateway-mac": {
                     "type": "string",
                     "description": "Optional gateway MAC address (resolved via ARP/ND by default)",
@@ -2363,6 +2375,11 @@
                     "type": "string",
                     "description": "Overwrite network interface IPv6 address",
                     "format": "ipv6"
+                },
+                "destination-mac": {
+                    "type": "string",
+                    "description": "Overwrite destination MAC address",
+                    "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
                 },
                 "destination-ipv4-address": {
                     "type": "string",
