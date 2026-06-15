@@ -59,6 +59,8 @@ typedef struct bbl_stream_config_
     ipv6addr_t ipv6_network_address; /* overwrite default IPv6 network address */
     uint32_t ipv4_destination_address; /* overwrite IPv4 destination address */
     ipv6addr_t ipv6_destination_address; /* overwrite IPv6 destination address */
+    uint8_t destination_mac[ETH_ADDR_LEN]; /* overwrite destination MAC address */
+    bool destination_mac_set;
     char *network_interface;
     char *a10nsp_interface;
 

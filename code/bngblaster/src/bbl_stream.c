@@ -838,6 +838,10 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             return false;
     }
 
+    if(config->destination_mac_set) {
+        eth.dst = config->destination_mac;
+    }
+
     buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
     if(buf_len < 256) buf_len = 256;
     stream->tx_buf = malloc(buf_len);

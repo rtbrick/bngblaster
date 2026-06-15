@@ -2522,7 +2522,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "ldp-ipv4-lookup-address", "ldp-ipv6-lookup-address", 
         "access-ipv4-source-address", "access-ipv6-source-address",
         "network-ipv4-address", "network-ipv6-address", "destination-ipv4-address",
-        "destination-ipv6-address", "ipv4-df", "tx-label1",
+        "destination-ipv6-address", "destination-mac", "ipv4-df", "tx-label1",
         "tx-label1-exp", "tx-label1-ttl", "tx-label2",
         "tx-label2-exp", "tx-label2-ttl", "rx-label1",
         "rx-label2", "nat", "raw-tcp", "setup-interval"
@@ -2855,6 +2855,21 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             fprintf(stderr, "JSON config error: Invalid value for stream->destination-ipv6-address\n");
             return false;
         }
+    }
+
+    if(json_unpack(stream, "{s:s}", "destination-mac", &s) == 0) {
+        if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                &stream_config->destination_mac[0],
+                &stream_config->destination_mac[1],
+                &stream_config->destination_mac[2],
+                &stream_config->destination_mac[3],
+                &stream_config->destination_mac[4],
+                &stream_config->destination_mac[5]) < 6)
+        {
+            fprintf(stderr, "JSON config error: Invalid value for stream->destination-mac\n");
+            return false;
+        }
+        stream_config->destination_mac_set = true;
     }
 
     /* Set DF bit for IPv4 traffic (default true) */
