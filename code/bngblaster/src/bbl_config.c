@@ -3154,7 +3154,7 @@ json_parse_icmp_client_config(json_t *icmp, bbl_icmp_client_config_s *icmp_clien
     if(value) {
         icmp_client_config->interval = json_number_value(value);
         if(icmp_client_config->interval <= 0) {
-            fprintf(stderr, "JSON config error: Invalid value for stream->pps\n");
+            fprintf(stderr, "JSON config error: Invalid value for icmp-client->interval\n");
             return false;
         }
         icmp_client_config->interval_sec = icmp_client_config->interval;
