@@ -1557,15 +1557,21 @@ json_t *
 bbl_session_summary_json(bbl_session_s *session)
 {
     json_t *root = NULL;
+    const char *ipv4 = NULL;
 
     if(!session) {
         return NULL;
     }
 
+    if(session->ip_address) {
+        ipv4 = format_ipv4_address(&session->ip_address);
+    }
+
     if(session->access_type == ACCESS_TYPE_PPPOE) {
-        root = json_pack("{ss si ss* ss* si ss* si si ss* ss* ss* ss* ss* ss* ss* ss* sI sI}",
+        root = json_pack("{ss si si ss* ss* si ss* si si ss* ss* ss* ss* ss* ss* ss* ss* ss* ss* sI sI}",
             "type", "pppoe",
             "session-id", session->session_id,
+            "pppoe-session-id", session->pppoe_session_id,
             "session-state", session_state_string(session->session_state),
             "session-substate", bbl_session_substate_pppoe(session),
             "flapped", session->stats.flapped,
@@ -1573,7 +1579,9 @@ bbl_session_summary_json(bbl_session_s *session)
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
             "mac", format_mac_address(session->client_mac),
+            "server-mac", format_mac_address(session->server_mac),
             "username", session->username,
+            "ipv4-address", ipv4,
             "agent-circuit-id", session->agent_circuit_id,
             "agent-remote-id", session->agent_remote_id,
             "lcp-state", ppp_state_string(session->lcp_state),
@@ -1583,7 +1591,7 @@ bbl_session_summary_json(bbl_session_s *session)
             "tx-packets", session->stats.packets_tx,
             "rx-packets", session->stats.packets_rx);
     } else {
-        root = json_pack("{ss si ss* ss* si ss* si si ss* ss* ss* ss* ss* sI sI}",
+        root = json_pack("{ss si ss* ss* si ss* si si ss* ss* ss* ss* ss* ss* ss* sI sI}",
             "type", "ipoe",
             "session-id", session->session_id,
             "session-state", session_state_string(session->session_state),
@@ -1593,6 +1601,8 @@ bbl_session_summary_json(bbl_session_s *session)
             "outer-vlan", session->vlan_key.outer_vlan_id,
             "inner-vlan", session->vlan_key.inner_vlan_id,
             "mac", format_mac_address(session->client_mac),
+            "server-mac", format_mac_address(session->server_mac),
+            "ipv4-address", ipv4,
             "agent-circuit-id", session->agent_circuit_id,
             "agent-remote-id", session->agent_remote_id,
             "dhcp-state", dhcp_state_string(session->dhcp_state),
