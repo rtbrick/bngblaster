@@ -95,7 +95,7 @@ isis_str_to_area(const char *str, isis_area_s *area)
 {
     int len = 0;
     uint16_t *a;
-    char *ptr;
+    const char *ptr;
 
     if(!area->value) {
         area->value = calloc(1, ISIS_MAX_AREA_LEN);
