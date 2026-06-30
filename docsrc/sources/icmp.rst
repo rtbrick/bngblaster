@@ -43,12 +43,12 @@ Following is a basic ICMP client configuration example.
         },
         "icmp-client": [
             {
-                "__comment__": "ping from session"
+                "__comment__": "ping from session",
                 "icmp-client-group-id": 1,
                 "destination-address": "10.10.10.10"
             },
             {
-                "__comment__": "ping from network interface"
+                "__comment__": "ping from network interface",
                 "network-interface": "eth1:10",
                 "destination-address": "10.0.1.1"
             }
