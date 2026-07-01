@@ -375,7 +375,7 @@ static const struct action actions[] = {
     {"icmp-clients", bbl_icmp_client_ctrl, schema_icmp, true},
     {"icmp-clients-start", bbl_icmp_client_ctrl_start, schema_icmp, false},
     {"icmp-clients-stop", bbl_icmp_client_ctrl_stop, schema_icmp, false},
-    {"http-clients", bbl_http_client_ctrl, schema_session_id, true},
+    {"http-clients", bbl_http_client_ctrl, schema_session_id, false},
     {"http-clients-start", bbl_http_client_ctrl_start, schema_session_id, false},
     {"http-clients-stop", bbl_http_client_ctrl_stop, schema_session_id, false},
     {"arp-clients", bbl_arp_client_ctrl, schema_session_id, true},
