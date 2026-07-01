@@ -15,26 +15,33 @@ void
 bbl_http_server_receive_cb(void *arg, uint8_t *buf, uint16_t len)
 {
     bbl_http_server_connection_s *connection = (bbl_http_server_connection_s*)arg;
-    bbl_tcp_ctx_s *tcpc = connection->tcpc;
+    bbl_tcp_ctx_s *tcpc;
     int str_len = 0;
 
     UNUSED(buf);
     UNUSED(len);
 
+    if(!(connection && connection->tcpc)) return;
+    tcpc = connection->tcpc;
+
     if(tcpc->af == AF_INET) {
         if(!tcpc->sp_len) {
-            tcpc->sp = malloc(256);
-            tcpc->sp_len = 256;
+            tcpc->sp = malloc(HTTP_SERVER_RESPONSE_BUF_LEN);
+            if(tcpc->sp) tcpc->sp_len = HTTP_SERVER_RESPONSE_BUF_LEN;
         }
-        str_len = snprintf((char*)connection->tcpc->sp, connection->tcpc->sp_len, 
-                           HTTP_SERVER_RESPONSE_STRING_IP_PORT, 
-                           format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr),
-                           tcpc->remote_port);
+        if(tcpc->sp_len == HTTP_SERVER_RESPONSE_BUF_LEN) {
+            str_len = snprintf((char*)tcpc->sp, tcpc->sp_len, 
+                               HTTP_SERVER_RESPONSE_STRING_IP_PORT, 
+                               format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr),
+                               tcpc->remote_port);
 
-        bbl_tcp_send(connection->tcpc, connection->tcpc->sp, str_len);
-    } else {
-        bbl_tcp_send(connection->tcpc, (uint8_t*)HTTP_SERVER_RESPONSE_STRING, sizeof(HTTP_SERVER_RESPONSE_STRING));
+            if(str_len > 0 && str_len < HTTP_SERVER_RESPONSE_BUF_LEN) {
+                bbl_tcp_send(tcpc, tcpc->sp, str_len);
+                return;
+            }
+        }
     }
+    bbl_tcp_send(tcpc, (uint8_t*)HTTP_SERVER_RESPONSE_STRING, sizeof(HTTP_SERVER_RESPONSE_STRING));
 }
 
 /**
@@ -58,7 +65,7 @@ bbl_http_server_accepted_cb(bbl_tcp_ctx_s *tcpc, void *arg)
     } else {
         LOG(HTTP, "HTTP-Server (Name: %s) new connection from %s\n",
             server->config->name, 
-            format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr));
+            format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr));
     }
     return ERR_OK;
 }
@@ -77,17 +84,17 @@ bbl_http_server_job(timer_s *timer)
         connection_next = connection->next;
 
         tcpc = connection->tcpc;
-        if(tcpc->pcb->state == CLOSE_WAIT || tcpc->pcb->state == CLOSED) {
-            if(connection->tcpc->af == AF_INET) {
+        if(tcpc && tcpc->pcb && (tcpc->pcb->state == CLOSE_WAIT || tcpc->pcb->state == CLOSED)) {
+            if(tcpc->af == AF_INET) {
                 LOG(HTTP, "HTTP-Server (Name: %s) delete connection from %s\n",
                     server->config->name, 
-                    format_ipv4_address(&connection->tcpc->remote_addr.u_addr.ip4.addr));
+                    format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr));
             } else {
                 LOG(HTTP, "HTTP-Server (Name: %s) delete connection from %s\n",
                     server->config->name, 
-                    format_ipv6_address((ipv6addr_t*)&connection->tcpc->local_addr.u_addr.ip6.addr));
+                    format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr));
             }
-            bbl_tcp_ctx_free(connection->tcpc);
+            bbl_tcp_ctx_free(tcpc);
             connection->tcpc = NULL;
             free(connection);
             connection = NULL;

@@ -12,6 +12,7 @@
 
 #define HTTP_SERVER_RESPONSE_STRING "HTTP/1.1 200 OK\r\nServer: BNG-Blaster\r\n\r\n"
 #define HTTP_SERVER_RESPONSE_STRING_IP_PORT "HTTP/1.1 200 OK\r\nServer: BNG-Blaster\r\nX-Client-Ip: %s\r\nX-Client-Port: %d\r\n\r\n"
+#define HTTP_SERVER_RESPONSE_BUF_LEN 256
 
 typedef struct bbl_http_server_config_
 {
