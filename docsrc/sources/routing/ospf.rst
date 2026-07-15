@@ -36,7 +36,7 @@ attached to two network interfaces.
                     "address": "10.0.1.2/30",
                     "gateway": "10.0.1.1",
                     "ospfv2-instance-id": 1,
-                    "ospfv2-type": "p2p",
+                    "ospfv2-type": "p2p"
                 },
                 {
                     "interface": "eth2",
