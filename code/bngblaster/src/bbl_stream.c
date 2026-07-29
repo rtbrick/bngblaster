@@ -1478,6 +1478,7 @@ bbl_stream_io_send(bbl_stream_s *stream)
         stream->tx_first_epoch = 0;
         stream->tx_first_seq = stream->flow_seq;
         stream->rx_last_seq = 0;
+        stream->session_version = 0;
         if(stream->max_packets) {
             stream->max_packets = stream->tx_packets + stream->config->max_packets;
         }
@@ -2335,7 +2336,8 @@ bbl_stream_reset(bbl_stream_s *stream)
 }
 
 const char *
-stream_type_string(bbl_stream_s *stream) {
+stream_type_string(bbl_stream_s *stream)
+{
     switch(stream->type) {
         case BBL_TYPE_UNICAST: return "unicast";
         case BBL_TYPE_MULTICAST: return "multicast";
@@ -2344,7 +2346,8 @@ stream_type_string(bbl_stream_s *stream) {
 }
 
 const char *
-stream_sub_type_string(bbl_stream_s *stream) {
+stream_sub_type_string(bbl_stream_s *stream)
+{
     switch(stream->sub_type) {
         case BBL_SUB_TYPE_IPV4: return "ipv4";
         case BBL_SUB_TYPE_IPV6: return "ipv6";
@@ -2354,15 +2357,20 @@ stream_sub_type_string(bbl_stream_s *stream) {
 }
 
 static void
-bbl_stream_rx_nat(bbl_ethernet_header_s *eth, bbl_stream_s *stream) {
-    bbl_ipv4_s *ipv4 = NULL;
+bbl_stream_rx_nat(bbl_ethernet_header_s *eth, bbl_stream_s *stream)
+{
+    bbl_ipv4_s *ipv4 = (bbl_ipv4_s*)eth->next;
     bbl_udp_s *udp = NULL;
-    if(eth->type == ETH_TYPE_IPV4) {
-        ipv4 = (bbl_ipv4_s*)eth->next;
-        if(ipv4->protocol == PROTOCOL_IPV4_UDP || ipv4->protocol == PROTOCOL_IPV4_TCP) {
-            udp = (bbl_udp_s*)ipv4->next;
+    if(ipv4->protocol == PROTOCOL_IPV4_UDP || ipv4->protocol == PROTOCOL_IPV4_TCP) {
+        udp = (bbl_udp_s*)ipv4->next;
+        if(stream->rx_source_ip != ipv4->src || stream->rx_source_port != udp->src) {
+            /* Translated IP or port has changed. */
             stream->rx_source_ip = ipv4->src;
             stream->rx_source_port = udp->src;
+            if(stream->reverse) {
+                /* This triggers to rebuild the packet with new IP and port. */
+                stream->reverse->session_version = 0;
+            }
         }
     }
 }
@@ -2407,6 +2415,9 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
             } else {
                 stream->rx_wrong_order++;
                 stream->rx_packets++;
+            }
+            if(stream->nat && stream->direction == BBL_DIRECTION_UP && eth->type == ETH_TYPE_IPV4) {
+                bbl_stream_rx_nat(eth, stream);
             }
         } else {
             /* Verify stream ... */
@@ -2476,7 +2487,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                     }
                 }
             }
-            if(stream->nat && stream->direction == BBL_DIRECTION_UP) {
+            if(stream->nat && stream->direction == BBL_DIRECTION_UP && eth->type == ETH_TYPE_IPV4) {
                 bbl_stream_rx_nat(eth, stream);
             }
             stream->rx_first_seq = flow_seq;
