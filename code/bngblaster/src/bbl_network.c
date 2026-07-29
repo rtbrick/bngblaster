@@ -112,11 +112,11 @@ bbl_network_interfaces_add()
         memcpy(network_interface->gateway6_mac, network_config->gateway_mac, ETH_ADDR_LEN);
 
         /* Init IPv4 */
-        if(network_config->ip.address && network_config->gateway) {
-            network_interface->ip.address = network_config->ip.address;
-            network_interface->ip.len = network_config->ip.len;
+        network_interface->ip.address = network_config->ip.address;
+        network_interface->ip.len = network_config->ip.len;
+        network_interface->secondary_ip_addresses = network_config->secondary_ip_addresses;
+        if(network_config->gateway) {
             network_interface->gateway = network_config->gateway;
-            network_interface->secondary_ip_addresses = network_config->secondary_ip_addresses;
             /* Send initial ARP request */
             network_interface->send_requests |= BBL_IF_SEND_ARP_REQUEST;
         }
