@@ -1365,9 +1365,10 @@ bbl_session_json(bbl_session_s *session, bool debug)
         }
     }
     if(session->a10nsp_session) {
-        a10nsp_session = json_pack("{ss si sb sb ss* ss* ss* ss* ss* ss* sI sI}",
+        a10nsp_session = json_pack("{ss si si sb sb ss* ss* ss* ss* ss* ss* sI sI}",
             "interface", session->a10nsp_session->a10nsp_interface->name,
             "s-vlan", session->a10nsp_session->s_vlan,
+            "c-vlan", session->a10nsp_session->c_vlan,
             "qinq-send", session->a10nsp_session->a10nsp_interface->qinq,
             "qinq-received", session->a10nsp_session->qinq_received,
             "pppoe-aci", session->a10nsp_session->pppoe_aci,

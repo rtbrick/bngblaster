@@ -79,7 +79,8 @@ typedef struct bbl_a10nsp_session_
 {
     bbl_session_s *session;
     bbl_a10nsp_interface_s *a10nsp_interface;
-    uint16_t s_vlan;
+    uint16_t s_vlan; /* outer */
+    uint16_t c_vlan; /* inner */
 
     bool qinq_received;
 

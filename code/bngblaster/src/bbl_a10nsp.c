@@ -864,6 +864,7 @@ bbl_a10nsp_session_init(bbl_a10nsp_interface_s *interface,
     a10nsp_session->ipv4_address = bbl_a10nsp_ipv4_address();
     a10nsp_session->a10nsp_interface = interface;
     a10nsp_session->s_vlan = eth->vlan_outer;
+    a10nsp_session->c_vlan = eth->vlan_inner;
     a10nsp_session->qinq_received = eth->qinq;
     if(eth->mpls) {
         mpls = eth->mpls;
