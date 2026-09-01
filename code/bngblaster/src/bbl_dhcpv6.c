@@ -318,7 +318,7 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
         if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len && dhcpv6->ia_pd_valid_lifetime) {
             /* IA_PD */
             if(!t1) t1 = dhcpv6->ia_pd_t1;
-            if(!t2) t1 = dhcpv6->ia_pd_t2;
+            if(!t2) t2 = dhcpv6->ia_pd_t2;
             session->dhcpv6_ia_pd_t1 = dhcpv6->ia_pd_t1;
             session->dhcpv6_ia_pd_t2 = dhcpv6->ia_pd_t2;
             session->dhcpv6_ia_pd_preferred_lifetime = dhcpv6->ia_pd_preferred_lifetime;
