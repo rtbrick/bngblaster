@@ -105,9 +105,9 @@ typedef struct bbl_stream_args_
     bbl_session_s *session;
 
     json_t *flows;
-    uint64_t flow_id;
-    uint64_t flow_id_min;
-    uint64_t flow_id_max;
+    uint32_t flow_id;
+    uint32_t flow_id_min;
+    uint32_t flow_id_max;
     
     stream_state_t state;
 
@@ -141,7 +141,7 @@ typedef struct bbl_stream_
     bbl_rate_s rate_packets_tx;
     bbl_rate_s rate_packets_rx;
 
-    uint64_t flow_id; /* KEY */
+    uint32_t flow_id; /* KEY */
     uint8_t type;
     uint8_t sub_type;
     uint8_t direction;
@@ -262,7 +262,7 @@ typedef struct bbl_stream_
 } bbl_stream_s;
 
 bbl_stream_s *
-bbl_stream_index_get(uint64_t flow_id);
+bbl_stream_index_get(uint32_t flow_id);
 
 bool
 bbl_stream_index_init();

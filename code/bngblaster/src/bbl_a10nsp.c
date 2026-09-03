@@ -779,10 +779,10 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
            stream->tx_a10nsp_interface && 
            stream->tx_a10nsp_interface != interface) {
             if(stream->threaded || (interface->interface && interface->interface->io.tx && interface->interface->io.tx->thread)) {
-                LOG(ERROR, "A10NSP (ID: %u) Failed to change TX interface of stream %lu from %s to %s\n",
+                LOG(ERROR, "A10NSP (ID: %u) Failed to change TX interface of stream %u from %s to %s\n",
                     session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
             } else {
-                LOG(DEBUG, "A10NSP (ID: %u) Change TX interface of stream %lu from %s to %s\n",
+                LOG(DEBUG, "A10NSP (ID: %u) Change TX interface of stream %u from %s to %s\n",
                     session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
 
                 if(stream->lag) {

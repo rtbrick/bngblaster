@@ -633,7 +633,7 @@ typedef struct bbl_bbl_ {
     uint16_t     inner_vlan_id;
     uint32_t     mc_source;
     uint32_t     mc_group;
-    uint64_t     flow_id;
+    uint32_t     flow_id;
     uint64_t     flow_seq;
     struct timespec timestamp;
 } bbl_bbl_s;

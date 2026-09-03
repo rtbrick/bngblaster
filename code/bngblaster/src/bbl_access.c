@@ -660,7 +660,7 @@ bbl_access_rx_ipv4_mc(bbl_access_interface_s *interface,
                         interface->stats.mc_loss += loss;
                         session->stats.mc_loss += loss;
                         group->loss += loss;
-                        LOG(LOSS, "LOSS (ID: %u) Multicast flow: %lu seq: %lu last: %lu\n",
+                        LOG(LOSS, "LOSS (ID: %u) Multicast flow: %u seq: %lu last: %lu\n",
                             session->session_id, bbl->flow_id, bbl->flow_seq, session->mc_rx_last_seq);
                     }
                     session->mc_rx_last_seq = bbl->flow_seq;

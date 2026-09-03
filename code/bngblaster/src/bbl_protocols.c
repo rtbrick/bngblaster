@@ -789,8 +789,10 @@ encode_bbl(uint8_t *buf, uint16_t *len,
         *(uint32_t*)buf = bbl->mc_group;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     }
-    *(uint64_t*)buf = bbl->flow_id;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
+    *(uint32_t*)buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    *(uint32_t*)buf = bbl->flow_id;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     *(uint64_t*)buf = bbl->flow_seq;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
     *(uint32_t*)buf = bbl->timestamp.tv_sec;
@@ -3214,8 +3216,9 @@ decode_bbl(uint8_t *buf, uint16_t len,
         bbl->mc_group = *(uint32_t*)buf;
         BUMP_BUFFER(buf, len, sizeof(uint32_t));
     }
-    bbl->flow_id = *(uint64_t*)buf;
-    BUMP_BUFFER(buf, len, sizeof(uint64_t));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    bbl->flow_id = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
     bbl->flow_seq = *(uint64_t*)buf;
     BUMP_BUFFER(buf, len, sizeof(uint64_t));
     bbl->timestamp.tv_sec = *(uint32_t*)buf;

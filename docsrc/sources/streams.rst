@@ -529,8 +529,9 @@ session which has sent or should receive the packet.
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Session Outer VLAN            | Session Inner VLAN            |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    | Reserved                                                      |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Flow Identifier                                               |
-    |                                                               |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Flow Sequence Number                                          |
     |                                                               |
@@ -560,8 +561,9 @@ Multicast Traffic
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Group                                                         |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    | Reserved                                                      |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Flow Identifier                                               |
-    |                                                               |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Flow Sequence Number                                          |
     |                                                               |
@@ -590,7 +592,7 @@ of blaster traffic.
 Flow Identifier
 ^^^^^^^^^^^^^^^
 
-The 64-bit flow identifier is a globally unique number that identifies
+The 32-bit flow identifier is a globally unique number that identifies
 the flow.
 
 Flow Sequence Number

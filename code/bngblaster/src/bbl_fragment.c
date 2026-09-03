@@ -119,7 +119,7 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
                 bbl.outer_vlan_id = 0;
                 bbl.inner_vlan_id = 0;
             }
-            bbl.flow_id = *(uint64_t*)(bbl_start+24);
+            bbl.flow_id = *(uint32_t*)(bbl_start+28);
             bbl.flow_seq = *(uint64_t*)(bbl_start+32);
             bbl.timestamp.tv_sec = *(uint32_t*)(bbl_start+40);
             bbl.timestamp.tv_nsec = *(uint32_t*)(bbl_start+44);

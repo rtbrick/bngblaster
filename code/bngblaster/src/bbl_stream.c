@@ -28,7 +28,7 @@ endpoint_state_t g_endpoint = ENDPOINT_ACTIVE;
  * @return stream or NULL if stream not found
  */
 bbl_stream_s *
-bbl_stream_index_get(uint64_t flow_id)
+bbl_stream_index_get(uint32_t flow_id)
 {
     if(g_ctx->stream_index && flow_id <= g_ctx->streams && flow_id > 0) {
         return g_ctx->stream_index[flow_id-1];
@@ -42,7 +42,7 @@ bbl_stream_index_get(uint64_t flow_id)
 bool
 bbl_stream_index_init()
 {
-    uint64_t flow_id;
+    uint32_t flow_id;
     bbl_stream_s *stream = g_ctx->stream_head;
 
     g_ctx->stream_index = calloc(g_ctx->streams, sizeof(bbl_stream_s*));
@@ -2406,7 +2406,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                     stream->rx_loss += loss;
                     if(unlikely(log_loss)) {
                         log_loss = log_id[LOSS].enable;
-                        LOG(LOSS, "LOSS Unicast flow: %lu seq: %lu last: %lu loss: %lu\n",
+                        LOG(LOSS, "LOSS Unicast flow: %u seq: %lu last: %lu loss: %lu\n",
                             bbl->flow_id, flow_seq, rx_last_seq, loss);
                     }
                 }
@@ -2717,7 +2717,7 @@ bbl_stream_ctrl_args(int fd, uint32_t session_id, json_t *arguments, bbl_stream_
 
     /* Init defaults */
     args->session_group_id = -1;
-    args->flow_id_max = UINT64_MAX;
+    args->flow_id_max = UINT32_MAX;
     args->direction = BBL_DIRECTION_BOTH;
 
     if(session_id) {
@@ -2872,7 +2872,7 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
 
     bbl_stream_s *stream;
     json_int_t number;
-    uint64_t flow_id;
+    uint32_t flow_id;
 
     /* Unpack further arguments */
     json_unpack(arguments, "{s:b}", "debug", &debug);

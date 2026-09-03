@@ -775,7 +775,7 @@ bbl_interactive_window_job(timer_s *timer)
                     rx_kbps = 1;
                 }
                 if(i >= stats_win_postion && i < 32+stats_win_postion) {
-                    wprintw(stats_win, "  %-16.16s | %9lu | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, stream->flow_id,
+                    wprintw(stats_win, "  %-16.16s | %9u | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, stream->flow_id,
                             stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
                 } else if(i == 32+stats_win_postion) {   
                     wprintw(stats_win, "  ...\n");

@@ -75,13 +75,13 @@ typedef struct bbl_ctx_
     bbl_stream_s **stream_index;
     bbl_stream_s *stream_head;
     bbl_stream_s *stream_tail;
-    uint64_t streams;
+    uint32_t streams;
 
     bbl_stream_group_s *stream_groups;
 
     uint16_t next_tunnel_id;
 
-    uint64_t flow_id;
+    uint32_t flow_id;
 
     char *ctrl_socket_path;
     bbl_ctrl_thread_s *ctrl_thread;
