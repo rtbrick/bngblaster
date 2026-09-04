@@ -65,6 +65,9 @@ log_open()
         return;
     }
     g_log_fp = fopen(g_log_file, "a");
+    if(g_log_fp) {
+        setvbuf(g_log_fp, NULL, _IOLBF, 0);
+    }
 }
 
 /*

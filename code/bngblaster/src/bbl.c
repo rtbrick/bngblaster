@@ -435,6 +435,9 @@ main(int argc, char *argv[])
         exit(2);
     }
 
+    setvbuf(stdout, NULL, _IOLBF, 0);
+    setvbuf(stderr, NULL, _IONBF, 0);
+
     /* Clear logging global array. */
     memset(log_id, 0, sizeof(struct log_id_) * LOG_ID_MAX);
     log_id[INFO].enable = true;
