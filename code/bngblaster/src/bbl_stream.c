@@ -2521,7 +2521,7 @@ bbl_stream_summary_json(bbl_stream_s *stream)
         rate_packets_tx_avg = stream->rate_packets_tx->avg;
     }
 
-    jobj = json_pack("{si ss* ss ss ss sb sb sb ss* sI sI sI}",
+    jobj = json_pack("{si ss* ss ss ss sb sb sb ss* sI sI sI sI sI sI sI}",
         "flow-id", stream->flow_id,
         "name", stream->config->name,
         "type", stream_type_string(stream),
@@ -2531,6 +2531,10 @@ bbl_stream_summary_json(bbl_stream_s *stream)
         "active", *(stream->endpoint) == ENDPOINT_ACTIVE ? true : false,
         "verified", stream->verified,
         "interface", stream->tx_interface->name,
+        "tx-packets", stream->tx_packets - stream->reset_packets_tx,
+        "tx-bytes", (stream->tx_packets - stream->reset_packets_tx) * stream->tx_len,
+        "rx-packets", stream->rx_packets - stream->reset_packets_rx,
+        "rx-bytes", (stream->rx_packets - stream->reset_packets_rx) * stream->rx_len,
         "rx-loss", stream->rx_loss - stream->reset_loss,
         "rx-pps", rate_packets_rx_avg,
         "tx-pps", rate_packets_tx_avg);
