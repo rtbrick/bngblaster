@@ -410,7 +410,14 @@ io_dpdk_tx_job(timer_s *timer)
                 if(unlikely(nb_tx < built)) {
                     /* Offered more than the NIC could actually transmit.
                      * These packets never left the box, so just count them
-                     * as locally dropped instead of as sent stream traffic. */
+                     * as locally dropped instead of as sent stream traffic.
+                     * Give back the flow_seq already consumed for each at
+                     * build time, so the next packet actually sent for
+                     * that stream reuses it instead of leaving a gap the
+                     * receiver would otherwise report as network loss. */
+                    for(i = nb_tx; i < built; i++) {
+                        streams[i]->flow_seq--;
+                    }
                     io->stats.dropped += (built - nb_tx);
                     rte_pktmbuf_free_bulk(&mbufs[nb_tx], built - nb_tx);
                 }
@@ -597,7 +604,14 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                         /* Offered more than the NIC could actually transmit.
                          * These packets never left the box, so just count
                          * them as locally dropped instead of as sent stream
-                         * traffic. */
+                         * traffic. Give back the flow_seq already consumed
+                         * for each at build time, so the next packet
+                         * actually sent for that stream reuses it instead
+                         * of leaving a gap the receiver would otherwise
+                         * report as network loss. */
+                        for(i = nb_tx; i < built; i++) {
+                            streams[i]->flow_seq--;
+                        }
                         io->stats.dropped += (built - nb_tx);
                         rte_pktmbuf_free_bulk(&mbufs[nb_tx], built - nb_tx);
                     }
