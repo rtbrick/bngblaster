@@ -11,6 +11,7 @@
  * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include <sys/mman.h>
 #include "bbl.h"
 #include "bbl_pcap.h"
 #include "bbl_interactive.h"
@@ -444,6 +445,17 @@ main(int argc, char *argv[])
     memset(log_id, 0, sizeof(struct log_id_) * LOG_ID_MAX);
     log_id[INFO].enable = true;
     log_id[ERROR].enable = true;
+
+    /* Lock all current and future memory pages into RAM. Without this, the
+     * first touch of a newly faulted-in page (e.g. hugepage-backed mbuf
+     * pools, or any allocation made while traffic is already running) can
+     * stall a time-critical RX/TX thread for the duration of the page
+     * fault. Not fatal if the process lacks the required privileges
+     * (CAP_IPC_LOCK/root) - this protection just isn't available then. */
+    if(mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+        LOG(ERROR, "Failed to lock memory pages (%s), consider running as root or granting CAP_IPC_LOCK\n",
+            strerror(errno));
+    }
 
     /* Seed pseudo random generator. */
     srand(time(0));
