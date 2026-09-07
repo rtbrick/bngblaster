@@ -230,6 +230,11 @@ bbl_smear_job(timer_s *timer)
         /* Adding 1 nanoseconds to enforce a dedicated timer bucket. */
         timer_smear_bucket(&g_ctx->timer_root, g_ctx->config.lcp_keepalive_interval, 1);
     }
+    /* Rate Computation (per-session, per-interface and L2TP tunnel control
+     * timers all share the plain 1 second bucket). Sessions in particular
+     * are created back-to-back during session setup, which would otherwise
+     * cluster their periodic rate timers into a thundering herd. */
+    timer_smear_bucket(&g_ctx->timer_root, 1, 0);
 }
 
 void

@@ -21,12 +21,18 @@ typedef struct vlan_session_key_ {
  */
 typedef struct bbl_session_
 {
+    uint32_t version;
     uint32_t session_id; /* BNG Blaster internal session identifier */
     uint16_t session_group_id;
 
     session_state_t session_state;
+    struct {
+        endpoint_state_t ipv4;
+        endpoint_state_t ipv6;
+        endpoint_state_t ipv6pd;
+    } endpoint;
+
     uint32_t send_requests;
-    uint32_t version;
 
     CIRCLEQ_ENTRY(bbl_session_) session_idle_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_teardown_qnode;
@@ -67,12 +73,6 @@ typedef struct bbl_session_
     struct timer_ *timer_tun;
 
     access_type_t access_type;
-
-    struct {
-        endpoint_state_t ipv4;
-        endpoint_state_t ipv6;
-        endpoint_state_t ipv6pd;
-    } endpoint;
 
     struct {
         uint32_t ifindex;

@@ -187,8 +187,8 @@ io_stream_update_pps(io_handle_s *io)
                     io_stream_add(stream->io, stream);
                 }
                 if(stream->pps < 1.0) {
-                    stream->rate_packets_rx.avg = 0;
-                    stream->rate_packets_tx.avg = 0;
+                    if(stream->rate_packets_rx) stream->rate_packets_rx->avg = 0;
+                    if(stream->rate_packets_tx) stream->rate_packets_tx->avg = 0;
                 }
                 stream->update_pps = false;
             } else {

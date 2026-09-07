@@ -692,6 +692,8 @@ bbl_interactive_window_job(timer_s *timer)
 
                 uint64_t tx_kbps;
                 uint64_t rx_kbps;
+                uint64_t rate_packets_tx_avg = 0;
+                uint64_t rate_packets_rx_avg = 0;
                 uint64_t stream_sum_up_tx_pps = 0;
                 uint64_t stream_sum_up_tx_kbps = 0;
                 uint64_t stream_sum_up_rx_pps = 0;
@@ -706,33 +708,35 @@ bbl_interactive_window_job(timer_s *timer)
                 bbl_stream_s *stream = session->streams.head;
                 i = 0;
                 while(stream) {
-                    tx_kbps = stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000;
-                    if(stream->rate_packets_tx.avg && tx_kbps == 0) {
+                    if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg;
+                    tx_kbps = rate_packets_tx_avg * stream->tx_len * 8 / 1000;
+                    if(rate_packets_tx_avg && tx_kbps == 0) {
                         tx_kbps = 1;
                     }
-                    rx_kbps = stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000;
-                    if(stream->rate_packets_rx.avg && rx_kbps == 0) {
+                    if(stream->rate_packets_rx) rate_packets_rx_avg = stream->rate_packets_rx->avg;
+                    rx_kbps = rate_packets_rx_avg * stream->rx_len * 8 / 1000;
+                    if(rate_packets_rx_avg && rx_kbps == 0) {
                         rx_kbps = 1;
                     }
                     if(i >= stats_win_postion && i < 16+stats_win_postion) {
                         wprintw(stats_win, "  %-16.16s | %-9.9s | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name,
                                 stream->direction == BBL_DIRECTION_UP ? "up" : "down",
-                                stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
+                                rate_packets_tx_avg, tx_kbps, rate_packets_rx_avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
                     } else if(i == 16+stats_win_postion) {   
                         wprintw(stats_win, "  ...\n");
                     }
                     i++;
 
                     if(stream->direction == BBL_DIRECTION_UP) {
-                        stream_sum_up_tx_pps += stream->rate_packets_tx.avg;
+                        stream_sum_up_tx_pps += rate_packets_tx_avg;
                         stream_sum_up_tx_kbps += tx_kbps;
-                        stream_sum_up_rx_pps += stream->rate_packets_rx.avg;
+                        stream_sum_up_rx_pps += rate_packets_rx_avg;
                         stream_sum_up_rx_kbps += rx_kbps;
                         stream_sum_up_loss +=  (stream->rx_loss - stream->reset_loss);
                     } else {
-                        stream_sum_down_tx_pps += stream->rate_packets_tx.avg;
+                        stream_sum_down_tx_pps += rate_packets_tx_avg;
                         stream_sum_down_tx_kbps += tx_kbps;
-                        stream_sum_down_rx_pps += stream->rate_packets_rx.avg;
+                        stream_sum_down_rx_pps += rate_packets_rx_avg;
                         stream_sum_down_rx_kbps += rx_kbps;
                         stream_sum_down_loss += (stream->rx_loss - stream->reset_loss);
                     }
@@ -761,22 +765,26 @@ bbl_interactive_window_job(timer_s *timer)
 
         uint64_t tx_kbps;
         uint64_t rx_kbps;
+        uint64_t rate_packets_tx_avg = 0;
+        uint64_t rate_packets_rx_avg = 0;
 
         bbl_stream_s *stream = g_ctx->stream_head;
         i = 0;
         while(stream) {
             if((!stream->session) && stream->tx_network_interface == g_network_if) {
-                tx_kbps = stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000;
-                if(stream->rate_packets_tx.avg && tx_kbps == 0) {
+                if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg;
+                tx_kbps = rate_packets_tx_avg * stream->tx_len * 8 / 1000;
+                if(rate_packets_tx_avg && tx_kbps == 0) {
                     tx_kbps = 1;
                 }
-                rx_kbps = stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000;
-                if(stream->rate_packets_rx.avg && rx_kbps == 0) {
+                if(stream->rate_packets_rx) rate_packets_rx_avg = stream->rate_packets_rx->avg;
+                rx_kbps = rate_packets_rx_avg * stream->rx_len * 8 / 1000;
+                if(rate_packets_rx_avg && rx_kbps == 0) {
                     rx_kbps = 1;
                 }
                 if(i >= stats_win_postion && i < 32+stats_win_postion) {
                     wprintw(stats_win, "  %-16.16s | %9u | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, stream->flow_id,
-                            stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
+                            rate_packets_tx_avg, tx_kbps, rate_packets_rx_avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
                 } else if(i == 32+stats_win_postion) {   
                     wprintw(stats_win, "  ...\n");
                     break;

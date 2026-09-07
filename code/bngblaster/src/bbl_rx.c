@@ -18,6 +18,7 @@ bbl_rx_stream_network(bbl_network_interface_s *interface,
     stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {
         if(stream->rx_network_interface != interface) {
+            stream->rx_flags |= STREAM_FLAG_NETWORK;
             if(stream->rx_network_interface) {
                 /* RX interface has changed! */
                 stream->rx_interface_changes++;
@@ -39,6 +40,7 @@ bbl_rx_stream_access(bbl_access_interface_s *interface,
     stream = bbl_stream_rx(eth, NULL);
     if(stream) {
         if(stream->rx_access_interface == NULL) {
+            stream->rx_flags |= STREAM_FLAG_ACCESS;
             stream->rx_access_interface = interface;
         }
         return true;
@@ -55,6 +57,7 @@ bbl_rx_stream_a10nsp(bbl_a10nsp_interface_s *interface,
     stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {
         if(stream->rx_a10nsp_interface == NULL) {
+            stream->rx_flags |= STREAM_FLAG_A10NSP;
             stream->rx_a10nsp_interface = interface;
         }
         return true;

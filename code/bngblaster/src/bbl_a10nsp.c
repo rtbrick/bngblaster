@@ -775,17 +775,16 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
     uint8_t key;
 
     while(stream) {
-        if(stream->direction == BBL_DIRECTION_DOWN && 
-           stream->tx_a10nsp_interface && 
+        if(stream->direction == BBL_DIRECTION_DOWN && stream->tx_flags & STREAM_FLAG_A10NSP &&
            stream->tx_a10nsp_interface != interface) {
-            if(stream->threaded || (interface->interface && interface->interface->io.tx && interface->interface->io.tx->thread)) {
+            if((stream->tx_flags & STREAM_FLAG_THREADED) || (interface->interface && interface->interface->io.tx && interface->interface->io.tx->thread)) {
                 LOG(ERROR, "A10NSP (ID: %u) Failed to change TX interface of stream %u from %s to %s\n",
                     session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
             } else {
                 LOG(DEBUG, "A10NSP (ID: %u) Change TX interface of stream %u from %s to %s\n",
                     session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
 
-                if(stream->lag) {
+                if(stream->tx_flags & STREAM_FLAG_LAG) {
                     /* Remove stream from LAG interface */
                     lag = stream->tx_a10nsp_interface->interface->lag;
                     stream_next = lag->stream_head;
@@ -798,7 +797,7 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                             } else {
                                 lag->stream_head = stream->lag_next;
                             }
-                            stream->lag = false;
+                            stream->tx_flags &= (uint16_t)~STREAM_FLAG_LAG;
                             stream->lag_next = NULL;
                             stream_next = NULL;
                         } else {
@@ -812,7 +811,7 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                 /* Move stream */
                 if(interface->interface->type == LAG_INTERFACE) {
                     lag = interface->interface->lag;
-                    stream->lag = true;
+                    stream->tx_flags |= STREAM_FLAG_LAG;
                     stream->lag_next = lag->stream_head;
                     lag->stream_head = stream;
                     lag->stream_count++;

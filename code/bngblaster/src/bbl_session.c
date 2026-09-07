@@ -21,7 +21,7 @@ bbl_session_traffic_enable(bool enabled, bbl_session_s *session, uint8_t directi
 {
     bbl_stream_s *stream = session->streams.head;
     while(stream) {
-        if(stream->session_traffic && stream->direction & direction) {
+        if((stream->tx_flags & STREAM_FLAG_SESSION_TRAFFIC) && stream->direction & direction) {
             stream->enabled = enabled;
         }
         stream = stream->session_next;

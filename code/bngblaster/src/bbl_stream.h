@@ -116,19 +116,122 @@ typedef struct bbl_stream_args_
     uint8_t direction;
 } bbl_stream_args_s;
 
+#define STREAM_FLAG_UPSTREAM        (1 << 0)
+#define STREAM_FLAG_DOWNSTREAM      (1 << 1)
+#define STREAM_FLAG_NAT             (1 << 2)
+#define STREAM_FLAG_DELAY           (1 << 3)
+#define STREAM_FLAG_RATE            (1 << 4)
+#define STREAM_FLAG_IPV4            (1 << 5)
+#define STREAM_FLAG_UDP             (1 << 6)
+#define STREAM_FLAG_TCP             (1 << 7)
+#define STREAM_FLAG_THREADED        (1 << 8)
+#define STREAM_FLAG_LAG             (1 << 9)
+#define STREAM_FLAG_SESSION_TRAFFIC (1 << 10)
+#define STREAM_FLAG_LDP             (1 << 11)
+#define STREAM_FLAG_ACCESS          (1 << 12)
+#define STREAM_FLAG_NETWORK         (1 << 13)
+#define STREAM_FLAG_A10NSP          (1 << 14)
+
 /**
  * In the architecture of BNG Blaster, every traffic stream 
  * corresponds to one or two flows, namely upstream and downstream. 
  * Each flow is encapsulated within a bbl_stream_s structure and is 
- * assigned a unique 64-bit flow identifier. The structure is organized 
+ * assigned a unique 32-bit flow identifier. The structure is organized 
  * into three distinct sections, each separated by cache-line aligned 
  * padding (pad0 and pad1). The first section is dedicated to writes 
- * by the main thread, the second section by the TX thread, and the 
- * final section by the RX thread. This design was used to allow 
+ * by the TX thread, the second section by the RX thread, and the 
+ * final section by the main thread. This design was used to allow 
  * lock-free but thread-safe access across different threads.
  */
 typedef struct bbl_stream_
 {
+    /* TX Thread */
+    uint64_t expired;
+    uint64_t tx_packets;
+    uint64_t max_packets;
+    io_handle_s *io;
+    bbl_stream_s *io_next; /* Next stream of same IO bucket */
+    bbl_session_s *session;
+    endpoint_state_t *endpoint;
+    uint32_t session_version;
+    uint16_t tx_flags;
+    volatile bool reset;
+    volatile bool enabled;
+
+    /* 1. cache line */
+
+    bool setup;
+    uint16_t tx_len; /* TX length */
+    uint16_t tx_bbl_hdr_len; /* TX BBL HDR length */
+    uint8_t *tx_buf; /* TX buffer */
+    uint64_t tx_first_seq;
+
+    uint64_t flow_seq;
+    struct timespec wait_start;
+    time_t tx_first_epoch;
+    bbl_interface_s *tx_interface; /* TX link */
+    union {
+        bbl_access_interface_s *tx_access_interface;
+        bbl_network_interface_s *tx_network_interface;
+        bbl_a10nsp_interface_s *tx_a10nsp_interface;
+    };
+
+    /* RX Thread */
+    char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
+
+    uint64_t rx_packets;
+    uint64_t rx_loss;
+    uint64_t rx_last_seq;
+    uint64_t rx_min_delay_us;
+    uint64_t rx_max_delay_us;
+    time_t   rx_last_epoch;
+    union {
+        bbl_access_interface_s *rx_access_interface;
+        bbl_network_interface_s *rx_network_interface;
+        bbl_a10nsp_interface_s *rx_a10nsp_interface;
+    };
+    uint32_t rx_wrong_order;
+    uint16_t rx_flags;    
+    volatile bool verified;
+
+    /* All variables used in RX hot path are defined until 
+     * here and fit into a single cache line. */
+
+    uint64_t rx_first_seq;
+    uint32_t rx_wrong_session;
+    uint16_t rx_len;
+    uint16_t rx_fragment_offset; /* Max fragmentation offset received */
+    uint8_t  rx_fragments;
+    uint8_t  rx_interface_changes;
+    uint16_t rx_source_port;
+    uint32_t rx_source_ip;
+    time_t   rx_first_epoch;
+    time_t   rx_interface_changed_epoch;
+
+    uint8_t  rx_ttl; /* IPv4 or IPv6 TTL */
+    uint8_t  rx_priority; /* IPv4 TOS or IPv6 TC */
+    uint8_t  rx_outer_vlan_pbit;
+    uint8_t  rx_inner_vlan_pbit;
+
+    bool     rx_mpls1;
+    bool     rx_mpls2;
+    uint8_t  rx_mpls1_exp;
+    uint8_t  rx_mpls1_ttl;
+    uint8_t  rx_mpls2_exp;
+    uint8_t  rx_mpls2_ttl;
+
+    uint32_t rx_mpls1_label;
+    uint32_t rx_mpls2_label;
+
+    /* Main Thread */
+    char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
+
+    uint32_t flow_id; /* KEY */
+    uint8_t type;
+    uint8_t sub_type;
+    uint8_t direction;
+    uint8_t tcp_flags;
+
     uint64_t last_sync_packets_tx;
     uint64_t last_sync_packets_rx;
     uint64_t last_sync_loss;
@@ -138,33 +241,12 @@ typedef struct bbl_stream_
     uint64_t reset_packets_rx;
     uint64_t reset_loss;
 
-    bbl_rate_s rate_packets_tx;
-    bbl_rate_s rate_packets_rx;
+    bbl_rate_s *rate_packets_tx;
+    bbl_rate_s *rate_packets_rx;
 
-    uint32_t flow_id; /* KEY */
-    uint8_t type;
-    uint8_t sub_type;
-    uint8_t direction;
-    uint8_t tcp_flags;
-
-    volatile bool enabled;
-    volatile bool verified;
-    volatile bool reset;
     volatile bool update_pps;
-
-    bool threaded;
-    bool session_traffic;
-    bool setup;
-    bool wait;
-    bool nat;
-    bool tcp;
-    bool lag;
-    bool ldp_lookup;
-
     double pps;
-    uint64_t expired;
 
-    uint32_t session_version;
     uint32_t ldp_entry_version;
 
     uint32_t ipv4_src;
@@ -173,92 +255,19 @@ typedef struct bbl_stream_
     uint16_t src_port;
     uint16_t dst_port;
 
-    uint16_t tx_len; /* TX length */
-    uint16_t tx_bbl_hdr_len; /* TX BBL HDR length */
-    uint8_t *tx_buf; /* TX buffer */
-
     uint8_t *ipv6_src;
     uint8_t *ipv6_dst;
 
     bbl_stream_config_s *config;
 
     bbl_stream_s *next; /* Next stream (global) */
-    bbl_stream_s *io_next; /* Next stream of same IO bucket */
     bbl_stream_s *group_next; /* Next stream of same group */
     bbl_stream_s *lag_next; /* Next stream of same LAG group */
     bbl_stream_s *session_next; /* Next stream of same session */
     bbl_stream_s *reverse; /* Reverse stream direction */
-
     bbl_stream_group_s *group;
-    bbl_session_s *session;
-    endpoint_state_t *endpoint;
 
-    io_handle_s *io;
-
-    bbl_access_interface_s *tx_access_interface;
-    bbl_network_interface_s *tx_network_interface;
-    bbl_a10nsp_interface_s *tx_a10nsp_interface;
-    bbl_interface_s *tx_interface; /* TX interface */
     ldp_db_entry_s *ldp_entry;
-
-    char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
-
-    volatile uint64_t tx_packets;
-
-    uint64_t flow_seq;
-    uint64_t max_packets;
-
-    uint64_t tx_first_seq;
-    time_t   tx_first_epoch;
-
-    struct timespec wait_start;
-
-    char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
-
-    volatile uint64_t rx_packets;
-    volatile uint64_t rx_loss;
-    
-    uint64_t rx_wrong_session;
-    uint64_t rx_wrong_order;
-
-    uint64_t rx_min_delay_us;
-    uint64_t rx_max_delay_us;
-
-    uint16_t rx_len;
-    uint64_t rx_first_seq;
-    uint64_t rx_last_seq;
-
-    time_t   rx_first_epoch;
-    time_t   rx_last_epoch;
-
-    time_t   rx_interface_changed_epoch;
-    uint8_t  rx_interface_changes;
-
-    uint8_t  rx_fragments;
-    uint16_t rx_fragment_offset; /* Max fragmentation offset received */
-
-    uint8_t  rx_ttl; /* IPv4 or IPv6 TTL */
-    uint8_t  rx_priority; /* IPv4 TOS or IPv6 TC */
-    uint8_t  rx_outer_vlan_pbit;
-    uint8_t  rx_inner_vlan_pbit;
-
-    bool     rx_mpls1;
-    uint8_t  rx_mpls1_exp;
-    uint8_t  rx_mpls1_ttl;
-    uint32_t rx_mpls1_label;
-
-    bool     rx_mpls2;
-    uint8_t  rx_mpls2_exp;
-    uint8_t  rx_mpls2_ttl;
-    uint32_t rx_mpls2_label;
-
-    uint32_t rx_source_ip;
-    uint16_t rx_source_port;
-
-    bbl_access_interface_s *rx_access_interface;
-    bbl_network_interface_s *rx_network_interface;
-    bbl_a10nsp_interface_s *rx_a10nsp_interface;
-
 } bbl_stream_s;
 
 bbl_stream_s *
