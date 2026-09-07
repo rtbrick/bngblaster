@@ -22,7 +22,7 @@ bbl_dhcpv6_status_code_string(uint16_t status_code)
         case DHCPV6_STATUS_CODE_NOTONLINK: return "NotOnLink";
         case DHCPV6_STATUS_CODE_USEMULTICAST: return "UseMulticast";
         case DHCPV6_STATUS_CODE_NOPREFIXAVAIL: return "NoPrefixAvail";
-        default: return "unkown";
+        default: return "unknown";
     }
 }
 

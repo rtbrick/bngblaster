@@ -176,7 +176,7 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
                 if(peer_state == ISIS_PEER_STATE_UP) {
                     isis_adjacency_up(adjacency);
                 } else {
-                    isis_adjacency_down(adjacency, "hello goodby");
+                    isis_adjacency_down(adjacency, "hello goodbye");
                 }
                 isis_lsp_self_update(instance, adjacency->level);
             }

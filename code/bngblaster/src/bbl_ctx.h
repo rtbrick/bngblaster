@@ -140,7 +140,7 @@ typedef struct bbl_ctx_
     endpoint_state_t multicast_endpoint;
     bool zapping;
 
-    double total_pps; /* Sum of all sream PPS */
+    double total_pps; /* Sum of all stream PPS */
 
     /* Config options */
     struct {
@@ -363,7 +363,7 @@ typedef struct bbl_ctx_
         bool stream_rate_calc; /* Enable/disable stream rate calculation */
         bool stream_delay_calc; /* Enable/disable stream delay calculation */
         bool stream_udp_checksum; /* Enable/disable stream UDP checksum calculation */
-        uint64_t stream_burst_ms; /* Max bust size per stream in milliseconds */
+        uint64_t stream_burst_ms; /* Max burst size per stream in milliseconds */
 
         /* Session Traffic */
         bool session_traffic_autostart;

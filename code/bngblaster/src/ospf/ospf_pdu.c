@@ -95,7 +95,7 @@ ospf_pdu_checksum_v2(ospf_pdu_s *pdu)
         return 0;
     }
 
-    /* reset checkum/auth */
+    /* reset checksum/auth */
     checksum_orig = *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM);
     *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = 0;
     auth_data_orig = *(uint64_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_AUTH_DATA);
@@ -121,7 +121,7 @@ ospf_pdu_checksum_v3(ospf_pdu_s *pdu)
         return 0;
     }
 
-    /* reset checkum */
+    /* reset checksum */
     checksum_orig = *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM);
     *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = 0;
 

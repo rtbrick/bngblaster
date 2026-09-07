@@ -1403,7 +1403,7 @@ encode_ppp_ip6cp(uint8_t *buf, uint16_t *len,
         ip6cp_len = ip6cp->options_len + 4;
         *ip6cp_len_field = htobe16(ip6cp_len);
     } else {
-        /* Constuct options ... */
+        /* Construct options ... */
         ip6cp_len = 4;
         *buf = PPP_IP6CP_OPTION_IDENTIFIER;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -2648,7 +2648,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
                 }
                 if(option == ICMPV6_OPTION_DEST_LINK_LAYER) {
                     if(option_len != 8) {
-                        // Maleformed ICMPv6 packet
+                        // Malformed ICMPv6 packet
                         return DECODE_ERROR;
                     }
                     icmpv6->mac = buf;

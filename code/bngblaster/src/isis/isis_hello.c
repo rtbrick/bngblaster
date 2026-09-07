@@ -235,7 +235,7 @@ isis_hello_handler_rx(bbl_network_interface_s *interface,
         if(adjacency_up) {
             isis_adjacency_up(adjacency);
         } else {
-            isis_adjacency_down(adjacency, "hello goodby");
+            isis_adjacency_down(adjacency, "hello goodbye");
         }
     }
 

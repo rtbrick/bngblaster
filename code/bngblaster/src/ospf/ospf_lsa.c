@@ -359,7 +359,7 @@ ospf_lsa_update_age(ospf_lsa_s *lsa, struct timespec *now)
         lsa->expired = true;
     }
     lsa->age = age;
-    /* First two bytes of LSA HDR is age which is also exlcuded 
+    /* First two bytes of LSA HDR is age which is also excluded 
      * from checksum. Therefore updating age is that simple! */
     *(uint16_t*)lsa->lsa = htobe16(age);
 }

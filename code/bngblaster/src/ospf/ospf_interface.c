@@ -33,7 +33,7 @@ ospf_interface_elect_dr_bdr(ospf_interface_s *ospf_interface)
 
     neighbor = &self;
     while(neighbor) {
-        /* Iterate over all neighbors with staet >= 2WAY ... */
+        /* Iterate over all neighbors with state >= 2WAY ... */
         if(neighbor->state >= OSPF_NBSTATE_2WAY && neighbor->priority > 0) {
             if(ospf_interface->version == OSPF_VERSION_2) {
                 neighbor_id = neighbor->ipv4;

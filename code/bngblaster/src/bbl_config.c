@@ -2153,7 +2153,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->external_auto_refresh  = json_boolean_value(value);
     }
 
-    /* Value range choosen from smallest configurable on IOS-XR (lsp-mtu) and maximum on JunOS (max-lsp-size) */
+    /* Value range chosen from smallest configurable on IOS-XR (lsp-mtu) and maximum on JunOS (max-lsp-size) */
     JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-buffer-size", 128, 9192);
     if(value) {
         isis_config->lsp_buffer_size = json_number_value(value);
@@ -2928,11 +2928,11 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if(value) {
         stream_config->nat = json_boolean_value(value);
         if(stream_config->nat && stream_config->type != BBL_SUB_TYPE_IPV4) {
-            fprintf(stderr, "JSON config error: NAT support can't be enabledd for IPv6 stream %s\n", stream_config->name);
+            fprintf(stderr, "JSON config error: NAT support can't be enabled for IPv6 stream %s\n", stream_config->name);
             return false;
         }
         if(stream_config->nat && stream_config->direction == BBL_DIRECTION_DOWN) {
-            fprintf(stderr, "JSON config error: NAT support can't be enabledd for downstream only stream %s\n", stream_config->name);
+            fprintf(stderr, "JSON config error: NAT support can't be enabled for downstream only stream %s\n", stream_config->name);
             return false;
         }
     }

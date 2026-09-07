@@ -93,7 +93,7 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
     fragment->received += ipv4->payload_len;
 
     if(!(ipv4->offset & IPV4_MF)) {
-        /* Last fragment recieved. */
+        /* Last fragment received. */
         fragment->expected = offset + ipv4->payload_len;
     }
     if(fragment->received == fragment->expected) {

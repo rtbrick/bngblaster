@@ -95,7 +95,7 @@ ldp_notification(ldp_session_s *session, uint8_t *start, uint16_t length)
         ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
         (e_bit ? "fatal error" : "advisory"),
         status_code, keyval_get_key(ldp_status_names, status_code), 
-        (f_bit ? " wit forwarding bit set" : ""));
+        (f_bit ? " with forwarding bit set" : ""));
 
     return true;
 }
