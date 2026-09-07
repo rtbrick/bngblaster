@@ -222,6 +222,7 @@ bbl_ctrl_test_info(int fd, uint32_t session_id __attribute__((unused)), json_t *
                      "duration", test_duration());
     if(root) {
         result = json_dumpfd(root, fd, 0);
+        json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
     }
@@ -410,7 +411,7 @@ bbl_ctrl_commands(int fd, uint32_t session_id __attribute__((unused)), json_t *a
     int result = 0;
     json_t *jobj;
     json_t *jobj_c_array = json_array();
-    json_t *jobj_a_array = json_array();
+    json_t *jobj_a_array;
     const char **schema;
 
     int i = 0;
@@ -438,8 +439,10 @@ bbl_ctrl_commands(int fd, uint32_t session_id __attribute__((unused)), json_t *a
 
     if(root) {
         result = json_dumpfd(root, fd, 0);
+        json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(jobj_c_array);
     }
     return result;
 }
