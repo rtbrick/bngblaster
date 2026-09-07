@@ -692,8 +692,8 @@ bbl_interactive_window_job(timer_s *timer)
 
                 uint64_t tx_kbps;
                 uint64_t rx_kbps;
-                uint64_t rate_packets_tx_avg = 0;
-                uint64_t rate_packets_rx_avg = 0;
+                uint64_t rate_packets_tx_avg;
+                uint64_t rate_packets_rx_avg;
                 uint64_t stream_sum_up_tx_pps = 0;
                 uint64_t stream_sum_up_tx_kbps = 0;
                 uint64_t stream_sum_up_rx_pps = 0;
@@ -708,6 +708,8 @@ bbl_interactive_window_job(timer_s *timer)
                 bbl_stream_s *stream = session->streams.head;
                 i = 0;
                 while(stream) {
+                    rate_packets_tx_avg = 0;
+                    rate_packets_rx_avg = 0;
                     if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg;
                     tx_kbps = rate_packets_tx_avg * stream->tx_len * 8 / 1000;
                     if(rate_packets_tx_avg && tx_kbps == 0) {
@@ -765,13 +767,15 @@ bbl_interactive_window_job(timer_s *timer)
 
         uint64_t tx_kbps;
         uint64_t rx_kbps;
-        uint64_t rate_packets_tx_avg = 0;
-        uint64_t rate_packets_rx_avg = 0;
+        uint64_t rate_packets_tx_avg;
+        uint64_t rate_packets_rx_avg;
 
         bbl_stream_s *stream = g_ctx->stream_head;
         i = 0;
         while(stream) {
             if((!stream->session) && stream->tx_network_interface == g_network_if) {
+                rate_packets_tx_avg = 0;
+                rate_packets_rx_avg = 0;
                 if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg;
                 tx_kbps = rate_packets_tx_avg * stream->tx_len * 8 / 1000;
                 if(rate_packets_tx_avg && tx_kbps == 0) {
