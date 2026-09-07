@@ -386,6 +386,7 @@ io_dpdk_tx_job(timer_s *timer)
                 }
                 memcpy(rte_pktmbuf_mtod(mbufs[built], uint8_t *), stream->tx_buf, stream->tx_len);
                 streams[built] = stream;
+                stream->flow_seq++;
                 built++;
             }
             if(built < n) {
@@ -403,7 +404,6 @@ io_dpdk_tx_job(timer_s *timer)
                                                 interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
                     }
                     streams[i]->tx_packets++;
-                    streams[i]->flow_seq++;
                     io->stats.packets++;
                     io->stats.bytes += streams[i]->tx_len;
                 }
@@ -578,6 +578,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                     }
                     memcpy(rte_pktmbuf_mtod(mbufs[built], uint8_t *), stream->tx_buf, stream->tx_len);
                     streams[built] = stream;
+                    stream->flow_seq++;
                     built++;
                 }
                 if(built < n) {
@@ -589,7 +590,6 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                     nb_tx = rte_eth_tx_burst(interface->port_id, io->queue, mbufs, built);
                     for(i = 0; i < nb_tx; i++) {
                         streams[i]->tx_packets++;
-                        streams[i]->flow_seq++;
                         io->stats.packets++;
                         io->stats.bytes += streams[i]->tx_len;
                     }
