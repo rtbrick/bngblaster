@@ -1622,7 +1622,7 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
                 io_bucket->stream_cur = stream;
                 break;
             }
-            __builtin_prefetch(&stream->flow_seq, 1, 0);
+            __builtin_prefetch(&stream->setup, 1, 0);
             __builtin_prefetch(&stream->session_version, 0, 0);
             if(bbl_stream_io_send(stream) == PROTOCOL_SUCCESS) {
                 io_bucket->stream_cur = stream->io_next;
