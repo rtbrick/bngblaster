@@ -1,8 +1,8 @@
 /*
  * BNG Blaster (BBL) - IO DPDK Functions (EXPERIMENTAL/WIP)
  *
- * TESTED WITH DPDK 21.11.1
- * 
+ * TESTED WITH DPDK 25.11.3
+ *
  * Christian Giese, September 2022
  *
  * Copyright (C) 2020-2026, RtBrick, Inc.
@@ -19,6 +19,7 @@
 #include <dev_driver.h>
 
 #include <rte_memory.h>
+#include <rte_errno.h>
 #include <rte_launch.h>
 #include <rte_eal.h>
 #include <rte_common.h>
@@ -36,10 +37,11 @@
 #include <rte_malloc.h>
 
 #define MBUF_CACHE_SIZE 256
-#define NUM_MBUFS_RX 131072
-#define NUM_MBUFS_TX 8192
+#define NUM_MBUFS_RX (131072 - 1)
+#define NUM_MBUFS_TX (8192 - 1)
 #define BURST_SIZE_RX 256
 #define BURST_SIZE_TX 32
+#define PREFETCH_OFFSET 3
 
 extern bool g_init_phase;
 extern bool g_traffic;
@@ -147,9 +149,15 @@ io_dpdk_init()
         dpdk_args[argc++] = link_config->interface;
         link_config = link_config->next;
     }
-    
+    if(link_config) {
+        LOG_NOARG(ERROR, "DPDK: too many link interfaces, EAL argument list truncated\n");
+    }
+
     LOG_NOARG(DPDK, "DPDK: init the EAL\n");
-    rte_eal_init(argc, argv);
+    if(rte_eal_init(argc, argv) < 0) {
+        LOG(ERROR, "DPDK: failed to init the EAL (%s)\n", rte_strerror(rte_errno));
+        return false;
+    }
     LOG(DPDK, "DPDK: version %s\n", rte_version());
 
     dpdk_ports = rte_eth_dev_count_avail();
@@ -211,9 +219,18 @@ io_dpdk_rx_job(timer_s *timer)
         if(nb_rx == 0) {
             break;
         }
+        /* Prefetch the first few packets of the burst before processing
+         * starts, so their data has time to land before it's touched. */
+        for(i = 0; i < PREFETCH_OFFSET && i < nb_rx; i++) {
+            rte_prefetch0(rte_pktmbuf_mtod(packet_burst[i], void *));
+        }
         for(i = 0; i < nb_rx; i++) {
+            /* Prefetch packets ahead of the one being processed to hide
+             * memory latency behind the current packet's processing. */
+            if(likely(i + PREFETCH_OFFSET < nb_rx)) {
+                rte_prefetch0(rte_pktmbuf_mtod(packet_burst[i + PREFETCH_OFFSET], void *));
+            }
             packet = packet_burst[i];
-            rte_prefetch0(rte_pktmbuf_mtod(packet, void *));
             io->buf = rte_pktmbuf_mtod(packet, uint8_t *);
             io->buf_len = packet->pkt_len;
             io->stats.packets++;
@@ -265,6 +282,7 @@ io_dpdk_mbuf_alloc(io_handle_s *io)
         return false;
     }
     mbuf->data_len = 0;
+    mbuf->pkt_len = 0;
     mbuf->next = NULL;
     
     io->mbuf = mbuf;
@@ -283,7 +301,13 @@ io_dpdk_tx_job(timer_s *timer)
     bbl_interface_s *interface = io->interface;
 
     bbl_stream_s *stream = NULL;
+    bbl_stream_s *streams[BURST_SIZE_TX];
+    struct rte_mbuf *mbufs[BURST_SIZE_TX];
     uint16_t burst = interface->config->io_burst;
+    uint16_t built;
+    uint16_t n;
+    uint16_t nb_tx;
+    uint16_t i;
     uint64_t now;
     bool pcap = false;
 
@@ -314,6 +338,7 @@ io_dpdk_tx_job(timer_s *timer)
         }
         /* Transmit the packet. */
         io->mbuf->data_len = io->buf_len;
+        io->mbuf->pkt_len = io->buf_len;
         if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
             /* Dump the packet into pcap file. */
             if(unlikely(g_ctx->pcap.write_buf != NULL)) {
@@ -336,37 +361,64 @@ io_dpdk_tx_job(timer_s *timer)
     if(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP) {
         now = timespec_to_nsec(timer->timestamp);
         while(burst) {
-            /* Send traffic streams up to allowed burst. */
-            if(!io->mbuf) {
-                if(!io_dpdk_mbuf_alloc(io)) {
-                    break;
-                }
-            }
-            stream = bbl_stream_io_send_iter(io, now);
-            if(unlikely(stream == NULL)) {
+            /* Build a batch of up to BURST_SIZE_TX stream packets, then
+             * hand the whole batch to rte_eth_tx_burst() in one call. Stream
+             * accounting (flow_seq/tx_packets) is only applied below to the
+             * packets rte_eth_tx_burst() confirms it actually sent - a
+             * packet that never leaves the NIC (e.g. because the generator
+             * is offering more than line rate) must not advance its stream
+             * sequence number, or the receiver will report it as network
+             * loss when it was really dropped locally before transmission. */
+            n = burst < BURST_SIZE_TX ? burst : BURST_SIZE_TX;
+            if(unlikely(rte_pktmbuf_alloc_bulk(io->mbuf_pool, mbufs, n) != 0)) {
+                io->stats.no_buffer++;
                 break;
             }
-            /* Transmit the packet. */
-            io->mbuf->data_len = io->buf_len;
-            if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
-                /* Dump the packet into pcap file. */
-                if(unlikely(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams)) {
-                    pcap = true;
-                    pcapng_push_packet_header(&io->timestamp, io->buf, io->buf_len,
-                                            interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+            built = 0;
+            while(built < n) {
+                stream = bbl_stream_io_send_iter(io, now);
+                if(unlikely(stream == NULL)) {
+                    break;
                 }
-                stream->tx_packets++;
-                stream->flow_seq++;
-                io->stats.packets++;
-                io->stats.bytes += io->buf_len;
-                io->mbuf = NULL;
-                io->buf_len = 0;
-                burst--;
-            } else {
-                /* This packet will be retried next interval 
-                * because io->buf_len is not reset to zero. */
-                io->stats.io_errors++;
-                burst = 0;
+                if(unlikely(rte_pktmbuf_append(mbufs[built], stream->tx_len) == NULL)) {
+                    io->stats.no_buffer++;
+                    break;
+                }
+                memcpy(rte_pktmbuf_mtod(mbufs[built], uint8_t *), stream->tx_buf, stream->tx_len);
+                streams[built] = stream;
+                built++;
+            }
+            if(built < n) {
+                /* Return the mbufs bulk-allocated but not built into a
+                 * packet this round. */
+                rte_pktmbuf_free_bulk(&mbufs[built], n - built);
+            }
+            if(built) {
+                nb_tx = rte_eth_tx_burst(interface->port_id, io->queue, mbufs, built);
+                for(i = 0; i < nb_tx; i++) {
+                    /* Dump the packet into pcap file. */
+                    if(unlikely(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams)) {
+                        pcap = true;
+                        pcapng_push_packet_header(&io->timestamp, streams[i]->tx_buf, streams[i]->tx_len,
+                                                interface->ifindex, PCAPNG_EPB_FLAGS_OUTBOUND);
+                    }
+                    streams[i]->tx_packets++;
+                    streams[i]->flow_seq++;
+                    io->stats.packets++;
+                    io->stats.bytes += streams[i]->tx_len;
+                }
+                if(unlikely(nb_tx < built)) {
+                    /* Offered more than the NIC could actually transmit.
+                     * These packets never left the box, so just count them
+                     * as locally dropped instead of as sent stream traffic. */
+                    io->stats.dropped += (built - nb_tx);
+                    rte_pktmbuf_free_bulk(&mbufs[nb_tx], built - nb_tx);
+                }
+                burst -= built;
+            }
+            if(built < n) {
+                /* Nothing more was due this round. */
+                break;
             }
         }
     } else {
@@ -403,9 +455,18 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
         }
         /* Get RX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
+        /* Prefetch the first few packets of the burst before processing
+         * starts, so their data has time to land before it's touched. */
+        for(i = 0; i < PREFETCH_OFFSET && i < nb_rx; i++) {
+            rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i], void *));
+        }
         for(i = 0; i < nb_rx; i++) {
+            /* Prefetch packets ahead of the one being processed to hide
+             * memory latency behind the current packet's processing. */
+            if(likely(i + PREFETCH_OFFSET < nb_rx)) {
+                rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i + PREFETCH_OFFSET], void *));
+            }
             packet = pkts_burst[i];
-            rte_prefetch0(rte_pktmbuf_mtod(packet, void *));
             io->buf = rte_pktmbuf_mtod(packet, uint8_t *);
             io->buf_len = packet->pkt_len;
             /* Process packet */
@@ -425,20 +486,34 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
     bbl_txq_slot_t *slot;
 
     bbl_stream_s *stream = NULL;
+    bbl_stream_s *streams[BURST_SIZE_TX];
+    struct rte_mbuf *mbufs[BURST_SIZE_TX];
     uint16_t io_burst = interface->config->io_burst;
     uint16_t burst = 0;
+    uint16_t built;
+    uint16_t n;
+    uint16_t nb_tx;
+    uint16_t i;
     uint64_t now;
 
     struct timespec sleep, rem;
     sleep.tv_sec = 0;
-    sleep.tv_nsec = 1000; 
+    sleep.tv_nsec = 1000;
+
+    /* Number of consecutive rounds without anything sent before we back
+     * off with a nanosleep. With many independently paced stream instances,
+     * a single round finding nothing due is common even under heavy
+     * aggregate load (the next stream may become due microseconds later),
+     * so we only throttle once idleness looks sustained rather than after
+     * a single empty round. */
+    uint32_t idle_rounds = 0;
+    const uint32_t idle_spin_rounds = 10000;
 
     assert(io->mode == IO_MODE_DPDK);
     assert(io->direction == IO_EGRESS);
     assert(io->thread);
 
     while(thread->active) {
-        nanosleep(&sleep, &rem);
         if(io->update_streams) {
             io_stream_update_pps(io);
         }
@@ -446,7 +521,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
 
         /* First send all control traffic which has higher priority. */
         while((slot = bbl_txq_read_slot(txq))) {
-            /* This packet will be retried next interval 
+            /* This packet will be retried next interval
              * because slot is not marked as read. */
             if(!io->mbuf) {
                 if(!io_dpdk_mbuf_alloc(io)) {
@@ -465,6 +540,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                 if(burst) burst--;
             } else {
                 io->stats.io_errors++;
+                nanosleep(&sleep, &rem);
                 burst = 0;
                 break;
             }
@@ -476,34 +552,76 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
         if(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP) {
             now = timespec_to_nsec(&io->timestamp);
             while(burst) {
-                /* Send traffic streams up to allowed burst. */
-                if(!io->mbuf) {
-                    if(!io_dpdk_mbuf_alloc(io)) {
-                        break;
-                    }
-                }
-                stream = bbl_stream_io_send_iter(io, now);
-                if(unlikely(stream == NULL)) {
+                /* Build a batch of up to BURST_SIZE_TX stream packets, then
+                 * hand the whole batch to rte_eth_tx_burst() in one call.
+                 * Stream accounting (flow_seq/tx_packets) is only applied
+                 * below to the packets rte_eth_tx_burst() confirms it
+                 * actually sent - a packet that never leaves the NIC (e.g.
+                 * because the generator is offering more than line rate)
+                 * must not advance its stream sequence number, or the
+                 * receiver will report it as network loss when it was
+                 * really dropped locally before transmission. */
+                n = burst < BURST_SIZE_TX ? burst : BURST_SIZE_TX;
+                if(unlikely(rte_pktmbuf_alloc_bulk(io->mbuf_pool, mbufs, n) != 0)) {
+                    io->stats.no_buffer++;
                     break;
                 }
-                /* Transmit the packet. */
-                io->mbuf->data_len = stream->tx_len;
-                io->mbuf->pkt_len = stream->tx_len;
-                memcpy(io->buf, stream->tx_buf, stream->tx_len);
-                if(rte_eth_tx_burst(interface->port_id, io->queue, &io->mbuf, 1) != 0) {
-                    stream->tx_packets++;
-                    stream->flow_seq++;
-                    io->stats.packets++;
-                    io->stats.bytes += stream->tx_len;
-                    io->mbuf = NULL;
-                    burst--;
-                } else {
-                    io->stats.io_errors++;
-                    burst = 0;
+                built = 0;
+                while(built < n) {
+                    stream = bbl_stream_io_send_iter(io, now);
+                    if(unlikely(stream == NULL)) {
+                        break;
+                    }
+                    if(unlikely(rte_pktmbuf_append(mbufs[built], stream->tx_len) == NULL)) {
+                        io->stats.no_buffer++;
+                        break;
+                    }
+                    memcpy(rte_pktmbuf_mtod(mbufs[built], uint8_t *), stream->tx_buf, stream->tx_len);
+                    streams[built] = stream;
+                    built++;
+                }
+                if(built < n) {
+                    /* Return the mbufs bulk-allocated but not built into a
+                     * packet this round. */
+                    rte_pktmbuf_free_bulk(&mbufs[built], n - built);
+                }
+                if(built) {
+                    nb_tx = rte_eth_tx_burst(interface->port_id, io->queue, mbufs, built);
+                    for(i = 0; i < nb_tx; i++) {
+                        streams[i]->tx_packets++;
+                        streams[i]->flow_seq++;
+                        io->stats.packets++;
+                        io->stats.bytes += streams[i]->tx_len;
+                    }
+                    if(unlikely(nb_tx < built)) {
+                        /* Offered more than the NIC could actually transmit.
+                         * These packets never left the box, so just count
+                         * them as locally dropped instead of as sent stream
+                         * traffic. */
+                        io->stats.dropped += (built - nb_tx);
+                        rte_pktmbuf_free_bulk(&mbufs[nb_tx], built - nb_tx);
+                    }
+                    burst -= built;
+                }
+                if(built < n) {
+                    /* Nothing more was due this round. */
+                    break;
                 }
             }
         } else {
             bbl_stream_io_stop(io);
+        }
+
+        if(burst != io_burst) {
+            idle_rounds = 0;
+        } else if(++idle_rounds >= idle_spin_rounds) {
+            /* Nothing was sent for many consecutive rounds in a row.
+             * Only now back off, instead of busy-spinning forever, or
+             * sleeping after every single empty round (which would also
+             * throttle bursty-but-busy streams that just missed being
+             * due by a few microseconds). */
+            nanosleep(&sleep, &rem);
+            idle_rounds = 0;
         }
     }
 }
@@ -512,20 +630,16 @@ static bool
 io_dpdk_add_mbuf_pool(io_handle_s *io, unsigned int num_mbufs)
 {
     struct rte_mempool *mbuf_pool;
-    char buf[16] = {0};
-    char *name;
+    char name[16] = {0};
     static uint16_t id = 0;
 
-    snprintf(buf, sizeof(buf), "MBUF_POOL_%u", ++id);
-    name = strdup(buf);
-    if(!name) return false; /* very unlikely... */
+    snprintf(name, sizeof(name), "MBUF_POOL_%u", ++id);
 
-    mbuf_pool = rte_pktmbuf_pool_create(name, num_mbufs, 
+    mbuf_pool = rte_pktmbuf_pool_create(name, num_mbufs,
             MBUF_CACHE_SIZE, 0,
-            RTE_MBUF_DEFAULT_BUF_SIZE, 
+            RTE_MBUF_DEFAULT_BUF_SIZE,
             rte_eth_dev_socket_id(io->interface->port_id));
     if(!mbuf_pool) {
-        free(name);
         return false;
     }
     io->mbuf_pool = mbuf_pool;
@@ -698,24 +812,6 @@ io_dpdk_interface_init(bbl_interface_s *interface)
                                      &tx_conf);
         if(ret < 0) {
             LOG(ERROR, "DPDK: interface %s (%u) failed to setup TX queue %u (error %d)\n",
-                interface->name, port_id, queue, ret);
-            return false;
-        }
-
-        /* Initialize TX buffers */
-        io->tx_buffer = rte_zmalloc_socket("tx_buffer",
-                RTE_ETH_TX_BUFFER_SIZE(BURST_SIZE_TX), 0,
-                rte_eth_dev_socket_id(port_id));
-        if (!io->tx_buffer) {
-            LOG(ERROR, "DPDK: interface %s (%u) failed to allocate TX buffer for queue %u (error %d)\n",
-                interface->name, port_id, queue, ret);
-            return false;
-        }
-        rte_eth_tx_buffer_init(io->tx_buffer, BURST_SIZE_TX);
-        ret = rte_eth_tx_buffer_set_err_callback(io->tx_buffer, 
-            rte_eth_tx_buffer_count_callback, &io->stats.dropped);
-        if(ret < 0) {
-            LOG(ERROR, "DPDK: interface %s (%u) failed to set TX error callback for queue %u (error %d)\n",
                 interface->name, port_id, queue, ret);
             return false;
         }
