@@ -129,7 +129,7 @@ append_cpu(uint16_t *cpuset, uint16_t *count, uint16_t max, uint16_t cpu)
 static void
 order_cpuset_physical_first(uint16_t **cpuset, uint16_t count)
 {
-    uint16_t *ordered = NULL;;
+    uint16_t *ordered = NULL;
     uint16_t ordered_count = 0;
     uint16_t i;
     uint16_t j;
@@ -200,7 +200,7 @@ io_interface_init_topology(bbl_interface_s *interface, int numa_node_hint)
     bool use_numa = false;
     bool use_online = false;
 
-    if(numa_node_hint >= -1) {
+    if(numa_node_hint >= 0) {
         numa_node = numa_node_hint;
     }
 
