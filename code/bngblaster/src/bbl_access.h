@@ -77,19 +77,20 @@ typedef struct bbl_access_interface_
         uint32_t dhcpv6_timeout;
 
         uint32_t ipv4_fragmented_rx;
+        
+        uint32_t session_ipv4_wrong_session;
+        uint32_t session_ipv6_wrong_session;
+        uint32_t session_ipv6pd_wrong_session;
 
         uint64_t session_ipv4_tx;
         uint64_t session_ipv4_rx;
         uint64_t session_ipv4_loss;
-        uint64_t session_ipv4_wrong_session;
         uint64_t session_ipv6_tx;
         uint64_t session_ipv6_rx;
         uint64_t session_ipv6_loss;
-        uint64_t session_ipv6_wrong_session;
         uint64_t session_ipv6pd_tx;
         uint64_t session_ipv6pd_rx;
         uint64_t session_ipv6pd_loss;
-        uint64_t session_ipv6pd_wrong_session;
 
         uint64_t stream_tx;
         uint64_t stream_rx;

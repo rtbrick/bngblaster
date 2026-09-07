@@ -1254,8 +1254,8 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
 static void
 bbl_stream_rx_wrong_session(bbl_stream_s *stream) 
 {
-    uint64_t packets;
-    uint64_t packets_delta;
+    uint32_t packets;
+    uint32_t packets_delta;
 
     packets = stream->rx_wrong_session;
     packets_delta = packets - stream->last_sync_wrong_session;
@@ -2482,7 +2482,9 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                     if(bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
                        bbl->inner_vlan_id != session->vlan_key.inner_vlan_id ||
                        bbl->session_id != session->session_id) {
-                        stream->rx_wrong_session++;
+                        if(stream->rx_wrong_session < UINT32_MAX) {
+                            stream->rx_wrong_session++;
+                        }
                         return NULL;
                     }
                 }

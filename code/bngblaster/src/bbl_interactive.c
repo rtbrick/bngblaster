@@ -576,17 +576,17 @@ bbl_interactive_window_job(timer_s *timer)
             if(g_ctx->stats.session_traffic_flows) {
                 wprintw(stats_win, "  TX Session Packets IPv4   %10lu |%7lu PPS\n",
                     g_access_if->stats.session_ipv4_tx, g_access_if->stats.rate_session_ipv4_tx.avg);
-                wprintw(stats_win, "  RX Session Packets IPv4   %10lu |%7lu PPS %10lu Loss %lu Wrong Session\n",
+                wprintw(stats_win, "  RX Session Packets IPv4   %10lu |%7lu PPS %10lu Loss %u Wrong Session\n",
                     g_access_if->stats.session_ipv4_rx, g_access_if->stats.rate_session_ipv4_rx.avg,
                     g_access_if->stats.session_ipv4_loss, g_access_if->stats.session_ipv4_wrong_session);
                 wprintw(stats_win, "  TX Session Packets IPv6   %10lu |%7lu PPS\n",
                     g_access_if->stats.session_ipv6_tx, g_access_if->stats.rate_session_ipv6_tx.avg);
-                wprintw(stats_win, "  RX Session Packets IPv6   %10lu |%7lu PPS %10lu Loss %lu Wrong Session\n",
+                wprintw(stats_win, "  RX Session Packets IPv6   %10lu |%7lu PPS %10lu Loss %u Wrong Session\n",
                     g_access_if->stats.session_ipv6_rx, g_access_if->stats.rate_session_ipv6_rx.avg,
                     g_access_if->stats.session_ipv6_loss, g_access_if->stats.session_ipv6_wrong_session);
                 wprintw(stats_win, "  TX Session Packets IPv6PD %10lu |%7lu PPS\n",
                     g_access_if->stats.session_ipv6pd_tx, g_access_if->stats.rate_session_ipv6pd_tx.avg);
-                wprintw(stats_win, "  RX Session Packets IPv6PD %10lu |%7lu PPS %10lu Loss %lu Wrong Session\n",
+                wprintw(stats_win, "  RX Session Packets IPv6PD %10lu |%7lu PPS %10lu Loss %u Wrong Session\n",
                     g_access_if->stats.session_ipv6pd_rx, g_access_if->stats.rate_session_ipv6pd_rx.avg,
                     g_access_if->stats.session_ipv6pd_loss, g_access_if->stats.session_ipv6pd_wrong_session);
             }

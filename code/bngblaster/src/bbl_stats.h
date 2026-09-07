@@ -153,6 +153,17 @@ typedef struct bbl_interface_stats_ {
     uint64_t to_long;
     uint64_t no_buffer;
     uint64_t polled;
+    uint64_t dropped; /* offered more than could locally be transmitted */
+
+    /* NIC-level counters (DPDK only, 0 otherwise). These reflect drops
+     * that happen in the NIC/driver before bngblaster's own RX/TX loop
+     * ever sees the packet, e.g. ring overflow from a poll thread not
+     * being scheduled promptly enough - a class of loss otherwise
+     * invisible to software-side accounting. */
+    uint64_t hw_rx_missed; /* RX packets dropped by the NIC, no free descriptor */
+    uint64_t hw_rx_nombuf; /* RX packets dropped, mbuf pool exhausted */
+    uint64_t hw_rx_errors; /* RX packets dropped due to NIC-detected errors */
+    uint64_t hw_tx_errors; /* TX packets the NIC failed to transmit */
 } bbl_interface_stats_s;
 
 void 

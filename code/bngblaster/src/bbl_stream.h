@@ -191,7 +191,7 @@ typedef struct bbl_stream_
         bbl_a10nsp_interface_s *rx_a10nsp_interface;
     };
     uint32_t rx_wrong_order;
-    uint16_t rx_flags;    
+    uint16_t rx_flags;
     volatile bool verified;
 
     /* All variables used in RX hot path are defined until 
@@ -235,7 +235,9 @@ typedef struct bbl_stream_
     uint64_t last_sync_packets_tx;
     uint64_t last_sync_packets_rx;
     uint64_t last_sync_loss;
-    uint64_t last_sync_wrong_session;
+    uint32_t last_sync_wrong_session;
+
+    uint32_t ldp_entry_version;
 
     uint64_t reset_packets_tx;
     uint64_t reset_packets_rx;
@@ -247,7 +249,6 @@ typedef struct bbl_stream_
     volatile bool update_pps;
     double pps;
 
-    uint32_t ldp_entry_version;
 
     uint32_t ipv4_src;
     uint32_t ipv4_dst;
