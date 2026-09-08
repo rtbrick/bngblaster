@@ -16,6 +16,10 @@
 #include <rte_ethdev.h>
 #endif
 
+#ifdef BNGBLASTER_AF_XDP
+#include <linux/if_xdp.h>
+#endif
+
 extern const char banner[];
 
 void
@@ -83,6 +87,21 @@ bbl_stats_generate_interface(io_handle_s *io, bbl_interface_stats_s *stats)
         stats->no_buffer += io->stats.no_buffer;
         stats->polled += io->stats.polled;
         stats->dropped += io->stats.dropped;
+#ifdef BNGBLASTER_AF_XDP
+        if(io->mode == IO_MODE_AF_XDP) {
+            /* Per-socket (per queue) kernel counters. The RX and TX chain
+             * are accumulated separately here since bbl_stats_generate_interface()
+             * is always called once per direction with the matching chain. */
+            struct xdp_statistics xdp_stats;
+            socklen_t optlen = sizeof(xdp_stats);
+            if(getsockopt(io->fd, SOL_XDP, XDP_STATISTICS, &xdp_stats, &optlen) == 0) {
+                stats->hw_rx_missed += xdp_stats.rx_ring_full;
+                stats->hw_rx_nombuf += xdp_stats.rx_fill_ring_empty_descs;
+                stats->hw_rx_errors += xdp_stats.rx_dropped + xdp_stats.rx_invalid_descs;
+                stats->hw_tx_errors += xdp_stats.tx_invalid_descs;
+            }
+        }
+#endif
         io = io->next;
     }
 }

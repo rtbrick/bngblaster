@@ -16,7 +16,8 @@
                         "packet_mmap_raw",
                         "packet_mmap",
                         "raw",
-                        "dpdk"
+                        "dpdk",
+                        "af_xdp"
                     ]
                 },
                 "io-slots": {
@@ -1601,7 +1602,7 @@
                     ],
                     "default": "STRING"
                 },
-                "cfm-cc-seq": {
+                "cfm-seq": {
                     "type": "boolean",
                     "description": "Enable EOAM CFM CC sequence numbers",
                     "default": true
@@ -1832,7 +1833,7 @@
                     ],
                     "default": "STRING"
                 },
-                "cfm-cc-seq": {
+                "cfm-seq": {
                     "type": "boolean",
                     "default": true
                 },

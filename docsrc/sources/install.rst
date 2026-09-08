@@ -163,7 +163,7 @@ The following steps are required to build the BNG Blaster with experimental
 
 .. note::
 
-    Tested with DPDK version 25.11.0 and Ubuntu 22.04 (LTS)!
+    Tested with DPDK version 25.11.3 and Ubuntu 22.04 (LTS)!
 
 
 Download and install DPDK:
@@ -213,6 +213,52 @@ The installed version should now show `dpdk` as new IO mode.
     Version: DEV
     Compiler: GNU (11.2.0)
     IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk
+
+
+.. _install-af-xdp:
+
+Build with AF_XDP Support
+^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The following steps are required to build the BNG Blaster with experimental
+:ref:`AF_XDP <af-xdp-usage>` support.
+
+.. note::
+
+    Tested with libbpf version 0.5.0 and Ubuntu 22.04 (LTS)!
+
+
+Install libbpf development files (which include the AF_XDP helper library):
+
+.. code-block:: none
+
+    sudo apt install libbpf-dev
+
+Building BNG Blaster with AF_XDP support works as explained before but with
+the additional cmake argument ``-DBNGBLASTER_AF_XDP=on``
+
+.. code-block:: none
+
+    cmake -DBNGBLASTER_AF_XDP=on ..
+
+If libbpf is installed correctly, cmake should show the following output:
+
+.. code-block:: none
+
+    -- Build bngblaster with AF_XDP support
+    -- Found PkgConfig: /usr/bin/pkg-config (found version "1.8.0")
+    -- Checking for module 'libbpf'
+    --   Found libbpf, version 0.5.0
+    -- Found libbpf via pkg-config
+
+The installed version should now show `af_xdp` as new IO mode.
+
+.. code-block:: none
+
+    sudo bngblaster -v
+    Version: DEV
+    Compiler: GNU (11.4.0)
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw, af_xdp
 
 
 Running BNG Blaster

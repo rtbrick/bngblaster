@@ -53,6 +53,11 @@ bbl_interface_ctrl_topology_threads(io_handle_s *io, bool auto_cpuset, bool manu
                 json_object_set_new(jobj, "queue", json_integer(io->queue));
             }
 #endif
+#ifdef BNGBLASTER_AF_XDP
+            if(jobj && io->mode == IO_MODE_AF_XDP) {
+                json_object_set_new(jobj, "queue", json_integer(io->af_xdp_queue_id));
+            }
+#endif
             if(jobj) {
                 json_array_append_new(jarray, jobj);
             }

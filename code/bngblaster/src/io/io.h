@@ -31,4 +31,8 @@
 #include "io_dpdk.h"
 #endif
 
+#ifdef BNGBLASTER_AF_XDP
+#include "io_af_xdp.h"
+#endif
+
 #endif

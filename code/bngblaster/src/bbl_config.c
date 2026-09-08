@@ -693,6 +693,11 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             link_config->io_mode = IO_MODE_DPDK;
             g_ctx->dpdk = true;
 #endif
+#if BNGBLASTER_AF_XDP
+        } else if(strcmp(s, "af_xdp") == 0) {
+            link_config->io_mode = IO_MODE_AF_XDP;
+            io_af_xdp_set_max_stream_len();
+#endif
         } else {
             fprintf(stderr, "JSON config error: Invalid value for links->io-mode\n");
             return false;
@@ -1474,7 +1479,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->arp_client_group_id = json_number_value(value);
     }
 
-    JSON_OBJ_GET_BOOL(access_interface, value, "network", "cfm-cc");
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "cfm-cc");
     if(value && json_boolean_value(value)) {
         access_config->cfm = calloc(1, sizeof(bbl_cfm_config_s));
         if(!json_parse_cfm_config(access_interface, access_config->cfm)) {
@@ -4235,6 +4240,11 @@ json_parse_config(json_t *root)
             } else if(strcmp(s, "dpdk") == 0) {
                 g_ctx->config.io_mode = IO_MODE_DPDK;
                 g_ctx->dpdk = true;
+#endif
+#if BNGBLASTER_AF_XDP
+            } else if(strcmp(s, "af_xdp") == 0) {
+                g_ctx->config.io_mode = IO_MODE_AF_XDP;
+                io_af_xdp_set_max_stream_len();
 #endif
             } else {
                 fprintf(stderr, "JSON config error: Invalid value for interfaces->io-mode\n");

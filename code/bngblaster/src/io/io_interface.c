@@ -487,11 +487,23 @@ io_interface_init(bbl_interface_s *interface)
         if(*(uint32_t*)config->mac) {
             memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
         }
-        if(!io_interface_init_rx(interface)) {
+        if(config->io_mode == IO_MODE_AF_XDP) {
+#ifdef BNGBLASTER_AF_XDP
+            if(!io_af_xdp_interface_init(interface)) {
+                return false;
+            }
+#else
+            LOG(ERROR, "IO mode af_xdp requested for interface %s but BNG Blaster "
+                "was built without AF_XDP support\n", interface->name);
             return false;
-        }
-        if(!io_interface_init_tx(interface)) {
-            return false;
+#endif
+        } else {
+            if(!io_interface_init_rx(interface)) {
+                return false;
+            }
+            if(!io_interface_init_tx(interface)) {
+                return false;
+            }
         }
     }
     return true;

@@ -71,6 +71,14 @@ typedef struct io_handle_ {
     uint16_t queue;
 #endif
 
+#ifdef BNGBLASTER_AF_XDP
+    /* Shared per (interface, queue) AF_XDP context. The RX and TX
+     * io_handle_s of a given queue point to the same context, since
+     * AF_XDP binds RX and TX rings to a single combined socket. */
+    struct io_af_xdp_queue_ *af_xdp_queue;
+    uint16_t af_xdp_queue_id;
+#endif
+
     uint8_t *ring; /* ring buffer */
     unsigned int cursor; /* ring buffer cursor */
     unsigned int queued;

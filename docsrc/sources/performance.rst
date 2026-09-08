@@ -101,11 +101,26 @@ test environment.
 
     ethtool -C <interface> adaptive-rx off adaptive-tx off rx-usecs 125 tx-usecs 125
 
+The NIC's own on-card RX descriptor ring is a separate, usually much smaller
+buffer than any of the software-side ring/slot settings above (``io-slots``,
+AF_XDP's fill ring, DPDK's descriptor count, ...) - it is the actual DMA
+ring the driver refills via its NAPI poll. On some drivers/NICs it defaults
+far below what the hardware supports (e.g. 512 out of a possible 8160 on an
+Intel i40e we tested), so at high line rates any brief delay in the NAPI
+poll (e.g. from interrupt moderation, see above) can drain it before the
+driver gets to refill it - visible as the ``rx_missed_errors`` counter in
+``ethtool -S <interface>`` increasing even though every software-side ring
+is comfortably sized. Check and, if needed, raise it towards its maximum:
+
+.. code-block:: none
+
+    ethtool -g <interface>
+    ethtool -G <interface> rx 8160 tx 8160
+
 .. note::
 
     We are continuously working to increase performance. Contributions, proposals,
     or recommendations on how to further increase performance are welcome!
-
 
 NUMA
 ----
@@ -324,4 +339,78 @@ remains available if you need exact CPU control.
 
 DPDK assigns one hardware queue to each RX thread, so you need to increase
 the number of threads to utilize more queues and enhance performance.
+
+
+.. _af-xdp-usage:
+
+AF_XDP
+------
+
+Using the experimental `AF_XDP <https://www.kernel.org/doc/html/latest/networking/af_xdp.html>`_
+support requires building the BNG Blaster from sources with AF_XDP enabled as
+explained in the corresponding :ref:`installation <install-af-xdp>` section.
+
+.. note::
+
+    The official BNG Blaster Debian release packages do not support AF_XDP!
+
+Unlike :ref:`DPDK <dpdk-usage>`, AF_XDP interfaces stay attached to the Linux
+network stack and keep using the normal kernel driver, which makes it a good
+middle ground between the regular ``packet_mmap``/``raw`` modes and DPDK: no
+dedicated driver binding or hugepages are required, while still bypassing
+most of the kernel networking stack for a lot better performance than
+``packet_mmap``.
+
+RX and TX each get their own dedicated, disjoint NIC queues - they are never
+combined onto the same queue, so heavy TX load can't delay that same
+queue's own RX servicing (they would otherwise share one NAPI/IRQ context).
+``rx-threads`` and ``tx-threads`` are fully independent, e.g. more RX than
+TX threads to spread out RX-side protocol processing without paying for
+extra TX threads.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "io-slots": 4096,
+            "links": [
+                {
+                    "interface": "eth1",
+                    "io-mode": "af_xdp",
+                    "rx-threads": 6,
+                    "rx-auto-cpuset": true,
+                    "tx-threads": 2,
+                    "tx-auto-cpuset": true
+                }
+            ]
+        }
+    }
+
+.. note::
+
+    AF_XDP frames are limited to 4096 byte, so ``jumbo-frames`` are not
+    supported by this I/O mode and the maximum stream packet length is
+    reduced accordingly.
+
+Like DPDK, AF_XDP requires the NIC to actually provide as many hardware
+queues as bngblaster needs, i.e. ``rx-threads`` + ``tx-threads`` (each
+defaulting to 1 if left unset), since RX and TX never share a queue.
+BNG Blaster reconfigures the interface to the required number of combined
+queues automatically via ``ethtool``-equivalent ioctls (the same effect as
+running ``ethtool -L <interface> combined <n>`` beforehand) - if that fails
+(e.g. insufficient privileges, or a driver that splits RX/TX channels
+instead of combined ones), it is logged with a hint to configure it
+manually. Native (driver) mode additionally requires a driver with native
+XDP support; BNG Blaster automatically falls back to generic (SKB) mode -
+which works on any interface, including ``veth`` - if native mode is not
+available.
+
+.. note::
+
+    If the NIC has more queues configured than bngblaster binds AF_XDP
+    sockets to, RSS may hash some flows to a queue nothing is bound to -
+    those packets are passed to the normal kernel stack instead of being
+    redirected to bngblaster, which looks like silent RX loss for the
+    affected flows. This is exactly what the automatic queue
+    reconfiguration above avoids.
 

@@ -537,7 +537,7 @@ ring buffer and sent through RAW packet sockets.
     $ bngblaster -v
     Version: 0.8.1
     Compiler: GNU (7.5.0)
-    IO Modes: packet_mmap_raw (default), packet_mmap, raw
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk, af_xdp
 
 Packet MMAP
 ~~~~~~~~~~~
@@ -565,6 +565,13 @@ The I/O mode ``raw`` allows steam packet lengths of up to 9000 bytes (layer 3).
 DPDK
 ~~~~
 
-`DPDK <https://www.dpdk.org/>`_ support should be considered as experimental. 
-This I/O mode is detailed explained in the :ref:`DPDK <dpdk-usage>` section of the 
-:ref:`performance guide <performance>`. 
+`DPDK <https://www.dpdk.org/>`_ support should be considered as experimental.
+This I/O mode is detailed explained in the :ref:`DPDK <dpdk-usage>` section of the
+:ref:`performance guide <performance>`.
+
+AF_XDP
+~~~~~~
+
+`AF_XDP <https://www.kernel.org/doc/html/latest/networking/af_xdp.html>`_ support
+should be considered as experimental. This I/O mode is detailed explained in the
+:ref:`AF_XDP <af-xdp-usage>` section of the :ref:`performance guide <performance>`.

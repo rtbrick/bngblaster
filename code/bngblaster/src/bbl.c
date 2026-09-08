@@ -158,6 +158,7 @@ struct keyval_ log_names[] = {
     { TCP,           "tcp" },
     { LAG,           "lag" },
     { DPDK,          "dpdk" },
+    { AFXDP,         "af_xdp" },
     { PACKET,        "packet" },
     { HTTP,          "http" },
 #ifdef BNGBLASTER_TIMER_LOGGING
@@ -204,6 +205,9 @@ bbl_print_version (void)
     printf("IO Modes: packet_mmap_raw (default), packet_mmap, raw");
 #ifdef BNGBLASTER_DPDK
     printf(", dpdk");
+#endif
+#ifdef BNGBLASTER_AF_XDP
+    printf(", af_xdp");
 #endif
     printf("\n");
 }
