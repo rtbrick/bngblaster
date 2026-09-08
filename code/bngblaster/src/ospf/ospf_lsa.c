@@ -1143,6 +1143,8 @@ ospf_lsa_router_information_update(ospf_instance_s *ospf_instance)
 
     uint8_t lsa_type = OSPF_LSA_TYPE_10;
     uint8_t options = 0;
+    size_t  hostname_len;
+
     if(config->version == OSPF_VERSION_3) {
         lsa_type = OSPF_LSA_TYPE_12;
         options = OSPFV3_U_BIT|OSPFV3_FSCOPE_AREA;
@@ -1187,11 +1189,12 @@ ospf_lsa_router_information_update(ospf_instance_s *ospf_instance)
     hdr->router = key.router;
     hdr->seq = htobe32(lsa->seq);
 
+    hostname_len = strnlen(config->hostname, OSPF_MAX_HOSTNAME_LEN);
     tlv = (ospf_lsa_tlv_s*)(lsa->lsa+lsa->lsa_len);
     tlv->type = htobe16(OSPF_RI_TLV_HOSTNAME);
-    tlv->len = htobe16(strlen(config->hostname));
-    strcpy((char*)tlv->value, (char*)config->hostname);
-    lsa->lsa_len += 4 + ((strlen(config->hostname)+3)&(~3));
+    tlv->len = htobe16(hostname_len);
+    memcpy(tlv->value, config->hostname, hostname_len);
+    lsa->lsa_len += 4 + ((hostname_len+3)&(~3));
 
     if(config->sr_base && config->sr_node_sid && config->sr_range) {
         tlv = (ospf_lsa_tlv_s*)(lsa->lsa+lsa->lsa_len);
@@ -1673,14 +1676,14 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
     }
 
     if(ospf_interface->version == OSPF_VERSION_2) {
-        if(pdu->pdu_len < OSPFV2_LS_UPDATE_LEN_MIN) {
+        if(pdu->packet_len < OSPFV2_LS_UPDATE_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
         lsa_count = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_LS_UPDATE_COUNT));
         OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_LS_UPDATE_LSA);
     } else {
-        if(pdu->pdu_len < OSPFV3_LS_UPDATE_LEN_MIN) {
+        if(pdu->packet_len < OSPFV3_LS_UPDATE_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
@@ -1845,13 +1848,13 @@ ospf_lsa_req_handler_rx(ospf_interface_s *ospf_interface,
     }
 
     if(ospf_interface->version == OSPF_VERSION_2) {
-        if(pdu->pdu_len < OSPFV2_LS_REQ_LEN_MIN) {
+        if(pdu->packet_len < OSPFV2_LS_REQ_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
         OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_LS_REQ_LSA);
     } else {
-        if(pdu->pdu_len < OSPFV3_LS_REQ_LEN_MIN) {
+        if(pdu->packet_len < OSPFV3_LS_REQ_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
@@ -1935,13 +1938,13 @@ ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface,
     }
 
     if(ospf_interface->version == OSPF_VERSION_2) {
-        if(pdu->pdu_len < OSPFV2_LS_ACK_LEN_MIN) {
+        if(pdu->packet_len < OSPFV2_LS_ACK_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
         OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_LS_ACK_LSA);
     } else {
-        if(pdu->pdu_len < OSPFV3_LS_ACK_LEN_MIN) {
+        if(pdu->packet_len < OSPFV3_LS_ACK_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }

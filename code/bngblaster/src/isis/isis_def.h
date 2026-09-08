@@ -383,7 +383,7 @@ typedef struct isis_pdu_ {
 
     uint16_t cur; /* current position */
 
-    uint8_t  pdu[ISIS_MAX_PDU_LEN];
+    uint8_t  pdu[ISIS_MAX_PDU_LEN_RX];
     uint16_t pdu_len;
 } isis_pdu_s;
 

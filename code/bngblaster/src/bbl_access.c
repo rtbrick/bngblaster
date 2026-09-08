@@ -776,6 +776,7 @@ bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_messa
     char substring[16] = {0};
     char *tok;
     char *save = NULL;
+    uint8_t len;
 
     if(!((reply_message_len > 23) && 
          (strncmp(reply_message, L2TP_REPLY_MESSAGE, 20) == 0))) {
@@ -783,7 +784,11 @@ bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_messa
     }
 
     session->l2tp = true;
-    memcpy(substring, reply_message+21, reply_message_len-21);
+    len = reply_message_len-21;
+    if(len > sizeof(substring)-1) {
+        len = sizeof(substring)-1;
+    }
+    memcpy(substring, reply_message+21, len);
     tok = strtok_r(substring, ":", &save);
     if(tok) {
         key.tunnel_id = atoi(tok);

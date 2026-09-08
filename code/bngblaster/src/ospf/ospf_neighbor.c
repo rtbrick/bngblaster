@@ -420,7 +420,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     }
 
     if(ospf_interface->version == OSPF_VERSION_2) {
-        if(pdu->pdu_len < OSPFV2_DBD_LEN_MIN) {
+        if(pdu->packet_len < OSPFV2_DBD_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
@@ -430,7 +430,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
         dd = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_DBD_DD_SEQ));
         OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_DBD_LSA);
     } else {
-        if(pdu->pdu_len < OSPFV3_DBD_LEN_MIN) {
+        if(pdu->packet_len < OSPFV3_DBD_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }

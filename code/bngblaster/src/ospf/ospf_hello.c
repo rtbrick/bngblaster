@@ -235,7 +235,7 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
     ospf_interface->stats.hello_rx++;
 
     if(ospf_interface->version == OSPF_VERSION_2) {
-        if(pdu->pdu_len < OSPFV2_HELLO_LEN_MIN) {
+        if(pdu->packet_len < OSPFV2_HELLO_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
@@ -252,7 +252,7 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
         dead_interval = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_DEAD_INTERVAL));
         OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_HELLO_NBR);
     } else {
-        if(pdu->pdu_len < OSPFV3_HELLO_LEN_MIN) {
+        if(pdu->packet_len < OSPFV3_HELLO_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }

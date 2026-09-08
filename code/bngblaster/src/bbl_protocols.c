@@ -3001,6 +3001,9 @@ decode_dhcp_agent(uint8_t *buf, uint16_t len,
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
         tlv_length = *buf;
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(tlv_length > len) {
+            return DECODE_ERROR;
+        }
         switch (tlv_type) {
             case ACCESS_LINE_ACI:
                 if(sp_len > tlv_length) {
@@ -3304,6 +3307,11 @@ decode_ldp_hello(uint8_t *buf, uint16_t len,
      * and PDU length fields. */
     if(pdu_len > len) {
         return UNKNOWN_PROTOCOL;
+    }
+    /* The PDU must at least carry the LDP identifier (6 byte) followed
+     * by a message header (4 byte). */
+    if(pdu_len < 10) {
+        return DECODE_ERROR;
     }
     len = pdu_len;
 
@@ -4373,6 +4381,9 @@ decode_pppoe_vendor(uint8_t *buf, uint16_t len,
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
         tlv_length = *buf;
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(tlv_length > len) {
+            return DECODE_ERROR;
+        }
         switch (tlv_type) {
             case ACCESS_LINE_ACI:
                 if(sp_len > tlv_length) {

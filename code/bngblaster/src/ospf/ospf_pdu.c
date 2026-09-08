@@ -52,7 +52,7 @@ ospf_pdu_load(ospf_pdu_s *pdu, uint8_t *buf, uint16_t len)
     pdu->pdu_version = *OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_VERSION);
     pdu->pdu_type = *OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_TYPE);
     pdu->packet_len = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_PACKET_LEN));
-    if(pdu->packet_len > len) {
+    if(pdu->packet_len > len || pdu->packet_len < OSPF_PDU_LEN_MIN) {
         return DECODE_ERROR;
     }
     pdu->router_id = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_ROUTER_ID);
