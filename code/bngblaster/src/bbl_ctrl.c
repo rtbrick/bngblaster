@@ -29,105 +29,125 @@
 
 extern volatile bool g_monkey;
 
-const char *schema_no_args[] = { NULL };
-const char *schema_file[] = {
-    "file", NULL
+typedef enum {
+    SCHEMA_ARG_STRING = 0,
+    SCHEMA_ARG_NUMBER,
+    SCHEMA_ARG_BOOLEAN,
+    SCHEMA_ARG_ARRAY,
+} schema_arg_type_t;
+
+typedef struct schema_arg_ {
+    const char *name;
+    schema_arg_type_t type;
+    schema_arg_type_t sub_type; /* element type, only valid if type is SCHEMA_ARG_ARRAY */
+} schema_arg_s;
+
+#define ARG_STR(_name)     { _name, SCHEMA_ARG_STRING, 0 }
+#define ARG_NUM(_name)     { _name, SCHEMA_ARG_NUMBER, 0 }
+#define ARG_BOOL(_name)    { _name, SCHEMA_ARG_BOOLEAN, 0 }
+#define ARG_ARR_NUM(_name) { _name, SCHEMA_ARG_ARRAY, SCHEMA_ARG_NUMBER }
+#define ARG_ARR_STR(_name) { _name, SCHEMA_ARG_ARRAY, SCHEMA_ARG_STRING }
+#define ARG_END            { NULL, 0, 0 }
+
+const schema_arg_s schema_no_args[] = { ARG_END };
+const schema_arg_s schema_file[] = {
+    ARG_STR("file"), ARG_END
 };
-const char *schema_interface[] = {
-    "interface", NULL
+const schema_arg_s schema_interface[] = {
+    ARG_STR("interface"), ARG_END
 };
-const char *schema_session_id[] = {
-    "session-id", NULL
+const schema_arg_s schema_session_id[] = {
+    ARG_NUM("session-id"), ARG_END
 };
-const char *schema_session_id_debug[] = {
-    "session-id", "debug", NULL
+const schema_arg_s schema_session_id_debug[] = {
+    ARG_NUM("session-id"), ARG_BOOL("debug"), ARG_END
 };
-const char *schema_session_group_id[] = {
-    "session-id", "session-group-id", NULL
+const schema_arg_s schema_session_group_id[] = {
+    ARG_NUM("session-id"), ARG_NUM("session-group-id"), ARG_END
 };
-const char *schema_session_terminate[] = {
-    "session-id", "session-group-id", "reconnect-delay", NULL
+const schema_arg_s schema_session_terminate[] = {
+    ARG_NUM("session-id"), ARG_NUM("session-group-id"), ARG_NUM("reconnect-delay"), ARG_END
 };
-const char *schema_session_direction[] = {
-    "session-id", "session-group-id", "direction", NULL
+const schema_arg_s schema_session_direction[] = {
+    ARG_NUM("session-id"), ARG_NUM("session-group-id"), ARG_STR("direction"), ARG_END
 };
-const char *schema_session_update[] = {
-    "session-id", "username", "password", 
-    "agent-remote-id", "agent-circuit-id", "ipv6-link-local",
-    NULL
+const schema_arg_s schema_session_update[] = {
+    ARG_NUM("session-id"), ARG_STR("username"), ARG_STR("password"),
+    ARG_STR("agent-remote-id"), ARG_STR("agent-circuit-id"), ARG_STR("ipv6-link-local"),
+    ARG_END
 };
-const char *schema_session_summary[] = {
-    "session-id", "session-group-id", 
-    "sessions", "session-id-min", "session-id-max",
-    NULL
+const schema_arg_s schema_session_summary[] = {
+    ARG_NUM("session-id"), ARG_NUM("session-group-id"),
+    ARG_ARR_NUM("sessions"), ARG_NUM("session-id-min"), ARG_NUM("session-id-max"),
+    ARG_END
 };
-const char *schema_stream_info[] = {
-    "flow-id", "debug", NULL
+const schema_arg_s schema_stream_info[] = {
+    ARG_NUM("flow-id"), ARG_BOOL("debug"), ARG_END
 };
-const char *schema_stream_args[] = {
-    "session-id", "session-group-id",
-    "flows", "flow-id", "flow-id-min", "flow-id-max",
-    "name", "interface", "direction",
-    "verified-only", "bidirectional-verified-only",
-    "pending-only",
-    NULL
+const schema_arg_s schema_stream_args[] = {
+    ARG_NUM("session-id"), ARG_NUM("session-group-id"),
+    ARG_ARR_NUM("flows"), ARG_NUM("flow-id"), ARG_NUM("flow-id-min"), ARG_NUM("flow-id-max"),
+    ARG_STR("name"), ARG_STR("interface"), ARG_STR("direction"),
+    ARG_BOOL("verified-only"), ARG_BOOL("bidirectional-verified-only"),
+    ARG_BOOL("pending-only"),
+    ARG_END
 };
-const char *schema_stream_update[] = {
-    "session-id", "session-group-id",
-    "flows", "flow-id", "flow-id-min", "flow-id-max",
-    "name", "interface", "direction",
-    "verified-only", "bidirectional-verified-only",
-    "pending-only",
-    "tcp-flags", "pps", 
-    NULL
+const schema_arg_s schema_stream_update[] = {
+    ARG_NUM("session-id"), ARG_NUM("session-group-id"),
+    ARG_ARR_NUM("flows"), ARG_NUM("flow-id"), ARG_NUM("flow-id-min"), ARG_NUM("flow-id-max"),
+    ARG_STR("name"), ARG_STR("interface"), ARG_STR("direction"),
+    ARG_BOOL("verified-only"), ARG_BOOL("bidirectional-verified-only"),
+    ARG_BOOL("pending-only"),
+    ARG_STR("tcp-flags"), ARG_NUM("pps"),
+    ARG_END
 };
-const char *schema_bgp[] = {
-    "local-ipv4-address", "peer-ipv4-address",
-    "local-ipv6-address", "peer-ipv6-address",  "ipv6-link-local",
-    "file",
-    NULL
+const schema_arg_s schema_bgp[] = {
+    ARG_STR("local-ipv4-address"), ARG_STR("peer-ipv4-address"),
+    ARG_STR("local-ipv6-address"), ARG_STR("peer-ipv6-address"), ARG_STR("ipv6-link-local"),
+    ARG_STR("file"),
+    ARG_END
 };
-const char *schema_isis[] = {
-    "instance", "level", "file", "interface", 
-    "priority", "timer", "id", "pdu",
-    NULL
+const schema_arg_s schema_isis[] = {
+    ARG_NUM("instance"), ARG_NUM("level"), ARG_STR("file"), ARG_STR("interface"),
+    ARG_NUM("priority"), ARG_NUM("timer"), ARG_STR("id"), ARG_ARR_STR("pdu"),
+    ARG_END
 };
-const char *schema_ospf[] = {
-    "instance", "level", "file", "lsa", "pdu",
-    NULL
+const schema_arg_s schema_ospf[] = {
+    ARG_NUM("instance"), ARG_NUM("level"), ARG_STR("file"), ARG_ARR_STR("lsa"), ARG_ARR_STR("pdu"),
+    ARG_END
 };
-const char *schema_ldp[] = {
-    "ldp-instance-id",
-    "local-ipv4-address", "peer-ipv4-address",
-    "local-ipv6-address", "peer-ipv6-address",
-    "file",
-    NULL
+const schema_arg_s schema_ldp[] = {
+    ARG_NUM("ldp-instance-id"),
+    ARG_STR("local-ipv4-address"), ARG_STR("peer-ipv4-address"),
+    ARG_STR("local-ipv6-address"), ARG_STR("peer-ipv6-address"),
+    ARG_STR("file"),
+    ARG_END
 };
-const char *schema_l2tp[] = {
-    "tunnel-id", "session-id", "sessions",
-    "result-code", "error-code", "error-message",
-    "disconnect-code", "disconnect-protocol", 
-    "disconnect-direction", "disconnect-message",
-    NULL
+const schema_arg_s schema_l2tp[] = {
+    ARG_NUM("tunnel-id"), ARG_NUM("session-id"), ARG_ARR_NUM("sessions"),
+    ARG_NUM("result-code"), ARG_NUM("error-code"), ARG_STR("error-message"),
+    ARG_NUM("disconnect-code"), ARG_NUM("disconnect-protocol"),
+    ARG_NUM("disconnect-direction"), ARG_STR("disconnect-message"),
+    ARG_END
 };
-const char *schema_icmp[] = {
-    "session-id", "detail", NULL
+const schema_arg_s schema_icmp[] = {
+    ARG_NUM("session-id"), ARG_BOOL("detail"), ARG_END
 };
-const char *schema_dhcp[] = {
-    "session-id", "session-group-id", "keep-address", NULL
+const schema_arg_s schema_dhcp[] = {
+    ARG_NUM("session-id"), ARG_NUM("session-group-id"), ARG_BOOL("keep-address"), ARG_END
 };
-const char *schema_cfm[] = {
-    "session-id", "network-interface", NULL
+const schema_arg_s schema_cfm[] = {
+    ARG_NUM("session-id"), ARG_STR("network-interface"), ARG_END
 };
-const char *schema_igmp[] = {
-    "session-id", "group", "group-iter", "group-count", 
-    "source1", "source2", "source3", "reset", 
-    NULL
+const schema_arg_s schema_igmp[] = {
+    ARG_NUM("session-id"), ARG_STR("group"), ARG_NUM("group-iter"), ARG_NUM("group-count"),
+    ARG_STR("source1"), ARG_STR("source2"), ARG_STR("source3"), ARG_BOOL("reset"),
+    ARG_END
 };
 
 
 static bool
-bbl_ctrl_schema(json_t *arguments, const char *const schema[])
+bbl_ctrl_schema(json_t *arguments, const schema_arg_s schema[])
 {
     size_t i;
     bool valid;
@@ -135,8 +155,8 @@ bbl_ctrl_schema(json_t *arguments, const char *const schema[])
     json_t *value = NULL;
     json_object_foreach(arguments, key, value) {
         valid = false; i = 0;
-        while(schema[i]) {
-            if (!strcmp(key, schema[i])) {
+        while(schema[i].name) {
+            if (!strcmp(key, schema[i].name)) {
                 valid = true;
                 break;
             }
@@ -282,7 +302,7 @@ typedef int callback_function(int fd, uint32_t session_id, json_t *arguments);
 struct action {
     char *name;
     callback_function *fn;
-    void *schema;
+    const schema_arg_s *schema;
     bool thread_safe;
 };
 
@@ -405,14 +425,27 @@ static const struct action actions[] = {
     {NULL, NULL, NULL, false},
 };
 
+static const char *
+bbl_ctrl_schema_arg_type_string(schema_arg_type_t type)
+{
+    switch(type) {
+        case SCHEMA_ARG_NUMBER: return "number";
+        case SCHEMA_ARG_BOOLEAN: return "boolean";
+        case SCHEMA_ARG_ARRAY: return "array";
+        case SCHEMA_ARG_STRING:
+        default: return "string";
+    }
+}
+
 int
 bbl_ctrl_commands(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)))
 {
     int result = 0;
     json_t *jobj;
+    json_t *jobj_arg;
     json_t *jobj_c_array = json_array();
     json_t *jobj_a_array;
-    const char **schema;
+    const schema_arg_s *schema;
 
     int i = 0;
     int i2;
@@ -420,10 +453,20 @@ bbl_ctrl_commands(int fd, uint32_t session_id __attribute__((unused)), json_t *a
         schema = actions[i].schema;
         jobj_a_array = json_array();
         i2 = 0;
-        while(schema[i2] != NULL) {
-            json_array_append_new(jobj_a_array, json_string(schema[i2++]));
+        while(schema[i2].name != NULL) {
+            jobj_arg = json_pack("{ss ss}",
+                "name", schema[i2].name,
+                "type", bbl_ctrl_schema_arg_type_string(schema[i2].type));
+            if(jobj_arg && schema[i2].type == SCHEMA_ARG_ARRAY) {
+                json_object_set_new(jobj_arg, "sub-type",
+                    json_string(bbl_ctrl_schema_arg_type_string(schema[i2].sub_type)));
+            }
+            if(jobj_arg) {
+                json_array_append_new(jobj_a_array, jobj_arg);
+            }
+            i2++;
         }
-        jobj = json_pack("{ss* so*}", 
+        jobj = json_pack("{ss* so*}",
             "command", actions[i].name,
             "arguments", jobj_a_array
         );
