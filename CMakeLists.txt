@@ -50,6 +50,8 @@ if(BNGBLASTER_TESTS)
 endif()
 add_subdirectory(code)
 
+install(FILES schemas/bngblaster-config.json DESTINATION /etc/bngblaster)
+
 # cpack
 set(CPACK_GENERATOR "DEB")
 
