@@ -30,7 +30,7 @@
 |                                | | See chapter Stream Iterators for details.                      |
 |                                | | Default: 0 Range: 0 - 65535                                    |
 +--------------------------------+------------------------------------------------------------------+
-| **source-port-max**            | | Max source port before reset to `destination-port`.            |
+| **source-port-max**            | | Max source port before reset to `source-port`.                 |
 |                                | | Default: 65535 Range: 0 - 65535                                |
 +--------------------------------+------------------------------------------------------------------+
 | **destination-port**           | | Overwrite the default destination port.                        |

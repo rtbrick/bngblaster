@@ -3881,7 +3881,7 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.igmp_zap_interval = json_number_value(value);
         }
-        JSON_OBJ_GET_NUMBER(section, value, "igmp", "zapping-view-duration", 1, 65535);
+        JSON_OBJ_GET_NUMBER(section, value, "igmp", "zapping-view-duration", 0, 65535);
         if(value) {
             g_ctx->config.igmp_zap_view_duration = json_number_value(value);
         }
@@ -4052,7 +4052,7 @@ json_parse_config(json_t *root)
             "ipv6pd-pps", "ipv4-label", "ipv4-address",
             "ipv6-label", "ipv6-address"
         };
-        if(!schema_validate(section, "traffic", schema, 
+        if(!schema_validate(section, "session-traffic", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
@@ -4535,6 +4535,7 @@ json_parse_config(json_t *root)
                 add_secondary_ipv4(ipv4);
             } else {
                 fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
+                return false;
             }
             JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "receive-window-size", 1, 65535);
             if(value) {

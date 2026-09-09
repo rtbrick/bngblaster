@@ -93,6 +93,16 @@
                     "type": "string",
                     "description": "TUN interface name prefix"
                 },
+                "a10nsp-dynamic": {
+                    "type": "boolean",
+                    "description": "Move streams to dynamically learned A10NSP interface",
+                    "default": false
+                },
+                "jumbo-frames": {
+                    "type": "boolean",
+                    "description": "Enable support for jumbo-frames",
+                    "default": false
+                },
                 "links": {
                     "oneOf": [
                         {
@@ -552,7 +562,7 @@
                     "description": "Add access-line attributes like Agent-Remote/Circuit-Id",
                     "default": true
                 },
-                "vendor-class-identifier": {
+                "vendor-class-id": {
                     "type": "string",
                     "description": "Add DHCP vendor class id/option 60"
                 }
@@ -693,7 +703,7 @@
                 "zapping-wait": {
                     "type": "boolean",
                     "description": "Wait for multicast traffic before zapping to next channel",
-                    "default": false
+                    "default": true
                 },
                 "zapping-view-duration": {
                     "type": "integer",
@@ -1003,21 +1013,21 @@
                         "minimum": 0,
                         "maximum": 4294967295
                     },
-                    "ont-onu-assured-up": {
+                    "ont-onu-ass-up": {
                         "type": "integer",
                         "description": "ONT/ONU Assured Data Rate Upstream",
                         "default": 0,
                         "minimum": 0,
                         "maximum": 4294967295
                     },
-                    "pon-tree-max-up": {
+                    "pon-max-up": {
                         "type": "integer",
                         "description": "PON Tree Maximum Data Rate Upstream",
                         "default": 0,
                         "minimum": 0,
                         "maximum": 4294967295
                     },
-                    "pon-tree-max-down": {
+                    "pon-max-down": {
                         "type": "integer",
                         "description": "PON Tree Maximum Data Rate Downstream",
                         "default": 0,
@@ -1142,6 +1152,13 @@
                     "type": "boolean",
                     "description": "Enable reassembly of fragmented IPv4 stream packets",
                     "default": false
+                },
+                "li-udp-port": {
+                    "type": "integer",
+                    "description": "Change default UDP port for LI traffic",
+                    "default": 49152,
+                    "minimum": 0,
+                    "maximum": 65535
                 }
             }
         },
@@ -1175,7 +1192,7 @@
                         "type": "string",
                         "description": "Tunnel secret"
                     },
-                    "receive-window": {
+                    "receive-window-size": {
                         "type": "integer",
                         "description": "Control messages receive window size",
                         "default": 16,
@@ -1506,7 +1523,7 @@
                 "ospfv2-metric": {
                     "type": "integer",
                     "description": "OSPFv2 interface metric",
-                    "default": 10,
+                    "default": 1,
                     "minimum": 0,
                     "maximum": 4294967295
                 },
@@ -1607,7 +1624,7 @@
                     "description": "Enable EOAM CFM CC sequence numbers",
                     "default": true
                 },
-                "cfm-cc-vlan-priority": {
+                "cfm-vlan-priority": {
                     "type": "integer",
                     "description": "EOAM CFM CC VLAN priority (PCP)",
                     "default": 0,
@@ -1674,14 +1691,14 @@
                     "description": "Outer VLAN minimum value (0 = untagged)",
                     "default": 0,
                     "minimum": 0,
-                    "maximum": 4094
+                    "maximum": 4095
                 },
                 "outer-vlan-max": {
                     "type": "integer",
                     "description": "Outer VLAN maximum value (0 = untagged)",
                     "default": 0,
                     "minimum": 0,
-                    "maximum": 4094
+                    "maximum": 4095
                 },
                 "outer-vlan-step": {
                     "type": "integer",
@@ -1728,7 +1745,7 @@
                     "description": "Static third VLAN (most inner, 0 = untagged)",
                     "default": 0,
                     "minimum": 0,
-                    "maximum": 4094
+                    "maximum": 4095
                 },
                 "ipv4": {
                     "type": "boolean",
@@ -2178,19 +2195,19 @@
                     "type": "integer",
                     "description": "Overwrite the IO slots (ring size)",
                     "minimum": 32,
-                    "maximum": 65535
+                    "maximum": 65534
                 },
                 "io-slots-tx": {
                     "type": "integer",
                     "description": "Overwrite the TX IO slots (ring size)",
                     "minimum": 32,
-                    "maximum": 65535
+                    "maximum": 65534
                 },
                 "io-slots-rx": {
                     "type": "integer",
                     "description": "Overwrite the RX IO slots (ring size)",
                     "minimum": 32,
-                    "maximum": 65535
+                    "maximum": 65534
                 },
                 "qdisc-bypass": {
                     "type": "boolean",
@@ -2271,10 +2288,38 @@
                     "minimum": 0,
                     "maximum": 65535
                 },
+                "source-port-step": {
+                    "type": "integer",
+                    "description": "Increment source-port for each instance of this stream",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "source-port-max": {
+                    "type": "integer",
+                    "description": "Max source port before reset to source-port",
+                    "default": 65535,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
                 "destination-port": {
                     "type": "integer",
                     "description": "Destination port",
                     "default": 65056,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "destination-port-step": {
+                    "type": "integer",
+                    "description": "Increment destination-port for each instance of this stream",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "destination-port-max": {
+                    "type": "integer",
+                    "description": "Max destination port before reset to destination-port",
+                    "default": 65535,
                     "minimum": 0,
                     "maximum": 65535
                 },
@@ -2350,6 +2395,21 @@
                 "bps-upstream": {
                     "type": "number",
                     "description": "Overwrite bps in upstream for bidirectional streams",
+                    "minimum": 0
+                },
+                "Kbps-upstream": {
+                    "type": "number",
+                    "description": "Overwrite Kbps in upstream for bidirectional streams",
+                    "minimum": 0
+                },
+                "Mbps-upstream": {
+                    "type": "number",
+                    "description": "Overwrite Mbps in upstream for bidirectional streams",
+                    "minimum": 0
+                },
+                "Gbps-upstream": {
+                    "type": "number",
+                    "description": "Overwrite Gbps in upstream for bidirectional streams",
                     "minimum": 0
                 },
                 "setup-interval": {
@@ -3179,6 +3239,9 @@
         },
         "icmpClient": {
             "type": "object",
+            "required": [
+                "destination-address"
+            ],
             "properties": {
                 "icmp-client-group-id": {
                     "type": "integer",
