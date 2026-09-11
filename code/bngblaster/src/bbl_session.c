@@ -1666,7 +1666,7 @@ bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), j
                              "status", "ok",
                              "code", 200,
                              "session-counters",
-                             "sessions", g_ctx->config.sessions,
+                             "sessions", g_ctx->sessions,
                              "sessions-pppoe", g_ctx->sessions_pppoe,
                              "sessions-ipoe", g_ctx->sessions_ipoe,
                              "sessions-established", g_ctx->sessions_established,
