@@ -93,7 +93,7 @@ else()
   message(WARNING "IPO is not supported: ${output}")
 endif()
 
-install(TARGETS bngblaster DESTINATION sbin)
+install(TARGETS bngblaster DESTINATION bin)
 
 # Build tests only if required
 if(BNGBLASTER_TESTS)
