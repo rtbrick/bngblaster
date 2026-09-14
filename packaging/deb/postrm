@@ -1,0 +1,23 @@
+#!/bin/sh
+# postrm for bngblaster
+#
+# Remove the /usr/sbin compatibility symlinks created by postinst, but
+# only if they still point into /usr/bin as we left them.
+set -e
+
+BINARIES="bngblaster bngblaster-cli"
+
+case "$1" in
+    remove|purge)
+        for name in $BINARIES; do
+            link="/usr/sbin/$name"
+            if [ -L "$link" ] && [ "$(readlink "$link")" = "/usr/bin/$name" ]; then
+                rm -f "$link"
+            fi
+        done
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

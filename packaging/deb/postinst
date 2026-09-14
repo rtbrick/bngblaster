@@ -1,23 +1,30 @@
 #!/bin/sh
 # postinst for bngblaster
 #
-# The bngblaster binary moved from /usr/sbin to /usr/bin. On systems where
-# sudo's secure_path lists /usr/sbin before /usr/bin, a leftover binary at
-# the old location (from an old manual install or an old package version
-# that dpkg did not track) would silently shadow the current one. Remove
-# it here if present and not owned by an unrelated package.
+# The bngblaster and bngblaster-cli binaries moved from /usr/sbin to
+# /usr/bin. Remove any leftover binary at the old /usr/sbin location (from
+# an old manual install, or an old package version that dpkg did not
+# track) and replace it with a symlink into /usr/bin, so older controllers
+# that still invoke the binary from /usr/sbin keep working.
 set -e
 
-OLD_BIN="/usr/sbin/bngblaster"
+BINARIES="bngblaster bngblaster-cli"
 
 case "$1" in
     configure)
-        if [ -e "$OLD_BIN" ] || [ -L "$OLD_BIN" ]; then
-            owner=$(dpkg-query -S "$OLD_BIN" 2>/dev/null | cut -d: -f1 | head -n1)
-            if [ -z "$owner" ] || [ "$owner" = "bngblaster" ]; then
-                rm -f "$OLD_BIN"
+        for name in $BINARIES; do
+            old_bin="/usr/sbin/$name"
+            new_bin="/usr/bin/$name"
+            if [ -e "$old_bin" ] || [ -L "$old_bin" ]; then
+                owner=$(dpkg-query -S "$old_bin" 2>/dev/null | cut -d: -f1 | head -n1)
+                if [ -z "$owner" ] || [ "$owner" = "bngblaster" ]; then
+                    rm -f "$old_bin"
+                fi
             fi
-        fi
+            if [ -e "$new_bin" ] && [ ! -e "$old_bin" ]; then
+                ln -s "$new_bin" "$old_bin"
+            fi
+        done
         ;;
 esac
 
