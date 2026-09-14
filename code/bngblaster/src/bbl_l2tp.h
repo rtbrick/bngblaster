@@ -68,6 +68,8 @@ typedef struct bbl_l2tp_server_
     uint16_t receive_window;
     uint16_t max_retry;
     uint16_t lcp_padding;
+    uint16_t lcp_keepalive_interval;
+    uint8_t  lcp_keepalive_retry;
 
     bool data_control_priority;
     bool data_length;
@@ -250,6 +252,10 @@ typedef struct bbl_l2tp_session_
 
     uint8_t ipcp_state;
     uint8_t ip6cp_state;
+
+    struct timer_ *timer_lcp_echo;
+    uint8_t lcp_identifier;
+    uint8_t lcp_retries;
 
     uint16_t result_code; /* RFC2661 Result Code */
     uint16_t error_code; /* RFC2661 Error Code */

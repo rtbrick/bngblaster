@@ -1259,6 +1259,20 @@
                         "minimum": 0,
                         "maximum": 65535
                     },
+                    "lcp-keepalive-interval": {
+                        "type": "integer",
+                        "description": "LCP echo-request keepalive interval in seconds send from LNS to client (0 means disabled)",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 65535
+                    },
+                    "lcp-keepalive-retry": {
+                        "type": "integer",
+                        "description": "LCP echo-request keepalive max retry before terminating the session",
+                        "default": 3,
+                        "minimum": 0,
+                        "maximum": 255
+                    },
                     "client-auth-id": {
                         "type": "string",
                         "description": "Optional check for client-auth-id"

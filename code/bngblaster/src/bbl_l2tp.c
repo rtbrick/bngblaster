@@ -16,6 +16,9 @@
 void
 bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, l2tp_message_t l2tp_type);
 
+static void
+bbl_l2tp_lcp_echo(timer_s *timer);
+
 const char*
 l2tp_message_string(l2tp_message_t type)
 {
@@ -166,6 +169,9 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
 
             if(g_ctx->l2tp_sessions) g_ctx->l2tp_sessions--;
         }
+        /* Delete timer */
+        timer_del(l2tp_session->timer_lcp_echo);
+
         /* Remove session from tunnel object */
         if(CIRCLEQ_NEXT(l2tp_session, session_qnode) != NULL) {
             CIRCLEQ_REMOVE(&l2tp_session->tunnel->session_qhead, l2tp_session, session_qnode);
@@ -882,8 +888,41 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
     bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_ICRP);
 }
 
+/**
+ * bbl_l2tp_lcp_echo
+ *
+ * Periodic timer job sending LCP echo-requests from the LNS
+ * to the client for LNS initiated keepalive.
+ */
 static void
-bbl_l2tp_iccn_rx(bbl_network_interface_s *interface, 
+bbl_l2tp_lcp_echo(timer_s *timer)
+{
+    bbl_l2tp_session_s *l2tp_session = timer->data;
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_lcp_s lcp = {0};
+
+    if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
+        return;
+    }
+    if(l2tp_session->lcp_retries > l2tp_tunnel->server->lcp_keepalive_retry) {
+        LOG(L2TP, "L2TP Info (%s) Tunnel (%u) session (%u) LCP echo timeout\n",
+            l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
+            l2tp_session->key.session_id);
+        l2tp_session->disconnect_code = 3;
+        l2tp_session->disconnect_protocol = 0;
+        l2tp_session->disconnect_direction = 2;
+        bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
+        bbl_l2tp_session_delete(l2tp_session);
+        return;
+    }
+    l2tp_session->lcp_retries++;
+    lcp.code = PPP_CODE_ECHO_REQUEST;
+    lcp.identifier = ++l2tp_session->lcp_identifier;
+    bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp);
+}
+
+static void
+bbl_l2tp_iccn_rx(bbl_network_interface_s *interface,
                  bbl_l2tp_session_s *l2tp_session,
                  bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp)
 {
@@ -912,6 +951,13 @@ bbl_l2tp_iccn_rx(bbl_network_interface_s *interface,
             l2tp_tunnel->peer_name,
             format_ipv4_address(&l2tp_tunnel->peer_ip),
             l2tp_session->key.session_id);
+
+        if(l2tp_tunnel->server->lcp_keepalive_interval) {
+            /* Start LCP echo request / keep alive */
+            timer_add_periodic(&g_ctx->timer_root, &l2tp_session->timer_lcp_echo, "L2TP LCP ECHO",
+                                l2tp_tunnel->server->lcp_keepalive_interval, 1,
+                                l2tp_session, &bbl_l2tp_lcp_echo);
+        }
     }
 }
 
@@ -1077,6 +1123,8 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
             if(lcp_rx->code == PPP_CODE_ECHO_REQUEST) {
                 lcp_rx->code = PPP_CODE_ECHO_REPLY;
                 bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
+            } else if(lcp_rx->code == PPP_CODE_ECHO_REPLY) {
+                l2tp_session->lcp_retries = 0;
             } else if(lcp_rx->code == PPP_CODE_TERM_REQUEST) {
                 l2tp_session->disconnect_code = 3;
                 l2tp_session->disconnect_protocol = 0;

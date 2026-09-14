@@ -4499,7 +4499,7 @@ json_parse_config(json_t *root)
                 "receive-window-size", "max-retry", "congestion-mode",
                 "data-control-priority", "data-length", "data-offset",
                 "control-tos", "data-control-tos", "hello-interval",
-                "lcp-padding"
+                "lcp-padding", "lcp-keepalive-interval", "lcp-keepalive-retry"
             };
             if(!schema_validate(sub, "l2tp-server", schema, 
             sizeof(schema)/sizeof(schema[0]))) {
@@ -4593,7 +4593,17 @@ json_parse_config(json_t *root)
             JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "lcp-padding", 0, 65535);
             if(value) {
                 l2tp_server->lcp_padding = json_number_value(value);
-            } 
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "lcp-keepalive-interval", 0, 65535);
+            if(value) {
+                l2tp_server->lcp_keepalive_interval = json_number_value(value);
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "lcp-keepalive-retry", 0, 255);
+            if(value) {
+                l2tp_server->lcp_keepalive_retry = json_number_value(value);
+            } else {
+                l2tp_server->lcp_keepalive_retry = 3;
+            }
         }
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");

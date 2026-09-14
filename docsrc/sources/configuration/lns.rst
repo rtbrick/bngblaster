@@ -49,6 +49,14 @@
 | **lcp-padding**                           | | Add fixed padding to LCP packets send from LNS.                   |
 |                                           | | Default: 0 Range: 0 - 65535                                       |
 +-------------------------------------------+---------------------------------------------------------------------+
+| **lcp-keepalive-interval**                | | LCP echo-request keepalive interval in seconds send from LNS      |
+|                                           | | to client. Disabled if set to 0.                                  |
+|                                           | | Default: 0 Range: 0 - 65535                                       |
++-------------------------------------------+---------------------------------------------------------------------+
+| **lcp-keepalive-retry**                   | | LCP echo-request keepalive max retry before terminating the       |
+|                                           | | session.                                                          |
+|                                           | | Default: 3 Range: 0 - 255                                        |
++-------------------------------------------+---------------------------------------------------------------------+
 | **client-auth-id**                        | | Add optional check based on client-auth-id to support multiple    |
 |                                           | | LNS server configurations with the same IP address.               |
 +-------------------------------------------+---------------------------------------------------------------------+
