@@ -130,6 +130,166 @@ io_af_xdp_check_mtu(bbl_interface_s *interface)
 }
 
 /**
+ * With RX VLAN offload enabled (the default on most drivers), the NIC
+ * strips the VLAN tag in hardware and reports it out-of-band via the skb
+ * (skb->vlan_tci) instead of leaving it in the frame data - that is how
+ * io_packet_mmap.c recovers it, via tp_vlan_tci/TP_STATUS_VLAN_VALID.
+ * AF_XDP has no equivalent side channel: the xdp_desc UMEM frame handed to
+ * us is the raw DMA buffer, so a hardware-stripped tag is simply gone by
+ * the time we see it, in both native and generic (SKB) mode. Disable RX
+ * VLAN offload so the tag stays in-band where we can parse it.
+ */
+static bool
+io_af_xdp_disable_rxvlan_offload(bbl_interface_s *interface)
+{
+    struct ifreq ifr = {0};
+    struct ethtool_value eval = {0};
+    int fd;
+
+    fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if(fd == -1) {
+        return true; /* best effort, do not block on this check */
+    }
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+
+    eval.cmd = ETHTOOL_GFLAGS;
+    ifr.ifr_data = (void*)&eval;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        /* Driver does not support ethtool flags (e.g. some virtual
+         * interfaces) - nothing we can/need to do. */
+        close(fd);
+        return true;
+    }
+    if(!(eval.data & ETH_FLAG_RXVLAN)) {
+        close(fd);
+        return true;
+    }
+
+    eval.cmd = ETHTOOL_SFLAGS;
+    eval.data &= ~ETH_FLAG_RXVLAN;
+    ifr.ifr_data = (void*)&eval;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        LOG(ERROR, "AF_XDP: failed to disable RX VLAN offload on interface %s (%s), "
+            "VLAN tags will be missing from received frames, please disable it "
+            "manually (e.g. 'ethtool -K %s rxvlan off')\n",
+            interface->name, strerror(errno), interface->name);
+        close(fd);
+        return false;
+    }
+
+    LOG(AFXDP, "AF_XDP: RX VLAN offload disabled on interface %s\n", interface->name);
+    close(fd);
+    return true;
+}
+
+/**
+ * Read the NIC's RSS indirection table and remap any entry >= limit back
+ * into range (entry % limit), writing the table back if anything changed.
+ *
+ * This is used both to keep TX-only queues excluded from RX distribution
+ * (io_af_xdp_constrain_rss()) and, before shrinking the channel count in
+ * io_af_xdp_set_channels(), to bring the table within the new bound first:
+ * once an RSS indirection table has been explicitly configured (which a
+ * prior bngblaster run with more rx-threads/tx-threads does), the kernel
+ * refuses ETHTOOL_SCHANNELS with EINVAL if that table still references a
+ * queue index at or beyond the channel count being requested.
+ */
+static bool
+io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool *changed)
+{
+    struct ifreq ifr = {0};
+    struct ethtool_rxfh size_probe = {0};
+    struct ethtool_rxfh *rxfh;
+    uint32_t *indir;
+    uint8_t *buf;
+    size_t buf_len;
+    int fd;
+    uint32_t i;
+
+    *changed = false;
+
+    fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if(fd == -1) {
+        return true; /* best effort */
+    }
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+
+    size_probe.cmd = ETHTOOL_GRSSH;
+    ifr.ifr_data = (void*)&size_probe;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        /* Driver exposes multiple queues but not the RSS indirection
+         * table - we cannot verify queues >= limit are excluded from
+         * RSS, so fail loudly instead of risking silent per-flow RX
+         * loss or an unexplained EINVAL further down the line. */
+        LOG(ERROR, "AF_XDP: interface %s does not support querying the RSS "
+            "indirection table (%s), cannot guarantee it is constrained to "
+            "%u queue%s\n",
+            interface->name, strerror(errno), limit, limit == 1 ? "" : "s");
+        close(fd);
+        return false;
+    }
+    if(size_probe.indir_size == 0) {
+        /* No indirection table on this driver/NIC - nothing to constrain. */
+        close(fd);
+        return true;
+    }
+
+    buf_len = sizeof(struct ethtool_rxfh) + (size_t)size_probe.indir_size * sizeof(uint32_t)
+              + size_probe.key_size;
+    buf = calloc(1, buf_len);
+    if(!buf) {
+        close(fd);
+        return true; /* best effort */
+    }
+    rxfh = (struct ethtool_rxfh*)buf;
+    rxfh->cmd = ETHTOOL_GRSSH;
+    rxfh->indir_size = size_probe.indir_size;
+    rxfh->key_size = size_probe.key_size;
+
+    ifr.ifr_data = (void*)rxfh;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        LOG(ERROR, "AF_XDP: interface %s failed to read the RSS indirection table (%s)\n",
+            interface->name, strerror(errno));
+        free(buf);
+        close(fd);
+        return false;
+    }
+
+    /* rss_config holds indir_size u32 indirection entries, followed by
+     * key_size byte of hash key (left untouched below). */
+    indir = rxfh->rss_config;
+    for(i = 0; i < rxfh->indir_size; i++) {
+        if(indir[i] >= limit) {
+            indir[i] = indir[i] % limit;
+            *changed = true;
+        }
+    }
+    if(!*changed) {
+        free(buf);
+        close(fd);
+        return true;
+    }
+
+    rxfh->cmd = ETHTOOL_SRSSH;
+    rxfh->rss_context = 0;
+    ifr.ifr_data = (void*)rxfh;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        LOG(ERROR, "AF_XDP: failed to constrain the RSS indirection table on interface %s "
+            "to the first %u queue%s (%s), please configure it manually "
+            "(e.g. 'ethtool -X %s equal %u')\n",
+            interface->name, limit, limit == 1 ? "" : "s", strerror(errno),
+            interface->name, limit);
+        free(buf);
+        close(fd);
+        return false;
+    }
+
+    free(buf);
+    close(fd);
+    return true;
+}
+
+/**
  * AF_XDP binds sockets to specific queue indices (0..queues-1), and the
  * NIC's RSS engine hashes every flow to one fixed hardware queue out of
  * however many are currently configured on the interface. If the NIC has
@@ -176,6 +336,13 @@ io_af_xdp_set_channels(bbl_interface_s *interface, uint32_t queues)
             close(fd);
             return false;
         }
+        if(queues < old_combined) {
+            bool rss_changed;
+            if(!io_af_xdp_clamp_rss_indir(interface, queues, &rss_changed)) {
+                close(fd);
+                return false;
+            }
+        }
         ch.cmd = ETHTOOL_SCHANNELS;
         ch.combined_count = queues;
         if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
@@ -201,6 +368,13 @@ io_af_xdp_set_channels(bbl_interface_s *interface, uint32_t queues)
                 interface->name, ch.max_rx, ch.max_tx, queues);
             close(fd);
             return false;
+        }
+        if(queues < ch.rx_count) {
+            bool rss_changed;
+            if(!io_af_xdp_clamp_rss_indir(interface, queues, &rss_changed)) {
+                close(fd);
+                return false;
+            }
         }
         ch.cmd = ETHTOOL_SCHANNELS;
         ch.rx_count = queues;
@@ -235,104 +409,25 @@ io_af_xdp_set_channels(bbl_interface_s *interface, uint32_t queues)
 static bool
 io_af_xdp_constrain_rss(bbl_interface_s *interface, uint32_t rx_queues, uint32_t total_queues)
 {
-    struct ifreq ifr = {0};
-    struct ethtool_rxfh size_probe = {0};
-    struct ethtool_rxfh *rxfh;
-    uint32_t *indir;
-    uint8_t *buf;
-    size_t buf_len;
-    int fd;
-    uint32_t i;
-    bool changed = false;
+    bool changed;
 
     if(rx_queues >= total_queues) {
         /* No TX-only queue exists, nothing for RSS to avoid. */
         return true;
     }
 
-    fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if(fd == -1) {
-        return true; /* best effort */
-    }
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-
-    size_probe.cmd = ETHTOOL_GRSSH;
-    ifr.ifr_data = (void*)&size_probe;
-    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
-        /* Driver exposes multiple queues but not the RSS indirection
-         * table - we cannot verify TX-only queues are excluded from RSS,
-         * so fail loudly instead of risking silent per-flow RX loss. */
-        LOG(ERROR, "AF_XDP: interface %s does not support querying the RSS "
-            "indirection table (%s), cannot guarantee that TX-only queue%s "
-            "%u-%u are excluded from RX traffic distribution\n",
-            interface->name, strerror(errno), total_queues - rx_queues == 1 ? "" : "s",
-            rx_queues, total_queues - 1);
-        close(fd);
-        return false;
-    }
-    if(size_probe.indir_size == 0) {
-        /* No indirection table on this driver/NIC - nothing to constrain. */
-        close(fd);
-        return true;
-    }
-
-    buf_len = sizeof(struct ethtool_rxfh) + (size_t)size_probe.indir_size * sizeof(uint32_t)
-              + size_probe.key_size;
-    buf = calloc(1, buf_len);
-    if(!buf) {
-        close(fd);
-        return true; /* best effort */
-    }
-    rxfh = (struct ethtool_rxfh*)buf;
-    rxfh->cmd = ETHTOOL_GRSSH;
-    rxfh->indir_size = size_probe.indir_size;
-    rxfh->key_size = size_probe.key_size;
-
-    ifr.ifr_data = (void*)rxfh;
-    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
-        LOG(ERROR, "AF_XDP: interface %s failed to read the RSS indirection table (%s)\n",
-            interface->name, strerror(errno));
-        free(buf);
-        close(fd);
+    if(!io_af_xdp_clamp_rss_indir(interface, rx_queues, &changed)) {
+        /* Cannot guarantee TX-only queues are excluded from RX traffic
+         * distribution - io_af_xdp_clamp_rss_indir() already logged why. */
         return false;
     }
 
-    /* rss_config holds indir_size u32 indirection entries, followed by
-     * key_size byte of hash key (left untouched below). */
-    indir = rxfh->rss_config;
-    for(i = 0; i < rxfh->indir_size; i++) {
-        if(indir[i] >= rx_queues) {
-            indir[i] = indir[i] % rx_queues;
-            changed = true;
-        }
+    if(changed) {
+        LOG(AFXDP, "AF_XDP: interface %s RSS indirection table constrained to queue%s 0-%u "
+            "(queue%s %u-%u reserved for TX only, excluded from RX distribution)\n",
+            interface->name, rx_queues == 1 ? "" : "s", rx_queues - 1,
+            total_queues - rx_queues == 1 ? "" : "s", rx_queues, total_queues - 1);
     }
-    if(!changed) {
-        free(buf);
-        close(fd);
-        return true;
-    }
-
-    rxfh->cmd = ETHTOOL_SRSSH;
-    rxfh->rss_context = 0;
-    ifr.ifr_data = (void*)rxfh;
-    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
-        LOG(ERROR, "AF_XDP: failed to constrain the RSS indirection table on interface %s "
-            "to the first %u queue%s (%s), please configure it manually "
-            "(e.g. 'ethtool -X %s equal %u')\n",
-            interface->name, rx_queues, rx_queues == 1 ? "" : "s", strerror(errno),
-            interface->name, rx_queues);
-        free(buf);
-        close(fd);
-        return false;
-    }
-
-    LOG(AFXDP, "AF_XDP: interface %s RSS indirection table constrained to queue%s 0-%u "
-        "(queue%s %u-%u reserved for TX only, excluded from RX distribution)\n",
-        interface->name, rx_queues == 1 ? "" : "s", rx_queues - 1,
-        total_queues - rx_queues == 1 ? "" : "s", rx_queues, total_queues - 1);
-
-    free(buf);
-    close(fd);
     return true;
 }
 
@@ -953,6 +1048,10 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
     }
 
     if(!io_af_xdp_check_mtu(interface)) {
+        return false;
+    }
+
+    if(!io_af_xdp_disable_rxvlan_offload(interface)) {
         return false;
     }
 
