@@ -183,8 +183,9 @@ io_af_xdp_disable_rxvlan_offload(bbl_interface_s *interface)
 }
 
 /**
- * Read the NIC's RSS indirection table and remap any entry >= limit back
- * into range (entry % limit), writing the table back if anything changed.
+ * Read the NIC's RSS indirection table and rebuild it as an even
+ * round-robin over 0..limit-1 (entry i -> i % limit), writing the table
+ * back if anything changed.
  *
  * This is used both to keep TX-only queues excluded from RX distribution
  * (io_af_xdp_constrain_rss()) and, before shrinking the channel count in
@@ -193,6 +194,18 @@ io_af_xdp_disable_rxvlan_offload(bbl_interface_s *interface)
  * prior bngblaster run with more rx-threads/tx-threads does), the kernel
  * refuses ETHTOOL_SCHANNELS with EINVAL if that table still references a
  * queue index at or beyond the channel count being requested.
+ *
+ * The table is unconditionally rebuilt by index rather than only remapping
+ * out-of-range entries by value. Patching only out-of-range entries is not
+ * enough: a table previously collapsed onto a single queue (e.g. by an
+ * earlier run with rx-threads 1, where every entry % 1 == 0) has every
+ * entry already in range for any larger limit, so it would never be
+ * touched again and RSS would stay collapsed onto queue 0 even after
+ * rx-threads is increased. Remapping in-range values by their old value
+ * is also not sufficient, since old_combined % limit != 0 skews a handful
+ * of low queue indices with extra weight from the wrapped-around entries.
+ * Rebuilding by table index guarantees an even (+/-1) distribution
+ * regardless of the table's prior content.
  */
 static bool
 io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool *changed)
@@ -259,8 +272,9 @@ io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool *chan
      * key_size byte of hash key (left untouched below). */
     indir = rxfh->rss_config;
     for(i = 0; i < rxfh->indir_size; i++) {
-        if(indir[i] >= limit) {
-            indir[i] = indir[i] % limit;
+        uint32_t balanced = i % limit;
+        if(indir[i] != balanced) {
+            indir[i] = balanced;
             *changed = true;
         }
     }
