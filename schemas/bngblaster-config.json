@@ -3056,9 +3056,6 @@
         },
         "bgpConfig": {
             "type": "object",
-            "required": [
-                "peer-address"
-            ],
             "properties": {
                 "network-interface": {
                     "type": "string",
@@ -3067,6 +3064,16 @@
                 "local-address": {
                     "type": "string",
                     "description": "BGP local IPv4/6 address"
+                },
+                "local-ipv4-address": {
+                    "type": "string",
+                    "description": "BGP local IPv4 address (deprecated, use local-address)",
+                    "deprecated": true
+                },
+                "local-ipv6-address": {
+                    "type": "string",
+                    "description": "BGP local IPv6 address (deprecated, use local-address)",
+                    "deprecated": true
                 },
                 "local-as": {
                     "type": "integer",
@@ -3078,6 +3085,16 @@
                 "peer-address": {
                     "type": "string",
                     "description": "BGP peer IPv4/6 address"
+                },
+                "peer-ipv4-address": {
+                    "type": "string",
+                    "description": "BGP peer IPv4 address (deprecated, use peer-address)",
+                    "deprecated": true
+                },
+                "peer-ipv6-address": {
+                    "type": "string",
+                    "description": "BGP peer IPv6 address (deprecated, use peer-address)",
+                    "deprecated": true
                 },
                 "peer-as": {
                     "type": "integer",
