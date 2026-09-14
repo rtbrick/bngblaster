@@ -17,7 +17,7 @@
 |                                   | | ``flow-id-max``                                                      |
 |                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``)                           |
 |                                   | | ``session-id``                                                       |
-|                                   | | ``session-group-id``                                                 |
+|                                   | | ``session-group-id`` (ignored if session-id is present)              |
 |                                   | | ``name`` stream name                                                 |
 |                                   | | ``interface`` TX interface name                                      |
 |                                   | | ``direction`` [both(default), upstream, downstream]                  |
@@ -33,7 +33,7 @@
 |                                   | | other arguments are ignored. In this particular case, you can also   |
 | **stream-stop-verified**          | | start and stop session-traffic and multicast.                        |
 |                                   | |                                                                      |
-|                                   | | The command **stream-stop-verified** works similar to                |
+|                                   | | The command **stream-stop-verified** works similarly to              |
 |                                   | | **stream-stop** but only verified streams will be stopped.           |
 |                                   | |                                                                      |
 |                                   | | **Arguments:**                                                       |
@@ -42,7 +42,7 @@
 |                                   | | ``flow-id-max``                                                      |
 |                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``)                           |
 |                                   | | ``session-id``                                                       |
-|                                   | | ``session-group-id``                                                 |
+|                                   | | ``session-group-id`` (ignored if session-id is present)              |
 |                                   | | ``name`` stream name                                                 |
 |                                   | | ``interface`` TX interface name                                      |
 |                                   | | ``direction`` [both(default), upstream, downstream]                  |
@@ -60,7 +60,7 @@
 |                                   | | ``flow-id-max``                                                      |
 |                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``)                           |
 |                                   | | ``session-id``                                                       |
-|                                   | | ``session-group-id``                                                 |
+|                                   | | ``session-group-id`` (ignored if session-id is present)              |
 |                                   | | ``name`` stream name                                                 |
 |                                   | | ``interface`` TX interface name                                      |
 |                                   | | ``direction`` [both(default), upstream, downstream]                  |
@@ -68,5 +68,5 @@
 |                                   | | ``bidirectional-verified-only`` streams verified in both directions  |
 |                                   | | ``pending-only`` streams not verified                                |
 |                                   | | ``tcp-flags`` [ack, fin, fin-ack, syn, syn-ack, rst, push, push-ack] |
-|                                   | | ``pps``                                                              |
+|                                   | | ``pps`` Update the stream rate in packets per second.                |
 +-----------------------------------+------------------------------------------------------------------------+

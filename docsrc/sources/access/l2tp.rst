@@ -10,7 +10,7 @@ test.
 Configuration
 ~~~~~~~~~~~~~
 
-Following an example with 30 L2TP LNS servers.
+Following is an example with 30 L2TP LNS servers.
 
 .. code-block:: json
 
@@ -317,15 +317,15 @@ four servers as shown in the example below.
 RFC5515
 ~~~~~~~
 
-The Agent-Circuit-Id and Agent-Remote-Id AVP defined in RFC5515
-is supported and stored for each session if received. Received
+The Agent-Circuit-Id and Agent-Remote-Id AVPs defined in RFC5515
+are supported and stored for each session if received. Received
 CSUN messages are processed correctly and via the control socket,
-it is possible to send also CSURQ requests to the LAC.
+it is also possible to send CSURQ requests to the LAC.
 
 L2TP Commands
 ~~~~~~~~~~~~~
 
-The :ref:`command <api>` ``session-info l2tp-tunnels`` provides
+The :ref:`command <api>` ``l2tp-tunnels`` provides
 detailed information about L2TP tunnels.
 
 ``$ sudo bngblaster-cli run.sock l2tp-tunnels``
@@ -389,7 +389,7 @@ The ``l2tp-sessions`` :ref:`command <api>` returns all L2TP sessions.
         ]
     }
 
-This output can be also filtered to return only sessions
+This output can also be filtered to return only sessions
 of a given tunnel.
 
 ``sudo bngblaster-cli run.sock l2tp-sessions tunnel-id 1``

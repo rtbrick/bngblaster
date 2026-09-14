@@ -276,7 +276,7 @@ argument ``-J <filename>``.
             "rx-bytes": 12300031,
             "rx-protocol-error": 0,
             "rx-unknown": 5,
-            "rx-polled": 12300031,
+            "rx-polled": 93709,
             "rx-io-error": 0
           },
           {
@@ -290,7 +290,7 @@ argument ``-J <filename>``.
             "rx-bytes": 11982029,
             "rx-protocol-error": 0,
             "rx-unknown": 5,
-            "rx-polled": 11982029,
+            "rx-polled": 95265,
             "rx-io-error": 0
           },
           {
@@ -304,7 +304,7 @@ argument ``-J <filename>``.
             "rx-bytes": 20425245,
             "rx-protocol-error": 0,
             "rx-unknown": 0,
-            "rx-polled": 20425245,
+            "rx-polled": 74810,
             "rx-io-error": 0
           }
         ],
@@ -355,7 +355,7 @@ argument ``-J <filename>``.
             "rx-session-packets-ipv6-loss": 0,
             "rx-session-packets-ipv6-wrong-session": 0,
             "tx-session-packets-ipv6-avg-pps-max": 500,
-            "rx-session-packets-ipv6avg-pps-max": 500,
+            "rx-session-packets-ipv6-avg-pps-max": 500,
             "tx-session-packets-ipv6pd": 33311,
             "rx-session-packets-ipv6pd": 32633,
             "rx-session-packets-ipv6pd-loss": 0,
@@ -423,7 +423,7 @@ argument ``-J <filename>``.
             "rx-session-packets-ipv6-loss": 0,
             "rx-session-packets-ipv6-wrong-session": 0,
             "tx-session-packets-ipv6-avg-pps-max": 500,
-            "rx-session-packets-ipv6avg-pps-max": 500,
+            "rx-session-packets-ipv6-avg-pps-max": 500,
             "tx-session-packets-ipv6pd": 32461,
             "rx-session-packets-ipv6pd": 31894,
             "rx-session-packets-ipv6pd-loss": 0,

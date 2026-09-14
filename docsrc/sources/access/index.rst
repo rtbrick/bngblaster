@@ -9,7 +9,7 @@ and quality of service (QoS) for internet services.
 .. _sessions:
 
 The BNG Blaster is equipped with versatile support for various 
-access protocols, allowing the creation of seubscriber sessions, 
+access protocols, allowing the creation of subscriber sessions,
 each of which can comprise multiple protocols. For instance, in the 
 case of dual-stack IPoE sessions, these are formed by a combination of 
 DHCPv4, DHCPv6, as well as ARP/ND protocols. Every session is 
@@ -18,8 +18,8 @@ and identified by a globally unique **session-id**, with the
 numbering starting at 1 and increasing sequentially for each 
 new session established. Furthermore, you have the flexibility 
 to group multiple sessions together using the optional 
-**session-group-id**, which enables the application of commands
-:ref:`commands <api>` to an entire group of sessions simultaneously. 
+**session-group-id**, which enables the application of
+:ref:`commands <api>` to an entire group of sessions simultaneously.
 
 .. code-block:: json
 
@@ -44,7 +44,7 @@ to group multiple sessions together using the optional
                 "outer-vlan-max": 1999,
                 "outer-vlan-step": 2,
                 "inner-vlan": 7
-            },
+            }
         ]
     }
 

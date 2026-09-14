@@ -105,7 +105,7 @@ Let's advance the test by enabling some features explained below.
 * ``-j streams`` include detailed results for every stream in the JSON report
 * ``-P test.pcap`` generates a PCAP file
 * ``-S run.sock`` opens the JSON RPC API socket
-* ``-I`` start interactive courses user interface
+* ``-I`` start interactive ncurses user interface
 
 .. image:: images/quickstart_interactive.png
     :alt: BNG Blaster Interactive
@@ -242,7 +242,7 @@ ISIS
 ----
 
 In the following example, we create two :ref:`ISIS <isis>` nodes (R1 and R2) with an emulated
-ISIS topology attached to R1 (`isis.mrt``). 
+ISIS topology attached to R1 (``isis.mrt``).
 
 .. image:: images/quickstart_isis.png
     :alt: ISIS Quickstart
@@ -417,7 +417,7 @@ and `gobgp <https://github.com/osrg/gobgp>`_.
 
     sudo apt install gobgpd
 
-Therefore, we use again the veth interface pair. But this time
+Therefore, we again use the veth interface pair. But this time
 the side used by `gobgp <https://github.com/osrg/gobgp>`_ 
 needs an IP address and TCP checksum offloading must be disabled!
 
@@ -432,8 +432,8 @@ needs an IP address and TCP checksum offloading must be disabled!
     # add IPv4 address for gobgpd
     sudo ip address add 192.168.92.1/24 dev veth1.1
 
-Following the `gobgp <https://github.com/osrg/gobgp>`_ and 
-BNG Blaster configuration files needed. 
+Following are the `gobgp <https://github.com/osrg/gobgp>`_ and
+BNG Blaster configuration files needed.
 
 **gobgpd.conf:**
 
@@ -484,8 +484,8 @@ BNG Blaster configuration files needed.
         ]
     }
 
-Use the included tool ``bgpupdate`` to generate a BGP update file 
-with 10.000 IPv4 and 10.000 IPv6 prefixes. 
+Use the included tool ``bgpupdate`` to generate a BGP update file
+with 10000 IPv4 and 10000 IPv6 prefixes.
 
 .. code-block:: none
 

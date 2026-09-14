@@ -25,7 +25,7 @@ Download and install the Debian package: https://github.com/rtbrick/bngblaster/r
 
     sudo dpkg -i <package>
 
-This command installs the BNG Blaster to `/usr/sbin/bngblaster`.
+This command installs the BNG Blaster to ``/usr/bin/bngblaster``.
 
 Build from Sources
 ------------------
@@ -68,7 +68,7 @@ and the following standard dependencies:
 Build
 ^^^^^
 
-Per default cmake (`cmake .`) will build the BNG Blaster as a release
+Per default cmake (``cmake .``) will build the BNG Blaster as a release
 version with optimization and debug symbols (RelWithDebInfo).
 
 .. code-block:: none
@@ -92,10 +92,10 @@ optimization for detailed troubleshooting using gdb.
 
 
 There are also CPack files generated which allow to easily generate a Debian
-package by just executing `cpack` from the build directory.
+package by just executing ``cpack`` from the build directory.
 
-It is also recommended to provide the GIT commit details to be included in the
-manually build the version as shown below:
+It is also recommended to provide the GIT commit details to be included when
+manually building the version, as shown below:
 
 .. code-block:: none
 
@@ -120,7 +120,7 @@ Then BNG Blaster can be installed using the make install target.
 
     sudo make install
 
-This command installs the BNG Blaster to `/usr/sbin/bngblaster`.
+This command installs the BNG Blaster to ``/usr/bin/bngblaster``.
 
 Build and Run Unit Tests
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -131,7 +131,7 @@ Building and running unit tests requires CMocka to be installed:
 
     sudo apt install libcmocka-dev
 
-The option `BNGBLASTER_TESTS` enables to build unit tests.
+The option ``BNGBLASTER_TESTS`` enables to build unit tests.
 
 .. code-block:: none
 
@@ -205,7 +205,7 @@ If DPDK is installed correctly, cmake should show the following output:
     --   Found libdpdk, version 25.11.0
     -- Found DPDK via pkg-config
 
-The installed version should now show `dpdk` as new IO mode. 
+The installed version should now show ``dpdk`` as new IO mode.
 
 .. code-block:: none
 
@@ -251,7 +251,7 @@ If libbpf is installed correctly, cmake should show the following output:
     --   Found libbpf, version 0.5.0
     -- Found libbpf via pkg-config
 
-The installed version should now show `af_xdp` as new IO mode.
+The installed version should now show ``af_xdp`` as new IO mode.
 
 .. code-block:: none
 
@@ -266,7 +266,7 @@ Running BNG Blaster
 
 The BNG Blaster needs permission to send raw packets and change network interface
 settings. The easiest way to run the BNG Blaster is either as the root user or 
-with `sudo`:
+with ``sudo``:
 
 .. code-block:: none
 
@@ -277,7 +277,7 @@ with `sudo`:
     sudo bngblaster -C config.json -I
 
 
-A third option is to set capabilities on the binary with for example `setcap`
+A third option is to set capabilities on the binary with for example ``setcap``
 as shown below:
 
 .. code-block:: none

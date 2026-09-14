@@ -36,7 +36,7 @@ Following is a basic HTTP client configuration example.
         ]
         },
         "dhcp": {
-            "enable": true,
+            "enable": true
         },
         "dhcpv6": {
             "enable": true
@@ -177,19 +177,19 @@ Following is a basic HTTP server configuration example.
                     "vlan-mode": "N:1",
                     "http-client-group-id": 1
                 }
-            ]
+            ],
             "network": [
                 {
                     "interface": "eth2",
-                    "address": "10.10.10.10.1/24",
+                    "address": "10.10.10.10/24",
                     "gateway": "10.10.10.1",
                     "address-ipv6": "fc66:1337:7331::1/64",
-                    "gateway-ipv6": "fc66:1337:7331::2",
+                    "gateway-ipv6": "fc66:1337:7331::2"
                 }
             ]
         },
         "dhcp": {
-            "enable": true,
+            "enable": true
         },
         "dhcpv6": {
             "enable": true
@@ -206,9 +206,9 @@ Following is a basic HTTP server configuration example.
         "http-server": [
             {
                 "name": "SERVER",
-                "network-interface": "eth2"
+                "network-interface": "eth2",
                 "ipv4-address": "10.10.10.10",
-                "port": 80,
+                "port": 80
             }
         ]
     }

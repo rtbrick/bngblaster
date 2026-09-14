@@ -5,7 +5,7 @@
 +--------------------------+------------------------------------------------------------------+
 | Attribute                | Description                                                      |
 +==========================+==================================================================+
-| **enable**               | | This option allows to enable or disable the IPCP protocol      |
+| **enable**               | | This option allows enabling or disabling the IPCP protocol     |
 |                          | | Default: true                                                  |
 +--------------------------+------------------------------------------------------------------+
 | **request-ip**           | | Include IP-Address with 0.0.0.0 in the initial IPCP            |

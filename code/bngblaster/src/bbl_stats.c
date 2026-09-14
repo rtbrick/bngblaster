@@ -1025,7 +1025,7 @@ bbl_stats_json(bbl_stats_s * stats)
                 json_object_set_new(jobj_sub, "rx-session-packets-ipv6-loss", json_integer(access_interface->stats.session_ipv6_loss));
                 json_object_set_new(jobj_sub, "rx-session-packets-ipv6-wrong-session", json_integer(access_interface->stats.session_ipv6_wrong_session));
                 json_object_set_new(jobj_sub, "tx-session-packets-ipv6-avg-pps-max", json_integer(access_interface->stats.rate_session_ipv6_tx.avg_max));
-                json_object_set_new(jobj_sub, "rx-session-packets-ipv6avg-pps-max", json_integer(access_interface->stats.rate_session_ipv6_rx.avg_max));
+                json_object_set_new(jobj_sub, "rx-session-packets-ipv6-avg-pps-max", json_integer(access_interface->stats.rate_session_ipv6_rx.avg_max));
                 json_object_set_new(jobj_sub, "tx-session-packets-ipv6pd", json_integer(access_interface->stats.session_ipv6pd_tx));
                 json_object_set_new(jobj_sub, "rx-session-packets-ipv6pd", json_integer(access_interface->stats.session_ipv6pd_rx));
                 json_object_set_new(jobj_sub, "rx-session-packets-ipv6pd-loss", json_integer(access_interface->stats.session_ipv6pd_loss));

@@ -4,11 +4,12 @@ Monkey
 ------
 
 Monkey testing allows testing a BNG for robustness. If enabled, 
-it will randomly kill sessions using different methods. For PPPoE 
-sessions, it may restart sessions without a termination request or 
-PADT (e.g. CPE power outage), gracefully with LCP terminate request, 
-flaps IPCP (IPv4) and IP6CP (IPv6) independently, and many more. This 
-works similarly for IPoE by flapping DHCPv4 and DHCPv6 sessions.
+it will randomly kill sessions using different methods. For PPPoE
+sessions, it may restart sessions without a termination request or
+PADT (e.g. CPE power outage), terminate them gracefully via LCP
+terminate request, flap IPCP (IPv4) and IP6CP (IPv6) independently,
+and more. This works similarly for IPoE by flapping DHCPv4 and
+DHCPv6 sessions.
 
 Monkey testing must be enabled per access function and starts automatically 
 per default, which can be changed using the monkey-autostart option. It is 
@@ -38,7 +39,7 @@ the following two :ref:`commands <api>`:
 
 ``$ sudo bngblaster-cli run.sock monkey-stop``
 
-A common test could be to start a test with the maximum number of session and
+A common test could be to start a test with the maximum number of sessions and
 monkey test autostart disabled. As soon as all sessions are established, start
 monkey testing with the corresponding start :ref:`command <api>` and keep it running. 
 After 24 hours stop monkey testing with the corresponding stop :ref:`command <api>`

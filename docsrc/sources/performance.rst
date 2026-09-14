@@ -4,7 +4,7 @@ Performance Guide
 =================
 
 The BNG Blaster handles all traffic sent and received (I/O) in the main thread per default.
-With this default behavior, you can achieve between 100.000 and 250.000 PPS bidirectional
+With this default behavior, you can achieve between 100000 and 250000 PPS bidirectional
 traffic in most environments. Depending on the actual setup, this can be even less or much
 more, which is primarily driven by the single-thread performance of the given CPU.
 
@@ -24,7 +24,7 @@ The number of I/O threads can be configured globally for all interfaces or per i
                 {
                     "interface": "eth1",
                     "rx-threads": 4,
-                    "tx-threads": 2,
+                    "tx-threads": 2
                 }
             ]
         }
@@ -388,7 +388,7 @@ extra TX threads.
 
 .. note::
 
-    AF_XDP frames are limited to 4096 byte, so ``jumbo-frames`` are not
+    AF_XDP frames are limited to 4096 bytes, so ``jumbo-frames`` are not
     supported by this I/O mode and the maximum stream packet length is
     reduced accordingly.
 

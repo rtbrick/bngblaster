@@ -17,7 +17,7 @@ between the Bundesnetzagentur, network operators, manufacturers, states, and loc
 on NGA rollout.
 
 The L2BSA specification defines two interfaces. The so-called U interface (User Interface) 
-at the customer location and the A10-NSP interface (A10 Network Service Provider) between 
+at the customer location and the A10NSP interface (A10 Network Service Provider) between 
 the service provider networks. Those interface types were introduced in the Broadband Forum 
 TR-101 (Migration to Ethernet-Based Broadband Aggregation).
 
@@ -27,12 +27,12 @@ TR-101 (Migration to Ethernet-Based Broadband Aggregation).
 The U interface is defined as a transparent Layer 2 interface. This can be used with or without 
 VLAN tags by the wholesale service providers. This means that some CPE will send their traffic 
 untagged while another CPE is configured for tagged traffic. All those traffic needs to be forwarded 
-between the U interface and the A10-NSP interface.
+between the U interface and the A10NSP interface.
 
-The A10-NSP interface is defined as a link aggregation bundle interface with one or more interfaces 
+The A10NSP interface is defined as a link aggregation bundle interface with one or more interfaces 
 and LACP enabled or disabled. All traffic on this interface is at least single-tagged with the so-called 
-S-VLAN tag which identifies the U interface. This limits the amount of L2BSA services to 4094 per A10-NSP 
-interface caused by the usable VLAN range. So some providers need many A10-NSP interfaces if they need to 
+S-VLAN tag which identifies the U interface. This limits the amount of L2BSA services to 4094 per A10NSP 
+interface caused by the usable VLAN range. So some providers need many A10NSP interfaces if they need to 
 address more than the 4094 services.
 
 The term A10 relates to the end-to-end ADSL network reference model depicted in the figure below. 
@@ -43,20 +43,20 @@ the two functional blocks. U, V, and A10 are the three reference points.
 .. image:: ../images/tr-025.png
     :alt: TR-025
 
-The mapping between the U interface and A10-NSP/S-VLAN is managed by the L2BSA service provider. 
+The mapping between the U interface and A10NSP/S-VLAN is managed by the L2BSA service provider. 
 These mappings may change triggered by re-provisioning actions (port up/down). 
 
 Thus all PPPoE discovery, as well as DHCPv4/v6 packets, must be enriched with extra line identification 
 headers (Agent-Remote-Id, Agent-Circuit-Id, Actual-Data-Rate, …​) by the L2BSA service provider in the 
-upstream direction (from U to A10-NSP interface). Those headers allow the wholesale provider to identify 
-the actual U interface for traffic received on the A10-NSP interface. This functionality is referred to 
+upstream direction (from U to A10NSP interface). Those headers allow the wholesale provider to identify 
+the actual U interface for traffic received on the A10NSP interface. This functionality is referred to 
 as the intermediate agent functionality.
 
 The BNG Blaster A10NSP interface emulates such a layer two provider interface. This interface type accepts 
-all DHCPv4 and PPPoE sessions were received to verify forwarding and header enrichment.
+all DHCPv4 and PPPoE sessions received, to verify forwarding and header enrichment.
 
-Following a basic PPPoE/A10NSP configuration example which is
-detailed explained in the configuration section.
+Following is a basic PPPoE/A10NSP configuration example, which is
+explained in detail in the configuration section.
 
 .. code-block:: json
 
@@ -128,9 +128,9 @@ detailed explained in the configuration section.
 You can define multiple interfaces with the same MAC
 address to emulate some static link aggregation (without LACP)
 or directly use :ref:`Link Aggregation (LAG) <lag-interface>` 
-interfaces as the parent interface for the A10-NSP interface function.
-Using static link aggregation allows to manually define the sending 
-interface for every stream (``"a10nsp-interface": "<interface"``) 
+interfaces as the parent interface for the A10NSP interface function.
+Using static link aggregation allows you to manually define the sending
+interface for every stream (``"a10nsp-interface": "<interface>"``)
 where LAG interfaces automatically balance streams over the member 
 interfaces. It also allows using TX threads for those interfaces 
 which is not supported for LAG interfaces.
@@ -147,8 +147,8 @@ and streams are automatically moved to the correct interface. This feature is on
 supported when threading is disabled.
 
 
-L2BSA over Network Inerfaces
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+L2BSA over Network Interfaces
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 This experimental feature enables the termination of MPLS-encapsulated 
 L2BSA services through network interfaces. It requires that L2BSA services 

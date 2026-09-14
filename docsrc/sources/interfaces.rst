@@ -15,8 +15,8 @@ At least one interface function is required to start the BNG Blaster.
 Operating System Settings
 -------------------------
 
-The BNG Blaster implements all protocols in user space. Therefore the used interfaces 
-links must not have an IP address configured in the host operating system, to prevent that 
+The BNG Blaster implements all protocols in user space. Therefore the interface
+links must not have an IP address configured in the host operating system, to prevent that
 the received packets are handled or even responded to from the Linux kernel as well.
 
 All used interface links must be in an operational state up.
@@ -26,14 +26,14 @@ All used interface links must be in an operational state up.
     sudo ip link set dev <interface> up
 
 It is not possible to send packets larger than the configured interface MTU, which is 1500 
-bytes per default. For PPPoE with multiple VLAN headers, this might be not enough for large 
+bytes per default. For PPPoE with multiple VLAN headers, this might not be enough for large
 packets. Therefore the interface MTU should be increased using the following commands.
 
 .. code-block:: none
     
     sudo ip link set mtu 9000 dev <interface>
 
-All this can be also archived via netplan using the following configuration for each BNG Blaster
+All this can be also achieved via netplan using the following configuration for each BNG Blaster
 interface link.
 
 .. code-block:: yaml
@@ -99,7 +99,7 @@ The interfaces section contains all configurations around interface links and op
         "interfaces": {
             "tx-interval": 0.1,
             "rx-interval": 0.1,
-            "io-slots": 4096,
+            "io-slots": 4096
         }
     }
 
@@ -120,7 +120,7 @@ for interface links referenced by interface functions.
         "interfaces": {
             "tx-interval": 0.1,
             "rx-interval": 0.1,
-            "io-slots": 4096,
+            "io-slots": 4096
         }
     }
 
@@ -152,7 +152,7 @@ for all kinds of interface functions.
                     "lag-interface": "lag1"
                 },
                 {
-                    "interface": "eth1",
+                    "interface": "eth2",
                     "lag-interface": "lag1"
                 }
             ],
@@ -224,7 +224,7 @@ as shown in the example below.
                     "address-ipv6": "fc66:1337:7331:1::1/64",
                     "gateway-ipv6": "fc66:1337:7331:1::2"
                 }
-            ],
+            ]
         }
     }
 
@@ -444,14 +444,14 @@ section using this mode.
                 "vlan-mode": "N:1",
                 "username": "test@rtbrick.com",
                 "outer-vlan": 2000,
-                "inner-vlan": 7,
-            },
+                "inner-vlan": 7
+            }
         ]
     }
 
 One or more access interface blocks can be grouped using the ``session-group-id``, 
-which allows applying some commands like `session-start`, `session-stop` or 
-`session-restart` to all sessions belonging to the same group. The example
+which allows applying some commands like ``session-start``, ``session-stop`` or
+``session-restart`` to all sessions belonging to the same group. The example
 below shows how to assign all even VLAN identifiers to session group 1 and
 all odd VLAN identifiers to session group 2.
 
@@ -478,7 +478,7 @@ all odd VLAN identifiers to session group 2.
                 "outer-vlan-max": 1999,
                 "outer-vlan-step": 2,
                 "inner-vlan": 7
-            },
+            }
         ]
     }
 
@@ -515,13 +515,13 @@ as shown in the example below.
                     "qinq": false,
                     "mac": "02:00:00:ff:ff:02"
                 }
-            ],
+            ]
         }
     }
 
 .. note::
 
-    The A10NSP interface function can't reside on the same link with
+    The A10NSP interface function can't reside on the same link
     with network or access interface functions!
 
 
@@ -552,7 +552,7 @@ Packet MMAP is as easy as copying a packet into a buffer and setting a flag.
 
 Using I/O mode ``packet_mmap_raw`` or ``packet_mmap`` limits the maximum
 stream packet length to 3936 bytes on most systems. The actual limit is dynamically
-calcualted based on pagesize (typically 4096) minus overhead. 
+calculated based on pagesize (typically 4096) minus overhead.
 
 RAW
 ~~~
@@ -560,7 +560,7 @@ RAW
 `RAW Packet Sockets <https://man7.org/linux/man-pages/man7/packet.7.html>`_. 
 are used to receive or send raw packets at the device driver (OSI layer 2) level.
 
-The I/O mode ``raw`` allows steam packet lengths of up to 9000 bytes (layer 3). 
+The I/O mode ``raw`` allows stream packet lengths of up to 9000 bytes (layer 3).
 
 DPDK
 ~~~~

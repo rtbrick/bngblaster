@@ -11,7 +11,7 @@ access-aggregation-circuit-id support :ref:`variable substitution <variables>`.
 
 +---------------------------------------------+------------------------------------------------------------+
 | Attribute                                   | Description                                                |
-+===================================+======================================================================+
++=============================================+============================================================+
 | **agent-circuit-id**                        | | Agent-Circuit-Id (string).                               |
 +---------------------------------------------+------------------------------------------------------------+
 | **agent-remote-id**                         | | Agent-Remote-Id (string).                                |
@@ -34,7 +34,7 @@ any attribute that has a value of zero will not be included in the corresponding
 packets.
 
 In the context of DHCPv6, access line attributes, as well as Agent-Remote-Id or Agent-Circuit-Id, 
-are exclusively permitted in DHCPv6 relay-forward messages as dictated by RFC. By default, BNG Blaster 
+are exclusively permitted in DHCPv6 relay-forward messages as dictated by RFC 4649. By default, BNG Blaster
 includes these attributes in other DHCPv6 messages, even if this deviates from RFC guidelines. 
 Therefore, the DHCPv6 configuration section provides the option to either disable access-line attributes or, 
 as an alternative, enable LDRA (Lightweight DHCPv6 Relay Agent). 

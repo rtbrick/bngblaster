@@ -7,11 +7,11 @@ Logging
 -------
 
 The BNG Blaster can log events to the standard output
-or the logging window of the interactive courses interface. 
+or the logging window of the interactive ncurses interface.
 Those events could be also logged into files using the argument 
 ``-L <file>``.
 
-Per default, only events classified as `info` or `error` are logged. 
+Per default, only events classified as ``info`` or ``error`` are logged.
 The following list shows all supported logging options. 
 
 * ``debug``: debug events

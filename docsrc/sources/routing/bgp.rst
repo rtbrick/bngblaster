@@ -44,7 +44,7 @@ Following is an example of a BGP configuration with one session.
 BGP Sessions
 ~~~~~~~~~~~~
 
-BGP session are opened with the capabilities for the following
+BGP sessions are opened with the capabilities for the following
 address families:
 
 + IPv4 unicast
@@ -52,19 +52,19 @@ address families:
 + IPv6 unicast
 + IPv6 labeled unicast
 
-This can be changed using `family` configuration option.
+This can be changed using the ``family`` configuration option.
 
 Limitations
 ~~~~~~~~~~~
 
-BGP authentication is currently not supported but already 
-planned as an enhancement in one of the next releases. 
+BGP authentication is currently not supported but is already
+planned as an enhancement in one of the next releases.
 
 RAW Update Files
 ~~~~~~~~~~~~~~~~
 
-The BNG Blaster can inject BGP messages from a pre-compiled 
-RAW update file into the defined sessions. A RAW update file is not
+The BNG Blaster can inject BGP messages from a pre-compiled
+RAW update file into the defined sessions. A RAW update file is nothing
 more than a pre-compiled binary stream of BGP messages, typically
 but not limited to update messages.
 
@@ -82,7 +82,7 @@ but not limited to update messages.
     |                                                               |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |          Length               |      Type     | ...
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++++
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     .
     .
     .
@@ -96,32 +96,32 @@ but not limited to update messages.
     |                                                               |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     |          Length               |      Type     | ...
-    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-++++
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
 
 Those files can be created using the included BGP RAW update generator
 script ``bgpupdate`` or manually using libraries like scapy or converters
 from PCAP or MRT files. 
 
-The configured ``raw-update-file`` under the BGP session is loaded 
-during BNG Blaster startup phase and send it as soon as the session is 
-established. 
+The configured ``raw-update-file`` under the BGP session is loaded
+during BNG Blaster startup phase and sent as soon as the session is
+established.
 
-The ``bgp-raw-update`` :ref:`command <api>` allows to send further updates during
+The ``bgp-raw-update`` :ref:`command <api>` allows sending further updates during
 the session lifetime.
 
 ``$ sudo bngblaster-cli run.sock bgp-raw-update file update1.bgp``
 
 This allows loading a full table after the BGP session has
-started and manually trigger a series of changes using incremental
-updates files.
+started and manually triggering a series of changes using incremental
+update files.
 
-All BGP RAW update files are loaded once and can then be used for 
-multiple sessions. Meaning if two or more sessions reference the 
-same file identified by file name, this file is loaded once into 
-memory and used by multiple sessions. 
+All BGP RAW update files are loaded once and can then be used for
+multiple sessions. This means that if two or more sessions reference the
+same file identified by file name, this file is loaded once into
+memory and used by multiple sessions.
 
 Therefore for incremental updates, it may make sense to pre-load
-via ``bgp-raw-update-files`` configuration. 
+them via the ``bgp-raw-update-files`` configuration option.
 
 .. code-block:: json
 
@@ -204,10 +204,10 @@ streams for use with the BNG Blaster.
 
 
 
-The python BGP RAW update generator is a python script that uses
-scapy to build BGP messages. Therefore this tool can be easily 
-modified, extend or used as a blueprint for your own tools to generate
-valid BGP update streams. 
+The Python BGP RAW update generator is a Python script that uses
+scapy to build BGP messages. Therefore this tool can be easily
+modified, extended, or used as a blueprint for your own tools to generate
+valid BGP update streams.
 
 The following example shows how to generate a BGP update stream 
 with IPv4 and labeled IPv6 prefixes (6PE).
@@ -222,12 +222,12 @@ with IPv4 and labeled IPv6 prefixes (6PE).
     bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -m 20001 -M 1000 -p fc66:1::/48 -P 50000 --append
     bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P 50000 --append --end-of-rib
 
-Per default, the file is replaced but the option `--append` allows it to append to an existing file. 
-The last update to a file should include the option `--end-of-rib` (optional). 
+By default, the file is replaced but the option ``--append`` allows it to append to an existing file.
+The last update to a file should include the option ``--end-of-rib`` (optional).
 
-The option `--streams <file>` (`-s`) automatically generates corresponding traffic streams
-for all prefixes. Per default, this file is replaced but the option `--stream-append` allows
-appending to an existing file. 
+The option ``--streams <file>`` (``-s``) automatically generates corresponding traffic streams
+for all prefixes. By default, this file is replaced but the option ``--stream-append`` allows
+appending to an existing file.
 
 .. code-block:: none
 

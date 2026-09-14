@@ -111,7 +111,7 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **password**                      | | Overwrite the password from the authentication section.            |
 +-----------------------------------+----------------------------------------------------------------------+
-| **authentication-protocol**       | | Overwrite the username from the authentication section.            |
+| **authentication-protocol**       | | Overwrite the protocol from the authentication section.            |
 +-----------------------------------+----------------------------------------------------------------------+
 | **agent-circuit-id**              | | Overwrite the agent-circuit-id from the access-line section.       |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -176,7 +176,7 @@
 | **arp-client-group-id**           | | Set ARP group identifier.                                          |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
-| **icmp-client-group-id",**        | | Set ICMP group identifier.                                         |
+| **icmp-client-group-id**          | | Set ICMP group identifier.                                         |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **http-client-group-id**          | | Set HTTP group identifier.                                         |

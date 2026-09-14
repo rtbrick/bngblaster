@@ -34,6 +34,7 @@
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **vendor-class-id**               | | Add DHCP vendor class id/option 60.                                |
+|                                   | | Default: none                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **keep-address**                  | | Emulates init-reboot on stop if enabled together with              |
 |                                   | | release-retry set to zero (disabled).                              |

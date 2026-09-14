@@ -23,7 +23,7 @@ instance generates a ``self`` originated type 1 router LSA describing the node i
 Configuration
 ~~~~~~~~~~~~~
 
-Following an example OSPFv2 configuration with two instances 
+Following is an example OSPFv2 configuration with two instances
 attached to two network interfaces.
 
 .. code-block:: json
@@ -66,9 +66,9 @@ attached to two network interfaces.
 .. include:: ../configuration/ospf.rst
 
 The support for multiple instances allows different use cases. One example might 
-be to create two instances connected to the device or network under test. Now 
-inject an LSA on one instance and check if learned over the tested network on 
-the other instance. 
+be to create two instances connected to the device or network under test. Now
+inject an LSA on one instance and check if it is learned over the tested network on
+the other instance.
 
 Every OSPF instance can be also connected to an emulated link state graph loaded 
 by MRT files as shown in the example below. 
@@ -84,7 +84,7 @@ by MRT files as shown in the example below.
                 "instance-id": 1,
                 "version": 2,
                 "router-id": "10.0.0.11",
-                "hostname": "R1"
+                "hostname": "R1",
                 "external": {
                     "mrt-file": "ospf.mrt",
                     "connections": [
@@ -255,7 +255,7 @@ and inject them using the ospf-lsa-update :ref:`command <api>`.
 MRT Files
 ~~~~~~~~~
 
-The BNG Blaster can load LSA updates from a MRT file as defined in 
+The BNG Blaster can load LSA updates from an MRT file as defined in
 `RFC6396 <https://datatracker.ietf.org/doc/html/rfc6396>`_.
 
 .. code-block:: none
@@ -276,8 +276,8 @@ The message field contains the complete OSPF LS Update PDU including
 the OSPF common header starting with version field. 
 
 Those files can be loaded at startup via the configuration option 
-``"ospf": { "external": { "mrt-file": "<file>" } }`` or alternative
-via ``ospf-load-mrt`` :ref:`command <api>`. 
+``"ospf": { "external": { "mrt-file": "<file>" } }`` or alternatively
+via ``ospf-load-mrt`` :ref:`command <api>`.
 
 ``$ sudo bngblaster-cli run.sock ospf-load-mrt file ospf.mrt instance 1``
 

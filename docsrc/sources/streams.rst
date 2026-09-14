@@ -183,7 +183,7 @@ static (RAW) TCP header.
 This option can be used stand-alone to verify firewall filters or together 
 with the new NAT option to verify NAT TCP streams. 
 
-For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.
+For now, TCP flags (SYN, …) are statically set to SYN but this could be adapted if needed.
 
 Stream Iterators
 ~~~~~~~~~~~~~~~~
@@ -211,16 +211,19 @@ by the port-step configuraton option.
 the port iterator resets to the initial port value and resumes incrementing.
 
 **Configuration Parameters:**
+
 * ``source/destination-port`` (default: 65056): The starting port number.
 * ``source/destination-port-step`` (default: 0):	The value by which to increment the port for each new stream instance.
 * ``source/destination-port-max`` (default: 65535): The upper limit for the port range. When the current port exceeds this value, it wraps back to source-port.
 
 **Examples:**
-Consider a scenario with 10 sessions, where each session generates 10 instances of a specific stream (total stream count = 100). 
+
+Consider a scenario with 10 sessions, where each session generates 10 instances of a specific stream (total stream count = 100).
 The starting source-port is 1000 and source-port-step is 1.
 
 *Scenario A - Global Unique Ports (Continuous Range):*
-If you want every stream across all sessions to have a unique source port, 
+
+If you want every stream across all sessions to have a unique source port,
 ensure the source-port-max is high enough to cover the total count.
 
 Config: source-port-max: 65535
@@ -231,8 +234,9 @@ Result: Ports are assigned sequentially from 1000 to 1099.
 * ...
 * Session 10: Ports 1090–1099
 
-*Scenario B - Per-Session Port Reuse (Repeating Range):* 
-If you want each session to use the same set of source ports, you must configure source-port-max to 
+*Scenario B - Per-Session Port Reuse (Repeating Range):*
+
+If you want each session to use the same set of source ports, you must configure source-port-max to
 force a reset after the stream count for a single session is reached.
 
 Config: source-port-max: 1009 (Start port 1000 + 9 increments)
@@ -426,7 +430,7 @@ flow is ready to send. These checks include:
 
 The global traffic state can be changed by multiple methods like the configuration 
 parameter ``{ "traffic": { "autostart": true/false } }``, the commands ``traffic-start/stop``, 
-and the keyboard shortcuts `F7/F8`. All these methods have the same effect of setting 
+and the keyboard shortcuts ``F7/F8``. All these methods have the same effect of setting
 the global traffic state. 
 
 The flow state can be changed by different configurations and commands, depending on the traffic type. 
@@ -448,7 +452,7 @@ can modify the state of these streams at any time.
 
 ``$ sudo bngblaster-cli run.sock session-traffic-start session-id 1``
 
-Details about all commands and their arguments can found int the :ref:`API/CLI <api>` section. 
+Details about all commands and their arguments can be found in the :ref:`API/CLI <api>` section.
 
 Fragmentation
 ~~~~~~~~~~~~~

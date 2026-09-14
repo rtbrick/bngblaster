@@ -94,7 +94,7 @@ and the A10-NSP interface (A10 Network Service Provider)
 between the service provider networks. 
 
 The BNG Blaster A10NSP interface emulates such a layer two provider interface. 
-This interface type accepts all DHCPv4 and PPPoE sessions were received to verify 
+This interface type accepts all DHCPv4 and PPPoE sessions that are received, to verify
 forwarding and header enrichment.
 
 .. include:: interfaces_a10nsp.rst

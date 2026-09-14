@@ -7,13 +7,13 @@ Intermediate System to Intermediate System (ISIS, also written IS-IS)
 is a routing protocol designed to move information efficiently within 
 a network.
 
-The ISIS protocol is defined in ISO/IEC 10589:2002 as an international 
-standard within the Open Systems Interconnection (OSI) reference design. 
+The ISIS protocol is defined in ISO/IEC 10589:2002 as an international
+standard within the Open Systems Interconnection (OSI) reference model.
 The Internet Engineering Task Force (IETF) republished ISIS in RFC 1142, 
 but that RFC was later marked as historic by RFC 7142 because it republished 
 a draft rather than a final version of the ISO standard, causing confusion.
 
-ISIS has been called the de facto standard for a large service provider 
+ISIS has been called the de facto standard for large service provider
 network backbones.
 
 The BNG Blaster can emulate multiple ISIS instances. An ISIS instance
@@ -25,7 +25,7 @@ node itself.
 Configuration
 ~~~~~~~~~~~~~
 
-Following an example ISIS configuration with one instance 
+Following is an example ISIS configuration with one instance
 attached to two network interfaces.
 
 .. code-block:: json
@@ -41,7 +41,7 @@ attached to two network interfaces.
                     "gateway-ipv6": "fc66:1337:7331:1::1",
                     "isis-instance-id": 1,
                     "isis-level": 1,
-                    "isis-l1-metric": 100,
+                    "isis-l1-metric": 100
                 },
                 {
                     "interface": "eth2",
@@ -76,9 +76,9 @@ attached to two network interfaces.
 .. include:: ../configuration/isis.rst
 
 The support for multiple instances allows different use cases. One example might 
-be to create two instances connected to the device or network under test. Now 
-inject an LSP on one instance and check if learned over the tested network on 
-the other instance. 
+be to create two instances connected to the device or network under test. Now
+inject an LSP on one instance and check if it is learned over the tested network on
+the other instance.
 
 Every ISIS instance can be also connected to an emulated link state graph loaded 
 by MRT files as shown in the example below. 
@@ -117,8 +117,8 @@ by MRT files as shown in the example below.
 
 .. include:: ../configuration/isis_external.rst
 
-The node ``N1`` in this example also needs to advertise the 
-reachability to node ``B1``.
+The external node ``1921.6800.0000.00`` in this example also needs to
+advertise the reachability to node ``R1``.
 
 .. include:: ../configuration/isis_external_connections.rst
 
@@ -235,7 +235,7 @@ LSP Update Command
 It is also possible to inject external LSPs using the ``isis-lsp-update``
 :ref:`command <api>`. 
 
-The :ref:`command <api>` expects a list of hex encoded PDU's including 
+The :ref:`command <api>` expects a list of hex encoded PDUs including
 the ISIS common header starting with ``0x83``.
 
 ``$ cat command.json | jq .``
@@ -326,7 +326,7 @@ and inject them using the ``isis-lsp-update`` :ref:`command <api>`.
 MRT Files
 ~~~~~~~~~
 
-The BNG Blaster can load LSPs from a MRT file as defined in 
+The BNG Blaster can load LSPs from an MRT file as defined in
 `RFC6396 <https://datatracker.ietf.org/doc/html/rfc6396>`_.
 
 .. code-block:: none
@@ -347,8 +347,8 @@ The message field contains the complete ISIS LSP PDU including
 the ISIS common header starting with ``0x83``. 
 
 Those files can be loaded at startup via the configuration option 
-``"isis": { "external": { "mrt-file": "<file>" } }`` or alternative
-via ``isis-load-mrt`` :ref:`command <api>`. 
+``"isis": { "external": { "mrt-file": "<file>" } }`` or alternatively
+via ``isis-load-mrt`` :ref:`command <api>`.
 
 ``$ sudo bngblaster-cli run.sock isis-load-mrt file test.mrt instance 1``
 
@@ -357,5 +357,5 @@ LSPGEN
 
 The BNG Blaster includes a tool called :ref:`lspgen <lspgen>`, which is able to generate
 topologies and link state packets for export as MRT and PCAP files. This tool
-is also able to inject LSAs directly using the ``isis-lsp-update``
+is also able to inject LSPs directly using the ``isis-lsp-update``
 :ref:`command <api>`.

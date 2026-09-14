@@ -14,7 +14,7 @@
 | **ia-pd**                         | | This option allows enabling or disabling DHCPv6 IA_PD.             |
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
-| **ia-separate**                   | | Send seperate requests for IA_NA and IA_PD.                        |
+| **ia-separate**                   | | Send separate requests for IA_NA and IA_PD.                        |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **rapid-commit**                  | | DHCPv6 rapid commit (2-way handshake).                             |
@@ -35,7 +35,7 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **ldra**                          | | This option allows enabling or disabling LDRA.                     |
 |                                   | | DHCPv6 LDRA (Lightweight DHCPv6 Relay Agent) is defined in         |
-|                                   | | [RFC6221](https://datatracker.ietf.org/doc/html/rfc6221).          |
+|                                   | | `RFC 6221 <https://datatracker.ietf.org/doc/html/rfc6221>`_.       |
 |                                   | | Adding access-line information like Agent-Remote-Id or             |
 |                                   | | Agent-Circuit-Id should be used with LDRA enabled only.            |
 |                                   | | Default: false                                                     |

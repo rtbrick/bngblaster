@@ -18,7 +18,7 @@
 |                                  | | keepalive timeout is reset each time a PDU arrives. The  |
 |                                  | | BNG Blaster will send keepalive messages at an interval  |
 |                                  | | calculated by using the effective keepalive time divided |
-|                                  | | by 3. Assuming an effective keepalive time of of 15      |
+|                                  | | by 3. Assuming an effective keepalive time of 15         |
 |                                  | | seconds results in a keepalive interval of 5 seconds.    |
 |                                  | | Default: 15 Range: 0 - 65535                             |
 +----------------------------------+------------------------------------------------------------+
@@ -52,4 +52,4 @@
 +----------------------------------+------------------------------------------------------------+
 | **tos**                          | | TOS/TC for all LDP control traffic.                      |
 |                                  | | Default: 0                                               |
-+-----------------------------------+-----------------------------------------------------------+
++----------------------------------+------------------------------------------------------------+

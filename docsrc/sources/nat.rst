@@ -19,27 +19,19 @@ service providers (ISPs) and telecommunications companies.
 It is used to address the increasing scarcity of IPv4 addresses, 
 as more and more devices are connected to the internet.
 
-The BNG Blaster incorporates a comprehensive set of functionalities 
-tailored to NAT, with a particular focus on CGNAT testing. These 
-features are purpose-built to address the specific requirements and 
-complexities associated with Carrier-Grade Network Address Translation. 
+The BNG Blaster incorporates a set of functionalities tailored to NAT, with a
+particular focus on CGNAT testing. These features are purpose-built to address
+the specific requirements and complexities associated with Carrier-Grade
+Network Address Translation.
 
-The tool offers a range of capabilities that are instrumental in assessing 
-and validating the performance and functionality of CGNAT systems. 
-This includes the ability to simulate and analyze large-scale address 
-translation scenarios, ensuring that the NAT infrastructure effectively 
-handles the demands of a multitude of users sharing a limited pool of public 
-IP addresses. Furthermore, the BNG Blaster's CGNAT testing features enable the 
-emulation of various network conditions and scenarios, helping service providers 
-and network operators assess the impact of CGNAT on user experiences and address 
-any potential issues.
-
-In addition to CGNAT testing, the BNG Blaster's NAT-related features encompass 
-a broad spectrum of testing and evaluation options, ensuring that Network Address 
-Translation mechanisms, whether they be traditional NAT or CGNAT, are rigorously 
-examined for performance, scalability, and reliability. This robust suite of tools 
-makes the BNG Blaster an invaluable resource for network professionals working 
-with NAT technologies in their infrastructure.
+This includes the ability to simulate and analyze large-scale address
+translation scenarios, ensuring that the NAT infrastructure effectively
+handles the demands of a multitude of users sharing a limited pool of public
+IP addresses. The BNG Blaster's CGNAT testing features also enable the
+emulation of various network conditions and scenarios, helping service providers
+and network operators assess the impact of CGNAT on user experiences and address
+any potential issues, ensuring that NAT mechanisms, whether traditional NAT or
+CGNAT, are rigorously examined for performance, scalability, and reliability.
 
 NAT Features
 ------------
@@ -105,14 +97,14 @@ address and port is now shown with stream-info command.
 
 NAT Enabled Streams
 ~~~~~~~~~~~~~~~~~~~
-A new option called **nat** is added to the stream configuraton. 
-This option is supported for bidirectional and upstream streams only, 
-meaning it is not supported for downstream-only streams, as those can't 
-pass a NAT gateway. 
+A new option called ``nat`` is added to the stream configuraton.
+This option is supported for bidirectional and upstream streams only,
+meaning it is not supported for downstream-only streams, as those can't
+pass a NAT gateway.
 
-For bidirectional streams, the downstream flow waits until first upstream
+For bidirectional streams, the downstream flow waits until the first upstream
 packet has been received to learn the translated source address and port
-which have to be used as destionation for this flow. 
+which have to be used as destination for this flow.
 
 .. code-block:: json
 
@@ -172,7 +164,7 @@ NAT gateway.
 TCP RAW Streams
 ~~~~~~~~~~~~~~~
 
-A new option called **raw-tcp** is added to the stream configuraton. 
+A new option called ``raw-tcp`` is added to the stream configuraton.
 If enabled, UDP-like traffic with a constant rate is sent using a 
 static (RAW) TCP header.
 
@@ -195,7 +187,7 @@ static (RAW) TCP header.
 This option can be used stand-alone to verify firewall filters or together 
 with the new NAT option to verify NAT TCP streams. 
 
-For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.
+For now, TCP flags (SYN, …) are statically set to SYN but this could be adapted if needed.
 
 Stream Setup interval
 ~~~~~~~~~~~~~~~~~~~~~
@@ -227,7 +219,7 @@ directions to be verified.
 HTTP NAT Extension
 ~~~~~~~~~~~~~~~~~~
 The existing :ref:`HTTP client/server <http>` was also enhanced for NAT usage.
-The actual configuration is uncahnged but the HTTP server will now return the 
+The actual configuration is unchanged but the HTTP server will now return the
 received client IP address and port in dedicated HTTP headers as shown below 
 where X-Client-Ip and Port shows the IP address and port assigned from the NAT gateway. 
 
@@ -371,7 +363,7 @@ which is typically not needed for millions of streams.
 
 All traffic stats are still working but the live rate is not calculated. 
 
-It is also possible to disable the stream delay calcualtion if not needed.
+It is also possible to disable the stream delay calculation if not needed.
 
 .. code-block:: json
 

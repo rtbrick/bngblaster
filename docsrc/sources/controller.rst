@@ -60,9 +60,9 @@ The corresponding service will be started automatically.
                 └─682535 /usr/local/bin/bngblasterctrl
 
 
-The BNG Blaster controller listens on port `8001` per default, 
-which can be changed using the argument `-addr` in the systemd
-service unit `/etc/systemd/system/bngblaster-controller.service`. 
+The BNG Blaster controller listens on port ``8001`` per default, 
+which can be changed using the argument ``-addr`` in the systemd
+service unit ``/etc/systemd/system/bngblaster-controller.service``. 
 
 .. code-block:: none
 
@@ -79,7 +79,7 @@ service unit `/etc/systemd/system/bngblaster-controller.service`.
     -debug
             turn on debug logging
     -e string
-            bngblaster executable (default "/usr/sbin/bngblaster")
+            bngblaster executable (default "/usr/bin/bngblaster")
 
 
 API
@@ -90,23 +90,23 @@ OpenAPI: https://rtbrick.github.io/bngblaster-controller/
 Create Test Instance
 ~~~~~~~~~~~~~~~~~~~~
 
-`PUT /api/v1/instances/<instance-name>` 
+``PUT /api/v1/instances/<instance-name>`` 
 
 This API endpoint creates a test instance if not already created. The body of this request 
-is stored as bngblaster configuration (`config.json`).
+is stored as bngblaster configuration (``config.json``).
 
-Each test instance creates a directory in `/var/bngblaster/<instance-name>`. 
+Each test instance creates a directory in ``/var/bngblaster/<instance-name>``. 
 This directory contains the following files:
 
-* `config.json`: bngblaster configuration
-* `run.pid`: bngblaster process ID (if running)
-* `run.json`: bngblaster arguments
-* `run.log`: bngblaster log file (if enabled)
-* `run_report.json`: bngblaster report (if enabled)
-* `run.pcap`: bngblaster traffic capture (if enabled)
-* `run.sock`: bngblaster control socket
-* `run.stderr`: bngblaster standard error
-* `run.stdout`: bngblaster standard output 
+* ``config.json``: bngblaster configuration
+* ``run.pid``: bngblaster process ID (if running)
+* ``run.json``: bngblaster arguments
+* ``run.log``: bngblaster log file (if enabled)
+* ``run_report.json``: bngblaster report (if enabled)
+* ``run.pcap``: bngblaster traffic capture (if enabled)
+* ``run.sock``: bngblaster control socket
+* ``run.stderr``: bngblaster standard error
+* ``run.stdout``: bngblaster standard output 
 
 Example:
 
@@ -139,7 +139,7 @@ Example:
 Start Test 
 ~~~~~~~~~~~
 
-`POST /api/v1/instances/<instance-name>/_start`
+``POST /api/v1/instances/<instance-name>/_start``
 
 The start API endpoint will start the bngblaster with the argument options
 defined in the body.
@@ -179,18 +179,18 @@ Example:
 Status
 ~~~~~~
 
-`GET /api/v1/instances/<instance-name>`
+``GET /api/v1/instances/<instance-name>``
 
 The status API endpoint returns the status of the test which can be either 
-`started` or `stopped`.
+``started`` or ``stopped``.
 
 Command 
 ~~~~~~~
 
-`POST /api/v1/instances/<instance-name>/_command`
+``POST /api/v1/instances/<instance-name>/_command``
 
 The JSON body of this API call will be passed to the bngblaster instance 
-control socket (`/var/bngbnlaster/<instance-name>/run.sock`). The result will 
+control socket (``/var/bngbnlaster/<instance-name>/run.sock``). The result will 
 be passed back to the client.
 
 Example:
@@ -235,31 +235,31 @@ The result code is passed as HTTP response status code.
 Stop Test 
 ~~~~~~~~~
 
-`POST /api/v1/instances/<instance-name>/_stop`
+``POST /api/v1/instances/<instance-name>/_stop``
 
 The stop API endpoint will send the SIGINT signal to the corresponding 
-BNG blaster instance (`kill -INT <pid>`).
+BNG blaster instance (``kill -INT <pid>``).
 
 Delete Test Instance
 ~~~~~~~~~~~~~~~~~~~~
 
-`DELETE /api/v1/instances/<instance-name>`
+``DELETE /api/v1/instances/<instance-name>``
 
 This API endpoint deletes the test instance directory. The corresponding
-test run is forcefully terminated (`kill -9 <pid>`) if running. 
+test run is forcefully terminated (``kill -9 <pid>``) if running. 
 
 Reports 
 ~~~~~~~
 
 The BNG Blaster can generate detailed :ref:`reports <reports>`
 at the end of the test execution. Those reports must be enabled
-during the start with the argument option `report`. This detailed
-report can be further enhanced using `report_flags` to include 
+during the start with the argument option ``report``. This detailed
+report can be further enhanced using ``report_flags`` to include 
 detailed per-session and stream results. Consider that the resulting 
-report may be large if `streams` flag is enabled in combination with 
+report may be large if ``streams`` flag is enabled in combination with 
 a huge amount of streams (around 500MB report file for one million streams). 
 
-`POST /api/v1/instances/<instance-name>/_start`
+``POST /api/v1/instances/<instance-name>/_start``
 
  .. code-block:: json
 
@@ -274,7 +274,7 @@ a huge amount of streams (around 500MB report file for one million streams).
 The final report can be retrieved with the following request 
 after the test has finally stopped.
 
-`GET /api/v1/instances/<instance-name>/run_report.json` 
+``GET /api/v1/instances/<instance-name>/run_report.json`` 
 
 After requesting the test to stop, it can take some time until the test 
 has gracefully stopped. This can be verified using the status command.
@@ -283,12 +283,12 @@ As soon as the status becomes stopped, the report file should be available.
 Logs
 ~~~~
 
-The BNG Blaster supports extensive :ref:`logging <logging>` 
+The BNG Blaster supports extensive :ref:`logging <logging>`
 during the test execution. This log file must be enabled
-during the start with the argument option `logging`. The optional
-argument `logging_flags` allows for enabling log categories.
+during the start with the argument option ``logging``. The optional
+argument ``logging_flags`` allows for enabling log categories.
 
-`POST /api/v1/instances/<instance-name>/_start`
+``POST /api/v1/instances/<instance-name>/_start``
 
  .. code-block:: json
 
@@ -307,22 +307,22 @@ of all logging flags.
 The final log file can be retrieved with the following request 
 after the test has finally stopped.
 
-`GET /api/v1/instances/<instance-name>/run.log`
+``GET /api/v1/instances/<instance-name>/run.log``
 
 It is also possible to retrieve the standard output and error
 for troubleshooting purposes. 
 
-`GET /api/v1/instances/<instance-name>/run.stderr` 
-`GET /api/v1/instances/<instance-name>/run.stdout` 
+``GET /api/v1/instances/<instance-name>/run.stderr`` 
+``GET /api/v1/instances/<instance-name>/run.stdout`` 
 
 PCAP
 ~~~~
 
 The BNG Blaster supports to :ref:`capture <capture>` all traffic 
 sent and received by the BNG Blaster which must be enabled during 
-the start with the argument option `pcap_capture`.
+the start with the argument option ``pcap_capture``.
 
-`POST /api/v1/instances/<instance-name>/_start`
+``POST /api/v1/instances/<instance-name>/_start``
 
  .. code-block:: json
 
@@ -333,12 +333,12 @@ the start with the argument option `pcap_capture`.
 The final capture file can be retrieved with the following request 
 after the test has finally stopped.
 
-`GET /api/v1/instances/<instance-name>/run.pcap`
+``GET /api/v1/instances/<instance-name>/run.pcap``
 
 Metrics
 ~~~~~~~
 
-`GET /metrics`
+``GET /metrics``
 
 This endpoint returns metrics for all instances in Prometheus text format. 
 
@@ -351,14 +351,14 @@ This endpoint returns metrics for all instances in Prometheus text format.
     # TYPE instances_total gauge
     instances_total{hostname="blaster"} 4
 
-The metric `instances_total` counts the number of test instance directories 
-present and `instances_running` shows how many of them are running. 
+The metric ``instances_total`` counts the number of test instance directories 
+present and ``instances_running`` shows how many of them are running. 
 
 Every metric is labeled with the hostname where the controller is running.
 
 Per default, there are no metrics per instance. This has to be explicitly 
-enabled during instance start (`/api/v1/instances/<instance-name>/_start`) 
-using the new  `metric_flags` option.
+enabled during instance start (``/api/v1/instances/<instance-name>/_start``) 
+using the new  ``metric_flags`` option.
 
 .. code-block:: json
 
@@ -376,16 +376,16 @@ using the new  `metric_flags` option.
 
 Currently, the following metrics are supported:
 
-* `session_counters` session statistics
-* `interfaces` interface/link counters
-* `access_interfaces` access interface function counters
-* `network_interfaces` network interface function counters
-* `a10nsp_interfaces` a10nsp interface function counters
-* `streams` stream counters
+* ``session_counters`` session statistics
+* ``interfaces`` interface/link counters
+* ``access_interfaces`` access interface function counters
+* ``network_interfaces`` network interface function counters
+* ``a10nsp_interfaces`` a10nsp interface function counters
+* ``streams`` stream counters
 
-The `streams` metric generates statistics for every stream and direction.
-Therefore the `streams` metric should not be used with massive streams 
-(e.g. > 10.000 streams) but there is no limit enforced. 
+The ``streams`` metric generates statistics for every stream and direction.
+Therefore the ``streams`` metric should not be used with massive streams 
+(e.g. > 10000 streams) but there is no limit enforced.
 
 .. code-block:: none
 

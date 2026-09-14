@@ -7,7 +7,7 @@ Emulating PPP over Ethernet (PPPoE) sessions was initial
 use case of the BNG Blaster supporting 1:1 and N:1 VLAN
 mode.
 
-The BNG Blaster concept is leaned to the idea of fail-fast.
+The BNG Blaster concept is based on the idea of fail-fast.
 Therefore PPPoE sessions may not be established if not all 
 expected conditions are fulfilled. PPPoE sessions become 
 established only if all enabled network protocols
@@ -15,8 +15,8 @@ established only if all enabled network protocols
 If IPCP is configured to request two DNS servers, 
 it fails if only one is returned.
 
-The BNG Blaster is not optimized for robustness. The opposite is 
-the case, to ensure it failed if the device under test behaves faulty. 
+The BNG Blaster is not optimized for robustness. The opposite is
+the case, to ensure it fails if the device under test misbehaves.
 
 Configuration
 ~~~~~~~~~~~~~
@@ -140,8 +140,8 @@ LCP Vendor Extension
 
 This chapter refers to RFC 2153 PPP vendor extensions.
 
-Per default, all LCP vendor-specific requests will be rejected sending a
-LCP code-reject message. With the LCP option ``ignore-vendor-specific`` 
+Per default, all LCP vendor-specific requests will be rejected by sending an
+LCP code-reject message. With the LCP option ``ignore-vendor-specific``
 enabled in the configuration, those messages will be ignored as required 
 to emulate different CPE behaviors.
 

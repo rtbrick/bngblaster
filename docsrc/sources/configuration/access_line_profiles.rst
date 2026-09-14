@@ -26,10 +26,10 @@ each access interface.
 | **min-down**                      | | Minimum Data Rate Downstream.                                      |
 |                                   | | Default: 0 Range: 0 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
-| **att-up**                        | | Attainable DataRate Upstream.                                      |
+| **att-up**                        | | Attainable Data Rate Upstream.                                     |
 |                                   | | Default: 0 Range: 0 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
-| **att-down**                      | | Attainable DataRate Downstream.                                    |
+| **att-down**                      | | Attainable Data Rate Downstream.                                   |
 |                                   | | Default: 0 Range: 0 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
 | **max-up**                        | | Maximum Data Rate Upstream.                                        |
@@ -38,10 +38,10 @@ each access interface.
 | **max-down**                      | | Maximum Data Rate Downstream.                                      |
 |                                   | | Default: 0 Range: 0 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
-| **min-up-low**                    | | Min Data Rate Upstream.in low power state                          |
+| **min-up-low**                    | | Minimum Data Rate Upstream. in low power state                     |
 |                                   | | Default: 0 Range: 0 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
-| **min-down-low**                  | | Min Data Rate Downstream.in low power state                        |
+| **min-down-low**                  | | Minimum Data Rate Downstream. in low power state                   |
 |                                   | | Default: 0 Range: 0 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
 | **max-interl-delay-up**           | | Max Interleaving Delay Upstream.                                   |
@@ -107,13 +107,13 @@ each access interface.
 | **pon-max-down**                  | | PON Tree Maximum Data Rate Downstream.                             |
 |                                   | | Default: 0 Range: 0 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
-| **pon-access-line-version**       | | This option allows to switch between the versions                  |
+| **pon-access-line-version**       | | This option allows switching between the versions                  |
 |                                   | | 00 (DRAFT-LIHAWI-00) and 04 (DRAFT-LIHAWI-04) of the RFC           |
 |                                   | | `draft-lihawi-ancp-protocol-access-extension`.                     |
-|                                   | | Default: DRAFT-LIHAWI-04                                           |
-+-----------------------------------+----------------------------------------------------------------------+
+|                                   | | Values: "00", "04" (string)                                        |
+|                                   | | Default: "04"                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 
 The values specified for **rate-up**, **rate-down** and **dsl-type** defined in the
-**access-line** or **interface** section section take precedence over the definitions 
+**access-line** or **interface** section take precedence over the definitions
 provided here.

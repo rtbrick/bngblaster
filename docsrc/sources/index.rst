@@ -6,11 +6,11 @@ RtBrick - Routing Protocol and BNG Blaster
 The **Routing Protocol and BNG Blaster** is an open-source 
 network tester for **routing** and **access** protocols.
 
-Originally developed as an access protocol tester, the BNG Blaster has undergone a 
-significant evolution, transforming into a comprehensive network testing tool that 
-now encompasses both access and routing functionalities. Its scope has expanded beyond 
-the assessment of access protocols and now encompasses a broader spectrum, involving 
-the evaluation of network functionalities at large. Contrary to its nomenclature, 
+Originally developed as an access protocol tester, the BNG Blaster has undergone a
+significant evolution, transforming into a comprehensive network testing tool that
+now encompasses both access and routing functionalities. Its scope has expanded beyond
+the assessment of access protocols and now covers a broader spectrum, involving
+the evaluation of network functionalities at large. Contrary to its nomenclature,
 the BNG Blaster isn't restricted only to BNG (Broadband Network Gateway) testing.
 
 It simulates a massive number of PPPoE and IPoE (DHCP) subscribers, encompassing 
@@ -27,7 +27,7 @@ service edge routers with detailed per-flow statistics like receive rate, loss
 or latency.
 
 The BNG Blaster is used by leading network operators like Deutsche Telekom AG
-with their famous Access 4.0 project, network hard- and software vendors like
+with its famous Access 4.0 project, network hardware and software vendors like
 RtBrick and many more.
 
 .. tabs::

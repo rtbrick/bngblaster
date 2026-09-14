@@ -37,7 +37,7 @@
 | **tos**                           | | IPv4 header TOS value.                                             |
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
-| **df**                            | | IPv4 header dont-fragement (DF) bit.                               |
+| **df**                            | | IPv4 header don't-fragment (DF) bit.                               |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **autostart**                     | | Autostart ICMP client after session reconnects. This applies only  |
