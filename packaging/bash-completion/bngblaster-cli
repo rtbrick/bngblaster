@@ -1,0 +1,178 @@
+# Bash completion for bngblaster-cli
+#
+# Completes command names and their arguments by querying the "commands"
+# endpoint of a running BNG Blaster instance over its control socket, so
+# completion always matches the schema of the connected binary.
+#
+# Install to /usr/share/bash-completion/completions/bngblaster-cli to be
+# picked up automatically by the bash-completion package, or source it
+# manually, e.g. from ~/.bashrc:
+#   source /usr/share/bash-completion/completions/bngblaster-cli
+#
+# Christian Giese, September 2026
+#
+# Copyright (C) 2020-2026, RtBrick, Inc.
+# SPDX-License-Identifier: BSD-3-Clause
+
+# Requires bash 4+ (associative arrays) and python3, already a hard
+# dependency of bngblaster-cli itself.
+if [ -z "${BASH_VERSINFO:-}" ] || [ "${BASH_VERSINFO[0]}" -lt 4 ]; then
+    return 0 2>/dev/null || exit 0
+fi
+
+# Cache of "commands" responses, keyed by control socket path, so we do
+# not hit the socket again for every keypress while completing.
+declare -gA _BNGBLASTER_CLI_COMMANDS_CACHE
+
+# Parses a cached "commands" JSON response (read from stdin) for one of:
+#   list-commands                      -> one command name per line
+#   list-args <command> [used ...]     -> argument names not already used
+#   arg-type  <command> <argument>     -> the argument type (string/number/boolean/array)
+_bngblaster_cli_py() {
+    python3 -c '
+import json, sys
+
+try:
+    data = json.load(sys.stdin)
+except Exception:
+    sys.exit(0)
+
+mode = sys.argv[1] if len(sys.argv) > 1 else ""
+commands = data.get("commands", []) if isinstance(data, dict) else []
+
+if mode == "list-commands":
+    for c in commands:
+        name = c.get("command")
+        if name:
+            print(name)
+elif mode == "list-args":
+    command = sys.argv[2] if len(sys.argv) > 2 else ""
+    used = set(sys.argv[3:])
+    for c in commands:
+        if c.get("command") == command:
+            for a in c.get("arguments", []):
+                name = a.get("name")
+                if name and name not in used:
+                    print(name)
+            break
+elif mode == "arg-type":
+    command = sys.argv[2] if len(sys.argv) > 2 else ""
+    argname = sys.argv[3] if len(sys.argv) > 3 else ""
+    for c in commands:
+        if c.get("command") == command:
+            for a in c.get("arguments", []):
+                if a.get("name") == argname:
+                    print(a.get("type", ""))
+            break
+' "$@"
+}
+
+# Sends {"command": "commands"} directly to the control socket and prints
+# the raw JSON response. bngblaster-cli itself is not used here: it
+# special-cases the "commands" command into a lossy pretty-printed text
+# format instead of raw JSON, so it is queried the same way bngblaster-cli
+# would, without going through it.
+_BNGBLASTER_CLI_FETCH_PY='
+import socket, json, sys
+
+sock_path = sys.argv[1]
+try:
+    client = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    client.settimeout(1.0)
+    client.connect(sock_path)
+    client.send(json.dumps({"command": "commands"}).encode("utf-8"))
+    data = b""
+    while True:
+        chunk = client.recv(4096)
+        if not chunk:
+            break
+        data += chunk
+    client.close()
+    sys.stdout.write(data.decode("utf-8", "replace"))
+except Exception:
+    sys.exit(1)
+'
+
+# Fetches (and caches) the "commands" JSON for the given control socket.
+# Returns non-zero if the socket does not exist (yet) or the call fails.
+#
+# Completion always runs as the invoking user, never as root, even when
+# the typed line starts with "sudo" (sudo only takes effect once the
+# command is actually run). Control sockets are typically root-owned with
+# no group/other write bit (bngblaster is normally started via sudo), so
+# a plain connect() here is expected to fail with permission denied; when
+# it does, retry once through "sudo -n" (non-interactive: it fails
+# immediately instead of prompting for a password) which succeeds
+# silently whenever the user already has an active sudo timestamp.
+_bngblaster_cli_commands_json() {
+    local socket_path="$1"
+    if [ -n "${_BNGBLASTER_CLI_COMMANDS_CACHE[$socket_path]+x}" ]; then
+        printf '%s' "${_BNGBLASTER_CLI_COMMANDS_CACHE[$socket_path]}"
+        return 0
+    fi
+    [ -S "$socket_path" ] || return 1
+    local json
+    json="$(python3 -c "$_BNGBLASTER_CLI_FETCH_PY" "$socket_path" 2>/dev/null)"
+    if [ -z "$json" ] && command -v sudo >/dev/null 2>&1; then
+        json="$(sudo -n python3 -c "$_BNGBLASTER_CLI_FETCH_PY" "$socket_path" 2>/dev/null)"
+    fi
+    [ -n "$json" ] || return 1
+    _BNGBLASTER_CLI_COMMANDS_CACHE[$socket_path]="$json"
+    printf '%s' "$json"
+}
+
+# bngblaster-cli <socket> <command> [key value] [key value] ...
+_bngblaster_cli() {
+    local cur prev
+    cur="${COMP_WORDS[COMP_CWORD]}"
+    prev="${COMP_WORDS[COMP_CWORD-1]}"
+    COMPREPLY=()
+
+    # Argument 1: control socket path -> plain filename completion.
+    if [ "$COMP_CWORD" -eq 1 ]; then
+        COMPREPLY=( $(compgen -f -- "$cur") )
+        return 0
+    fi
+
+    local socket_path="${COMP_WORDS[1]}"
+    local commands_json
+    commands_json="$(_bngblaster_cli_commands_json "$socket_path")" || return 0
+
+    # Argument 2: command name.
+    if [ "$COMP_CWORD" -eq 2 ]; then
+        local names
+        names="$(_bngblaster_cli_py list-commands <<< "$commands_json")"
+        COMPREPLY=( $(compgen -W "$names" -- "$cur") )
+        return 0
+    fi
+
+    # Arguments 3+ alternate "key value key value ...".
+    local command_name="${COMP_WORDS[2]}"
+    local rel=$(( COMP_CWORD - 3 ))
+
+    if [ $(( rel % 2 )) -eq 0 ]; then
+        # Completing an argument name: exclude ones already used.
+        local used=() i
+        for (( i=3; i<COMP_CWORD; i+=2 )); do
+            used+=("${COMP_WORDS[i]}")
+        done
+        local names
+        names="$(_bngblaster_cli_py list-args "$command_name" "${used[@]}" <<< "$commands_json")"
+        COMPREPLY=( $(compgen -W "$names" -- "$cur") )
+    else
+        # Completing the value for the argument named "$prev".
+        local type
+        type="$(_bngblaster_cli_py arg-type "$command_name" "$prev" <<< "$commands_json")"
+        case "$type" in
+            boolean)
+                COMPREPLY=( $(compgen -W "true false" -- "$cur") )
+                ;;
+            *)
+                COMPREPLY=()
+                ;;
+        esac
+    fi
+    return 0
+}
+
+complete -F _bngblaster_cli bngblaster-cli

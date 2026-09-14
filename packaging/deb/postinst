@@ -1,0 +1,26 @@
+#!/bin/sh
+# postinst for bngblaster
+#
+# The bngblaster binary moved from /usr/sbin to /usr/bin. On systems where
+# sudo's secure_path lists /usr/sbin before /usr/bin, a leftover binary at
+# the old location (from an old manual install or an old package version
+# that dpkg did not track) would silently shadow the current one. Remove
+# it here if present and not owned by an unrelated package.
+set -e
+
+OLD_BIN="/usr/sbin/bngblaster"
+
+case "$1" in
+    configure)
+        if [ -e "$OLD_BIN" ] || [ -L "$OLD_BIN" ]; then
+            owner=$(dpkg-query -S "$OLD_BIN" 2>/dev/null | cut -d: -f1 | head -n1)
+            if [ -z "$owner" ] || [ "$owner" = "bngblaster" ]; then
+                rm -f "$OLD_BIN"
+            fi
+        fi
+        ;;
+esac
+
+#DEBHELPER#
+
+exit 0

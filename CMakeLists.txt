@@ -51,6 +51,7 @@ endif()
 add_subdirectory(code)
 
 install(FILES schemas/bngblaster-config.json DESTINATION /etc/bngblaster)
+install(FILES packaging/bash-completion/bngblaster-cli DESTINATION share/bash-completion/completions)
 
 # cpack
 set(CPACK_GENERATOR "DEB")
@@ -68,6 +69,7 @@ set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "RtBrick BNG Blaster")
 set(CPACK_PACKAGE_CONTACT "RtBrick <bngblaster@rtbrick.com>")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/rtbrick/bngblaster")
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/packaging/deb/postinst")
 if (NOT DEFINED BNGBLASTER_VERSION)
     set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 else()

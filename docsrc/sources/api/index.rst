@@ -116,6 +116,13 @@ for interactive communication with the BNG Blaster.
         bngblaster-cli run.sock igmp-info session-id 1
         bngblaster-cli run.sock l2tp-csurq tunnel-id 1 sessions [1,2]
 
+Bash completion for ``bngblaster-cli`` is installed to
+``/usr/share/bash-completion/completions/bngblaster-cli`` and picked up
+automatically by the ``bash-completion`` package (or can be sourced manually).
+It completes the socket path, the command name and its arguments by querying
+the ``commands`` endpoint of the running instance referenced by the socket
+path already typed, so suggestions always match that instance.
+
 ``$ sudo bngblaster-cli run.sock session-counters | jq .``
 
 .. code-block:: json
