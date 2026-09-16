@@ -703,7 +703,8 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
 
     if(ipv4->offset & ~IPV4_DF) {
         session->stats.accounting_packets_rx++;
-        session->stats.accounting_bytes_rx += eth ? eth->length : ipv4->len;
+        /* PPPoL2TP has no ethernet header; account for the PPP protocol field instead. */
+        session->stats.accounting_bytes_rx += eth ? eth->length : ipv4->len + 2;
         session->stats.ipv4_fragmented_rx++;
         interface->stats.ipv4_fragmented_rx++;
         bbl_fragment_rx(interface, NULL, eth, ipv4);
@@ -737,7 +738,8 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
     }
 
     session->stats.accounting_packets_rx++;
-    session->stats.accounting_bytes_rx += eth ? eth->length : ipv4->len;
+    /* PPPoL2TP has no ethernet header; account for the PPP protocol field instead. */
+    session->stats.accounting_bytes_rx += eth ? eth->length : ipv4->len + 2;
 
     /* All IPv4 multicast addresses start with 1110 */
     if((ipv4->dst & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
@@ -777,7 +779,8 @@ bbl_access_rx_ipv6(bbl_access_interface_s *interface,
             break;
     }
     session->stats.accounting_packets_rx++;
-    session->stats.accounting_bytes_rx += eth ? eth->length : ipv6->len;
+    /* PPPoL2TP has no ethernet header; account for the PPP protocol field instead. */
+    session->stats.accounting_bytes_rx += eth ? eth->length : ipv6->len + 2;
 }
 
 static void
@@ -811,7 +814,7 @@ bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_messa
             search = dict_search(g_ctx->l2tp_session_dict, &key);
             if(search) {
                 session->l2tp_session = *search;
-                session->l2tp_session->pppoe_session = session;
+                session->l2tp_session->session = session;
                 LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n",
                     session->session_id, session->l2tp_session->key.tunnel_id, session->l2tp_session->key.session_id);
                 return;
