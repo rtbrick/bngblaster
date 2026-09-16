@@ -4633,8 +4633,8 @@ json_parse_config(json_t *root)
                 "group-id", "name", "secret", "server-address", "client-address",
                 "network-interface", "receive-window-size", "max-retry", "congestion-mode",
                 "data-control-priority", "data-length", "data-offset", "control-tos",
-                "data-control-tos", "hello-interval", "lcp-padding", "calling-number",
-                "called-number"
+                "data-control-tos", "hello-interval", "lcp-padding", "lcp-start",
+                "calling-number", "called-number"
             };
             if(!schema_validate(sub, "l2tp-client", schema, sizeof(schema)/sizeof(schema[0]))) {
                 return false;
@@ -4743,6 +4743,18 @@ json_parse_config(json_t *root)
             JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "lcp-padding", 0, 65535);
             if(value) {
                 l2tp_client->lcp_padding = json_number_value(value);
+            }
+            if(json_unpack(sub, "{s:s}", "lcp-start", &s) == 0) {
+                if(strcmp(s, "iccn-tx") == 0) {
+                    l2tp_client->lcp_start = BBL_L2TP_LCP_START_ICCN_TX;
+                } else if(strcmp(s, "iccn-ack") == 0) {
+                    l2tp_client->lcp_start = BBL_L2TP_LCP_START_ICCN_ACK;
+                } else {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->lcp-start\n");
+                    return false;
+                }
+            } else {
+                l2tp_client->lcp_start = BBL_L2TP_LCP_START_ICCN_TX;
             }
             if(json_unpack(sub, "{s:s}", "calling-number", &s) == 0) {
                 l2tp_client->calling_number = strdup(s);

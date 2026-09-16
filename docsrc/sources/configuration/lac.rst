@@ -63,6 +63,20 @@
 | **lcp-padding**                           | | Add fixed padding to LCP packets sent from the LAC.               |
 |                                           | | Default: 0 Range: 0 - 65535                                       |
 +-------------------------------------------+---------------------------------------------------------------------+
+| **lcp-start**                             | | Event which starts the LCP negotiation of a PPPoL2TP session      |
+|                                           | | once the ICCN has been generated (iccn-tx or iccn-ack).           |
+|                                           | | With ``iccn-tx``, LCP starts as soon as the ICCN has been         |
+|                                           | | appended to the network interface transmit queue. This            |
+|                                           | | guarantees that the ICCN is sent before the first LCP packet      |
+|                                           | | without any additional delay.                                     |
+|                                           | | With ``iccn-ack``, LCP starts only once the LNS has               |
+|                                           | | acknowledged the ICCN. This costs one additional round-trip       |
+|                                           | | per session but gives the LNS time to finish its session setup    |
+|                                           | | before the first PPP packet arrives. Use this with LNS            |
+|                                           | | implementations which silently drop PPP packets received          |
+|                                           | | immediately after the ICCN.                                       |
+|                                           | | Default: iccn-tx                                                  |
++-------------------------------------------+---------------------------------------------------------------------+
 | **calling-number**                        | | Optional Calling Number string sent in ICRQ (AVP 22).             |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **called-number**                         | | Optional Called Number string sent in ICRQ (AVP 21).              |

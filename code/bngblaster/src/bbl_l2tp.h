@@ -57,6 +57,14 @@ typedef enum {
     BBL_L2TP_CONGESTION_MAX
 } l2tp_congestion_mode_t;
 
+/* LAC: event that starts the PPP (LCP) state machine of a
+ * PPPoL2TP session once the ICCN has been generated. */
+typedef enum {
+    BBL_L2TP_LCP_START_ICCN_TX      = 0, /* ICCN handed over to the interface TX queue */
+    BBL_L2TP_LCP_START_ICCN_ACK     = 1, /* ICCN acknowledged by the LNS */
+    BBL_L2TP_LCP_START_MAX
+} l2tp_lcp_start_t;
+
 
 /* L2TP Server Configuration (LNS) */
 typedef struct bbl_l2tp_server_
@@ -112,6 +120,7 @@ typedef struct bbl_l2tp_client_
     uint8_t data_control_tos;
 
     l2tp_congestion_mode_t congestion_mode;
+    l2tp_lcp_start_t lcp_start;
 
     char *name;
     char *secret;
@@ -155,7 +164,7 @@ typedef struct bbl_l2tp_queue_
     uint16_t packet_len;
     struct timespec last_tx_time;
     struct bbl_l2tp_tunnel_ *tunnel;
-    struct bbl_session_ *ppp_session; /* If set, start PPP when this ctrl pkt is acknowledged by the peer */
+    struct bbl_session_ *ppp_session; /* If set, start PPP when this ctrl pkt reaches the l2tp-client->lcp-start event */
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) tunnel_tx_qnode; /* Tunnel TX queue (ctrl packets only) */
     CIRCLEQ_ENTRY(bbl_l2tp_queue_) interface_tx_qnode; /* Interface TX queue */
 } bbl_l2tp_queue_s;

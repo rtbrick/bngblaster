@@ -1387,6 +1387,15 @@
                         "minimum": 0,
                         "maximum": 65535
                     },
+                    "lcp-start": {
+                        "type": "string",
+                        "description": "Event which starts the LCP negotiation of a PPPoL2TP session after the ICCN has been generated",
+                        "enum": [
+                            "iccn-tx",
+                            "iccn-ack"
+                        ],
+                        "default": "iccn-tx"
+                    },
                     "calling-number": {
                         "type": "string",
                         "description": "Calling number AVP value"
