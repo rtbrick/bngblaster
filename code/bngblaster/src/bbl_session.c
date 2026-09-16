@@ -488,8 +488,8 @@ bbl_session_reset(bbl_session_s *session) {
     /* L2TP */
     session->l2tp = false;
     if(session->l2tp_session &&
-       session->l2tp_session->pppoe_session == session) {
-        session->l2tp_session->pppoe_session = NULL;
+       session->l2tp_session->session == session) {
+        session->l2tp_session->session = NULL;
     }
     session->l2tp_session = NULL;
 

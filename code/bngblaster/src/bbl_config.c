@@ -3332,6 +3332,120 @@ json_parse_http_server_config(json_t *http, bbl_http_server_config_s *http_serve
     return true;
 }
 
+/**
+ * json_parse_l2tp_tunnel_config
+ *
+ * Parses the tunnel-level configuration options shared between the
+ * "l2tp-server" (LNS) and "l2tp-client" (LAC) configuration sections.
+ *
+ * @param sub JSON object of the l2tp-server/l2tp-client entry
+ * @param scope section name used in error messages ("l2tp-server" or "l2tp-client")
+ * @param config shared tunnel configuration to populate
+ */
+static bool
+json_parse_l2tp_tunnel_config(json_t *sub, const char *scope, bbl_l2tp_tunnel_config_s *config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+
+    if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
+        config->secret = strdup(s);
+    }
+    value = json_object_get(sub, "receive-window-size");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 1 && json_number_value(value) <= 65535)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->receive-window-size (1 - 65535)\n", scope);
+            return false;
+        }
+        config->receive_window = json_number_value(value);
+    } else {
+        config->receive_window = 16;
+    }
+    value = json_object_get(sub, "max-retry");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 1 && json_number_value(value) <= 65535)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->max-retry (1 - 65535)\n", scope);
+            return false;
+        }
+        config->max_retry = json_number_value(value);
+    } else {
+        config->max_retry = 5;
+    }
+    if(json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
+        if(strcmp(s, "default") == 0) {
+            config->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+        } else if(strcmp(s, "slow") == 0) {
+            config->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
+        } else if(strcmp(s, "aggressive") == 0) {
+            config->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for %s->congestion-mode\n", scope);
+            return false;
+        }
+    } else {
+        config->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+    }
+    value = json_object_get(sub, "data-control-priority");
+    if(value) {
+        if(!json_is_boolean(value)) {
+            fprintf(stderr, "JSON config error: Invalid boolean value for %s->data-control-priority\n", scope);
+            return false;
+        }
+        config->data_control_priority = json_boolean_value(value);
+    }
+    value = json_object_get(sub, "data-length");
+    if(value) {
+        if(!json_is_boolean(value)) {
+            fprintf(stderr, "JSON config error: Invalid boolean value for %s->data-length\n", scope);
+            return false;
+        }
+        config->data_length = json_boolean_value(value);
+    }
+    value = json_object_get(sub, "data-offset");
+    if(value) {
+        if(!json_is_boolean(value)) {
+            fprintf(stderr, "JSON config error: Invalid boolean value for %s->data-offset\n", scope);
+            return false;
+        }
+        config->data_offset = json_boolean_value(value);
+    }
+    value = json_object_get(sub, "control-tos");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= 255)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->control-tos (0 - 255)\n", scope);
+            return false;
+        }
+        config->control_tos = json_number_value(value);
+    }
+    value = json_object_get(sub, "data-control-tos");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= 255)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->data-control-tos (0 - 255)\n", scope);
+            return false;
+        }
+        config->data_control_tos = json_number_value(value);
+    }
+    value = json_object_get(sub, "hello-interval");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= 65535)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->hello-interval (0 - 65535)\n", scope);
+            return false;
+        }
+        config->hello_interval = json_number_value(value);
+    } else {
+        config->hello_interval = 30;
+    }
+    value = json_object_get(sub, "lcp-padding");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= 65535)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->lcp-padding (0 - 65535)\n", scope);
+            return false;
+        }
+        config->lcp_padding = json_number_value(value);
+    }
+    return true;
+}
+
 static bool
 json_parse_config(json_t *root)
 {
@@ -4531,9 +4645,6 @@ json_parse_config(json_t *root)
             if(json_unpack(sub, "{s:s}", "client-auth-id", &s) == 0) {
                 l2tp_server->client_auth_id = strdup(s);
             }
-            if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
-                l2tp_server->secret = strdup(s);
-            }
             if(json_unpack(sub, "{s:s}", "address", &s) == 0) {
                 if(!inet_pton(AF_INET, s, &ipv4)) {
                     fprintf(stderr, "JSON config error: Invalid value for l2tp-server->address\n");
@@ -4546,62 +4657,8 @@ json_parse_config(json_t *root)
                 fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
                 return false;
             }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "receive-window-size", 1, 65535);
-            if(value) {
-                l2tp_server->receive_window = json_number_value(value);
-            } else {
-                l2tp_server->receive_window = 16;
-            }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "max-retry", 1, 65535);
-            if(value) {
-                l2tp_server->max_retry = json_number_value(value);
-            } else {
-                l2tp_server->max_retry = 5;
-            }
-            if(json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
-                if(strcmp(s, "default") == 0) {
-                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
-                } else if(strcmp(s, "slow") == 0) {
-                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
-                } else if(strcmp(s, "aggressive") == 0) {
-                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
-                } else {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->congestion-mode\n");
-                    return false;
-                }
-            } else {
-                l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
-            }
-            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "data-control-priority");
-            if(value) {
-                l2tp_server->data_control_priority = json_boolean_value(value);
-            }
-            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "data-length");
-            if(value) {
-                l2tp_server->data_length = json_boolean_value(value);
-            }
-            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "data-offset");
-            if(value) {
-                l2tp_server->data_offset = json_boolean_value(value);
-            }
-
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "control-tos", 0, 255);
-            if(value) {
-                l2tp_server->control_tos = json_number_value(value);
-            } 
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "data-control-tos", 0, 255);
-            if(value) {
-                l2tp_server->data_control_tos = json_number_value(value);
-            } 
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "hello-interval", 0, 65535);
-            if(value) {
-                l2tp_server->hello_interval = json_number_value(value);
-            } else {
-                l2tp_server->hello_interval = 30;
-            }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "lcp-padding", 0, 65535);
-            if(value) {
-                l2tp_server->lcp_padding = json_number_value(value);
+            if(!json_parse_l2tp_tunnel_config(sub, "l2tp-server", &l2tp_server->config)) {
+                return false;
             }
             JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "lcp-keepalive-interval", 0, 65535);
             if(value) {
@@ -4673,9 +4730,6 @@ json_parse_config(json_t *root)
                 }
                 l2tp_client->client_address = ipv4;
             }
-            if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
-                l2tp_client->secret = strdup(s);
-            }
             if(json_unpack(sub, "{s:s}", "server-address", &s) == 0) {
                 if(!inet_pton(AF_INET, s, &ipv4)) {
                     fprintf(stderr, "JSON config error: Invalid value for l2tp-client->server-address\n");
@@ -4687,62 +4741,8 @@ json_parse_config(json_t *root)
                 fprintf(stderr, "JSON config error: Missing value for l2tp-client->server-address\n");
                 return false;
             }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "receive-window-size", 1, 65535);
-            if(value) {
-                l2tp_client->receive_window = json_number_value(value);
-            } else {
-                l2tp_client->receive_window = 16;
-            }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "max-retry", 1, 65535);
-            if(value) {
-                l2tp_client->max_retry = json_number_value(value);
-            } else {
-                l2tp_client->max_retry = 5;
-            }
-            if(json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
-                if(strcmp(s, "default") == 0) {
-                    l2tp_client->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
-                } else if(strcmp(s, "slow") == 0) {
-                    l2tp_client->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
-                } else if(strcmp(s, "aggressive") == 0) {
-                    l2tp_client->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
-                } else {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->congestion-mode\n");
-                    return false;
-                }
-            } else {
-                l2tp_client->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
-            }
-            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "data-control-priority");
-            if(value) {
-                l2tp_client->data_control_priority = json_boolean_value(value);
-            }
-            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "data-length");
-            if(value) {
-                l2tp_client->data_length = json_boolean_value(value);
-            }
-            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "data-offset");
-            if(value) {
-                l2tp_client->data_offset = json_boolean_value(value);
-            }
-
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "control-tos", 0, 255);
-            if(value) {
-                l2tp_client->control_tos = json_number_value(value);
-            }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "data-control-tos", 0, 255);
-            if(value) {
-                l2tp_client->data_control_tos = json_number_value(value);
-            }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "hello-interval", 0, 65535);
-            if(value) {
-                l2tp_client->hello_interval = json_number_value(value);
-            } else {
-                l2tp_client->hello_interval = 30;
-            }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "lcp-padding", 0, 65535);
-            if(value) {
-                l2tp_client->lcp_padding = json_number_value(value);
+            if(!json_parse_l2tp_tunnel_config(sub, "l2tp-client", &l2tp_client->config)) {
+                return false;
             }
             if(json_unpack(sub, "{s:s}", "lcp-start", &s) == 0) {
                 if(strcmp(s, "iccn-tx") == 0) {
