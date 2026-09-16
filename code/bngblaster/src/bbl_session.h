@@ -40,6 +40,7 @@ typedef struct bbl_session_
     CIRCLEQ_ENTRY(bbl_session_) session_tx_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_network_tx_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_a10nsp_tx_qnode;
+    CIRCLEQ_ENTRY(bbl_session_) session_l2tp_qnode;
 
     bbl_access_config_s *access_config;
     bbl_access_interface_s *access_interface; /* where this session is attached to */
@@ -88,6 +89,9 @@ typedef struct bbl_session_
     /* Set to true if session is tunnelled via L2TP. */
     bool l2tp;
     bbl_l2tp_session_s *l2tp_session;
+    /* Set (LAC mode only) while the session is queued on a tunnel's
+     * pending_session_qhead, waiting for the tunnel to be established. */
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
 
     /* Set to true if session is connected to
      * BNG Blaster A10NSP Interface */
