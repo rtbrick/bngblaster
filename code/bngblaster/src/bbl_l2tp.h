@@ -66,18 +66,16 @@ typedef enum {
 } l2tp_lcp_start_t;
 
 
-/* L2TP Server Configuration (LNS) */
-typedef struct bbl_l2tp_server_
+/* L2TP tunnel-level configuration shared between the LNS (server)
+ * and LAC (client) roles, so tunnel state-machine code can read
+ * these through bbl_l2tp_tunnel_s.config without branching on the
+ * tunnel role. */
+typedef struct bbl_l2tp_tunnel_config_
 {
-    /* Filled by configuration ...*/
-    uint32_t ip;
     uint16_t hello_interval;
-    uint16_t session_limit;
     uint16_t receive_window;
     uint16_t max_retry;
     uint16_t lcp_padding;
-    uint16_t lcp_keepalive_interval;
-    uint8_t  lcp_keepalive_retry;
 
     bool data_control_priority;
     bool data_length;
@@ -89,6 +87,19 @@ typedef struct bbl_l2tp_server_
     l2tp_congestion_mode_t congestion_mode;
 
     char *secret;
+} bbl_l2tp_tunnel_config_s;
+
+/* L2TP Server Configuration (LNS) */
+typedef struct bbl_l2tp_server_
+{
+    bbl_l2tp_tunnel_config_s config;
+
+    /* Filled by configuration ...*/
+    uint32_t ip;
+    uint16_t session_limit;
+    uint16_t lcp_keepalive_interval;
+    uint8_t  lcp_keepalive_retry;
+
     char *host_name;
     char *client_auth_id;
 
@@ -104,26 +115,15 @@ typedef struct bbl_l2tp_server_
 /* L2TP Client Configuration (LAC) */
 typedef struct bbl_l2tp_client_
 {
+    bbl_l2tp_tunnel_config_s config;
+
     uint16_t group_id;   /* l2tp-client-group-id: ties this entry to access interfaces */
     uint32_t server_ip;      /* LNS address used for outer L2TP/UDP packets */
     uint32_t client_address; /* LAC address used for outer L2TP/UDP packets */
-    uint16_t hello_interval;
-    uint16_t receive_window;
-    uint16_t max_retry;
-    uint16_t lcp_padding;
 
-    bool data_control_priority;
-    bool data_length;
-    bool data_offset;
-
-    uint8_t control_tos;
-    uint8_t data_control_tos;
-
-    l2tp_congestion_mode_t congestion_mode;
     l2tp_lcp_start_t lcp_start;
 
     char *name;
-    char *secret;
     char *network_interface;
     char *calling_number; /* Optional ICRQ Calling Number (AVP 22) */
     char *called_number;  /* Optional ICRQ Called Number (AVP 21) */
@@ -186,6 +186,9 @@ typedef struct bbl_l2tp_tunnel_
     bbl_l2tp_server_s *server;
     /* Pointer to L2TP client configuration (LAC mode) */
     bbl_l2tp_client_s *client;
+    /* Shared tunnel-level configuration, pointing to either
+     * server->config (LNS) or client->config (LAC). */
+    bbl_l2tp_tunnel_config_s *config;
 
     /* RFC5515 CSURQ */
     uint16_t *csurq_requests;
@@ -264,7 +267,10 @@ typedef struct bbl_l2tp_session_
     bbl_l2tp_tunnel_s *tunnel;
     l2tp_session_state_t state;
 
-    bbl_session_s *pppoe_session;
+    /* The access-side session carried over this L2TP session: the
+     * tunnelled PPPoE session in LNS mode, or the LAC's own locally
+     * instantiated PPP session in LAC mode. */
+    bbl_session_s *session;
     struct {
         uint16_t tunnel_id;
         uint16_t session_id;

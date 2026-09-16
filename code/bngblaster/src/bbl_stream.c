@@ -905,8 +905,8 @@ bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream)
     l2tp.type = L2TP_MESSAGE_DATA;
     l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
     l2tp.session_id = l2tp_session->peer_session_id;
-    l2tp.with_length = l2tp_tunnel->client->data_length;
-    l2tp.with_offset = l2tp_tunnel->client->data_offset;
+    l2tp.with_length = l2tp_tunnel->config->data_length;
+    l2tp.with_offset = l2tp_tunnel->config->data_offset;
     udp.src = config->src_port;
     udp.dst = config->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
@@ -1050,8 +1050,8 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
     l2tp.type = L2TP_MESSAGE_DATA;
     l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
     l2tp.session_id = l2tp_session->peer_session_id;
-    l2tp.with_length = l2tp_tunnel->server->data_length;
-    l2tp.with_offset = l2tp_tunnel->server->data_offset;
+    l2tp.with_length = l2tp_tunnel->config->data_length;
+    l2tp.with_offset = l2tp_tunnel->config->data_offset;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.src = stream->src_port;
     udp.dst = stream->dst_port;

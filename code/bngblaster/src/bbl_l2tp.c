@@ -32,11 +32,31 @@ l2tp_tunnel_hostname(bbl_l2tp_tunnel_s *l2tp_tunnel)
 char*
 l2tp_tunnel_secret(bbl_l2tp_tunnel_s *l2tp_tunnel)
 {
-    if(l2tp_tunnel->is_lac) {
-        return l2tp_tunnel->client->secret;
-    } else {
-        return l2tp_tunnel->server->secret;
-    }
+    return l2tp_tunnel->config->secret;
+}
+
+/**
+ * bbl_l2tp_challenge_digest
+ *
+ * Compute the RFC 2661 CHAP-style MD5 digest used for both the
+ * tunnel authentication challenge and its response:
+ * MD5(message-type + shared-secret + challenge).
+ *
+ * @param type L2TP control message type the digest is sent with
+ * @param secret shared tunnel secret
+ * @param challenge challenge value received from or sent to the peer
+ * @param challenge_len length of challenge
+ * @param digest output buffer of at least L2TP_MD5_DIGEST_LEN bytes
+ */
+static void
+bbl_l2tp_challenge_digest(uint8_t type, char *secret, uint8_t *challenge, uint16_t challenge_len, uint8_t *digest)
+{
+    MD5_CTX md5_ctx;
+    MD5_Init(&md5_ctx);
+    MD5_Update(&md5_ctx, &type, 1);
+    MD5_Update(&md5_ctx, (unsigned char*)secret, strlen(secret));
+    MD5_Update(&md5_ctx, challenge, challenge_len);
+    MD5_Final(digest, &md5_ctx);
 }
 
 const char*
@@ -204,9 +224,9 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
         dict_remove(g_ctx->l2tp_session_dict, &l2tp_session->key);
 
         /* Remove session from PPPoE/PPPoL2TP session */
-        if(l2tp_session->pppoe_session) {
-            bbl_session_s *session = l2tp_session->pppoe_session;
-            l2tp_session->pppoe_session = NULL;
+        if(l2tp_session->session) {
+            bbl_session_s *session = l2tp_session->session;
+            l2tp_session->session = NULL;
             session->l2tp_session = NULL;
             /* In LAC mode the PPP session lifecycle is tied to the L2TP session:
              * terminate it so that it can be restarted or counted as terminated. */
@@ -368,8 +388,7 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
     int backoff;
 
     uint16_t max_ns = l2tp_tunnel->peer_nr + l2tp_tunnel->cwnd;
-    uint16_t max_retry = l2tp_tunnel->is_lac ?
-        l2tp_tunnel->client->max_retry : l2tp_tunnel->server->max_retry;
+    uint16_t max_retry = l2tp_tunnel->config->max_retry;
     l2tp_lcp_start_t lcp_start = l2tp_tunnel->is_lac ?
         l2tp_tunnel->client->lcp_start : BBL_L2TP_LCP_START_ICCN_TX;
 
@@ -482,8 +501,7 @@ void
 bbl_l2tp_tunnel_control_job(timer_s *timer)
 {
     bbl_l2tp_tunnel_s *l2tp_tunnel = timer->data;
-    uint16_t hello_interval = l2tp_tunnel->is_lac ?
-        l2tp_tunnel->client->hello_interval : l2tp_tunnel->server->hello_interval;
+    uint16_t hello_interval = l2tp_tunnel->config->hello_interval;
 
     l2tp_tunnel->state_seconds++;
     switch(l2tp_tunnel->state) {
@@ -563,11 +581,10 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
         ipv4.src = l2tp_tunnel->client->client_address ?
                    l2tp_tunnel->client->client_address :
                    l2tp_tunnel->interface->ip.address;
-        ipv4.tos = l2tp_tunnel->client->control_tos;
     } else {
         ipv4.src = l2tp_tunnel->server->ip;
-        ipv4.tos = l2tp_tunnel->server->control_tos;
     }
+    ipv4.tos = l2tp_tunnel->config->control_tos;
     ipv4.ttl = 64;
     ipv4.protocol = PROTOCOL_IPV4_UDP;
     ipv4.next = &udp;
@@ -671,24 +688,13 @@ bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *ne
     l2tp.tunnel_id = l2tp_tunnel->peer_tunnel_id;
     l2tp.session_id = l2tp_session->peer_session_id;
     l2tp.protocol = protocol;
-    if(l2tp_tunnel->is_lac) {
-        l2tp.with_length = l2tp_tunnel->client->data_length;
-        l2tp.with_offset = l2tp_tunnel->client->data_offset;
-        if(protocol != PROTOCOL_IPV4 && protocol != PROTOCOL_IPV6) {
-            if(l2tp_tunnel->client->data_control_priority) {
-                l2tp.with_priority = true;
-            }
-            ipv4.tos = l2tp_tunnel->client->data_control_tos;
+    l2tp.with_length = l2tp_tunnel->config->data_length;
+    l2tp.with_offset = l2tp_tunnel->config->data_offset;
+    if(protocol != PROTOCOL_IPV4 && protocol != PROTOCOL_IPV6) {
+        if(l2tp_tunnel->config->data_control_priority) {
+            l2tp.with_priority = true;
         }
-    } else {
-        l2tp.with_length = l2tp_tunnel->server->data_length;
-        l2tp.with_offset = l2tp_tunnel->server->data_offset;
-        if(protocol != PROTOCOL_IPV4 && protocol != PROTOCOL_IPV6) {
-            if(l2tp_tunnel->server->data_control_priority) {
-                l2tp.with_priority = true;
-            }
-            ipv4.tos = l2tp_tunnel->server->data_control_tos;
-        }
+        ipv4.tos = l2tp_tunnel->config->data_control_tos;
     }
     l2tp.next = next;
     if(encode_ethernet(q->packet, &len, &eth) == PROTOCOL_SUCCESS) {
@@ -708,8 +714,6 @@ bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *ne
 
 static void
 bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp) {
-    MD5_CTX md5_ctx;
-
     bbl_ipv4_s *ipv4 = (bbl_ipv4_s*)eth->next;
 
     bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
@@ -781,6 +785,7 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
             (strcmp(l2tp_server->client_auth_id, l2tp_tunnel->peer_name) == 0))) {
 
             l2tp_tunnel->server = l2tp_server;
+            l2tp_tunnel->config = &l2tp_server->config;
             LOG(PACKET, "L2TP (%s) SCCRQ received from %s (%s)\n",
                 l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->peer_name,
                 format_ipv4_address(&ipv4->src));
@@ -817,7 +822,7 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
             CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->session_qhead, l2tp_session, session_qnode);
             if(g_ctx->l2tp_tunnels > g_ctx->l2tp_tunnels_max) g_ctx->l2tp_tunnels_max = g_ctx->l2tp_tunnels;
             /* L2TP Challenge/Response */
-            if(l2tp_server->secret) {
+            if(l2tp_server->config.secret) {
                 l2tp_tunnel->challenge = malloc(L2TP_MD5_DIGEST_LEN);
                 l2tp_tunnel->challenge_len = L2TP_MD5_DIGEST_LEN;
                 RAND_bytes(l2tp_tunnel->challenge, l2tp_tunnel->challenge_len);
@@ -825,11 +830,9 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
                     l2tp_tunnel->challenge_response = malloc(L2TP_MD5_DIGEST_LEN);
                     l2tp_tunnel->challenge_response_len = L2TP_MD5_DIGEST_LEN;
                     l2tp_type = L2TP_MESSAGE_SCCRP;
-                    MD5_Init(&md5_ctx);
-                    MD5_Update(&md5_ctx, &l2tp_type, 1);
-                    MD5_Update(&md5_ctx, (unsigned char *) l2tp_server->secret, strlen(l2tp_server->secret));
-                    MD5_Update(&md5_ctx, l2tp_tunnel->peer_challenge, l2tp_tunnel->peer_challenge_len);
-                    MD5_Final(l2tp_tunnel->challenge_response, &md5_ctx);
+                    bbl_l2tp_challenge_digest(l2tp_type, l2tp_server->config.secret,
+                                               l2tp_tunnel->peer_challenge, l2tp_tunnel->peer_challenge_len,
+                                               l2tp_tunnel->challenge_response);
                 } else {
                     /* We are not able to setup a session if no challenge
                      * is received but there is a secret configured! */
@@ -878,7 +881,6 @@ bbl_l2tp_scccn_rx(bbl_network_interface_s *interface,
                   bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp)
 {
     uint8_t digest[L2TP_MD5_DIGEST_LEN];
-    MD5_CTX md5_ctx;
     uint8_t l2tp_type = L2TP_MESSAGE_SCCCN;
 
     UNUSED(interface);
@@ -896,13 +898,11 @@ bbl_l2tp_scccn_rx(bbl_network_interface_s *interface,
             return;
         }
         /* Check challenge response ... */
-        if(l2tp_tunnel->server->secret) {
+        if(l2tp_tunnel->config->secret) {
             if(l2tp_tunnel->peer_challenge_response_len) {
-                MD5_Init(&md5_ctx);
-                MD5_Update(&md5_ctx, &l2tp_type, 1);
-                MD5_Update(&md5_ctx, (unsigned char *) l2tp_tunnel->server->secret, strlen(l2tp_tunnel->server->secret));
-                MD5_Update(&md5_ctx, l2tp_tunnel->challenge, l2tp_tunnel->challenge_len);
-                MD5_Final(digest, &md5_ctx);
+                bbl_l2tp_challenge_digest(l2tp_type, l2tp_tunnel->config->secret,
+                                           l2tp_tunnel->challenge, l2tp_tunnel->challenge_len,
+                                           digest);
                 if(memcmp(digest, l2tp_tunnel->peer_challenge_response, L2TP_MD5_DIGEST_LEN) != 0) {
                     LOG(ERROR, "L2TP Error (%s) Wrong challenge response in SCCCN from %s\n",
                         l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
@@ -1243,7 +1243,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
 
     /* LAC mode: route received PPP packets to the generic PPP client RX path. */
     if(l2tp_session->tunnel->is_lac) {
-        bbl_session_s *session = l2tp_session->pppoe_session;
+        bbl_session_s *session = l2tp_session->session;
         if(session) {
             bbl_ppp_rx(session->access_interface, session, NULL,
                        l2tp->protocol, l2tp->next);
@@ -1254,7 +1254,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
     switch(l2tp->protocol) {
         case PROTOCOL_LCP:
             lcp_rx = (bbl_lcp_s*)l2tp->next;
-            lcp_rx->padding = l2tp_session->tunnel->server->lcp_padding;
+            lcp_rx->padding = l2tp_session->tunnel->config->lcp_padding;
             if(lcp_rx->code == PPP_CODE_ECHO_REQUEST) {
                 lcp_rx->code = PPP_CODE_ECHO_REPLY;
                 bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
@@ -1281,10 +1281,12 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                     lcp_tx.magic = (uint32_t)l2tp_session->key.tunnel_id << 16 |
                                     l2tp_session->key.session_id;
                     if(!lcp_tx.magic) lcp_tx.magic = 1;
-                    lcp_tx.padding = l2tp_session->tunnel->server->lcp_padding;
+                    lcp_tx.padding = l2tp_session->tunnel->config->lcp_padding;
                     bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp_tx);
                 }
             } else if(lcp_rx->code == PPP_CODE_CONF_ACK) {
+                /* Peer acknowledged our request: LCP is open once we already
+                 * accepted the peer's own request, otherwise send ours now. */
                 if(l2tp_session->lcp_state == BBL_PPP_PEER_ACK) {
                     l2tp_session->lcp_state = BBL_PPP_OPENED;
                 } else if(l2tp_session->lcp_state != BBL_PPP_OPENED) {
@@ -1296,7 +1298,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                     lcp_tx.magic = (uint32_t)l2tp_session->key.tunnel_id << 16 |
                                     l2tp_session->key.session_id;
                     if(!lcp_tx.magic) lcp_tx.magic = 1;
-                    lcp_tx.padding = l2tp_session->tunnel->server->lcp_padding;
+                    lcp_tx.padding = l2tp_session->tunnel->config->lcp_padding;
                     bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp_tx);
                 }
             }
@@ -1457,7 +1459,7 @@ bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *s
         g_ctx->l2tp_sessions_max = g_ctx->l2tp_sessions;
     }
     /* Link the PPP session and the L2TP session to each other. */
-    l2tp_session->pppoe_session = session;
+    l2tp_session->session = session;
     session->l2tp_session = l2tp_session;
     bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_ICRQ);
 }
@@ -1473,7 +1475,6 @@ bbl_l2tp_sccrp_rx(bbl_network_interface_s *interface,
                   bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp)
 {
     uint8_t digest[L2TP_MD5_DIGEST_LEN];
-    MD5_CTX md5_ctx;
     uint8_t l2tp_type;
 
     UNUSED(interface);
@@ -1493,14 +1494,12 @@ bbl_l2tp_sccrp_rx(bbl_network_interface_s *interface,
         return;
     }
     /* Validate challenge response if secret is configured */
-    if(l2tp_tunnel->client->secret) {
+    if(l2tp_tunnel->config->secret) {
         if(l2tp_tunnel->peer_challenge_response_len) {
             l2tp_type = L2TP_MESSAGE_SCCRP;
-            MD5_Init(&md5_ctx);
-            MD5_Update(&md5_ctx, &l2tp_type, 1);
-            MD5_Update(&md5_ctx, (unsigned char *)l2tp_tunnel->client->secret, strlen(l2tp_tunnel->client->secret));
-            MD5_Update(&md5_ctx, l2tp_tunnel->challenge, l2tp_tunnel->challenge_len);
-            MD5_Final(digest, &md5_ctx);
+            bbl_l2tp_challenge_digest(l2tp_type, l2tp_tunnel->config->secret,
+                                       l2tp_tunnel->challenge, l2tp_tunnel->challenge_len,
+                                       digest);
             if(memcmp(digest, l2tp_tunnel->peer_challenge_response, L2TP_MD5_DIGEST_LEN) != 0) {
                 LOG(ERROR, "L2TP Error (%s) Wrong challenge response in SCCRP from %s\n",
                     l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
@@ -1526,11 +1525,9 @@ bbl_l2tp_sccrp_rx(bbl_network_interface_s *interface,
             l2tp_tunnel->challenge_response = malloc(L2TP_MD5_DIGEST_LEN);
             l2tp_tunnel->challenge_response_len = L2TP_MD5_DIGEST_LEN;
             l2tp_type = L2TP_MESSAGE_SCCCN;
-            MD5_Init(&md5_ctx);
-            MD5_Update(&md5_ctx, &l2tp_type, 1);
-            MD5_Update(&md5_ctx, (unsigned char *)l2tp_tunnel->client->secret, strlen(l2tp_tunnel->client->secret));
-            MD5_Update(&md5_ctx, l2tp_tunnel->peer_challenge, l2tp_tunnel->peer_challenge_len);
-            MD5_Final(l2tp_tunnel->challenge_response, &md5_ctx);
+            bbl_l2tp_challenge_digest(l2tp_type, l2tp_tunnel->config->secret,
+                                       l2tp_tunnel->peer_challenge, l2tp_tunnel->peer_challenge_len,
+                                       l2tp_tunnel->challenge_response);
         }
     }
     /* Now that peer_tunnel_id is known, patch it into the pre-built ZLB packet.
@@ -1598,8 +1595,8 @@ bbl_l2tp_icrp_rx(bbl_network_interface_s *interface,
          * point selected by l2tp-client->lcp-start (ICCN transmitted or ICCN
          * acknowledged). The tag is cleared when consumed, so the PPP session
          * is started exactly once. */
-        if(l2tp_session->pppoe_session) {
-            bbl_session_s *session = l2tp_session->pppoe_session;
+        if(l2tp_session->session) {
+            bbl_session_s *session = l2tp_session->session;
             bbl_session_update_state(session, BBL_PPP_LINK);
             session->lcp_state        = BBL_PPP_INIT;
             session->lcp_request_code = PPP_CODE_CONF_REQUEST;
@@ -1667,6 +1664,7 @@ bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client)
 
     l2tp_tunnel->is_lac = true;
     l2tp_tunnel->client = l2tp_client;
+    l2tp_tunnel->config = &l2tp_client->config;
     l2tp_tunnel->interface = network_interface;
     l2tp_tunnel->peer_ip = l2tp_client->server_ip;
     l2tp_tunnel->peer_receive_window = 4;
@@ -1707,7 +1705,7 @@ bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client)
     if(g_ctx->l2tp_tunnels > g_ctx->l2tp_tunnels_max) g_ctx->l2tp_tunnels_max = g_ctx->l2tp_tunnels;
 
     /* L2TP Challenge */
-    if(l2tp_client->secret) {
+    if(l2tp_client->config.secret) {
         l2tp_tunnel->challenge = malloc(L2TP_MD5_DIGEST_LEN);
         l2tp_tunnel->challenge_len = L2TP_MD5_DIGEST_LEN;
         RAND_bytes(l2tp_tunnel->challenge, l2tp_tunnel->challenge_len);
@@ -1762,9 +1760,9 @@ bbl_l2tp_client_session_get_tunnel(bbl_session_s *session)
         return NULL;
     }
 
-    /* Ensure every l2tp-client config entry in the group has a live tunnel.
-     * If the entry's tunnel_qhead is empty, or all its tunnels are already
-     * tearing down, create a new one now. */
+    /* Ensure every l2tp-client config entry in the group has a live tunnel,
+     * creating one on demand, and count the live LAC tunnels in the group
+     * along the way. */
     l2tp_client = g_ctx->config.l2tp_client;
     while(l2tp_client) {
         if(l2tp_client->group_id == group_id) {
@@ -1772,24 +1770,11 @@ bbl_l2tp_client_session_get_tunnel(bbl_session_s *session)
             CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_client->tunnel_qhead, tunnel_qnode) {
                 if(l2tp_tunnel->is_lac && l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {
                     has_live = true;
-                    break;
-                }
-            }
-            if(!has_live) {
-                bbl_l2tp_client_connect(l2tp_client);
-            }
-        }
-        l2tp_client = l2tp_client->next;
-    }
-
-    /* First pass: count live LAC tunnels in the group. */
-    l2tp_client = g_ctx->config.l2tp_client;
-    while(l2tp_client) {
-        if(l2tp_client->group_id == group_id) {
-            CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_client->tunnel_qhead, tunnel_qnode) {
-                if(l2tp_tunnel->is_lac && l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {
                     tunnel_count++;
                 }
+            }
+            if(!has_live && bbl_l2tp_client_connect(l2tp_client)) {
+                tunnel_count++;
             }
         }
         l2tp_client = l2tp_client->next;
@@ -1802,8 +1787,8 @@ bbl_l2tp_client_session_get_tunnel(bbl_session_s *session)
         return NULL;
     }
 
-    /* Second pass: pick tunnel at index session_id % tunnel_count,
-     * giving an even round-robin distribution without any stored state. */
+    /* Pick tunnel at index session_id % tunnel_count, giving an even
+     * round-robin distribution without any stored state. */
     target = session->session_id % tunnel_count;
     tunnel_count = 0;
     l2tp_client = g_ctx->config.l2tp_client;
@@ -1899,8 +1884,7 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
                 }
             }
             /* Reliable Delivery of Control Messages */
-            l2tp_congestion_mode_t cmode = l2tp_tunnel->is_lac ?
-                l2tp_tunnel->client->congestion_mode : l2tp_tunnel->server->congestion_mode;
+            l2tp_congestion_mode_t cmode = l2tp_tunnel->config->congestion_mode;
             switch(cmode) {
                 case BBL_L2TP_CONGESTION_AGGRESSIVE:
                     l2tp_tunnel->cwnd = l2tp_tunnel->peer_receive_window;
@@ -2335,7 +2319,7 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
                                 "peer-name", string_or_na(l2tp_tunnel->peer_name),
                                 "peer-address", format_ipv4_address(&l2tp_tunnel->peer_ip),
                                 "peer-vendor", string_or_na(l2tp_tunnel->peer_vendor),
-                                "secret", string_or_na(l2tp_server->secret),
+                                "secret", string_or_na(l2tp_server->config.secret),
                                 "control-packets-rx", l2tp_tunnel->stats.control_rx,
                                 "control-packets-rx-dup", l2tp_tunnel->stats.control_rx_dup,
                                 "control-packets-rx-out-of-order", l2tp_tunnel->stats.control_rx_ooo,
@@ -2360,7 +2344,7 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
                                 "peer-name", string_or_na(l2tp_tunnel->peer_name),
                                 "peer-address", format_ipv4_address(&l2tp_tunnel->peer_ip),
                                 "peer-vendor", string_or_na(l2tp_tunnel->peer_vendor),
-                                "secret", string_or_na(l2tp_client->secret),
+                                "secret", string_or_na(l2tp_client->config.secret),
                                 "control-packets-rx", l2tp_tunnel->stats.control_rx,
                                 "control-packets-rx-dup", l2tp_tunnel->stats.control_rx_dup,
                                 "control-packets-rx-out-of-order", l2tp_tunnel->stats.control_rx_ooo,

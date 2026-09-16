@@ -808,8 +808,8 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
             bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Receive Window Size */
             v16 = 4;
-            if(l2tp_tunnel->client->receive_window) {
-                v16 = l2tp_tunnel->client->receive_window;
+            if(l2tp_tunnel->config->receive_window) {
+                v16 = l2tp_tunnel->config->receive_window;
             }
             avp.m = true;
             avp.type = L2TP_AVP_RECEIVE_WINDOW_SIZE;
@@ -884,8 +884,8 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
             bbl_l2tp_avp_encode(&buf, len, &avp);
             /* Receive Window Size  */
             v16 = 4;
-            if(l2tp_tunnel->server->receive_window) {
-                v16 = l2tp_tunnel->server->receive_window;
+            if(l2tp_tunnel->config->receive_window) {
+                v16 = l2tp_tunnel->config->receive_window;
             }
             avp.m = true;
             avp.type = L2TP_AVP_RECEIVE_WINDOW_SIZE;
