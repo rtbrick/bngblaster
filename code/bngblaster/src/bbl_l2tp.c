@@ -217,9 +217,10 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
             }
         }
 
-        /* If this was the last real session on an established tunnel, close it.
-         * The only entry left in session_qhead is the dummy tunnel session (id 0). */
-        if(l2tp_tunnel->state == BBL_L2TP_TUNNEL_ESTABLISHED) {
+        /* If this was the last real session on an established LAC tunnel, close it.
+         * The only entry left in session_qhead is the dummy tunnel session (id 0).
+         * LNS tunnels are left established so they can serve further sessions. */
+        if(l2tp_tunnel->is_lac && l2tp_tunnel->state == BBL_L2TP_TUNNEL_ESTABLISHED) {
             bbl_l2tp_session_s *s;
             bool has_sessions = false;
             CIRCLEQ_FOREACH(s, &l2tp_tunnel->session_qhead, session_qnode) {

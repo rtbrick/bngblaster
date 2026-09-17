@@ -742,6 +742,12 @@ bbl_session_clear(bbl_session_s *session)
                                   session->l2tp_session, L2TP_MESSAGE_CDN);
                     bbl_l2tp_session_delete(session->l2tp_session);
                 } else {
+                    if(session->l2tp_tunnel) {
+                        /* Still queued on a tunnel waiting to be established. */
+                        CIRCLEQ_REMOVE(&session->l2tp_tunnel->pending_session_qhead,
+                                       session, session_l2tp_qnode);
+                        session->l2tp_tunnel = NULL;
+                    }
                     bbl_session_update_state(session, BBL_TERMINATED);
                 }
                 return;
