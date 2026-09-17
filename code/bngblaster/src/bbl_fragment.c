@@ -51,6 +51,8 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
     bbl_bbl_s bbl;
 
     uint16_t offset;
+    uint16_t length;
+    time_t timestamp;
 
     while(fragment) {
         if(fragment->id == ipv4->id &&
@@ -79,15 +81,26 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
         return;
     }
 
-    if(eth->length > fragment->max_length) {
-        fragment->max_length = eth->length;
+    if(eth) {
+        length = eth->length;
+        timestamp = eth->timestamp.tv_sec;
+    } else {
+        /* PPPoL2TP (LAC) traffic has no ethernet header. */
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        length = ipv4->len;
+        timestamp = now.tv_sec;
+    }
+
+    if(length > fragment->max_length) {
+        fragment->max_length = length;
     }
     if(offset > fragment->max_offset) {
         fragment->max_offset = offset;
     }
 
     fragment->fragments++;
-    fragment->timestamp = eth->timestamp.tv_sec;
+    fragment->timestamp = timestamp;
 
     memcpy(fragment->buf+offset, ipv4->payload, ipv4->payload_len);
     fragment->received += ipv4->payload_len;
