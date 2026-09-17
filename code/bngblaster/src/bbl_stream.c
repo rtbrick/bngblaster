@@ -942,7 +942,7 @@ bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream)
             }
             ipv4.ttl = config->ttl;
             ipv4.tos = config->priority;
-            if(stream->tcp) {
+            if(stream->tx_flags & STREAM_FLAG_TCP) {
                 ipv4.protocol = PROTOCOL_IPV4_TCP;
             } else {
                 ipv4.protocol = PROTOCOL_IPV4_UDP;
@@ -974,7 +974,7 @@ bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream)
             }
             ipv6.ttl = config->ttl;
             ipv6.tos = config->priority;
-            if(stream->tcp) {
+            if(stream->tx_flags & STREAM_FLAG_TCP) {
                 ipv6.protocol = IPV6_NEXT_HEADER_TCP;
             } else {
                 ipv6.protocol = IPV6_NEXT_HEADER_UDP;
@@ -2027,13 +2027,13 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         if(stream_up->config->raw_tcp) {
             stream_up->tx_flags |= STREAM_FLAG_TCP;
         }
-        stream_up->tx_flags |= STREAM_FLAG_UPSTREAM;
         if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
             /* PPPoL2TP upstream goes through the L2TP tunnel's network interface */
+            stream_up->tx_flags |= (STREAM_FLAG_NETWORK|STREAM_FLAG_UPSTREAM);
             stream_up->tx_network_interface = network_interface;
             stream_up->tx_interface = network_interface->interface;
         } else {
-            stream_up->tx_flags |= STREAM_FLAG_ACCESS;
+            stream_up->tx_flags |= (STREAM_FLAG_ACCESS|STREAM_FLAG_UPSTREAM);
             stream_up->tx_access_interface = access_interface;
             stream_up->tx_interface = access_interface->interface;
         }
