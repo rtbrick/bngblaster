@@ -1533,6 +1533,7 @@ bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client)
             l2tp_client->name);
         free(l2tp_session);
         free(l2tp_tunnel);
+        if(g_ctx->l2tp_tunnels) g_ctx->l2tp_tunnels--;
         return NULL;
     }
     *result.datum_ptr = l2tp_session;
