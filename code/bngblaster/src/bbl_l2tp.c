@@ -242,6 +242,17 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_s *l2tp_tunnel)
         while (!CIRCLEQ_EMPTY(&l2tp_tunnel->session_qhead)) {
             bbl_l2tp_session_delete(CIRCLEQ_FIRST(&l2tp_tunnel->session_qhead));
         }
+        /* Terminate any PPP sessions still queued for this tunnel
+         * (e.g. the tunnel failed before reaching ESTABLISHED). */
+        while (!CIRCLEQ_EMPTY(&l2tp_tunnel->pending_session_qhead)) {
+            bbl_session_s *session = CIRCLEQ_FIRST(&l2tp_tunnel->pending_session_qhead);
+            CIRCLEQ_REMOVE(&l2tp_tunnel->pending_session_qhead, session, session_l2tp_qnode);
+            session->l2tp_tunnel = NULL;
+            if(session->session_state != BBL_TERMINATED &&
+               session->session_state != BBL_IDLE) {
+                bbl_session_update_state(session, BBL_TERMINATED);
+            }
+        }
         /* Remove tunnel from server/client object */
         if(CIRCLEQ_NEXT(l2tp_tunnel, tunnel_qnode) != NULL) {
             if(l2tp_tunnel->is_lac) {
@@ -1307,6 +1318,7 @@ bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *s
 
     if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
         /* Queue session to pending list */
+        session->l2tp_tunnel = l2tp_tunnel;
         CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->pending_session_qhead, session, session_l2tp_qnode);
         return;
     }
@@ -1433,6 +1445,7 @@ bbl_l2tp_sccrp_rx(bbl_network_interface_s *interface,
     while(!CIRCLEQ_EMPTY(&l2tp_tunnel->pending_session_qhead)) {
         bbl_session_s *session = CIRCLEQ_FIRST(&l2tp_tunnel->pending_session_qhead);
         CIRCLEQ_REMOVE(&l2tp_tunnel->pending_session_qhead, session, session_l2tp_qnode);
+        session->l2tp_tunnel = NULL;
         bbl_l2tp_client_session_connect(l2tp_tunnel, session);
     }
 }

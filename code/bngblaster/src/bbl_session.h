@@ -89,6 +89,9 @@ typedef struct bbl_session_
     /* Set to true if session is tunnelled via L2TP. */
     bool l2tp;
     bbl_l2tp_session_s *l2tp_session;
+    /* Set (LAC mode only) while the session is queued on a tunnel's
+     * pending_session_qhead, waiting for the tunnel to be established. */
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
 
     /* Set to true if session is connected to
      * BNG Blaster A10NSP Interface */
