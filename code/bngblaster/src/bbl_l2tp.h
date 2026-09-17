@@ -315,7 +315,10 @@ typedef struct bbl_l2tp_session_
 const char*
 l2tp_tunnel_hostname(bbl_l2tp_tunnel_s *l2tp_tunnel);
 
-const char* 
+char*
+l2tp_tunnel_secret(bbl_l2tp_tunnel_s *l2tp_tunnel);
+
+const char*
 l2tp_message_string(l2tp_message_t type);
 
 const char* 

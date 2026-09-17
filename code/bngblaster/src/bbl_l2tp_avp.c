@@ -195,13 +195,13 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
             l2tp_tunnel_hostname(l2tp_tunnel));
         return false;
     }
-    if(!(random_vector && l2tp_tunnel->server->secret)) {
+    secret = l2tp_tunnel_secret(l2tp_tunnel);
+    if(!(random_vector && secret)) {
         LOG(L2TP, "L2TP Error (%s) Missing random-vector or secret\n",
             l2tp_tunnel_hostname(l2tp_tunnel));
         return false;
     }
 
-    secret = l2tp_tunnel->server->secret;
     secret_len = strlen(secret);
 
     MD5_Init(&ctx);

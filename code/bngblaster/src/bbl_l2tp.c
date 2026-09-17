@@ -25,6 +25,16 @@ l2tp_tunnel_hostname(bbl_l2tp_tunnel_s *l2tp_tunnel)
     return l2tp_tunnel->server->host_name;
 }
 
+char*
+l2tp_tunnel_secret(bbl_l2tp_tunnel_s *l2tp_tunnel)
+{
+    if(l2tp_tunnel->is_lac) {
+        return l2tp_tunnel->client->secret;
+    } else {
+        return l2tp_tunnel->server->secret;
+    }
+}
+
 const char*
 l2tp_message_string(l2tp_message_t type)
 {
