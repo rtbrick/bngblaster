@@ -1494,12 +1494,13 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->l2tp_client_group_id = json_number_value(value);
     }
 
-    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
-        /* Disable IPv4 on PPPoE if IPCP is disabled. */
+    if(access_config->access_type == ACCESS_TYPE_PPPOE ||
+       access_config->access_type == ACCESS_TYPE_PPPOL2TP) {
+        /* Disable IPv4 on PPPoE/PPPoL2TP if IPCP is disabled. */
         if(!access_config->ipcp_enable) {
             access_config->ipv4_enable = false;
         }
-        /* Disable IPv6 on PPPoE if IP6CP is disabled. */
+        /* Disable IPv6 on PPPoE/PPPoL2TP if IP6CP is disabled. */
         if(!access_config->ip6cp_enable) {
             access_config->ipv6_enable = false;
             access_config->dhcpv6_enable = false;
