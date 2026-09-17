@@ -533,7 +533,8 @@ bbl_access_rx_icmpv6(bbl_access_interface_s *interface,
 {
     bbl_icmpv6_s *icmpv6 = (bbl_icmpv6_s*)ipv6->next;
 
-    if(session->access_type == ACCESS_TYPE_PPPOE &&
+    if((session->access_type == ACCESS_TYPE_PPPOE ||
+        session->access_type == ACCESS_TYPE_PPPOL2TP) &&
        session->ip6cp_state != BBL_PPP_OPENED) {
         return false;
     }
