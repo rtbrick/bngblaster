@@ -3264,6 +3264,35 @@
                     "minimum": 0,
                     "maximum": 255
                 },
+                "tcp-ao-key": {
+                    "type": "string",
+                    "description": "TCP authentication key (TCP-AO master key, or legacy TCP MD5 secret if tcp-ao-algorithm is md5). A recommended minimum length applies per tcp-ao-algorithm, but is not enforced, so interop with peers that accept shorter keys can be tested."
+                },
+                "tcp-ao-algorithm": {
+                    "type": "string",
+                    "description": "TCP authentication algorithm. tcp-ao-key is ignored unless this is also set to a value other than none",
+                    "enum": [
+                        "none",
+                        "hmac-sha-1-96",
+                        "hmac-sha-256-128",
+                        "aes-128-cmac-96",
+                        "md5"
+                    ],
+                    "default": "none"
+                },
+                "tcp-ao-key-id": {
+                    "type": "integer",
+                    "description": "TCP-AO KeyID, mandatory if tcp-ao-key is set (not applicable/not allowed for tcp-ao-algorithm md5)",
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "tcp-ao-rnext-key-id": {
+                    "type": "integer",
+                    "description": "TCP-AO RNextKeyID (not applicable for tcp-ao-algorithm md5)",
+                    "default": "tcp-ao-key-id",
+                    "minimum": 0,
+                    "maximum": 255
+                },
                 "reconnect": {
                     "type": "boolean",
                     "description": "Reconnect BGP session automatically",

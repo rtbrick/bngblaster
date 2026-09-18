@@ -110,8 +110,8 @@ bgp_capability(bgp_session_s *session, uint8_t *start, uint8_t length)
     return true;
 }
 
-static bool
-bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
+bool
+bgp_open_parse(bgp_session_s *session, uint8_t *start, uint16_t length)
 {
     uint8_t opt_length = 0;
     uint8_t opt_idx = 29;
@@ -151,6 +151,23 @@ bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
         session->peer_address_str,
         session->peer.as, session->peer.hold_time);
 
+    return true;
+}
+
+static bool
+bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
+{
+    if(!bgp_open_parse(session, start, length)) {
+        return false;
+    }
+    if(session->collision) {
+        if(!bgp_session_collision_resolve(session, /*trigger_is_primary=*/true)) {
+            /* session->tcpc/read_buf have already been swapped to the
+             * winning (collision) connection; the caller must stop
+             * processing the now-stale buffer immediately. */
+            return true;
+        }
+    }
     bgp_session_state_change(session, BGP_OPENCONFIRM);
     return true;
 }
@@ -276,6 +293,14 @@ bgp_read(bgp_session_s *session)
             case BGP_MSG_OPEN:
                 if(!bgp_open(session, start, length)) {
                     bgp_decode_error(session);
+                    return;
+                }
+                if(session->collision_promoted) {
+                    /* session->tcpc/read_buf were just swapped to the
+                     * connection that won collision resolution; buffer
+                     * (captured above) now points at freed/stale memory,
+                     * so stop processing it immediately. */
+                    session->collision_promoted = false;
                     return;
                 }
                 break;

@@ -84,6 +84,7 @@ bgp_init()
             session->local_address_str,
             session->peer_address_str);
 
+        bgp_session_listen(session);
         bgp_session_connect(session, 1);
         g_ctx->routing_sessions++;
 
@@ -110,6 +111,7 @@ void
 bgp_teardown()
 {
     bgp_session_s *session  = g_ctx->bgp_sessions;
+    bgp_session_listen_teardown();
     while(session) {
         if(!session->teardown) {
             LOG(BGP, "BGP (%s %s - %s) teardown session\n",
