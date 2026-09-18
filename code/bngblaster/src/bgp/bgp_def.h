@@ -9,6 +9,8 @@
 #ifndef __BBL_BGP_DEF_H__
 #define __BBL_BGP_DEF_H__
 
+#include "../bbl_tcp_ao.h"
+
 /* DEFINITIONS ... */
 
 #define BGP_PORT                    179
@@ -18,6 +20,10 @@
 #define BGP_DEFAULT_AS              65000
 #define BGP_DEFAULT_HOLD_TIME       90
 #define BGP_DEFAULT_TEARDOWN_TIME   5
+/* RFC 4271 8.2.2: on entering OpenSent the hold timer is set to a large
+ * value (4 minutes suggested), bounding a session that completes TCP but
+ * never receives the peer's OPEN. */
+#define BGP_OPENSENT_HOLD_TIME      240
 
 #define BGP_MSG_OPEN                1
 #define BGP_MSG_UPDATE              2
@@ -94,9 +100,49 @@ typedef struct bgp_config_ {
     char *network_interface;
     char *raw_update_file;
 
+    /* TCP-AO (RFC 5925/5926, HMAC-SHA-256-128) */
+    bool     tcp_ao_enabled;
+    char     *tcp_ao_key;
+    uint8_t  tcp_ao_key_id;
+    uint8_t  tcp_ao_rnext_key_id;
+    bbl_tcp_ao_algo_t tcp_ao_algo;
+
     /* Pointer to next instance */
     struct bgp_config_ *next;
 } bgp_config_s;
+
+/*
+ * BGP Connection Collision (RFC 4271 6.8)
+ *
+ * Holds a second, not-yet-resolved TCP connection to the same peer while
+ * both sides of a simultaneous active-open/passive-accept race independently
+ * proceed far enough to exchange OPEN messages and compare BGP Identifiers.
+ */
+typedef struct bgp_collision_ {
+    bbl_tcp_ctx_s *tcpc;
+    bool active; /* true if this leg is our own active connect, false if accepted */
+
+    io_buffer_t read_buf;
+    io_buffer_t write_buf;
+} bgp_collision_s;
+
+/*
+ * BGP Listen Socket
+ *
+ * One shared listen socket per unique (interface, local address, address
+ * family), deduplicated across all configured BGP sessions that share it.
+ * Owned independently of any single bgp_session_s.
+ */
+typedef struct bgp_listen_ {
+    uint8_t af;
+    bbl_network_interface_s *interface;
+    uint32_t ipv4_local_address;
+    ipv6addr_t ipv6_local_address;
+
+    bbl_tcp_ctx_s *tcpc;
+
+    struct bgp_listen_ *next;
+} bgp_listen_s;
 
 /*
  * BGP Session
@@ -115,7 +161,14 @@ typedef struct bgp_session_ {
     bgp_config_s *config;
     bbl_network_interface_s *interface;
     bbl_tcp_ctx_s *tcpc;
-    bbl_tcp_ctx_s *listen_tcpc;
+    bool active; /* is tcpc the connection we dialed out on? */
+
+    bbl_tcp_ctx_s *connecting_tcpc; /* pending active connect() attempt, not yet
+                                        adopted as tcpc (may lose a collision race
+                                        against an already-progressing passive one) */
+
+    bgp_collision_s *collision; /* non-NULL only while a second connection race is unresolved */
+    bool collision_promoted; /* one-shot flag consumed by bgp_read() after a promotion */
 
     struct timer_ *connect_timer;
     struct timer_ *keepalive_timer;

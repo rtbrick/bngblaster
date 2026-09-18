@@ -2,6 +2,13 @@
 
     { "bgp": {} }
 
+Every configured BGP peer both actively connects and passively listens on
+TCP port 179, matching real router behavior. If the peer also connects
+towards BNG Blaster at the same time, the resulting connection collision is
+resolved automatically per :rfc:`4271#section-6.8` by comparing BGP
+Identifiers, with the losing TCP connection closed via a NOTIFICATION
+(Cease, Connection Collision Resolution).
+
 +-----------------------------------+----------------------------------------------------------------------+
 | Attribute                         | Description                                                          |
 +===================================+======================================================================+
@@ -30,6 +37,27 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **ttl**                           | | BGP IP TTL.                                                        |
 |                                   | | Default: 255 Range: 0 - 255                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **tcp-ao-key**                    | | TCP authentication key. TCP-AO (RFC 5925) master key, or the       |
+|                                   | | legacy TCP MD5 (RFC 2385) secret if **tcp-ao-algorithm** is md5.   |
+|                                   | | A recommended minimum length applies per **tcp-ao-algorithm**      |
+|                                   | | (32 characters for hmac-sha-256-128, 20 for hmac-sha-1-96, 16 for  |
+|                                   | | aes-128-cmac-96, none for md5) but is not enforced, so shorter     |
+|                                   | | keys can be used to test interop with peers that accept them.      |
++-----------------------------------+----------------------------------------------------------------------+
+| **tcp-ao-algorithm**              | | TCP authentication algorithm. **tcp-ao-key** is ignored unless     |
+|                                   | | this is also set to a value other than none, so TCP                |
+|                                   | | authentication can be toggled on/off by changing only this         |
+|                                   | | attribute, without removing **tcp-ao-key** from the config.        |
+|                                   | | Default: none (disabled)                                           |
+|                                   | | Values: none, hmac-sha-1-96, hmac-sha-256-128, aes-128-cmac-96, md5|
++-----------------------------------+----------------------------------------------------------------------+
+| **tcp-ao-key-id**                 | | TCP-AO KeyID. Mandatory if **tcp-ao-key** is set, unless           |
+|                                   | | **tcp-ao-algorithm** is md5 (RFC 2385 has no KeyID).               |
+|                                   | | Range: 0 - 255                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **tcp-ao-rnext-key-id**           | | TCP-AO RNextKeyID. Not applicable for **tcp-ao-algorithm** md5.    |
+|                                   | | Default: `tcp-ao-key-id` Range: 0 - 255                            |
 +-----------------------------------+----------------------------------------------------------------------+
 | **reconnect**                     | | Reconnect BGP session automatically.                               |
 |                                   | | Default: true                                                      |

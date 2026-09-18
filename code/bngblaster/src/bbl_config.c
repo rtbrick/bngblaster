@@ -1598,21 +1598,23 @@ static bool
 json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
 {
     json_t *value, *sub = NULL;
-    const char *s = NULL;    
+    const char *s = NULL;
+    const char *tcp_ao_key_str = NULL;
     int i, size;
     uint32_t family;
 
     g_ctx->tcp = true;
 
     const char *schema[] = {
-        "network-interface", 
+        "network-interface",
         "local-address", "peer-address",
         "local-ipv4-address", "peer-ipv4-address",
         "local-ipv6-address", "peer-ipv6-address",
         "local-as", "peer-as", "hold-time", "tos", "ttl",
         "id", "reconnect", "start-traffic",
         "teardown-time", "raw-update-file",
-        "family", "extended-nexthop"
+        "family", "extended-nexthop",
+        "tcp-ao-key", "tcp-ao-key-id", "tcp-ao-rnext-key-id", "tcp-ao-algorithm"
     };
     if(!schema_validate(bgp, "bgp", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1701,6 +1703,53 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
     JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "ttl", 0, 255);
     if(value) {
         bgp_config->ttl = json_number_value(value);
+    }
+
+    if(json_unpack(bgp, "{s:s}", "tcp-ao-key", &tcp_ao_key_str) == 0 &&
+       json_unpack(bgp, "{s:s}", "tcp-ao-algorithm", &s) == 0 &&
+       strcmp(s, "none") != 0) {
+        uint16_t min_key_len;
+
+        if(!bbl_tcp_ao_algo_from_string(s, &bgp_config->tcp_ao_algo)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->tcp-ao-algorithm\n");
+            return false;
+        }
+
+        /* The RFC-recommended minimum is not enforced so BNG Blaster can also
+         * test interop with peers that accept shorter keys (e.g. some vendors
+         * do not enforce it either). Operators should still prefer keys that
+         * meet the minimum below for real deployments. */
+        min_key_len = bbl_tcp_ao_min_key_len(bgp_config->tcp_ao_algo);
+        if(strlen(tcp_ao_key_str) < min_key_len) {
+            fprintf(stderr, "JSON config warning: bgp->tcp-ao-key is shorter than the recommended "
+                    "minimum of %u characters for algorithm %s\n",
+                    min_key_len, bbl_tcp_ao_algo_string(bgp_config->tcp_ao_algo));
+        }
+        bgp_config->tcp_ao_key = strdup(tcp_ao_key_str);
+
+        if(bgp_config->tcp_ao_algo == TCP_AO_ALGO_MD5) {
+            /* RFC 2385 TCP MD5 signatures have no KeyID/RNextKeyID. */
+            JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "tcp-ao-key-id", 0, 255);
+            if(value) {
+                fprintf(stderr, "JSON config error: bgp->tcp-ao-key-id is not supported for algorithm md5\n");
+                return false;
+            }
+        } else {
+            JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "tcp-ao-key-id", 0, 255);
+            if(!value) {
+                fprintf(stderr, "JSON config error: bgp->tcp-ao-key-id is mandatory if bgp->tcp-ao-key is set\n");
+                return false;
+            }
+            bgp_config->tcp_ao_key_id = json_number_value(value);
+
+            JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "tcp-ao-rnext-key-id", 0, 255);
+            if(value) {
+                bgp_config->tcp_ao_rnext_key_id = json_number_value(value);
+            } else {
+                bgp_config->tcp_ao_rnext_key_id = bgp_config->tcp_ao_key_id;
+            }
+        }
+        bgp_config->tcp_ao_enabled = true;
     }
 
     bgp_config->id = htobe32(0x01020304);

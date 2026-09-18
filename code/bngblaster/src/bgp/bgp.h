@@ -12,6 +12,7 @@
 #include "../bbl.h"
 #include "bgp_def.h"
 #include "bgp_session.h"
+#include "bgp_collision.h"
 #include "bgp_message.h"
 #include "bgp_receive.h"
 #include "bgp_raw_update.h"

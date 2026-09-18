@@ -12,6 +12,7 @@
 
 #include "bbl.h"
 #include "lwip/priv/tcp_priv.h"
+#include "bbl_tcp_ao.h"
 
 #define BBL_TCP_BUF_SIZE 65000
 #define BBL_TCP_INTERVAL 250*MSEC
@@ -31,6 +32,10 @@ typedef void (*bbl_tcp_callback_fn)(void *arg);
 typedef void (*bbl_tcp_receive_fn)(void *arg, uint8_t *buf, uint16_t len);
 typedef void (*bbl_tcp_error_fn)(void *arg, err_t err);
 typedef err_t (*bbl_tcp_poll_fn)(void *arg, struct tcp_pcb *tpcb);
+/* Fires for a listen socket right after a SYN creates a new pcb but before
+ * the SYN-ACK is sent (lwIP tcp_ext_arg "passive_open" hook), so the pcb can
+ * still be configured (e.g. TCP-AO/MD5 enabled) in time for the SYN-ACK. */
+typedef void (*bbl_tcp_pre_accept_fn)(struct tcp_pcb *new_pcb, void *arg);
 
 typedef struct bbl_tcp_ctx_
 {
@@ -50,6 +55,7 @@ typedef struct bbl_tcp_ctx_
     struct tcp_pcb *pcb;
 
     bbl_tcp_accepted_fn accepted_cb; /* accepted callback (listen) */
+    bbl_tcp_pre_accept_fn pre_accept_cb; /* pre-accept callback (listen), fires before SYN-ACK is sent */
     bbl_tcp_callback_fn connected_cb; /* application connected callback */
     bbl_tcp_callback_fn idle_cb; /* application idle callback */
 
@@ -66,6 +72,13 @@ typedef struct bbl_tcp_ctx_
 
     bbl_tcp_state_t state;
     err_t err;
+
+    /* Set via bbl_tcp_ctx_free_deferred() when the owner wants this context
+     * torn down from inside one of its own lwIP callbacks, where freeing it
+     * immediately would leave the caller (and lwIP) using freed memory. The
+     * actual close/free then happens from the TCP timer instead. */
+    bool free_pending;
+    struct bbl_tcp_ctx_ *free_next;
 
     struct {
         uint8_t *buf;
@@ -90,6 +103,9 @@ bbl_tcp_close(bbl_tcp_ctx_s *tcpc);
 void
 bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc);
 
+void
+bbl_tcp_ctx_free_deferred(bbl_tcp_ctx_s *tcpc);
+
 bbl_tcp_ctx_s *
 bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address,
                      uint16_t port, uint8_t ttl, uint8_t tos);
@@ -99,8 +115,8 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address,
                      uint16_t port, uint8_t ttl, uint8_t tos);
 
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, 
-                     uint16_t port, uint8_t ttl, uint8_t tos);
+bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst,
+                     uint16_t port, uint8_t ttl, uint8_t tos, bbl_tcp_ao_key_s *ao);
 
 bbl_tcp_ctx_s *
 bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t *dst, 
@@ -108,7 +124,7 @@ bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t
 
 bbl_tcp_ctx_s *
 bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst,
-                     uint16_t port, uint8_t ttl, uint8_t tos);
+                     uint16_t port, uint8_t ttl, uint8_t tos, bbl_tcp_ao_key_s *ao);
 
 bbl_tcp_ctx_s *
 bbl_tcp_ipv6_connect_session(bbl_session_s *session, ipv6addr_t *src, ipv6addr_t *dst, 

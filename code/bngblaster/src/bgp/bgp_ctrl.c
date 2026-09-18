@@ -32,7 +32,8 @@ bgp_ctrl_session_json(bgp_session_s *session)
 {
     json_t *root = NULL;
     json_t *stats = NULL;
-    
+    uint32_t peer_id_be;
+
     const char *raw_update_file = NULL;
 
     if(!session) {
@@ -55,14 +56,18 @@ bgp_ctrl_session_json(bgp_session_s *session)
         return NULL;
     }
 
-    root = json_pack("{ss ss ss si si ss ss si si ss ss* ss* si si si so*}",
+    /* peer.id is a host-order value (read_be_uint), unlike config->id which
+     * is raw network order from inet_pton; convert before formatting. */
+    peer_id_be = htobe32(session->peer.id);
+
+    root = json_pack("{ss ss ss si si ss ss si si ss ss* ss* si si si ss so*}",
                      "interface", session->interface->name,
                      "local-address", session->local_address_str,
                      "local-id", format_ipv4_address(&session->config->id),
                      "local-as", session->config->local_as,
                      "local-hold-time", session->config->hold_time,
                      "peer-address", session->peer_address_str,
-                     "peer-id", format_ipv4_address(&session->peer.id),
+                     "peer-id", format_ipv4_address(&peer_id_be),
                      "peer-as", session->peer.as,
                      "peer-hold-time", session->peer.hold_time,
                      "state", bgp_session_state_string(session->state),
@@ -71,6 +76,8 @@ bgp_ctrl_session_json(bgp_session_s *session)
                      "raw-update-start-epoch", session->update_start_timestamp.tv_sec,
                      "raw-update-stop-epoch", session->update_stop_timestamp.tv_sec,
                      "raw-update-duration", session->update_duration.tv_sec,
+                     "tcp-auth", session->config->tcp_ao_enabled ?
+                                 bbl_tcp_ao_algo_string(session->config->tcp_ao_algo) : "none",
                      "stats", stats);
 
     if(!root) {

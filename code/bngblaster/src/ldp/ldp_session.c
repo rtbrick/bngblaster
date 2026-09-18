@@ -323,14 +323,14 @@ ldp_session_connect_job(timer_s *timer)
                 &session->local.ipv6_address,
                 &session->peer.ipv6_address,
                 LDP_PORT,
-                0, session->instance->config->tos);
+                0, session->instance->config->tos, NULL);
         } else {
             session->tcpc = bbl_tcp_ipv4_connect(
                 session->interface,
                 &session->local.ipv4_address,
                 &session->peer.ipv4_address,
                 LDP_PORT,
-                0, session->instance->config->tos);
+                0, session->instance->config->tos, NULL);
         }
 
         if(session->tcpc) {

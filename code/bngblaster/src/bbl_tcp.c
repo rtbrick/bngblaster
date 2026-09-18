@@ -13,6 +13,31 @@
 
 size_t g_netif_count = 0;
 
+/* Generic lwIP tcp_ext_arg id used purely to reach the "passive_open" hook
+ * (fires between tcp_alloc() and the SYN-ACK being sent) for listen
+ * sockets that set bbl_tcp_ctx_s.pre_accept_cb. Unrelated to the TCP-AO/MD5
+ * ext_arg id in bbl_tcp_ao.c. */
+static u8_t g_tcp_listen_ext_id = LWIP_TCP_PCB_NUM_EXT_ARG_ID_INVALID;
+
+/* Contexts queued by bbl_tcp_ctx_free_deferred(), drained by bbl_tcp_timer(). */
+static bbl_tcp_ctx_s *g_tcp_free_list = NULL;
+
+static err_t
+bbl_tcp_listen_passive_open(u8_t id, struct tcp_pcb_listen *lpcb, struct tcp_pcb *cpcb)
+{
+    bbl_tcp_ctx_s *listen_ctx = (bbl_tcp_ctx_s*)lpcb->callback_arg;
+    UNUSED(id);
+    if(listen_ctx && listen_ctx->pre_accept_cb) {
+        listen_ctx->pre_accept_cb(cpcb, listen_ctx->arg);
+    }
+    return ERR_OK;
+}
+
+static const struct tcp_ext_arg_callbacks bbl_tcp_listen_ext_callbacks = {
+    .destroy = NULL,
+    .passive_open = bbl_tcp_listen_passive_open,
+};
+
 const char *
 tcp_err_string(err_t err)
 {
@@ -87,6 +112,46 @@ bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc) {
         bbl_tcp_close(tcpc);
         free(tcpc);
     }
+}
+
+/**
+ * bbl_tcp_ctx_free_deferred
+ *
+ * Queue a TCP context to be closed and freed from the TCP timer instead of
+ * immediately. This is what an application MUST use when tearing a
+ * connection down from inside one of that connection's own callbacks
+ * (receive/connected/accepted): those callbacks continue to touch the
+ * context and its pcb after the application returns, so freeing in place
+ * would be a use-after-free. Application callbacks are detached right away,
+ * so nothing further is delivered to an owner that considers it gone.
+ *
+ * @param tcpc TCP context
+ */
+void
+bbl_tcp_ctx_free_deferred(bbl_tcp_ctx_s *tcpc)
+{
+    if(!tcpc || tcpc->free_pending) {
+        return;
+    }
+    tcpc->accepted_cb = NULL;
+    tcpc->pre_accept_cb = NULL;
+    tcpc->connected_cb = NULL;
+    tcpc->idle_cb = NULL;
+    tcpc->receive_cb = NULL;
+    tcpc->error_cb = NULL;
+    tcpc->poll_cb = NULL;
+    tcpc->arg = NULL;
+
+    /* Drop any pending transmit: the owner is free to release that buffer
+     * as soon as it hands the context over, while bbl_tcp_sent_cb() stays
+     * registered until the close below actually happens. */
+    tcpc->tx.buf = NULL;
+    tcpc->tx.len = 0;
+    tcpc->tx.offset = 0;
+
+    tcpc->free_pending = true;
+    tcpc->free_next = g_tcp_free_list;
+    g_tcp_free_list = tcpc;
 }
 
 static bbl_tcp_ctx_s *
@@ -195,17 +260,23 @@ bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
 
     if(p) {
         if(err == ERR_OK) {
+            /* Walk the pbuf chain, handing each element to the application.
+             * The callback is re-checked every iteration because it may tear
+             * this connection down mid-chain (bbl_tcp_ctx_free_deferred()
+             * detaches the callbacks). */
+            _p = p;
+            while(_p && tcpc->receive_cb) {
+                (tcpc->receive_cb)(tcpc->arg, _p->payload, _p->len);
+                _p = _p->next;
+            }
             if(tcpc->receive_cb) {
-                _p = p;
-                while(_p) {
-                    (tcpc->receive_cb)(tcpc->arg, p->payload, p->len);
-                    _p = _p->next;
-                }
                 /* Signal application that read is finished. */
                 (tcpc->receive_cb)(tcpc->arg, NULL, 0);
             }
             tcpc->bytes_rx += p->tot_len;
-            tcp_recved(tpcb, p->tot_len);
+            if(!tcpc->free_pending) {
+                tcp_recved(tpcb, p->tot_len);
+            }
         }
         pbuf_free(p);
     }
@@ -300,6 +371,11 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
     if(tcpc->connected_cb) {
         (tcpc->connected_cb)(tcpc->arg);
     }
+    if(tcpc->free_pending) {
+        /* Torn down from within the callback above (e.g. a BGP connection
+         * collision rejected this leg); must not touch it again here. */
+        return ERR_OK;
+    }
     bbl_tcp_sent_cb(tcpc, tpcb, 0);
     return ERR_OK;
 }
@@ -385,6 +461,18 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
     /* Call application TCP accepted callback function. */
     if(listen->accepted_cb) {
         if((listen->accepted_cb)(tcpc, listen->arg) != ERR_OK) {
+            /* Rejected by the application. Detach our callbacks before
+             * aborting so the abort cannot dispatch into a context we are
+             * about to free, then drop the context (the pcb belongs to lwIP
+             * and is reset here). Without this the context and its ifname
+             * leaked on every rejected inbound connection. */
+            tcp_arg(tpcb, NULL);
+            tcp_sent(tpcb, NULL);
+            tcp_recv(tpcb, NULL);
+            tcp_err(tpcb, NULL);
+            tcp_poll(tpcb, NULL, 0);
+            tcpc->pcb = NULL;
+            bbl_tcp_ctx_free(tcpc);
             tcp_abort(tpcb);
             return ERR_ABRT;
         };
@@ -396,8 +484,13 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
     if(tcpc->connected_cb) {
         (tcpc->connected_cb)(tcpc->arg);
     }
+    if(tcpc->free_pending) {
+        /* Torn down from within the callback above; nothing more to do here
+         * (the TCP timer owns it now). */
+        return ERR_OK;
+    }
     bbl_tcp_sent_cb(tcpc, tpcb, 0);
-    return ERR_OK;  
+    return ERR_OK;
 }
 
 /**
@@ -440,6 +533,9 @@ bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address,
     }
 
     tcp_accept(tcpc->pcb, bbl_tcp_listen_accepted);
+    if(g_tcp_listen_ext_id != LWIP_TCP_PCB_NUM_EXT_ARG_ID_INVALID) {
+        tcp_ext_arg_set_callbacks(tcpc->pcb, g_tcp_listen_ext_id, &bbl_tcp_listen_ext_callbacks);
+    }
 
     tcpc->listen = true;
     tcpc->af = AF_INET;
@@ -500,6 +596,9 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address,
     }
 
     tcp_accept(tcpc->pcb, bbl_tcp_listen_accepted);
+    if(g_tcp_listen_ext_id != LWIP_TCP_PCB_NUM_EXT_ARG_ID_INVALID) {
+        tcp_ext_arg_set_callbacks(tcpc->pcb, g_tcp_listen_ext_id, &bbl_tcp_listen_ext_callbacks);
+    }
 
     tcpc->listen = true;
     tcpc->af = AF_INET6;
@@ -532,8 +631,8 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address,
  * @return TCP context
  */
 bbl_tcp_ctx_s *
-bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst, 
-                     uint16_t port, uint8_t ttl, uint8_t tos)
+bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst,
+                     uint16_t port, uint8_t ttl, uint8_t tos, bbl_tcp_ao_key_s *ao)
 {
     bbl_tcp_ctx_s *tcpc;
     err_t err = ERR_OK;
@@ -545,6 +644,12 @@ bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4ad
 
     tcpc = bbl_tcp_ctx_new(interface);
     if(!tcpc) {
+        return NULL;
+    }
+
+    if(ao && !bbl_tcp_ao_enable(tcpc->pcb, ao)) {
+        LOG(TCP, "TCP (%s) failed to enable TCP-AO\n", tcpc->ifname);
+        bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
 
@@ -677,7 +782,7 @@ bbl_tcp_ipv4_connect_session(bbl_session_s *session, ipv4addr_t *src, ipv4addr_t
  */
 bbl_tcp_ctx_s *
 bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6addr_t *dst,
-                     uint16_t port, uint8_t ttl, uint8_t tos)
+                     uint16_t port, uint8_t ttl, uint8_t tos, bbl_tcp_ao_key_s *ao)
 {
     bbl_tcp_ctx_s *tcpc;
     err_t err = ERR_OK;
@@ -689,6 +794,12 @@ bbl_tcp_ipv6_connect(bbl_network_interface_s *interface, ipv6addr_t *src, ipv6ad
 
     tcpc = bbl_tcp_ctx_new(interface);
     if(!tcpc) {
+        return NULL;
+    }
+
+    if(ao && !bbl_tcp_ao_enable(tcpc->pcb, ao)) {
+        LOG(TCP, "TCP (%s) failed to enable TCP-AO\n", tcpc->ifname);
+        bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
 
@@ -845,14 +956,9 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
 #endif
 
     if(tcp->dst == BGP_PORT || tcp->src == BGP_PORT) {
-        bgp_session = g_ctx->bgp_sessions;
-        while(bgp_session) {
-            if(bgp_session->ipv4_local_address == ipv4->dst && 
-               bgp_session->ipv4_peer_address == ipv4->src) {
-                interface = bgp_session->interface;
-                break;
-            }
-            bgp_session = bgp_session->next;
+        bgp_session = bgp_session_find_ipv4(ipv4->dst, ipv4->src);
+        if(bgp_session) {
+            interface = bgp_session->interface;
         }
     }
     if(tcp->dst == LDP_PORT || tcp->src == LDP_PORT) {
@@ -861,7 +967,7 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
             ldp_session = instance->sessions;
             instance = instance->next;
             while(ldp_session) {
-                if(ldp_session->local.ipv4_address == ipv4->dst && 
+                if(ldp_session->local.ipv4_address == ipv4->dst &&
                    ldp_session->peer.ipv4_address == ipv4->src) {
                     interface = ldp_session->interface;
                     instance = NULL;
@@ -952,16 +1058,9 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
 #endif
 
     if(tcp->dst == BGP_PORT || tcp->src == BGP_PORT) {
-        bgp_session = g_ctx->bgp_sessions;
-        while(bgp_session) {
-            if(bgp_session->ipv6_local_address && 
-               bgp_session->ipv6_peer_address &&
-                memcpy(bgp_session->ipv6_local_address, ipv6->dst, IPV6_ADDR_LEN) == 0 && 
-                memcpy(bgp_session->ipv6_peer_address, ipv6->src, IPV6_ADDR_LEN) == 0) {
-                interface = bgp_session->interface;
-                break;
-            }
-            bgp_session = bgp_session->next;
+        bgp_session = bgp_session_find_ipv6((ipv6addr_t*)ipv6->dst, (ipv6addr_t*)ipv6->src);
+        if(bgp_session) {
+            interface = bgp_session->interface;
         }
     }
     if(tcp->dst == LDP_PORT || tcp->src == LDP_PORT) {
@@ -1295,8 +1394,18 @@ bbl_tcp_session_init(bbl_session_s *session)
 void
 bbl_tcp_timer(timer_s *timer)
 {
+    bbl_tcp_ctx_s *tcpc;
+
     UNUSED(timer);
     sys_check_timeouts();
+
+    /* Close/free contexts torn down from inside their own callbacks. This
+     * runs outside any lwIP callback, so it is safe here. */
+    while(g_tcp_free_list) {
+        tcpc = g_tcp_free_list;
+        g_tcp_free_list = tcpc->free_next;
+        bbl_tcp_ctx_free(tcpc);
+    }
 }
 
 /**
@@ -1313,6 +1422,8 @@ bbl_tcp_init()
     }
 
     lwip_init();
+    bbl_tcp_ao_init();
+    g_tcp_listen_ext_id = tcp_ext_arg_alloc_id();
 
     /* Start TCP timer */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->tcp_timer, "TCP",

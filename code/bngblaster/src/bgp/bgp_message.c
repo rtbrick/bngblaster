@@ -72,11 +72,9 @@ push_en_capability(io_buffer_t *buffer, uint16_t afi, uint16_t safi, uint16_t nh
 }
 
 void
-bgp_push_open_message(bgp_session_s *session)
+bgp_push_open_message_buf(io_buffer_t *buffer, bgp_config_s *config)
 {
     uint32_t open_start_idx, length, opt_parms_idx, opt_parms_length;
-    io_buffer_t *buffer = &session->write_buf;
-    bgp_config_s *config = session->config;
 
     if(buffer->idx > (buffer->size - BGP_MIN_MESSAGE_SIZE)) {
         return;
@@ -91,10 +89,10 @@ bgp_push_open_message(bgp_session_s *session)
     if(config->local_as > 65535) {
         push_be_uint(buffer, 2, 23456);
     } else {
-        push_be_uint(buffer, 2, config->local_as); 
+        push_be_uint(buffer, 2, config->local_as);
     }
     push_be_uint(buffer, 2, config->hold_time); /* hold-time */
-    push_data(buffer, (uint8_t*)&session->config->id, 4); /* BGP ID */
+    push_data(buffer, (uint8_t*)&config->id, 4); /* BGP ID */
 
     /* Optional parameters */
     push_be_uint(buffer, 1, 0); /* Optional Parameter length */
@@ -159,6 +157,12 @@ bgp_push_open_message(bgp_session_s *session)
 }
 
 void
+bgp_push_open_message(bgp_session_s *session)
+{
+    bgp_push_open_message_buf(&session->write_buf, session->config);
+}
+
+void
 bgp_push_keepalive_message(bgp_session_s *session)
 {
     uint32_t keepalive_start_idx, length;
@@ -180,10 +184,9 @@ bgp_push_keepalive_message(bgp_session_s *session)
 }
 
 void
-bgp_push_notification_message(bgp_session_s *session)
+bgp_push_notification_message_buf(io_buffer_t *buffer, uint8_t error_code, uint8_t error_subcode)
 {
     uint32_t notification_start_idx, length;
-    io_buffer_t *buffer = &session->write_buf;
 
     if(buffer->idx > (buffer->size - BGP_MIN_MESSAGE_SIZE)) {
         return;
@@ -194,10 +197,16 @@ bgp_push_notification_message(bgp_session_s *session)
     push_be_uint(buffer, 8, 0xffffffffffffffff); /* marker */
     push_be_uint(buffer, 2, 0); /* length */
     push_be_uint(buffer, 1, BGP_MSG_NOTIFICATION); /* message type */
-    push_be_uint(buffer, 1, session->error_code);
-    push_be_uint(buffer, 1, session->error_subcode);
+    push_be_uint(buffer, 1, error_code);
+    push_be_uint(buffer, 1, error_subcode);
 
     /* Calculate message length field */
     length = buffer->idx - notification_start_idx;
     write_be_uint(buffer->data+notification_start_idx+16, 2, length); /* overwrite message length */
+}
+
+void
+bgp_push_notification_message(bgp_session_s *session)
+{
+    bgp_push_notification_message_buf(&session->write_buf, session->error_code, session->error_subcode);
 }
