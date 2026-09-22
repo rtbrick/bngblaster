@@ -4,10 +4,19 @@
  *
  * Supported algorithms:
  *  - HMAC-SHA-1-96     (RFC 5926, TCP-AO option kind 29)
- *  - HMAC-SHA-256-128  (draft-ietf-tcpm-tcp-ao-algs, TCP-AO option kind 29)
+ *  - HMAC-SHA-256-128  (TCP-AO option kind 29)
+ *
+ *    NOTE: draft-ietf-tcpm-tcp-ao-algs specifies HKDF-SHA256 (RFC 5869) as the
+ *    KDF for this algorithm, NOT the RFC 5926 generic KDF. This build
+ *    deliberately uses the RFC 5926 generic construction with SHA-256 instead,
+ *    to interoperate with implementations that added HMAC-SHA-256-128 by
+ *    extending their RFC 5926 HMAC-SHA-1-96 code path (swapping the hash and
+ *    Output_Length) rather than implementing the draft. See
+ *    tcp_ao_kdf_hmac() below. This is NOT draft-conformant.
+ * 
  *  - AES-128-CMAC-96   (RFC 5926, TCP-AO option kind 29)
  *  - MD5               (RFC 2385, legacy TCP MD5 Signature option kind 19,
- *                        not TCP-AO: no KeyID/RNextKeyID, no KDF, no SNE)
+ *                       not TCP-AO: no KeyID/RNextKeyID, no KDF, no SNE)
  *
  * This module plugs into lwIP purely through the TX/RX hooks declared in
  * lwip/lwip_hooks.h (LWIP_HOOK_TCP_OUT_TCPOPT_LENGTH, LWIP_HOOK_TCP_OUT_ADD_TCPOPTS,
@@ -343,37 +352,22 @@ tcp_md5_digest(const uint8_t *data, uint16_t data_len, uint8_t out[TCP_MD5_DIGES
 }
 
 /*
- * HKDF-SHA256 (RFC 5869) as used by TCP-AO HMAC-SHA-256-128
- * (draft-ietf-tcpm-tcp-ao-algs). L (output length) is 32 bytes, exactly one
- * SHA-256 block, so HKDF-Expand is a single HMAC iteration:
- * T(1) = HMAC(PRK, info || 0x01).
- */
-static void
-tcp_ao_kdf_hkdf_sha256(const uint8_t *master_key, uint16_t master_key_len,
-                        const uint8_t *context, uint16_t context_len,
-                        uint8_t traffic_key[32])
-{
-    uint8_t salt[32] = {0};
-    uint8_t prk[32];
-    uint8_t info[TCP_AO_MAX_CONTEXT + 1];
-
-    tcp_ao_hmac(EVP_sha256(), salt, sizeof(salt), master_key, master_key_len, prk);
-
-    memcpy(info, context, context_len);
-    info[context_len] = 0x01;
-    tcp_ao_hmac(EVP_sha256(), prk, sizeof(prk), info, (uint16_t)(context_len + 1), traffic_key);
-}
-
-/*
- * KDF_HMAC_SHA1 (RFC 5926 3.1.1.1): traffic_key = HMAC-SHA1(Master_Key,
+ * KDF_HMAC_<hash> (RFC 5926 3.1.1.1): traffic_key = HMAC(Master_Key,
  * i || Label || Context || Output_Length), i=1 (one octet), Label="TCP-AO",
- * Output_Length=160 (two octets, in bits). A single iteration produces the
- * full 160-bit Key_Length needed.
+ * Output_Length in bits (two octets). A single iteration produces the full
+ * Key_Length for every algorithm using this KDF, since Output_Length always
+ * equals the hash output size.
+ *
+ * RFC 5926 defines this only for HMAC-SHA-1-96 (Output_Length=160). It is
+ * reused here for HMAC-SHA-256-128 (Output_Length=256) as well, which is the
+ * non-conformant variant described in the file header, not what
+ * draft-ietf-tcpm-tcp-ao-algs specifies.
  */
 static void
-tcp_ao_kdf_hmac_sha1(const uint8_t *master_key, uint16_t master_key_len,
-                      const uint8_t *context, uint16_t context_len,
-                      uint8_t traffic_key[20])
+tcp_ao_kdf_hmac(const EVP_MD *md, uint16_t output_length_bits,
+                 const uint8_t *master_key, uint16_t master_key_len,
+                 const uint8_t *context, uint16_t context_len,
+                 uint8_t *traffic_key)
 {
     uint8_t input[1 + TCP_AO_KDF_LABEL_LEN + TCP_AO_MAX_CONTEXT + 2];
     uint8_t *p = input;
@@ -381,9 +375,9 @@ tcp_ao_kdf_hmac_sha1(const uint8_t *master_key, uint16_t master_key_len,
     *p++ = 0x01;
     memcpy(p, TCP_AO_KDF_LABEL, TCP_AO_KDF_LABEL_LEN); p += TCP_AO_KDF_LABEL_LEN;
     memcpy(p, context, context_len); p += context_len;
-    write_be_uint(p, 2, 160); p += 2;
+    write_be_uint(p, 2, output_length_bits); p += 2;
 
-    tcp_ao_hmac(EVP_sha1(), master_key, master_key_len, input, (uint16_t)(p - input), traffic_key);
+    tcp_ao_hmac(md, master_key, master_key_len, input, (uint16_t)(p - input), traffic_key);
 }
 
 /*
@@ -424,10 +418,12 @@ tcp_ao_derive_key(bbl_tcp_ao_ctx_s *ctx, const uint8_t *context, uint16_t contex
 {
     switch(ctx->algo) {
         case TCP_AO_ALGO_HMAC_SHA256_128:
-            tcp_ao_kdf_hkdf_sha256(ctx->master_key, ctx->master_key_len, context, context_len, traffic_key);
+            tcp_ao_kdf_hmac(EVP_sha256(), 256, ctx->master_key, ctx->master_key_len,
+                            context, context_len, traffic_key);
             break;
         case TCP_AO_ALGO_HMAC_SHA1_96:
-            tcp_ao_kdf_hmac_sha1(ctx->master_key, ctx->master_key_len, context, context_len, traffic_key);
+            tcp_ao_kdf_hmac(EVP_sha1(), 160, ctx->master_key, ctx->master_key_len,
+                            context, context_len, traffic_key);
             break;
         case TCP_AO_ALGO_AES128_CMAC_96:
             tcp_ao_kdf_aes_cmac(ctx->master_key, ctx->master_key_len, context, context_len, traffic_key);
@@ -1065,10 +1061,10 @@ bbl_tcp_ao_set_remote_isn(struct tcp_pcb *pcb, uint32_t remote_isn)
 }
 
 /*
- * Known-answer tests for the 3 KDF-based algorithms, using the published
- * test vectors:
- *  - HMAC-SHA-256-128: draft-ietf-tcpm-tcp-ao-algs Appendix A.1.1.1
+ * Known-answer tests for the 3 KDF-based algorithms:
  *  - HMAC-SHA-1-96 and AES-128-CMAC-96: RFC 9235 sections 4.1.1 and 5.1.1
+ *  - HMAC-SHA-256-128: no published vector applies, since this build uses the
+ *    non-conformant RFC 5926 generic KDF (see the file header)
  * Exercises both the Context byte layout and each KDF's derivation. MD5
  * (RFC 2385) has no KDF and relies on the well-known/independently-verified
  * OpenSSL MD5 implementation, so it has no dedicated vector here.
@@ -1089,17 +1085,22 @@ bbl_tcp_ao_selftest(void)
             0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef,
             0x01, 0x23, 0x45, 0x67, 0x89, 0xab, 0xcd, 0xef
         };
+        /* NOT the draft-ietf-tcpm-tcp-ao-algs Appendix A.1.1 value (which is
+         * eb5a4032... for HKDF-SHA256): this build uses the RFC 5926 generic
+         * KDF with SHA-256 instead (see the file header). The construction
+         * itself is validated against a captured peer segment, this constant
+         * is that construction applied to the draft's Context. */
         static const uint8_t expected_key[32] = {
-            0xeb, 0x5a, 0x40, 0x32, 0xe9, 0x3e, 0x6c, 0x78,
-            0x02, 0xa7, 0x41, 0xac, 0x89, 0x9a, 0x63, 0x12,
-            0xd3, 0x46, 0xa9, 0xdc, 0x1d, 0x2b, 0xed, 0x62,
-            0xe2, 0xb6, 0xde, 0x94, 0x7f, 0x6c, 0x5c, 0x7d
+            0x16, 0xe5, 0xb0, 0x0b, 0xfa, 0x71, 0x4f, 0xcd,
+            0xde, 0x84, 0x1f, 0x8e, 0x60, 0x9b, 0x45, 0x79,
+            0x09, 0xb3, 0xe1, 0x03, 0x18, 0x27, 0x94, 0x4a,
+            0xcd, 0xef, 0x1c, 0xe8, 0x46, 0x45, 0xdd, 0x85
         };
         uint8_t traffic_key[32];
 
         context_len = tcp_ao_context(4, src_addr, dst_addr, 0xe9d7, 0x00b3,
                                       0xfbfbab5a, 0, context);
-        tcp_ao_kdf_hkdf_sha256(master_key, sizeof(master_key), context, context_len, traffic_key);
+        tcp_ao_kdf_hmac(EVP_sha256(), 256, master_key, sizeof(master_key), context, context_len, traffic_key);
         if(context_len != sizeof(context) || memcmp(traffic_key, expected_key, sizeof(expected_key)) != 0) {
             LOG(ERROR, "TCP-AO self-test failed for hmac-sha-256-128\n");
             ok = false;
@@ -1116,7 +1117,7 @@ bbl_tcp_ao_selftest(void)
 
         context_len = tcp_ao_context(4, src_addr, dst_addr, 0xe9d7, 0x00b3,
                                       0xfbfbab5a, 0, context);
-        tcp_ao_kdf_hmac_sha1(master_key, sizeof(master_key) - 1, context, context_len, traffic_key);
+        tcp_ao_kdf_hmac(EVP_sha1(), 160, master_key, sizeof(master_key) - 1, context, context_len, traffic_key);
         if(context_len != sizeof(context) || memcmp(traffic_key, expected_key, sizeof(expected_key)) != 0) {
             LOG(ERROR, "TCP-AO self-test failed for hmac-sha-1-96\n");
             ok = false;
