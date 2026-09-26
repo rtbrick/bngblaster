@@ -60,6 +60,8 @@ build/
 # Test Files
 test/Testing/Temporary
 fuzzing/*/.cur_input
+isis-level1-sequence-cache.json
+isis-level2-sequence-cache.json
 
 # SonarQube
 .scannerwork
@@ -71,3 +73,7 @@ config
 # Misc
 code/common/src/config.h
 tmp
+
+# Python
+__pycache__/
+*.py[cod]
