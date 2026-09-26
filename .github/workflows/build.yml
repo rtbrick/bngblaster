@@ -32,7 +32,9 @@ jobs:
 
     - name: Install Dependencies
       shell: bash
-      run: sudo apt install -y libcunit1-dev libncurses-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y libcunit1-dev libncurses-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
 
     - name: Set export SOURCE_DATE_EPOCH to git commit time
       run: |
