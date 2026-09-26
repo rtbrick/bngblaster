@@ -28,7 +28,10 @@ bbl_tcp_listen_passive_open(u8_t id, struct tcp_pcb_listen *lpcb, struct tcp_pcb
     bbl_tcp_ctx_s *listen_ctx = (bbl_tcp_ctx_s*)lpcb->callback_arg;
     UNUSED(id);
     if(listen_ctx && listen_ctx->pre_accept_cb) {
-        listen_ctx->pre_accept_cb(cpcb, listen_ctx->arg);
+        if(!listen_ctx->pre_accept_cb(cpcb, listen_ctx->arg)) {
+            /* lwIP abandons the new pcb without sending a SYN-ACK. */
+            return ERR_ABRT;
+        }
     }
     return ERR_OK;
 }

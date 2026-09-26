@@ -103,6 +103,7 @@ bgp_capability(bgp_session_s *session, uint8_t *start, uint8_t length)
                 return false;
             }
             session->peer.as = read_be_uint(start+2, 4);
+            session->peer.as4 = true;
             break;
         default:
             break;
@@ -229,6 +230,145 @@ bgp_notification(bgp_session_s *session, uint8_t *start, uint16_t length)
     return true;
 }
 
+static bool
+bgp_update_error(bgp_session_s *session, uint8_t error_subcode)
+{
+    session->error_code = 3; /* UPDATE Message Error */
+    session->error_subcode = error_subcode;
+    return false;
+}
+
+static bool
+bgp_update(bgp_session_s *session, uint8_t *start, uint16_t length)
+{
+    bgp_update_s update = {0};
+    uint16_t withdrawn_len, attr_len, attr_value_len;
+    uint8_t attr_flags, attr_type;
+    uint8_t *attr;
+
+    if(!session->config->learn_routes) {
+        /* Nothing to learn. */
+        return true;
+    }
+
+    /* Header (19), Withdrawn Routes Length (2), Withdrawn Routes,
+     * Total Path Attribute Length (2), Path Attributes, NLRI */
+    if(length < 23) {
+        return bgp_update_error(session, 1);
+    }
+    withdrawn_len = read_be_uint(start+19, 2);
+    if(21 + withdrawn_len + 2 > length) {
+        return bgp_update_error(session, 1);
+    }
+    update.withdrawn = start + 21;
+    update.withdrawn_len = withdrawn_len;
+    attr = start + 21 + withdrawn_len;
+    attr_len = read_be_uint(attr, 2);
+    attr += 2;
+    if(23 + withdrawn_len + attr_len > length) {
+        return bgp_update_error(session, 1);
+    }
+    update.nlri = attr + attr_len;
+    update.nlri_len = length - (23 + withdrawn_len + attr_len);
+
+    while(attr_len) {
+        if(attr_len < 3) {
+            return bgp_update_error(session, 1);
+        }
+        attr_flags = attr[0];
+        attr_type = attr[1];
+        if(attr_flags & BGP_PA_FLAG_EXTENDED_LENGTH) {
+            if(attr_len < 4) {
+                return bgp_update_error(session, 1);
+            }
+            attr_value_len = read_be_uint(attr+2, 2);
+            attr += 4; attr_len -= 4;
+        } else {
+            attr_value_len = attr[2];
+            attr += 3; attr_len -= 3;
+        }
+        if(attr_value_len > attr_len) {
+            return bgp_update_error(session, 5); /* Attribute Length Error */
+        }
+        switch(attr_type) {
+            case BGP_PA_ORIGIN:
+                if(attr_value_len != 1) return bgp_update_error(session, 5);
+                update.origin = attr;
+                break;
+            case BGP_PA_AS_PATH:
+                update.as_path = attr;
+                update.as_path_len = attr_value_len;
+                break;
+            case BGP_PA_NEXT_HOP:
+                if(attr_value_len != 4) return bgp_update_error(session, 5);
+                update.next_hop = attr;
+                break;
+            case BGP_PA_MED:
+                if(attr_value_len != 4) return bgp_update_error(session, 5);
+                update.med = attr;
+                break;
+            case BGP_PA_LOCAL_PREF:
+                if(attr_value_len != 4) return bgp_update_error(session, 5);
+                update.local_pref = attr;
+                break;
+            case BGP_PA_COMMUNITIES:
+                if(attr_value_len % 4) return bgp_update_error(session, 5);
+                update.communities = attr;
+                update.communities_len = attr_value_len;
+                break;
+            case BGP_PA_LARGE_COMMUNITIES:
+                if(attr_value_len % 12) return bgp_update_error(session, 5);
+                update.large_communities = attr;
+                update.large_communities_len = attr_value_len;
+                break;
+            case BGP_PA_EXT_COMMUNITIES:
+                if(attr_value_len % 8) return bgp_update_error(session, 5);
+                update.ext_communities = attr;
+                update.ext_communities_len = attr_value_len;
+                break;
+            case BGP_PA_PMSI_TUNNEL:
+                update.pmsi_tunnel = attr;
+                update.pmsi_tunnel_len = attr_value_len;
+                break;
+            case BGP_PA_MP_REACH_NLRI:
+                /* AFI (2), SAFI (1), Next Hop Length (1), Next Hop, Reserved (1), NLRI */
+                if(attr_value_len < 5 || attr_value_len < 5 + attr[3]) {
+                    return bgp_update_error(session, 9); /* Optional Attribute Error */
+                }
+                update.mp_reach = attr;
+                update.mp_reach_afi = read_be_uint(attr, 2);
+                update.mp_reach_safi = attr[2];
+                update.mp_reach_nexthop_len = attr[3];
+                update.mp_reach_nexthop = attr + 4;
+                update.mp_reach_nlri = attr + 5 + attr[3];
+                update.mp_reach_nlri_len = attr_value_len - 5 - attr[3];
+                break;
+            case BGP_PA_MP_UNREACH_NLRI:
+                /* AFI (2), SAFI (1), Withdrawn Routes */
+                if(attr_value_len < 3) {
+                    return bgp_update_error(session, 9); /* Optional Attribute Error */
+                }
+                update.mp_unreach = attr;
+                update.mp_unreach_afi = read_be_uint(attr, 2);
+                update.mp_unreach_safi = attr[2];
+                update.mp_unreach_nlri = attr + 3;
+                update.mp_unreach_nlri_len = attr_value_len - 3;
+                break;
+            default:
+                break;
+        }
+        attr += attr_value_len; attr_len -= attr_value_len;
+    }
+
+    if(!bgp_rib_update(session, &update)) {
+        return false;
+    }
+    if(!bgp_evpn_update(session, &update)) {
+        return bgp_update_error(session, 9); /* Optional Attribute Error */
+    }
+    return true;
+}
+
 /*
  * When there is only little data left and
  * the buffer start is close to buffer end,
@@ -318,6 +458,11 @@ bgp_read(bgp_session_s *session)
                 break;
             case BGP_MSG_UPDATE:
                 session->stats.update_rx++;
+                if(session->state == BGP_ESTABLISHED &&
+                   !bgp_update(session, start, length)) {
+                    bgp_decode_error(session);
+                    return;
+                }
                 break;
             default:
                 break;

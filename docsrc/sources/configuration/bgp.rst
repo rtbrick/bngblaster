@@ -50,14 +50,17 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | authentication can be toggled on/off by changing only this         |
 |                                   | | attribute, without removing **tcp-ao-key** from the config.        |
 |                                   | | Default: none (disabled)                                           |
-|                                   | | Values: none, hmac-sha-1-96, hmac-sha-256-128, aes-128-cmac-96, md5|
+|                                   | | Values: none, hmac-sha-1-96, hmac-sha-256-128, aes-128-cmac-96,    |
+|                                   | | md5                                                                |
 +-----------------------------------+----------------------------------------------------------------------+
-| **tcp-ao-key-id**                 | | TCP-AO KeyID. Mandatory if **tcp-ao-key** is set, unless           |
-|                                   | | **tcp-ao-algorithm** is md5 (RFC 2385 has no KeyID).               |
+| **tcp-ao-key-id**                 | | TCP-AO KeyID (SendID) sent with all segments. Mandatory for TCP-AO |
+|                                   | | (tcp-ao-key and tcp-ao-algorithm other than none or md5).          |
+|                                   | | Not supported for md5 (RFC 2385 has no KeyID).                     |
 |                                   | | Range: 0 - 255                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-| **tcp-ao-rnext-key-id**           | | TCP-AO RNextKeyID. Not applicable for **tcp-ao-algorithm** md5.    |
-|                                   | | Default: `tcp-ao-key-id` Range: 0 - 255                            |
+| **tcp-ao-rnext-key-id**           | | TCP-AO RNextKeyID, which is also the KeyID (RecvID) expected in    |
+|                                   | | received segments. Not supported for md5.                          |
+|                                   | | Default: tcp-ao-key-id Range: 0 - 255                              |
 +-----------------------------------+----------------------------------------------------------------------+
 | **reconnect**                     | | Reconnect BGP session automatically.                               |
 |                                   | | Default: true                                                      |
@@ -65,6 +68,10 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 | **start-traffic**                 | | Start global traffic after RAW update finished.                    |
 |                                   | | If enabled, the control command **traffic-start** is automatically |
 |                                   | | executed as soon as the BGP RAW update has finished.               |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **learn-routes**                  | | Store received IPv4/IPv6 unicast, labeled unicast and EVPN routes. |
+|                                   | | If disabled, received updates are not parsed.                      |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **teardown-time**                 | | BGP teardown time in seconds.                                      |

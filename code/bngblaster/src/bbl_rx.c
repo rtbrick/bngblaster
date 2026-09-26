@@ -14,6 +14,32 @@ bbl_rx_stream_network(bbl_network_interface_s *interface,
                       bbl_ethernet_header_s *eth) 
 {
     bbl_stream_s *stream;
+    bbl_ethernet_header_s *inner;
+    bbl_ethernet_header_s *inner_cw;
+
+    if(eth->type == ETH_TYPE_ETH && eth->mpls) {
+        /* Ethernet over MPLS (e.g. EVPN VPWS) */
+        inner = eth->next;
+        inner_cw = eth->next_cw;
+        if(inner_cw && inner_cw->bbl) {
+            /* Ambiguous control word, use the stream expectation. */
+            if(!inner->bbl) {
+                inner = inner_cw;
+            } else {
+                stream = bbl_stream_index_get(inner_cw->bbl->flow_id);
+                if(stream && stream->config->rx_control_word) {
+                    inner = inner_cw;
+                }
+            }
+        }
+        /* Keep other frames unchanged for the VPWS handler (e.g. ARP). */
+        if(!inner->bbl) return false;
+        inner->mpls = eth->mpls;
+        inner->timestamp = eth->timestamp;
+        /* Verify the outer destination MAC, the inner one is the customer MAC. */
+        inner->dst = eth->dst;
+        eth = inner;
+    }
     if(!eth->bbl) return false;
     stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {

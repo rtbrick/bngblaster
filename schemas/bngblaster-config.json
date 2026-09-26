@@ -2687,6 +2687,74 @@
                     "description": "Dynamically resolve outer label",
                     "format": "ipv6"
                 },
+                "bgp-evpn-rd": {
+                    "type": "string",
+                    "description": "Dynamically resolve inner label from BGP EVPN route with this route distinguisher"
+                },
+                "vpws-vlan": {
+                    "type": "number",
+                    "description": "Customer VLAN within EVPN VPWS service",
+                    "minimum": 1,
+                    "maximum": 4094
+                },
+                "vpws-inner-vlan": {
+                    "type": "number",
+                    "description": "Customer inner VLAN within EVPN VPWS service",
+                    "minimum": 1,
+                    "maximum": 4094
+                },
+                "vpws-vlan-priority": {
+                    "type": "number",
+                    "description": "Customer VLAN priority",
+                    "minimum": 0,
+                    "maximum": 7,
+                    "default": 0
+                },
+                "vpws-inner-vlan-priority": {
+                    "type": "number",
+                    "description": "Customer inner VLAN priority",
+                    "minimum": 0,
+                    "maximum": 7,
+                    "default": 0
+                },
+                "vpws-qinq": {
+                    "type": "boolean",
+                    "description": "Customer outer VLAN ethertype 0x88a8",
+                    "default": false
+                },
+                "vpws-arp": {
+                    "type": "boolean",
+                    "description": "Reply to ARP, IPv6 neighbor solicitation and ICMP/ICMPv6 echo requests within the EVPN VPWS service",
+                    "default": false
+                },
+                "rx-control-word": {
+                    "type": "boolean",
+                    "description": "Expect pseudowire control word for received Ethernet over MPLS traffic",
+                    "default": false
+                },
+                "bgp-evpn-esi": {
+                    "type": "string",
+                    "description": "ESI of BGP EVPN Ethernet A-D route (type 1)"
+                },
+                "bgp-evpn-ethernet-tag": {
+                    "type": "number",
+                    "description": "BGP EVPN route ethernet tag, resolve VPWS label of Ethernet A-D route (type 1) if bgp-evpn-mac and bgp-evpn-prefix are not set",
+                    "minimum": 0,
+                    "maximum": 4294967295,
+                    "default": 0
+                },
+                "bgp-evpn-mac": {
+                    "type": "string",
+                    "description": "Resolve label2 of BGP EVPN MAC/IP advertisement route (type 2) with this MAC address"
+                },
+                "bgp-evpn-ip": {
+                    "type": "string",
+                    "description": "IPv4 or IPv6 address of BGP EVPN MAC/IP advertisement route (type 2)"
+                },
+                "bgp-evpn-prefix": {
+                    "type": "string",
+                    "description": "Resolve label of BGP EVPN IP prefix route (type 5) with this IPv4 or IPv6 prefix"
+                },
                 "nat": {
                     "type": "boolean",
                     "description": "Enable NAT support",
@@ -3282,14 +3350,13 @@
                 },
                 "tcp-ao-key-id": {
                     "type": "integer",
-                    "description": "TCP-AO KeyID, mandatory if tcp-ao-key is set (not applicable/not allowed for tcp-ao-algorithm md5)",
+                    "description": "TCP-AO KeyID (SendID), mandatory for TCP-AO (not supported for tcp-ao-algorithm md5)",
                     "minimum": 0,
                     "maximum": 255
                 },
                 "tcp-ao-rnext-key-id": {
                     "type": "integer",
-                    "description": "TCP-AO RNextKeyID (not applicable for tcp-ao-algorithm md5)",
-                    "default": "tcp-ao-key-id",
+                    "description": "TCP-AO RNextKeyID, also the KeyID expected in received segments (default: tcp-ao-key-id, not supported for tcp-ao-algorithm md5)",
                     "minimum": 0,
                     "maximum": 255
                 },
@@ -3301,6 +3368,11 @@
                 "start-traffic": {
                     "type": "boolean",
                     "description": "Start traffic after RAW update finished",
+                    "default": false
+                },
+                "learn-routes": {
+                    "type": "boolean",
+                    "description": "Store received IPv4, IPv6 and EVPN routes",
                     "default": false
                 },
                 "teardown-time": {

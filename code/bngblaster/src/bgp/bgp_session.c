@@ -79,7 +79,39 @@ bgp_session_find_ipv6(ipv6addr_t *local_address, ipv6addr_t *peer_address)
 
 static bgp_listen_s *g_bgp_listen_sockets = NULL;
 
-static void
+/* Fill TCP-AO/MD5 key of the session, returns false if not enabled. */
+static bool
+bgp_session_tcp_ao_key(bgp_session_s *session, bbl_tcp_ao_key_s *ao)
+{
+    if(!(session && session->config->tcp_ao_enabled)) {
+        return false;
+    }
+    ao->key = (uint8_t*)session->config->tcp_ao_key;
+    ao->key_len = (uint16_t)strlen(session->config->tcp_ao_key);
+    ao->key_id = session->config->tcp_ao_key_id;
+    ao->rnext_key_id = session->config->tcp_ao_rnext_key_id;
+    ao->algo = session->config->tcp_ao_algo;
+    return true;
+}
+
+static bgp_session_s *
+bgp_session_find_ip(const ip_addr_t *local, const ip_addr_t *remote)
+{
+    if(IP_IS_V6_VAL(*remote)) {
+        return bgp_session_find_ipv6((ipv6addr_t*)&local->u_addr.ip6.addr,
+                                     (ipv6addr_t*)&remote->u_addr.ip6.addr);
+    }
+    return bgp_session_find_ipv4(local->u_addr.ip4.addr, remote->u_addr.ip4.addr);
+}
+
+/* Key lookup for connection requests on shared listen sockets. */
+static bool
+bgp_listen_tcp_ao_lookup(const ip_addr_t *local, const ip_addr_t *remote, bbl_tcp_ao_key_s *ao)
+{
+    return bgp_session_tcp_ao_key(bgp_session_find_ip(local, remote), ao);
+}
+
+static bool
 bgp_pre_accept_cb(struct tcp_pcb *new_pcb, void *arg)
 {
     bgp_session_s *session;
@@ -87,24 +119,15 @@ bgp_pre_accept_cb(struct tcp_pcb *new_pcb, void *arg)
 
     UNUSED(arg);
 
-    if(IP_IS_V6_VAL(new_pcb->remote_ip)) {
-        session = bgp_session_find_ipv6((ipv6addr_t*)&new_pcb->local_ip.u_addr.ip6.addr,
-                                         (ipv6addr_t*)&new_pcb->remote_ip.u_addr.ip6.addr);
-    } else {
-        session = bgp_session_find_ipv4(new_pcb->local_ip.u_addr.ip4.addr,
-                                         new_pcb->remote_ip.u_addr.ip4.addr);
-    }
-    if(session && session->config->tcp_ao_enabled) {
-        ao.key = (uint8_t*)session->config->tcp_ao_key;
-        ao.key_len = (uint16_t)strlen(session->config->tcp_ao_key);
-        ao.key_id = session->config->tcp_ao_key_id;
-        ao.rnext_key_id = session->config->tcp_ao_rnext_key_id;
-        ao.algo = session->config->tcp_ao_algo;
+    session = bgp_session_find_ip(&new_pcb->local_ip, &new_pcb->remote_ip);
+    if(bgp_session_tcp_ao_key(session, &ao)) {
         if(!bbl_tcp_ao_enable(new_pcb, &ao)) {
+            /* Never accept the connection without authentication. */
             LOG(BGP, "BGP (%s %s - %s) failed to enable TCP-AO on accepted connection\n",
                 session->interface->name,
                 session->local_address_str,
                 session->peer_address_str);
+            return false;
         } else {
             /* The peer's ISN (from the SYN that triggered this accept) is
              * already reflected in rcv_nxt at this point (lwIP sets it in
@@ -116,6 +139,7 @@ bgp_pre_accept_cb(struct tcp_pcb *new_pcb, void *arg)
             bbl_tcp_ao_set_remote_isn(new_pcb, new_pcb->rcv_nxt - 1);
         }
     }
+    return true;
 }
 
 static err_t
@@ -186,6 +210,10 @@ bgp_session_listen(bgp_session_s *session)
     }
     tcpc->pre_accept_cb = bgp_pre_accept_cb;
     tcpc->accepted_cb = bgp_accepted_cb;
+    if(!bbl_tcp_ao_listen(tcpc->pcb, bgp_listen_tcp_ao_lookup)) {
+        LOG(BGP, "BGP (%s %s) failed to enable TCP-AO/MD5 on listen socket\n",
+            session->interface->name, session->local_address_str);
+    }
 
     bgp_listen = calloc(1, sizeof(bgp_listen_s));
     if(!bgp_listen) {
@@ -410,6 +438,10 @@ bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state)
     if(session->state == new_state) {
         return;
     }
+    if(session->state == BGP_ESTABLISHED) {
+        bgp_evpn_session_down(session);
+        bgp_rib_flush(session);
+    }
 
     LOG(BGP, "BGP (%s %s - %s) state changed from %s -> %s\n",
         session->interface->name,
@@ -510,12 +542,7 @@ bgp_session_connect_job(timer_s *timer)
         bbl_tcp_ao_key_s ao;
         bbl_tcp_ao_key_s *ao_ptr = NULL;
 
-        if(session->config->tcp_ao_enabled) {
-            ao.key = (uint8_t*)session->config->tcp_ao_key;
-            ao.key_len = (uint16_t)strlen(session->config->tcp_ao_key);
-            ao.key_id = session->config->tcp_ao_key_id;
-            ao.rnext_key_id = session->config->tcp_ao_rnext_key_id;
-            ao.algo = session->config->tcp_ao_algo;
+        if(bgp_session_tcp_ao_key(session, &ao)) {
             ao_ptr = &ao;
         }
 
@@ -588,6 +615,7 @@ bgp_session_connect(bgp_session_s *session, time_t delay)
         session->peer.as = 0;
         session->peer.id = 0;
         session->peer.hold_time = 0;
+        session->peer.as4 = false;
 
         session->stats.message_rx = 0;
         session->stats.message_tx = 0;
@@ -595,6 +623,10 @@ bgp_session_connect(bgp_session_s *session, time_t delay)
         session->stats.keepalive_tx = 0;
         session->stats.update_rx = 0;
         session->stats.update_tx = 0;
+        session->stats.evpn_reach_rx = 0;
+        session->stats.evpn_withdraw_rx = 0;
+        session->stats.route_reach_rx = 0;
+        session->stats.route_withdraw_rx = 0;
 
         session->raw_update = session->raw_update_start;
         session->raw_update_sending = false;

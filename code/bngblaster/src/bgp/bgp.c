@@ -42,6 +42,12 @@ bgp_init()
         session->interface = network_interface;
         session->af = config->af;
 
+        if(config->learn_routes) {
+            if(!(bgp_rib_init(session) && bgp_evpn_init(session))) {
+                return false;
+            }
+        }
+
         if(session->af == AF_INET) {
             if(config->ipv4_local_address) {
                 session->ipv4_local_address = config->ipv4_local_address;

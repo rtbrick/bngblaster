@@ -498,6 +498,12 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
         case ETH_TYPE_ARP:
             bbl_network_rx_arp(interface, eth);
             return;
+        case ETH_TYPE_ETH:
+            /* Ethernet over MPLS (e.g. EVPN VPWS) */
+            if(eth->mpls && bbl_vpws_rx(interface, eth)) {
+                return;
+            }
+            break;
         case ETH_TYPE_IPV4:
             ipv4 = (bbl_ipv4_s*)eth->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {

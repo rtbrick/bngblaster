@@ -163,6 +163,8 @@ typedef struct bbl_network_interface_
 
     struct timer_ *rate_job;
 
+    hb_tree *vpws_db; /* EVPN VPWS services with vpws-arp enabled */
+
     CIRCLEQ_ENTRY(bbl_network_interface_) network_interface_qnode;
 
     /* The following ordered list includes all L2TP messages 

@@ -873,7 +873,8 @@ tcp_split_unsent_seg(struct tcp_pcb *pcb, u16_t split)
   /* Remove since checksum is not stored until after tcp_create_segment() */
   optflags &= ~TF_SEG_DATA_CHECKSUMMED;
 #endif /* TCP_CHECKSUM_ON_COPY */
-  optlen = LWIP_TCP_OPT_LENGTH(optflags);
+  /* BNG Blaster: include hook options (e.g. TCP-AO/MD5), see tcp_create_segment() */
+  optlen = LWIP_TCP_OPT_LENGTH_SEGMENT(optflags, pcb);
   remainder = useg->len - split;
 
   /* Create new pbuf for the remainder of the split */

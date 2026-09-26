@@ -21,7 +21,12 @@
  * This module plugs into lwIP purely through the TX/RX hooks declared in
  * lwip/lwip_hooks.h (LWIP_HOOK_TCP_OUT_TCPOPT_LENGTH, LWIP_HOOK_TCP_OUT_ADD_TCPOPTS,
  * LWIP_HOOK_TCP_INPACKET_PCB) and lwIP's tcp_ext_arg mechanism for per-connection
- * state, so no vendored lwIP core file needs to be patched.
+ * state. The only vendored lwIP core change is tcp_split_unsent_seg() using the
+ * hook option length (LWIP_TCP_OPT_LENGTH_SEGMENT) like tcp_create_segment().
+ *
+ * Shared listen sockets (bbl_tcp_ao_listen) have no key of their own, the key
+ * for a received SYN is looked up per peer and the SYN is verified before a
+ * new connection is created (RFC 5925 section 7.3).
  *
  * Only a single static key (Master Key Tuple) per connection is supported, i.e.
  * no key rollover. Both the active-open (connect) and passive-open (listen/accept)
@@ -39,6 +44,7 @@
 #include "lwip/prot/ip.h"
 #include "lwip/pbuf.h"
 #include "lwip/ip_addr.h"
+#include "lwip/ip.h"
 
 #include <openssl/hmac.h>
 #include <openssl/evp.h>
@@ -92,6 +98,8 @@ typedef struct bbl_tcp_ao_ctx_ {
 
     bbl_tcp_ao_sne_s snd; /* SNE state for segments we send (TCP-AO only) */
     bbl_tcp_ao_sne_s rcv; /* SNE state for segments we receive (TCP-AO only) */
+
+    bbl_tcp_ao_lookup_fn lookup; /* listen sockets only (no key) */
 } bbl_tcp_ao_ctx_s;
 
 static u8_t g_tcp_ao_ext_id = LWIP_TCP_PCB_NUM_EXT_ARG_ID_INVALID;
@@ -517,10 +525,13 @@ tcp_ao_get_key(bbl_tcp_ao_ctx_s *ctx, const struct tcp_pcb *pcb,
  * RFC 5925 6.2 sequence-number-extension tracking. SNE starts at 0 and is
  * incremented whenever the 32-bit sequence space wraps. `prev_seq` tracks the
  * highest sequence number observed so far (not simply the last one processed),
- * so retransmissions/reordering within the normal window never move it
- * backwards or falsely trigger a wrap. TCP_SEQ_GT is lwIP's own signed-delta
- * serial-number comparison (lwip/priv/tcp_priv.h), reused here so the notion
- * of "after" is identical to the one lwIP itself uses for sequence numbers.
+ * so retransmissions/reordering never move it backwards. TCP_SEQ_GT is lwIP's
+ * own signed-delta serial-number comparison (lwip/priv/tcp_priv.h), reused
+ * here so the notion of "after" is identical to the one lwIP uses.
+ *
+ * A newer segment which is numerically smaller than `prev_seq` has wrapped
+ * (SNE + 1). An older segment which is numerically larger than `prev_seq`
+ * was sent before the last wrap (e.g. a retransmission) and uses SNE - 1.
  */
 static uint32_t
 tcp_ao_sne_update(bbl_tcp_ao_sne_s *st, uint32_t seq)
@@ -531,13 +542,14 @@ tcp_ao_sne_update(bbl_tcp_ao_sne_s *st, uint32_t seq)
         return st->sne;
     }
     if(TCP_SEQ_GT(seq, st->prev_seq)) {
-        if(st->prev_seq > 0xC0000000u && seq < 0x40000000u) {
-            /* prev_seq was near the top of the space and seq wrapped into the
-             * bottom quarter: this is a genuine wraparound, not routine
-             * forward progress. */
+        if(seq < st->prev_seq) {
             st->sne++;
         }
         st->prev_seq = seq;
+        return st->sne;
+    }
+    if(seq > st->prev_seq && st->sne) {
+        return st->sne - 1;
     }
     return st->sne;
 }
@@ -574,8 +586,9 @@ tcp_ao_tx_mac(bbl_tcp_ao_ctx_s *ctx, const struct tcp_pcb *pcb,
     uint32_t sne;
 
     /* Bound the message buffer: 44 covers the 4-byte SNE plus the largest
-     * (IPv6) pseudo-header. A segment we cannot sign is dropped rather than
-     * sent unauthenticated (the caller leaves the MAC field zeroed). */
+     * (IPv6) pseudo-header. The lwIP hook cannot drop a segment which we
+     * cannot sign, it is sent with a zeroed MAC and discarded by the peer.
+     * This never happens with the configured MSS. */
     if((size_t)hdr_len + payload_len + 44 > sizeof(msg)) {
         LOG(TCP, "TCP-AO (%s) segment too large to sign (%u bytes)\n",
             tcp_ao_conn_string(pcb, hdr), tcp_len);
@@ -733,9 +746,11 @@ tcp_ao_verify_segment(bbl_tcp_ao_ctx_s *ctx, struct tcp_pcb *pcb, struct tcp_hdr
             tcp_ao_conn_string(pcb, hdr));
         goto reject;
     }
-    if(recv_key_id != ctx->key_id) {
+    /* The received KeyID is the SendID of the peer, which must match our
+     * RecvID, advertised as RNextKeyID (RFC 5925 section 2.2). */
+    if(recv_key_id != ctx->rnext_key_id) {
         LOG(TCP, "TCP-AO (%s) KeyID mismatch (received %u, expected %u)\n",
-            tcp_ao_conn_string(pcb, hdr), recv_key_id, ctx->key_id);
+            tcp_ao_conn_string(pcb, hdr), recv_key_id, ctx->rnext_key_id);
         goto reject;
     }
 
@@ -891,6 +906,42 @@ tcp_md5_verify_segment(bbl_tcp_ao_ctx_s *ctx, struct tcp_pcb *pcb, struct tcp_hd
     return ERR_OK;
 }
 
+/*
+ * Verify a segment (SYN) received on a shared listen socket with the key
+ * of the peer, using a temporary context and pcb which only carry the
+ * addresses, ports and key of this connection request. Segments of peers
+ * without key are accepted (e.g. other BGP sessions without authentication).
+ */
+static err_t
+tcp_ao_verify_listen(bbl_tcp_ao_ctx_s *listen_ctx, struct tcp_hdr *hdr,
+                     uint8_t *opts, uint16_t optlen, struct pbuf *p)
+{
+    bbl_tcp_ao_key_s ao;
+    bbl_tcp_ao_ctx_s ctx = {0};
+    struct tcp_pcb pcb;
+
+    if(!listen_ctx->lookup(ip_current_dest_addr(), ip_current_src_addr(), &ao)) {
+        return ERR_OK;
+    }
+    memset(&pcb, 0x0, sizeof(pcb));
+    ip_addr_copy(pcb.local_ip, *ip_current_dest_addr());
+    ip_addr_copy(pcb.remote_ip, *ip_current_src_addr());
+    pcb.local_port = hdr->dest; /* host byte order */
+    pcb.remote_port = hdr->src;
+
+    ctx.algo = ao.algo;
+    ctx.mac_len = tcp_ao_mac_len(ao.algo);
+    ctx.master_key = ao.key;
+    ctx.master_key_len = ao.key_len;
+    ctx.key_id = ao.key_id;
+    ctx.rnext_key_id = ao.rnext_key_id;
+
+    if(ctx.algo == TCP_AO_ALGO_MD5) {
+        return tcp_md5_verify_segment(&ctx, &pcb, hdr, opts, optlen, p);
+    }
+    return tcp_ao_verify_segment(&ctx, &pcb, hdr, opts, optlen, p);
+}
+
 /* --------------------------------------------------------------------- */
 /* lwIP hooks (declared in lwip/lwip_hooks.h) */
 
@@ -898,7 +949,7 @@ u8_t
 bbl_tcp_ao_hook_tcpopt_length(const struct tcp_pcb *pcb, u8_t internal_len)
 {
     bbl_tcp_ao_ctx_s *ctx = bbl_tcp_ao_get(pcb);
-    if(!ctx) {
+    if(!ctx || ctx->lookup) {
         return internal_len;
     }
     if(ctx->algo == TCP_AO_ALGO_MD5) {
@@ -915,7 +966,7 @@ bbl_tcp_ao_hook_add_tcpopts(struct pbuf *p, struct tcp_hdr *hdr,
     uint8_t *o = (uint8_t*)opts;
 
     ctx = bbl_tcp_ao_get(pcb);
-    if(!ctx) {
+    if(!ctx || ctx->lookup) {
         return opts;
     }
 
@@ -983,6 +1034,9 @@ bbl_tcp_ao_hook_inpacket_pcb(struct tcp_pcb *pcb, struct tcp_hdr *hdr,
         memcpy(opts + opt1len, opt2, (size_t)(optlen - opt1len));
     }
 
+    if(ctx->lookup) {
+        return tcp_ao_verify_listen(ctx, hdr, opts, optlen, p);
+    }
     if(ctx->algo == TCP_AO_ALGO_MD5) {
         return tcp_md5_verify_segment(ctx, pcb, hdr, opts, optlen, p);
     }
@@ -1033,6 +1087,34 @@ bbl_tcp_ao_enable(struct tcp_pcb *pcb, bbl_tcp_ao_key_s *ao)
 
     tcp_ext_arg_set_callbacks(pcb, g_tcp_ao_ext_id, &bbl_tcp_ao_ext_callbacks);
     tcp_ext_arg_set(pcb, g_tcp_ao_ext_id, ctx);
+    return true;
+}
+
+/**
+ * bbl_tcp_ao_listen
+ *
+ * Enable verification of connection requests (SYN) received on a
+ * shared listen socket, where the key is looked up per peer.
+ *
+ * @param lpcb listen pcb
+ * @param lookup key lookup function
+ * @return true on success
+ */
+bool
+bbl_tcp_ao_listen(struct tcp_pcb *lpcb, bbl_tcp_ao_lookup_fn lookup)
+{
+    bbl_tcp_ao_ctx_s *ctx;
+
+    if(!lpcb || !lookup || g_tcp_ao_ext_id == LWIP_TCP_PCB_NUM_EXT_ARG_ID_INVALID) {
+        return false;
+    }
+    ctx = calloc(1, sizeof(bbl_tcp_ao_ctx_s));
+    if(!ctx) {
+        return false;
+    }
+    ctx->lookup = lookup;
+    tcp_ext_arg_set_callbacks(lpcb, g_tcp_ao_ext_id, &bbl_tcp_ao_ext_callbacks);
+    tcp_ext_arg_set(lpcb, g_tcp_ao_ext_id, ctx);
     return true;
 }
 

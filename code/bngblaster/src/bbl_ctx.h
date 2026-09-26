@@ -96,6 +96,7 @@ typedef struct bbl_ctx_
     bbl_icmp_client_s *icmp_clients;
     bgp_session_s *bgp_sessions;
     bgp_raw_update_s *bgp_raw_updates;
+    uint32_t bgp_evpn_version; /* incremented with every EVPN route change */
     isis_instance_s *isis_instances;
     ospf_instance_s *ospf_instances;
     ldp_instance_s *ldp_instances;

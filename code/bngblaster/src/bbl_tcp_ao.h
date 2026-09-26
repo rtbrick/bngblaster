@@ -61,6 +61,14 @@ bbl_tcp_ao_enable(struct tcp_pcb *pcb, bbl_tcp_ao_key_s *ao);
 bool
 bbl_tcp_ao_set_remote_isn(struct tcp_pcb *pcb, uint32_t remote_isn);
 
+/* Lookup of the TCP-AO/MD5 key for a connection request received on a
+ * shared listen socket, returns false if no key is configured. */
+typedef bool (*bbl_tcp_ao_lookup_fn)(const ip_addr_t *local, const ip_addr_t *remote,
+                                     bbl_tcp_ao_key_s *ao);
+
+bool
+bbl_tcp_ao_listen(struct tcp_pcb *lpcb, bbl_tcp_ao_lookup_fn lookup);
+
 bool
 bbl_tcp_ao_selftest(void);
 

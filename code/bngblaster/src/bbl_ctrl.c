@@ -104,7 +104,8 @@ const schema_arg_s schema_stream_update[] = {
 const schema_arg_s schema_bgp[] = {
     ARG_STR("local-ipv4-address"), ARG_STR("peer-ipv4-address"),
     ARG_STR("local-ipv6-address"), ARG_STR("peer-ipv6-address"), ARG_STR("ipv6-link-local"),
-    ARG_STR("file"),
+    ARG_STR("file"), ARG_NUM("route-type"), ARG_STR("rd"),
+    ARG_STR("family"), ARG_STR("prefix"), ARG_STR("match"),
     ARG_END
 };
 const schema_arg_s schema_isis[] = {
@@ -380,9 +381,12 @@ static const struct action actions[] = {
     {"ospf-teardown", ospf_ctrl_teardown, schema_ospf, false},
     {"bgp-sessions", bgp_ctrl_sessions, schema_bgp, true},
     {"bgp-disconnect", bgp_ctrl_disconnect, schema_bgp, false},
-    {"bgp-teardown", bgp_ctrl_teardown, schema_bgp, true},
+    {"bgp-teardown", bgp_ctrl_teardown, schema_bgp, false},
     {"bgp-raw-update-list", bgp_ctrl_raw_update_list, schema_bgp, true},
     {"bgp-raw-update", bgp_ctrl_raw_update, schema_bgp, false},
+    {"bgp-evpn-routes", bgp_ctrl_evpn_routes, schema_bgp, false},
+    {"bgp-routes", bgp_ctrl_routes, schema_bgp, false},
+    {"bgp-routes-stats", bgp_ctrl_routes_stats, schema_bgp, false},
     {"ldp-adjacencies", ldp_ctrl_adjacencies, schema_ldp, true},
     {"ldp-sessions", ldp_ctrl_sessions, schema_ldp, true},
     {"ldp-database", ldb_ctrl_database, schema_ldp, true},

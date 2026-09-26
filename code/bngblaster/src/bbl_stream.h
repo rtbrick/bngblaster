@@ -52,6 +52,15 @@ typedef struct bbl_stream_config_
     uint8_t  ttl;
 
     uint32_t ipv4_ldp_lookup_address;
+    bool bgp_evpn; /* resolve VPN label from EVPN route */
+    bgp_evpn_key_s bgp_evpn_key;
+    uint16_t vpws_vlan; /* customer VLAN within EVPN VPWS service */
+    uint16_t vpws_inner_vlan;
+    uint8_t  vpws_vlan_priority;
+    uint8_t  vpws_inner_vlan_priority;
+    bool     vpws_qinq;
+    bool     vpws_arp; /* reply to ARP, ND and ICMP echo within EVPN VPWS service */
+    bool     rx_control_word; /* expect PW control word (Ethernet over MPLS) */
     uint32_t ipv4_access_src_address; /* overwrite default IPv4 access address */
     ipv6addr_t ipv6_access_src_address; /* overwrite default IPv6 access address */
     uint32_t ipv4_network_address; /* overwrite default IPv4 network address */
@@ -131,6 +140,7 @@ typedef struct bbl_stream_args_
 #define STREAM_FLAG_ACCESS          (1 << 12)
 #define STREAM_FLAG_NETWORK         (1 << 13)
 #define STREAM_FLAG_A10NSP          (1 << 14)
+#define STREAM_FLAG_EVPN            (1 << 15)
 
 /**
  * In the architecture of BNG Blaster, every traffic stream 
@@ -238,6 +248,8 @@ typedef struct bbl_stream_
     uint32_t last_sync_wrong_session;
 
     uint32_t ldp_entry_version;
+    uint32_t evpn_entry_version;
+    uint32_t evpn_lookup_version;
 
     uint64_t reset_packets_tx;
     uint64_t reset_packets_rx;
@@ -269,6 +281,15 @@ typedef struct bbl_stream_
     bbl_stream_group_s *group;
 
     ldp_db_entry_s *ldp_entry;
+    bgp_evpn_entry_s *evpn_entry;
+
+    /* EVPN VPWS customer MAC learned from ARP, ND or ICMP echo requests
+     * (vpws-arp), used if destination-mac is not configured. The version
+     * is updated by the main thread and applied by the TX thread. */
+    bbl_stream_s *vpws_next; /* Next stream of same VPWS service */
+    uint8_t vpws_mac[ETH_ADDR_LEN];
+    uint32_t vpws_mac_version;
+    uint32_t vpws_mac_tx_version;
 } bbl_stream_s;
 
 bbl_stream_s *
@@ -294,6 +315,9 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now);
 
 bbl_stream_s *
 bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac);
+
+bool
+bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner);
 
 void
 bbl_stream_reset(bbl_stream_s *stream);

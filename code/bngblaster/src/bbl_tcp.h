@@ -34,8 +34,9 @@ typedef void (*bbl_tcp_error_fn)(void *arg, err_t err);
 typedef err_t (*bbl_tcp_poll_fn)(void *arg, struct tcp_pcb *tpcb);
 /* Fires for a listen socket right after a SYN creates a new pcb but before
  * the SYN-ACK is sent (lwIP tcp_ext_arg "passive_open" hook), so the pcb can
- * still be configured (e.g. TCP-AO/MD5 enabled) in time for the SYN-ACK. */
-typedef void (*bbl_tcp_pre_accept_fn)(struct tcp_pcb *new_pcb, void *arg);
+ * still be configured (e.g. TCP-AO/MD5 enabled) in time for the SYN-ACK.
+ * Returning false aborts the new connection. */
+typedef bool (*bbl_tcp_pre_accept_fn)(struct tcp_pcb *new_pcb, void *arg);
 
 typedef struct bbl_tcp_ctx_
 {

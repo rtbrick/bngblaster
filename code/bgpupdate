@@ -161,6 +161,309 @@ def label_type(label: int) -> int:
 
 
 # ==============================================================
+# EVPN VPWS (RFC 8214)
+# ==============================================================
+
+BGP_EVPN_ROUTE_AD = 1
+BGP_EVPN_L2_FLAG_BACKUP = 0x0001
+BGP_EVPN_L2_FLAG_PRIMARY = 0x0002
+BGP_EVPN_L2_FLAG_CW = 0x0004
+BGP_ENCAP_MPLS = 10
+
+
+def admin_value(value: str, index: int, rt: bool) -> bytes:
+    """Encode route distinguisher or route target value (RFC 4364, RFC 4360)
+    in the formats <asn>:<number>, <asn>L:<number> or <ipv4>:<number> with
+    the number incremented by index."""
+    try:
+        admin, number = value.rsplit(":", 1)
+        number = int(number) + index
+        if "." in admin:
+            if number > 0xffff:
+                raise ValueError
+            type_value = 1
+            data = socket.inet_aton(admin) + struct.pack("!H", number)
+        else:
+            four_octet = admin[-1] in "lL"
+            asn = int(admin[:-1] if four_octet else admin)
+            if four_octet or asn > 0xffff:
+                if asn > 0xffffffff or number > 0xffff:
+                    raise ValueError
+                type_value = 2
+                data = struct.pack("!IH", asn, number)
+            else:
+                if number > 0xffffffff:
+                    raise ValueError
+                type_value = 0
+                data = struct.pack("!HI", asn, number)
+    except (ValueError, OSError, IndexError, struct.error):
+        raise argparse.ArgumentTypeError("invalid value %s" % value)
+    if rt:
+        # transitive extended community with sub-type route target
+        return struct.pack("!BB", type_value, 0x02) + data
+    return struct.pack("!H", type_value) + data
+
+
+def int_range(minimum: int, maximum: int):
+    """Argument parser type for integers within range."""
+    def check(value: str) -> int:
+        try:
+            number = int(value)
+        except ValueError:
+            raise argparse.ArgumentTypeError("invalid integer %s" % value)
+        if number < minimum or number > maximum:
+            raise argparse.ArgumentTypeError("%s out of range %s - %s" % (number, minimum, maximum))
+        return number
+    return check
+
+
+def rd_type(value: str) -> str:
+    """Argument parser type for route distinguishers and targets."""
+    admin_value(value, 0, False)
+    return value
+
+
+def esi_type(value: str) -> bytes:
+    """Argument parser type for ethernet segment identifier."""
+    try:
+        esi = bytes(int(x, 16) for x in value.split(":"))
+    except ValueError:
+        esi = b""
+    if len(esi) != 10:
+        raise argparse.ArgumentTypeError("invalid ESI %s (10 bytes expected)" % value)
+    return esi
+
+
+def bgp_attr(flags: int, code: int, value: bytes) -> bytes:
+    """Encode BGP path attribute (extended length flag set if required)."""
+    flags &= ~0x10
+    if len(value) > 255:
+        return struct.pack("!BBH", flags | 0x10, code, len(value)) + value
+    return struct.pack("!BBB", flags, code, len(value)) + value
+
+
+def bgp_update(path_attr: bytes) -> bytes:
+    """Encode BGP update message without withdrawn routes and IPv4 NLRI."""
+    body = struct.pack("!H", 0) + struct.pack("!H", len(path_attr)) + path_attr
+    return b"\xff" * 16 + struct.pack("!HB", 19 + len(body), 2) + body
+
+
+def evpn_vpws(args, log):
+    """Generate EVPN VPWS per-EVI Ethernet A-D routes (route type 1)."""
+    if args.withdraw:
+        # Route targets and labels are not relevant for withdrawn routes.
+        if not args.rd:
+            log.error("EVPN VPWS requires --rd")
+            exit(1)
+        if args.label_base is None:
+            args.label_base = 0
+    elif not args.rd or not args.rt or args.label_base is None:
+        log.error("EVPN VPWS requires --rd, --rt and --label-base")
+        exit(1)
+    if args.stream_group_id or args.stream_tx_inner_label or args.stream_rx_label_num != 1:
+        log.error("--stream-group-id, --stream-tx-inner-label and --stream-rx-label-num are not supported for EVPN VPWS")
+        exit(1)
+    if args.service_id + args.service_num - 1 >= 0xffffffff:
+        log.error("EVPN VPWS service identifier out of range")
+        exit(1)
+    if args.stream_evpn_service_id is not None and args.stream_evpn_service_id + args.service_num - 1 >= 0xffffffff:
+        log.error("EVPN VPWS stream service identifier out of range")
+        exit(1)
+    # Verify that incremented route distinguishers and targets are valid.
+    last = args.service_num - 1
+    try:
+        admin_value(args.rd, last if args.rd_increment else 0, False)
+        for rt in args.rt:
+            admin_value(rt, last if args.rt_increment else 0, True)
+        if args.stream_evpn_rd:
+            admin_value(args.stream_evpn_rd, last if args.rd_increment else 0, False)
+    except argparse.ArgumentTypeError:
+        log.error("route distinguisher or target out of range for %s services" % args.service_num)
+        exit(1)
+    if args.stream_ce_vlan is not None and args.stream_ce_vlan + args.service_num - 1 > 4094:
+        log.error("CE VLAN out of range")
+        exit(1)
+    if args.stream_vpws_vlan is not None and not (1 <= args.stream_vpws_vlan and args.stream_vpws_vlan + args.service_num - 1 <= 4094):
+        log.error("customer VLAN out of range")
+        exit(1)
+    if args.stream_vpws_inner_vlan is not None and (args.stream_vpws_vlan is None or not 1 <= args.stream_vpws_inner_vlan <= 4094):
+        log.error("customer inner VLAN requires --stream-vpws-vlan and must be in range 1 - 4094")
+        exit(1)
+
+    next_hops = [args.next_hop_base + i for i in range(args.next_hop_num)]
+    l2_flags = 0
+    if args.control_word:
+        l2_flags |= BGP_EVPN_L2_FLAG_CW
+    if args.primary:
+        l2_flags |= BGP_EVPN_L2_FLAG_PRIMARY
+    if args.backup:
+        l2_flags |= BGP_EVPN_L2_FLAG_BACKUP
+
+    # Common path attributes
+    common_attr = bgp_attr(0x40, 1, b"\x00")  # ORIGIN IGP
+    if args.asn:
+        common_attr += bgp_attr(0x40, 2, struct.pack("!BB", 2, len(args.asn)) + b"".join(struct.pack("!I", a) for a in args.asn))
+    else:
+        common_attr += bgp_attr(0x40, 2, b"")
+    if args.med is not None:
+        common_attr += bgp_attr(0x80, 4, struct.pack("!I", args.med))
+    if args.local_pref is not None:
+        common_attr += bgp_attr(0x40, 5, struct.pack("!I", args.local_pref))
+
+    services = []
+    streams = []
+    if args.streams and args.stream_append:
+        try:
+            with open(args.streams) as json_file:
+                streams = json.load(json_file).get("streams", [])
+        except Exception:
+            pass
+
+    label_index = 0
+    for index in range(args.service_num):
+        service_id = args.service_id + index
+        label = args.label_base + label_index
+        label_index += 1
+        if label_index >= args.label_num or args.label_base + label_index > MPLS_LABEL_MAX:
+            label_index = 0
+        rd_index = index if args.rd_increment else 0
+        rt_index = index if args.rt_increment else 0
+        next_hop = next_hops[index % len(next_hops)]
+
+        # RD (8), ESI (10), Ethernet Tag (4), MPLS Label (3)
+        route = admin_value(args.rd, rd_index, False) + args.esi + struct.pack("!I", service_id) + struct.pack("!I", (label << 4) | 1)[1:]
+        nlri = struct.pack("!BB", BGP_EVPN_ROUTE_AD, len(route)) + route
+
+        ext_communities = b"".join(admin_value(rt, rt_index, True) for rt in args.rt)
+        # Layer 2 Attributes: control flags (2), L2 MTU (2), reserved (2)
+        ext_communities += struct.pack("!BBHHH", 0x06, 0x04, l2_flags, args.mtu, 0)
+        if args.encap_mpls:
+            ext_communities += struct.pack("!BBIH", 0x03, 0x0c, 0, BGP_ENCAP_MPLS)
+
+        services.append((next_hop, ext_communities, nlri))
+        log.debug("add EVPN VPWS service %s via %s label %s" % (service_id, next_hop, label))
+
+        if args.streams:
+            stream_name = "vpws-%s" % service_id
+            if args.stream_direction in ("downstream", "both") and args.stream_interface:
+                # BNG Blaster (PE) -> DUT -> CE using the label advertised by the DUT
+                if not args.stream_evpn_rd or not (args.stream_destination_mac or args.stream_vpws_arp):
+                    log.error("PE to CE streams require --stream-evpn-rd and --stream-destination-mac or --stream-vpws-arp")
+                    exit(1)
+                rd = admin_value(args.stream_evpn_rd, rd_index, False)
+                stream = {
+                    "name": "%s-pe-ce" % stream_name,
+                    "type": "ipv4",
+                    "direction": "downstream",
+                    "pps": args.stream_pps,
+                    "network-interface": args.stream_interface,
+                    "destination-ipv4-address": args.stream_ce_address,
+                    "network-ipv4-address": args.stream_pe_address,
+                    "bgp-evpn-rd": format_rd(rd),
+                    "bgp-evpn-ethernet-tag": (args.stream_evpn_service_id if args.stream_evpn_service_id is not None else args.service_id) + index
+                }
+                if args.stream_destination_mac:
+                    stream["destination-mac"] = args.stream_destination_mac
+                if args.stream_vpws_arp:
+                    stream["vpws-arp"] = True
+                if args.stream_vpws_vlan is not None:
+                    stream["vpws-vlan"] = args.stream_vpws_vlan + index
+                    if args.stream_vpws_inner_vlan is not None:
+                        stream["vpws-inner-vlan"] = args.stream_vpws_inner_vlan
+                    if args.stream_vpws_qinq:
+                        stream["vpws-qinq"] = True
+                if args.stream_tx_label:
+                    stream["tx-label1"] = args.stream_tx_label
+                streams.append(stream)
+            if args.stream_direction in ("upstream", "both") and args.stream_ce_interface:
+                # CE -> DUT -> BNG Blaster (PE) using the label advertised here
+                interface = args.stream_ce_interface
+                if args.stream_ce_vlan is not None:
+                    interface = "%s:%s" % (interface, args.stream_ce_vlan + index)
+                stream = {
+                    "name": "%s-ce-pe" % stream_name,
+                    "type": "ipv4",
+                    "direction": "downstream",
+                    "pps": args.stream_pps,
+                    "network-interface": interface,
+                    "destination-ipv4-address": args.stream_pe_address,
+                    "network-ipv4-address": args.stream_ce_address
+                }
+                if args.stream_rx_label:
+                    stream["rx-label1"] = args.stream_rx_label
+                    stream["rx-label2"] = label
+                else:
+                    stream["rx-label1"] = label
+                if args.control_word:
+                    stream["rx-control-word"] = True
+                streams.append(stream)
+
+    if args.streams:
+        log.info("write %s streams to file %s", len(streams), args.streams)
+        with open(args.streams, "w") as f:
+            json.dump({"streams": streams}, f, indent=4)
+
+    messages = []
+    # Pack consecutive services with equal next-hop and attributes into one update.
+    index = 0
+    while index < len(services):
+        next_hop, ext_communities, _ = services[index]
+        nh = next_hop.packed
+        attr = common_attr + bgp_attr(0xc0, 16, ext_communities)
+        fixed_len = 19 + 4 + len(attr) + 4 + 5 + len(nh)
+        if args.withdraw:
+            attr = b""
+            fixed_len = 19 + 4 + 4 + 3
+        nlri = b""
+        while index < len(services):
+            s_next_hop, s_ext_communities, s_nlri = services[index]
+            if s_next_hop != next_hop or s_ext_communities != ext_communities:
+                break
+            if fixed_len + len(nlri) + len(s_nlri) > BGP_MAXIMUM_MESSAGE_SIZE:
+                break
+            nlri += s_nlri
+            index += 1
+        if args.withdraw:
+            path_attr = bgp_attr(0x80, 15, struct.pack("!HB", 25, 70) + nlri)
+        else:
+            mp_reach = struct.pack("!HBB", 25, 70, len(nh)) + nh + b"\x00" + nlri
+            path_attr = attr + bgp_attr(0x80, 14, mp_reach)
+        messages.append(bgp_update(path_attr))
+
+    if args.end_of_rib:
+        # EVPN end-of-rib is an empty MP_UNREACH_NLRI (RFC 4724)
+        messages.append(bgp_update(bgp_attr(0x80, 15, struct.pack("!HB", 25, 70))))
+
+    file_flags = "ab" if args.append else "wb"
+    log.info("open file %s (%s)" % (args.file, "append" if args.append else "replace"))
+    with open(args.file, file_flags) as f:
+        for message in messages:
+            f.write(message)
+
+    if args.pcap:
+        log.info("create PCAP file %s" % args.pcap)
+        try:
+            wrpcap(args.pcap, [Ether()/IP()/TCP(sport=10000+i, dport=179, seq=1, flags='PA')/Raw(m) for i, m in enumerate(messages)])
+        except Exception as e:
+            log.error("failed to create PCAP file")
+            log.debug(e)
+
+    log.info("finished (%s services in %s updates)" % (len(services), len(messages)))
+
+
+def format_rd(rd: bytes) -> str:
+    """Format route distinguisher as used by BNG Blaster (bgp-evpn-rd)."""
+    rd_type_value = struct.unpack("!H", rd[:2])[0]
+    if rd_type_value == 0:
+        asn, number = struct.unpack("!HI", rd[2:])
+        return "%s:%s" % (asn, number)
+    if rd_type_value == 1:
+        return "%s:%s" % (socket.inet_ntoa(rd[2:6]), struct.unpack("!H", rd[6:])[0])
+    asn, number = struct.unpack("!IH", rd[2:])
+    return "%s%s:%s" % (asn, "" if asn > 0xffff else "L", number)
+
+
+# ==============================================================
 # MAIN
 # ==============================================================
 
@@ -170,7 +473,7 @@ def main():
     parser.add_argument('-a', '--asn', type=int, default=[], action='append', help='autonomous system number')
     parser.add_argument('-n', '--next-hop-base', metavar='ADDRESS', type=ipaddress.ip_address, required=True, help='next-hop base address (IPv4 or IPv6)')
     parser.add_argument('-N', '--next-hop-num', metavar='N', type=int, default=1, help='next-hop count')
-    parser.add_argument('-p', '--prefix-base', metavar='PREFIX', type=ipaddress.ip_network, required=True, help='prefix base network (IPv4 or IPv6)')
+    parser.add_argument('-p', '--prefix-base', metavar='PREFIX', type=ipaddress.ip_network, help='prefix base network (IPv4 or IPv6)')
     parser.add_argument('-P', '--prefix-num', metavar='N', type=int, default=1, help='prefix count')
     parser.add_argument('-m', '--label-base', metavar='LABEL', type=label_type, help='label base')
     parser.add_argument('-M', '--label-num', metavar='N', type=int, default=1, help='label count')
@@ -192,10 +495,43 @@ def main():
     parser.add_argument('--append', action="store_true", help="append to file if exist")
     parser.add_argument('--pcap', metavar='FILE', type=str, help="write BGP updates to PCAP file")
     parser.add_argument('--log-level', type=str, default='info', choices=LOG_LEVELS.keys(), help='logging Level')
+    evpn = parser.add_argument_group('EVPN VPWS (E-LINE)')
+    evpn.add_argument('--evpn-vpws', action="store_true", help="generate EVPN VPWS per-EVI Ethernet A-D routes (route type 1)")
+    evpn.add_argument('--rd', metavar='RD', type=rd_type, help="route distinguisher (ASN:N, ASNL:N or IPv4:N)")
+    evpn.add_argument('--rd-increment', action="store_true", help="increment route distinguisher per service")
+    evpn.add_argument('--rt', metavar='RT', type=rd_type, default=[], action='append', help="route target (ASN:N, ASNL:N or IPv4:N)")
+    evpn.add_argument('--rt-increment', action="store_true", help="increment route targets per service")
+    evpn.add_argument('--esi', metavar='ESI', type=esi_type, default=bytes(10), help="ethernet segment identifier (default 0)")
+    evpn.add_argument('--service-id', metavar='ID', type=int_range(0, 0xfffffffe), default=1, help="local VPWS service identifier base (ethernet tag)")
+    evpn.add_argument('--service-num', metavar='N', type=int_range(1, 0xffffffff), default=1, help="VPWS service count")
+    evpn.add_argument('--mtu', type=int_range(0, 0xffff), default=0, help="L2 MTU (default 0)")
+    evpn.add_argument('--control-word', action="store_true", help="request control word (C flag)")
+    evpn.add_argument('--primary', action="store_true", help="set primary flag (P flag)")
+    evpn.add_argument('--backup', action="store_true", help="set backup flag (B flag)")
+    evpn.add_argument('--encap-mpls', action="store_true", help="add MPLS encapsulation extended community")
+    evpn.add_argument('--stream-ce-interface', metavar='IFACE', type=str, help="stream CE interface (CE to PE streams)")
+    evpn.add_argument('--stream-ce-vlan', metavar='VLAN', type=int_range(1, 4094), help="stream CE interface VLAN base (incremented per service)")
+    evpn.add_argument('--stream-vpws-vlan', metavar='VLAN', type=int_range(1, 4094), help="customer VLAN within VPWS base (incremented per service, PE to CE streams)")
+    evpn.add_argument('--stream-vpws-inner-vlan', metavar='VLAN', type=int_range(1, 4094), help="customer inner VLAN within VPWS (PE to CE streams)")
+    evpn.add_argument('--stream-vpws-qinq', action="store_true", help="customer outer VLAN ethertype 0x88a8 (PE to CE streams)")
+    evpn.add_argument('--stream-vpws-arp', action="store_true", help="reply to ARP, ND and ICMP echo and learn CE MAC (PE to CE streams)")
+    evpn.add_argument('--stream-evpn-rd', metavar='RD', type=rd_type, help="route distinguisher of DUT routes (PE to CE streams)")
+    evpn.add_argument('--stream-evpn-service-id', metavar='ID', type=int_range(0, 0xfffffffe), help="DUT local VPWS service identifier base (default --service-id)")
+    evpn.add_argument('--stream-destination-mac', metavar='MAC', type=str, help="CE interface MAC address (PE to CE streams)")
+    evpn.add_argument('--stream-pe-address', metavar='ADDRESS', type=str, default="192.0.2.1", help="PE side stream IPv4 address")
+    evpn.add_argument('--stream-ce-address', metavar='ADDRESS', type=str, default="192.0.2.2", help="CE side stream IPv4 address")
     args = parser.parse_args()
 
     # init logging
     log = init_logging(args.log_level)
+
+    if args.evpn_vpws:
+        evpn_vpws(args, log)
+        return
+
+    if not args.prefix_base:
+        log.error("prefix base (-p) is required")
+        exit(1)
 
     if args.label_base:
         log.info("init %s labeled IPv%s prefixes" % (args.prefix_num, args.prefix_base.version))

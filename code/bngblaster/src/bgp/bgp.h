@@ -16,6 +16,8 @@
 #include "bgp_message.h"
 #include "bgp_receive.h"
 #include "bgp_raw_update.h"
+#include "bgp_evpn.h"
+#include "bgp_rib.h"
 #include "bgp_ctrl.h"
 
 bool
