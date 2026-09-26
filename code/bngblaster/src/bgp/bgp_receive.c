@@ -88,25 +88,34 @@ static bool
 bgp_capability(bgp_session_s *session, uint8_t *start, uint8_t length)
 {
     uint8_t cap_code, cap_length;
+    uint16_t idx = 0;
 
+    /* RFC 5492: a Capabilities parameter may carry multiple capabilities. */
     if(length < 2) {
         return false;
     }
-    cap_code = read_be_uint(start, 1);
-    cap_length = read_be_uint(start+1, 1);
-    if(cap_length+2 > length) {
-        return false;
-    }
-    switch(cap_code) {
-        case BGP_CAPABILITY_4_BYTE_AS:
-            if(cap_length != 4) {
-                return false;
-            }
-            session->peer.as = read_be_uint(start+2, 4);
-            session->peer.as4 = true;
-            break;
-        default:
-            break;
+    while(idx < length) {
+        if(idx + 2 > length) {
+            return false;
+        }
+        cap_code = read_be_uint(start+idx, 1);
+        cap_length = read_be_uint(start+idx+1, 1);
+        idx += 2;
+        if(idx + cap_length > length) {
+            return false;
+        }
+        switch(cap_code) {
+            case BGP_CAPABILITY_4_BYTE_AS:
+                if(cap_length != 4) {
+                    return false;
+                }
+                session->peer.as = read_be_uint(start+idx, 4);
+                session->peer.as4 = true;
+                break;
+            default:
+                break;
+        }
+        idx += cap_length;
     }
     return true;
 }
@@ -114,8 +123,8 @@ bgp_capability(bgp_session_s *session, uint8_t *start, uint8_t length)
 bool
 bgp_open_parse(bgp_session_s *session, uint8_t *start, uint16_t length)
 {
-    uint8_t opt_length = 0;
-    uint8_t opt_idx = 29;
+    uint16_t opt_end;
+    uint16_t opt_idx = 29;
     uint8_t opt_param_type;
     uint8_t opt_param_length;
 
@@ -127,15 +136,18 @@ bgp_open_parse(bgp_session_s *session, uint8_t *start, uint16_t length)
     session->peer.id = read_be_uint(start+24, 4);
 
     /* Decode optional parameters. */
-    opt_length = read_be_uint(start+28, 1);
-    if((opt_length + opt_idx) > length) {
+    opt_end = opt_idx + read_be_uint(start+28, 1);
+    if(opt_end > length) {
         return false;
     }
-    while((opt_idx+2) <= length) {
+    while(opt_idx < opt_end) {
+        if(opt_idx+2 > opt_end) {
+            return false;
+        }
         opt_param_type = read_be_uint(start+opt_idx, 1);
         opt_param_length = read_be_uint(start+opt_idx+1, 1);
         opt_idx+=2;
-        if(opt_idx+opt_param_length > length) {
+        if(opt_idx+opt_param_length > opt_end) {
             return false;
         }
         if(opt_param_type == BGP_CAPABILITY) {

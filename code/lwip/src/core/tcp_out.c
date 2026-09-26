@@ -2237,7 +2237,8 @@ tcp_zero_window_probe(struct tcp_pcb *pcb)
     TCPH_FLAGS_SET(tcphdr, TCP_ACK | TCP_FIN);
   } else {
     /* Data segment, copy in one byte from the head of the unacked queue */
-    char *d = ((char *)p->payload + TCP_HLEN);
+    /* BNG Blaster: data follows hook options (e.g. TCP-AO/MD5) */
+    char *d = ((char *)p->payload + TCP_HLEN + optlen);
     /* Depending on whether the segment has already been sent (unacked) or not
        (unsent), seg->p->payload points to the IP header or TCP header.
        Ensure we copy the first TCP data byte: */

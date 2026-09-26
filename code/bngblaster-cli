@@ -99,8 +99,18 @@ def main():
     data = send_request(socket_path, request)
 
     if sys.argv[2] == "commands":
-        for cmd in data["commands"]: 
-            print("%s %s" % (cmd["command"], str(cmd["arguments"]).replace("', '", "|").replace("'", "")))
+        for cmd in data["commands"]:
+            arguments = []
+            for arg in cmd.get("arguments", []):
+                if isinstance(arg, dict):
+                    arg_type = arg["type"]
+                    if "sub-type" in arg:
+                        arg_type = "%s<%s>" % (arg_type, arg["sub-type"])
+                    arguments.append("%s:%s" % (arg["name"], arg_type))
+                else:
+                    # older versions return plain argument names
+                    arguments.append(str(arg))
+            print("%s [%s]" % (cmd["command"], "|".join(arguments)))
     elif sys.argv[2] == "interface-topology":
         for interface in data["interfaces"]:
             print("interface: %s" % interface["name"])

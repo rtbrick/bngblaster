@@ -555,6 +555,29 @@ bbl_session_reconnect_job(timer_s *timer) {
 }
 
 /**
+ * bbl_session_pppol2tp_release
+ *
+ * Release the L2TP session (send CDN) or remove the session
+ * from the pending queue of a not yet established LAC tunnel.
+ *
+ * @param session session
+ */
+static void
+bbl_session_pppol2tp_release(bbl_session_s *session)
+{
+    bbl_l2tp_session_s *l2tp_session = session->l2tp_session;
+
+    if(l2tp_session) {
+        bbl_l2tp_send(l2tp_session->tunnel, l2tp_session, L2TP_MESSAGE_CDN);
+        bbl_l2tp_session_delete(l2tp_session);
+    } else if(session->l2tp_tunnel) {
+        CIRCLEQ_REMOVE(&session->l2tp_tunnel->pending_session_qhead,
+                       session, session_l2tp_qnode);
+        session->l2tp_tunnel = NULL;
+    }
+}
+
+/**
  * bbl_session_update_state
  *
  * This function allows to change the state of a session including
@@ -568,6 +591,12 @@ void
 bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
 {
     session_state_t old_state = session->session_state;
+
+    if(new_state == BBL_TERMINATING && session->access_type == ACCESS_TYPE_PPPOL2TP) {
+        /* PPPoL2TP has no discovery stage (PADT), the session
+         * is terminated together with the L2TP session (CDN). */
+        new_state = BBL_TERMINATED;
+    }
 
     if(old_state != new_state) {
         /* State has changed ... */
@@ -622,6 +651,9 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             /* Increment sessions terminated if new state is terminated */
             g_ctx->sessions_terminated++;
             assert(g_ctx->sessions_terminated <= g_ctx->sessions);
+            if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
+                bbl_session_pppol2tp_release(session);
+            }
             if(session->dhcp_established) {
                 session->dhcp_established = false;
                 g_ctx->dhcp_established--;
@@ -728,29 +760,26 @@ bbl_session_clear(bbl_session_s *session)
 
     if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
         switch(session->session_state) {
-            case BBL_IDLE:
-                bbl_session_update_state(session, BBL_TERMINATED);
-                break;
-            case BBL_PPP_TERMINATING:
-            case BBL_TERMINATING:
             case BBL_TERMINATED:
                 break;
-            default:
-                bbl_session_update_state(session, BBL_PPP_TERMINATING);
+            case BBL_PPP_TERMINATING:
                 if(session->l2tp_session) {
-                    bbl_l2tp_send(session->l2tp_session->tunnel,
-                                  session->l2tp_session, L2TP_MESSAGE_CDN);
-                    bbl_l2tp_session_delete(session->l2tp_session);
-                } else {
-                    if(session->l2tp_tunnel) {
-                        /* Still queued on a tunnel waiting to be established. */
-                        CIRCLEQ_REMOVE(&session->l2tp_tunnel->pending_session_qhead,
-                                       session, session_l2tp_qnode);
-                        session->l2tp_tunnel = NULL;
-                    }
-                    bbl_session_update_state(session, BBL_TERMINATED);
+                    /* Retry LCP terminate-request, the session is
+                     * terminated after max retries (bbl_lcp_timeout)
+                     * or terminate-ack received. */
+                    session->lcp_request_code = PPP_CODE_TERM_REQUEST;
+                    session->lcp_options_len = 0;
+                    session->lcp_state = BBL_PPP_TERMINATE;
+                    session->send_requests |= BBL_SEND_LCP_REQUEST;
+                    bbl_session_tx_qnode_insert(session);
+                    break;
                 }
-                return;
+                /* fall through */
+            default:
+                /* The L2TP session is released (CDN) with
+                 * the transition to state terminated. */
+                bbl_session_update_state(session, BBL_TERMINATED);
+                break;
         }
     } else if(session->access_type == ACCESS_TYPE_PPPOE) {
         switch(session->session_state) {

@@ -142,6 +142,11 @@ typedef struct bbl_stream_args_
 #define STREAM_FLAG_A10NSP          (1 << 14)
 #define STREAM_FLAG_EVPN            (1 << 15)
 
+/* RX interface type flags (rx_flags), exactly one is set if
+ * the RX interface union below is valid. The type never changes
+ * once set, only the interface. */
+#define STREAM_FLAG_RX_INTERFACE    (STREAM_FLAG_ACCESS|STREAM_FLAG_NETWORK|STREAM_FLAG_A10NSP)
+
 /**
  * In the architecture of BNG Blaster, every traffic stream 
  * corresponds to one or two flows, namely upstream and downstream. 
@@ -195,7 +200,8 @@ typedef struct bbl_stream_
     uint64_t rx_min_delay_us;
     uint64_t rx_max_delay_us;
     time_t   rx_last_epoch;
-    union {
+    union { /* Discriminated by rx_flags & STREAM_FLAG_RX_INTERFACE */
+        void *rx_interface;
         bbl_access_interface_s *rx_access_interface;
         bbl_network_interface_s *rx_network_interface;
         bbl_a10nsp_interface_s *rx_a10nsp_interface;
@@ -360,5 +366,56 @@ bbl_stream_ctrl_stop_verified(int fd, uint32_t session_id, json_t *arguments);
 
 int
 bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+/**
+ * Set RX interface and type (RX thread).
+ *
+ * The RX interface type is fixed with the first received packet,
+ * only the interface can change to another one of the same type.
+ * A change of the type is unexpected and ignored.
+ *
+ * @param stream stream
+ * @param type STREAM_FLAG_ACCESS, STREAM_FLAG_NETWORK or STREAM_FLAG_A10NSP
+ * @param interface access, network or a10nsp interface
+ * @param now timestamp (seconds)
+ */
+static inline void
+bbl_stream_rx_interface_set(bbl_stream_s *stream, uint16_t type, void *interface, time_t now)
+{
+    uint16_t flags;
+    if(likely(stream->rx_interface == interface)) {
+        return;
+    }
+    flags = stream->rx_flags;
+    if(!(flags & STREAM_FLAG_RX_INTERFACE)) {
+        /* Publish pointer before type (see bbl_stream_rx_interface_get). */
+        __atomic_store_n(&stream->rx_interface, interface, __ATOMIC_RELEASE);
+        __atomic_store_n(&stream->rx_flags, flags|type, __ATOMIC_RELEASE);
+    } else if(flags & type) {
+        /* RX interface has changed! */
+        stream->rx_interface_changes++;
+        stream->rx_interface_changed_epoch = now;
+        __atomic_store_n(&stream->rx_interface, interface, __ATOMIC_RELEASE);
+    }
+}
+
+/**
+ * Get RX interface and type (any thread).
+ *
+ * @param stream stream
+ * @param interface returns RX interface or NULL
+ * @return RX interface type flag or 0
+ */
+static inline uint16_t
+bbl_stream_rx_interface_get(bbl_stream_s *stream, void **interface)
+{
+    uint16_t type = __atomic_load_n(&stream->rx_flags, __ATOMIC_ACQUIRE) & STREAM_FLAG_RX_INTERFACE;
+    if(!type) {
+        *interface = NULL;
+        return 0;
+    }
+    *interface = __atomic_load_n(&stream->rx_interface, __ATOMIC_ACQUIRE);
+    return type;
+}
 
 #endif

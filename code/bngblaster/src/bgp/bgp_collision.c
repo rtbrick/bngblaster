@@ -19,7 +19,6 @@
 
 static void bgp_collision_receive_cb(void *arg, uint8_t *buf, uint16_t len);
 static void bgp_collision_error_cb(void *arg, err_t err);
-static void bgp_session_collision_teardown(bgp_session_s *session);
 static void bgp_session_collision_promote(bgp_session_s *session, bool trigger_is_primary);
 
 /**
@@ -204,6 +203,7 @@ bgp_collision_receive_cb(void *arg, uint8_t *buf, uint16_t len)
     uint16_t length;
     uint8_t type;
     uint8_t *start;
+    __typeof__(session->peer) primary_peer;
 
     if(!collision) {
         /* Already resolved (freed) by the other leg's own receive/error
@@ -247,11 +247,18 @@ bgp_collision_receive_cb(void *arg, uint8_t *buf, uint16_t len)
         bgp_session_collision_free(session);
         return;
     }
+    /* bgp_open_parse() decodes into session->peer, which still belongs to
+     * the primary connection unless this leg wins. */
+    primary_peer = session->peer;
     if(!bgp_open_parse(session, start, length)) {
+        session->peer = primary_peer;
         bgp_session_collision_free(session);
         return;
     }
-    bgp_session_collision_resolve(session, /*trigger_is_primary=*/false);
+    buffer->start_idx += length;
+    if(bgp_session_collision_resolve(session, /*trigger_is_primary=*/false)) {
+        session->peer = primary_peer;
+    }
 }
 
 /**
@@ -259,7 +266,10 @@ bgp_collision_receive_cb(void *arg, uint8_t *buf, uint16_t len)
  *
  * The RFC 4271 6.8 algorithm: compares BGP Identifiers to decide whether
  * the primary (session->tcpc) or the collision leg survives, then tears
- * down or promotes accordingly.
+ * down or promotes accordingly. The connection initiated by the speaker
+ * with the higher BGP Identifier survives, i.e. if the local ID is lower
+ * the locally initiated (active) connection is closed, otherwise the
+ * peer initiated one. An Established primary always survives.
  *
  * config->id is a raw network-byte-order value (from inet_pton); peer.id is
  * already host byte order (populated via read_be_uint() in bgp_open_parse()) -
@@ -286,19 +296,20 @@ bgp_session_collision_resolve(bgp_session_s *session, bool trigger_is_primary)
     local_id = be32toh(session->config->id);
     peer_id = session->peer.id;
 
-    if(local_id == peer_id) {
+    if(session->state == BGP_ESTABLISHED) {
+        primary_survives = true;
+    } else if(local_id == peer_id) {
         LOG(BGP, "BGP (%s %s - %s) collision resolution: duplicate BGP Identifier, keeping existing connection\n",
             session->interface->name,
             session->local_address_str,
             session->peer_address_str);
         primary_survives = true;
-    } else if(trigger_is_primary) {
-        /* The collision leg is "existing", the primary is "new" (it just
-         * delivered this OPEN): local ID lower -> new (primary) wins. */
-        primary_survives = (local_id < peer_id);
+    } else if(session->active == session->collision->active) {
+        /* Both legs initiated by the same side, the ID comparison
+         * cannot distinguish them: keep the existing connection. */
+        primary_survives = true;
     } else {
-        /* Mirror image: primary is "existing", collision leg is "new". */
-        primary_survives = (local_id > peer_id);
+        primary_survives = (session->active == (local_id > peer_id));
     }
 
     if(primary_survives) {
@@ -309,9 +320,20 @@ bgp_session_collision_resolve(bgp_session_s *session, bool trigger_is_primary)
     return primary_survives;
 }
 
-static void
+/**
+ * bgp_session_collision_teardown
+ *
+ * Close the collision leg (if any) with a NOTIFICATION Cease (Connection
+ * Collision Resolution), keeping the primary connection.
+ *
+ * @param session BGP session
+ */
+void
 bgp_session_collision_teardown(bgp_session_s *session)
 {
+    if(!session->collision) {
+        return;
+    }
     LOG(BGP, "BGP (%s %s - %s) collision resolution: keeping existing connection\n",
         session->interface->name,
         session->local_address_str,
@@ -386,15 +408,28 @@ bgp_session_collision_promote(bgp_session_s *session, bool trigger_is_primary)
     collision->tcpc = NULL;
     bgp_session_collision_free(session);
 
-    bgp_session_state_change(session, BGP_OPENCONFIRM);
+    /* The promoted connection has already sent its OPEN, so its FSM is in
+     * OpenSent. Set this directly, as a regular state change would send
+     * another OPEN (or nothing, if the state is unchanged). */
+    session->state = BGP_OPENSENT;
 
     if(trigger_is_primary) {
-        /* Called from within bgp_open()'s processing of the old primary's
-         * (now-stale) buffer: signal the caller to stop immediately rather
-         * than falling through to arithmetic on a buffer that no longer
-         * corresponds to session->tcpc. */
+        /* The OPEN that triggered this arrived on the old primary; the
+         * promoted leg has not received the peer's OPEN yet, so wait for
+         * it in OpenSent. Called from within bgp_open()'s processing of
+         * the old primary's (now-stale) buffer: signal the caller to stop
+         * immediately rather than falling through to arithmetic on a
+         * buffer that no longer corresponds to session->tcpc. */
+        bgp_restart_hold_timer(session, BGP_OPENSENT_HOLD_TIME);
         session->collision_promoted = true;
-    } else if(leftover) {
+        return;
+    }
+
+    /* The promoted leg delivered the OPEN: move to OpenConfirm, which
+     * sends our KEEPALIVE on it. */
+    bgp_session_state_change(session, BGP_OPENCONFIRM);
+    bgp_restart_hold_timer(session, session->config->hold_time);
+    if(leftover) {
         /* Bytes already sitting in the winning buffer: process them now. */
         bgp_receive_cb(session, NULL, 0);
     }

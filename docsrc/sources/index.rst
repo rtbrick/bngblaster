@@ -14,7 +14,7 @@ the evaluation of network functionalities at large. Contrary to its nomenclature
 the BNG Blaster isn't restricted only to BNG (Broadband Network Gateway) testing.
 
 It simulates a massive number of PPPoE and IPoE (DHCP) subscribers, encompassing 
-IPTV and L2TP (LNS). Additionally, it supports all common routing protocols such 
+IPTV and L2TP (LAC and LNS). Additionally, it supports all common routing protocols such 
 as IS-IS, OSPF, LDP and BGP. This allows for comprehensive testing of both BNG 
 and non-BNG routers, enabling end-to-end evaluations.
 
@@ -39,12 +39,14 @@ RtBrick and many more.
         * All protocols implemented in user space and optimized for performance
         * Automation-friendly API
         * Optional DPDK support (experimental)
+        * Optional AF_XDP support
         * ...
 
    .. tab:: Access Protocols
 
         * Emulate massive PPPoE and IPoE (DHCP) clients
         * Emulate L2TPv2 LNS servers with different behaviors
+        * Emulate L2TPv2 LAC clients to test LNS devices
         * Emulate A10NSP interfaces for L2BSA testing
         * Included multicast and IPTV test suite
         * Verify legal interception (LI) traffic
@@ -58,6 +60,8 @@ RtBrick and many more.
         * Emulate ISIS and OSPFv2/3 topologies with thousands of nodes 
         * Support for ISIS and OSPFv2/3 Segment Routing
         * Support for LDP and traffic streams with dynamically resolved labels
+        * Support for BGP EVPN
+        * Support for BGP TCP authentication (TCP-AO and MD5)
         * Support all routing protocols with link aggregation (LAG)
         * ...
 
@@ -66,6 +70,7 @@ RtBrick and many more.
         * Generate and track millions of traffic flows
         * Verify your QoS configuration 
         * Verify all forwarding states
+        * Verify EVPN VPWS services
         * Measure convergence times and loss
         * Capture traffic
         * Emulate HTTP clients and servers

@@ -137,23 +137,19 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
             bbl.timestamp.tv_sec = *(uint32_t*)(bbl_start+40);
             bbl.timestamp.tv_nsec = *(uint32_t*)(bbl_start+44);
 
-            eth->bbl = &bbl;
-            eth->length = fragment->max_length;
-
-            if(access_interface) {
-                stream = bbl_stream_rx(eth, NULL);
-                if(stream && stream->rx_access_interface == NULL) {
-                    stream->rx_access_interface = access_interface;
-                }
-            } else if (network_interface) {
-                stream = bbl_stream_rx(eth, network_interface->mac);
-                if(stream && stream->rx_network_interface != network_interface) {
-                    if(stream->rx_network_interface) {
-                        /* RX interface has changed! */
-                        stream->rx_interface_changes++;
-                        stream->rx_interface_changed_epoch = eth->timestamp.tv_sec;
+            if(eth) {
+                eth->bbl = &bbl;
+                eth->length = fragment->max_length;
+                if(access_interface) {
+                    stream = bbl_stream_rx(eth, NULL);
+                    if(stream) {
+                        bbl_stream_rx_interface_set(stream, STREAM_FLAG_ACCESS, access_interface, timestamp);
                     }
-                    stream->rx_network_interface = network_interface;
+                } else if(network_interface) {
+                    stream = bbl_stream_rx(eth, network_interface->mac);
+                    if(stream) {
+                        bbl_stream_rx_interface_set(stream, STREAM_FLAG_NETWORK, network_interface, timestamp);
+                    }
                 }
             }
             if(stream) {

@@ -19,6 +19,9 @@ bool
 bgp_session_collision_resolve(bgp_session_s *session, bool trigger_is_primary);
 
 void
+bgp_session_collision_teardown(bgp_session_s *session);
+
+void
 bgp_session_collision_free(bgp_session_s *session);
 
 #endif

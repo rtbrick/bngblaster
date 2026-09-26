@@ -1705,13 +1705,19 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         bgp_config->ttl = json_number_value(value);
     }
 
-    if(json_unpack(bgp, "{s:s}", "tcp-ao-key", &tcp_ao_key_str) == 0 &&
-       json_unpack(bgp, "{s:s}", "tcp-ao-algorithm", &s) == 0 &&
+    /* The key is ignored without algorithm (auth can be toggled via
+     * algorithm only), but an algorithm without key is rejected instead
+     * of silently running the session without authentication. */
+    if(json_unpack(bgp, "{s:s}", "tcp-ao-algorithm", &s) == 0 &&
        strcmp(s, "none") != 0) {
         uint16_t min_key_len;
 
         if(!bbl_tcp_ao_algo_from_string(s, &bgp_config->tcp_ao_algo)) {
             fprintf(stderr, "JSON config error: Invalid value for bgp->tcp-ao-algorithm\n");
+            return false;
+        }
+        if(json_unpack(bgp, "{s:s}", "tcp-ao-key", &tcp_ao_key_str) != 0) {
+            fprintf(stderr, "JSON config error: bgp->tcp-ao-key is mandatory for bgp->tcp-ao-algorithm %s\n", s);
             return false;
         }
 

@@ -13,6 +13,7 @@ endif()
 message("Compiler: ${CMAKE_C_COMPILER_ID} Version: ${CMAKE_C_COMPILER_VERSION}")
 
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
+option(BNGBLASTER_INTEGRATION_TESTS "Add integration tests (requires root, pytest and GoBGP)" OFF)
 option(BNGBLASTER_DPDK "Build with dpdk support" OFF)
 option(BNGBLASTER_AF_XDP "Build with AF_XDP support" OFF)
 option(BNGBLASTER_TIMER_LOGGING "Build with timer logging support" OFF)
@@ -45,12 +46,21 @@ endif()
 # libdict will be statically linked
 find_library(libdict NAMES libdict.a REQUIRED)
 
-if(BNGBLASTER_TESTS)
+if(BNGBLASTER_TESTS OR BNGBLASTER_INTEGRATION_TESTS)
     include(CTest)
 endif()
 add_subdirectory(code)
 
-install(FILES schemas/bngblaster-config.json DESTINATION /etc/bngblaster)
+if(BNGBLASTER_INTEGRATION_TESTS)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME IntegrationTests
+             COMMAND ${Python3_EXECUTABLE} -m pytest -v ${CMAKE_SOURCE_DIR}/test/integration)
+    set_tests_properties(IntegrationTests PROPERTIES
+                         LABELS integration
+                         ENVIRONMENT "BNGBLASTER_BIN=$<TARGET_FILE:bngblaster>")
+endif()
+
+install(FILES schemas/bngblaster-config.json DESTINATION share/bngblaster)
 install(FILES packaging/bash-completion/bngblaster-cli DESTINATION share/bash-completion/completions)
 
 # cpack

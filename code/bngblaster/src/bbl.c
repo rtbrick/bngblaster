@@ -12,6 +12,9 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/syscall.h>
+#include <linux/capability.h>
 #include "bbl.h"
 #include "bbl_pcap.h"
 #include "bbl_interactive.h"
@@ -426,6 +429,51 @@ logfile_fflush_job(timer_s *timer)
 }
 
 /**
+ * Lock all current and future memory pages into RAM for
+ * DPDK and AF_XDP I/O modes, where a page fault in a RX/TX
+ * thread (e.g. first touch of a newly allocated page while
+ * traffic is running) can cause packet loss.
+ *
+ * With MCL_FUTURE, all allocations beyond RLIMIT_MEMLOCK fail
+ * without CAP_IPC_LOCK. Therefore memory is locked only if
+ * the limit is unlimited or the process has CAP_IPC_LOCK.
+ */
+static void
+bbl_mlockall(void)
+{
+    bbl_link_config_s *link_config = g_ctx->config.link_config;
+    bool required = false;
+    struct rlimit rlim;
+    struct __user_cap_header_struct cap_header = { _LINUX_CAPABILITY_VERSION_3, 0 };
+    struct __user_cap_data_struct cap_data[_LINUX_CAPABILITY_U32S_3] = {0};
+    bool privileged = false;
+
+    if(g_ctx->config.io_mode == IO_MODE_DPDK || g_ctx->config.io_mode == IO_MODE_AF_XDP) {
+        required = true;
+    }
+    while(link_config && !required) {
+        if(link_config->io_mode == IO_MODE_DPDK || link_config->io_mode == IO_MODE_AF_XDP) {
+            required = true;
+        }
+        link_config = link_config->next;
+    }
+    if(!required) return;
+
+    if(syscall(SYS_capget, &cap_header, cap_data) == 0) {
+        privileged = cap_data[CAP_TO_INDEX(CAP_IPC_LOCK)].effective & CAP_TO_MASK(CAP_IPC_LOCK);
+    }
+    if(!privileged) {
+        if(getrlimit(RLIMIT_MEMLOCK, &rlim) != 0 || rlim.rlim_cur != RLIM_INFINITY) {
+            LOG_NOARG(INFO, "Skip locking memory pages (requires CAP_IPC_LOCK or unlimited RLIMIT_MEMLOCK)\n");
+            return;
+        }
+    }
+    if(mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+        LOG(ERROR, "Failed to lock memory pages (%s)\n", strerror(errno));
+    }
+}
+
+/**
  * @brief BNG BLASTER MAIN FUNCTION
  *
  * @param argc number of argument values
@@ -460,17 +508,6 @@ main(int argc, char *argv[])
     memset(log_id, 0, sizeof(struct log_id_) * LOG_ID_MAX);
     log_id[INFO].enable = true;
     log_id[ERROR].enable = true;
-
-    /* Lock all current and future memory pages into RAM. Without this, the
-     * first touch of a newly faulted-in page (e.g. hugepage-backed mbuf
-     * pools, or any allocation made while traffic is already running) can
-     * stall a time-critical RX/TX thread for the duration of the page
-     * fault. Not fatal if the process lacks the required privileges
-     * (CAP_IPC_LOCK/root) - this protection just isn't available then. */
-    if(mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
-        LOG(ERROR, "Failed to lock memory pages (%s), consider running as root or granting CAP_IPC_LOCK\n",
-            strerror(errno));
-    }
 
     /* Seed pseudo random generator. */
     srand(time(0));
@@ -580,6 +617,9 @@ main(int argc, char *argv[])
         }
     }
     g_monkey = g_ctx->config.monkey_autostart;
+
+    /* Lock memory pages for DPDK and AF_XDP. */
+    bbl_mlockall();
 
     if(username) g_ctx->config.username = username;
     if(password) g_ctx->config.password = password;

@@ -261,8 +261,13 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                 session->dhcp_server_identifier = dhcp->server_identifier;
                 memcpy(session->dhcp_server_mac, eth ? eth->src : session->server_mac, ETH_ADDR_LEN);
                 session->dhcp_lease_time = dhcp->lease_time;
-                session->dhcp_lease_timestamp.tv_sec = eth ? eth->timestamp.tv_sec : 0;
-                session->dhcp_lease_timestamp.tv_nsec = eth ? eth->timestamp.tv_nsec : 0;
+                if(eth) {
+                    session->dhcp_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
+                    session->dhcp_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
+                } else {
+                    /* PPPoL2TP (LAC) has no ethernet header. */
+                    clock_gettime(CLOCK_MONOTONIC, &session->dhcp_lease_timestamp);
+                }
                 if(!(session->dhcp_address && session->dhcp_server_identifier && session->dhcp_lease_time)) {
                     LOG(ERROR, "DHCP (ID: %u) Invalid DHCP-Offer!\n", session->session_id);
                     bbl_dhcp_restart(session);
@@ -283,8 +288,13 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                 session->dhcp_server_identifier = dhcp->server_identifier;
                 memcpy(session->dhcp_server_mac, eth ? eth->src : session->server_mac, ETH_ADDR_LEN);
                 session->dhcp_lease_time = dhcp->lease_time;
-                session->dhcp_lease_timestamp.tv_sec = eth ? eth->timestamp.tv_sec : 0;
-                session->dhcp_lease_timestamp.tv_nsec = eth ? eth->timestamp.tv_nsec : 0;
+                if(eth) {
+                    session->dhcp_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
+                    session->dhcp_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
+                } else {
+                    /* PPPoL2TP (LAC) has no ethernet header. */
+                    clock_gettime(CLOCK_MONOTONIC, &session->dhcp_lease_timestamp);
+                }
                 if(!(session->dhcp_address && session->dhcp_server_identifier && session->dhcp_lease_time)) {
                     LOG(ERROR, "DHCP (ID: %u) Invalid DHCP-ACK!\n", session->session_id);
                     bbl_dhcp_restart(session);
@@ -352,8 +362,13 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                 session->dhcp_server = dhcp->header->siaddr;
                 session->dhcp_server_identifier = dhcp->server_identifier;
                 session->dhcp_lease_time = dhcp->lease_time;
-                session->dhcp_lease_timestamp.tv_sec = eth ? eth->timestamp.tv_sec : 0;
-                session->dhcp_lease_timestamp.tv_nsec = eth ? eth->timestamp.tv_nsec : 0;
+                if(eth) {
+                    session->dhcp_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
+                    session->dhcp_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
+                } else {
+                    /* PPPoL2TP (LAC) has no ethernet header. */
+                    clock_gettime(CLOCK_MONOTONIC, &session->dhcp_lease_timestamp);
+                }
                 if(!(session->dhcp_address && session->dhcp_server_identifier && session->dhcp_lease_time)) {
                     LOG(ERROR, "DHCP (ID: %u) Invalid DHCP-ACK!\n", session->session_id);
                     bbl_dhcp_restart(session);

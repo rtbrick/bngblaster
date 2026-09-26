@@ -464,7 +464,8 @@ bbl_access_rx_udp_ipv6(bbl_access_interface_s *interface,
             return;
         default:
             session->stats.accounting_packets_rx++;
-            session->stats.accounting_bytes_rx += eth->length;
+            /* PPPoL2TP has no ethernet header; account for the PPP protocol field instead. */
+            session->stats.accounting_bytes_rx += eth ? eth->length : ipv6->len + 2;
             break;
     }
 }

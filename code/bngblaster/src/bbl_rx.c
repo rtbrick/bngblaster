@@ -43,15 +43,7 @@ bbl_rx_stream_network(bbl_network_interface_s *interface,
     if(!eth->bbl) return false;
     stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {
-        if(stream->rx_network_interface != interface) {
-            stream->rx_flags |= STREAM_FLAG_NETWORK;
-            if(stream->rx_network_interface) {
-                /* RX interface has changed! */
-                stream->rx_interface_changes++;
-                stream->rx_interface_changed_epoch = eth->timestamp.tv_sec;
-            }
-            stream->rx_network_interface = interface;
-        }
+        bbl_stream_rx_interface_set(stream, STREAM_FLAG_NETWORK, interface, eth->timestamp.tv_sec);
         return true;
     }
     return false;
@@ -65,10 +57,7 @@ bbl_rx_stream_access(bbl_access_interface_s *interface,
     if(!eth->bbl) return false;
     stream = bbl_stream_rx(eth, NULL);
     if(stream) {
-        if(stream->rx_access_interface == NULL) {
-            stream->rx_flags |= STREAM_FLAG_ACCESS;
-            stream->rx_access_interface = interface;
-        }
+        bbl_stream_rx_interface_set(stream, STREAM_FLAG_ACCESS, interface, eth->timestamp.tv_sec);
         return true;
     }
     return false;
@@ -82,10 +71,7 @@ bbl_rx_stream_a10nsp(bbl_a10nsp_interface_s *interface,
     if(!eth->bbl) return false;
     stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {
-        if(stream->rx_a10nsp_interface == NULL) {
-            stream->rx_flags |= STREAM_FLAG_A10NSP;
-            stream->rx_a10nsp_interface = interface;
-        }
+        bbl_stream_rx_interface_set(stream, STREAM_FLAG_A10NSP, interface, eth->timestamp.tv_sec);
         return true;
     }
     return false;

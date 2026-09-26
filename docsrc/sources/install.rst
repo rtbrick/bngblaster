@@ -234,6 +234,14 @@ Install libbpf development files (which include the AF_XDP helper library):
 
     sudo apt install libbpf-dev
 
+The AF_XDP helper library (``xsk.h``) was removed from libbpf with version 1.0
+and moved to libxdp. With libbpf 1.0 or newer (e.g. Ubuntu 24.04 or Debian 12),
+install the libxdp development files instead, which are preferred if found:
+
+.. code-block:: none
+
+    sudo apt install libbpf-dev libxdp-dev
+
 Building BNG Blaster with AF_XDP support works as explained before but with
 the additional cmake argument ``-DBNGBLASTER_AF_XDP=on``
 
@@ -249,7 +257,9 @@ If libbpf is installed correctly, cmake should show the following output:
     -- Found PkgConfig: /usr/bin/pkg-config (found version "1.8.0")
     -- Checking for module 'libbpf'
     --   Found libbpf, version 0.5.0
-    -- Found libbpf via pkg-config
+    -- Found libbpf 0.5.0 via pkg-config
+
+With libxdp, cmake shows ``Found libxdp <version> via pkg-config`` instead.
 
 The installed version should now show ``af_xdp`` as new IO mode.
 

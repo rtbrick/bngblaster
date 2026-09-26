@@ -64,15 +64,15 @@ bgp_ctrl_session_json(bgp_session_s *session)
      * is raw network order from inet_pton; convert before formatting. */
     peer_id_be = htobe32(session->peer.id);
 
-    root = json_pack("{ss ss ss si si ss ss si si ss ss* ss* si si si ss so*}",
+    root = json_pack("{ss ss ss sI si ss ss sI si ss ss* ss* si si si ss so*}",
                      "interface", session->interface->name,
                      "local-address", session->local_address_str,
                      "local-id", format_ipv4_address(&session->config->id),
-                     "local-as", session->config->local_as,
+                     "local-as", (json_int_t)session->config->local_as,
                      "local-hold-time", session->config->hold_time,
                      "peer-address", session->peer_address_str,
                      "peer-id", format_ipv4_address(&peer_id_be),
-                     "peer-as", session->peer.as,
+                     "peer-as", (json_int_t)session->peer.as,
                      "peer-hold-time", session->peer.hold_time,
                      "state", bgp_session_state_string(session->state),
                      "raw-update-state", raw_update_state(session),

@@ -1,0 +1,62 @@
+{
+    "interfaces": {
+        "network": {
+            "interface": "eth2",
+            "address": "10.0.0.1/24",
+            "gateway": "10.0.0.2"
+        },
+        "access": [
+            {
+                "interface": "eth2",
+                "type": "pppol2tp",
+                "l2tp-client-group-id": 1,
+                "outer-vlan-min": 1,
+                "outer-vlan-max": 1000,
+                "inner-vlan": 7,
+                "authentication-protocol": "PAP"
+            }
+        ]
+    },
+    "sessions": {
+        "count": 1000,
+        "start-rate": 100,
+        "stop-rate": 100
+    },
+    "ppp": {
+        "mru": 1492,
+        "authentication": {
+            "username": "user{session-global}@rtbrick.com",
+            "password": "test"
+        },
+        "lcp": {
+            "conf-request-timeout": 5,
+            "conf-request-retry": 30
+        },
+        "ipcp": {
+            "enable": true
+        },
+        "ip6cp": {
+            "enable": true
+        }
+    },
+    "l2tp-client": [
+        {
+            "group-id": 1,
+            "name": "LAC1",
+            "network-interface": "eth2",
+            "client-address": "10.0.1.1",
+            "server-address": "10.0.0.100",
+            "secret": "test",
+            "receive-window-size": 16
+        },
+        {
+            "group-id": 1,
+            "name": "LAC2",
+            "network-interface": "eth2",
+            "client-address": "10.0.1.2",
+            "server-address": "10.0.0.100",
+            "secret": "test",
+            "receive-window-size": 16
+        }
+    ]
+}

@@ -9,9 +9,12 @@
  * network stack, which makes it a good alternative for setups where DPDK
  * (dedicated driver binding, hugepages, ...) is not an option.
  *
- * This implementation uses libbpf (bpf/xsk.h) which takes care of loading
- * the default XDP program redirecting packets into the AF_XDP socket of
- * the matching queue.
+ * This implementation uses the xsk API of libxdp (xdp/xsk.h) or of libbpf
+ * < 1.0 (bpf/xsk.h), which takes care of loading the default XDP program
+ * redirecting packets into the AF_XDP socket of the matching queue. With
+ * libxdp, this program is attached via the libxdp dispatcher (multi-prog),
+ * which requires the libxdp BPF object files (xsk_def_xdp_prog*.o) to
+ * be installed.
  *
  * RX and TX each get their own disjoint range of NIC queue indices - e.g.
  * with rx-threads 5 and tx-threads 1, RX uses queues 0-4 and TX uses queue
@@ -32,7 +35,11 @@
 
 #ifdef BNGBLASTER_AF_XDP
 
+#ifdef BNGBLASTER_LIBXDP
+#include <xdp/xsk.h>
+#else
 #include <bpf/xsk.h>
+#endif
 #include <linux/if_link.h>
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
@@ -69,6 +76,7 @@ typedef struct io_af_xdp_queue_ {
 
     int fd;
     uint32_t queue_id;
+    bool copy_mode; /* copy (not zero-copy) mode, TX requires sendto() kick */
 } io_af_xdp_queue_s;
 
 /* Conservative worst-case per-packet overhead (double VLAN tag, ...) added
@@ -230,6 +238,11 @@ io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool *chan
     size_probe.cmd = ETHTOOL_GRSSH;
     ifr.ifr_data = (void*)&size_probe;
     if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        if(errno == EOPNOTSUPP) {
+            /* No RSS support on this driver/NIC - nothing to constrain. */
+            close(fd);
+            return true;
+        }
         /* Driver exposes multiple queues but not the RSS indirection
          * table - we cannot verify queues >= limit are excluded from
          * RSS, so fail loudly instead of risking silent per-flow RX
@@ -624,6 +637,9 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
         const char *copy_mode = "unknown";
         if(getsockopt(q->fd, SOL_XDP, XDP_OPTIONS, &opts, &optlen) == 0) {
             copy_mode = (opts.flags & XDP_OPTIONS_ZEROCOPY) ? "zero-copy" : "copy";
+            q->copy_mode = !(opts.flags & XDP_OPTIONS_ZEROCOPY);
+        } else {
+            q->copy_mode = true;
         }
         LOG(AFXDP, "AF_XDP: interface %s queue %u bound (%s mode, %s, %s, %u RX / %u TX frames of %u byte)\n",
             interface->name, queue_id, sock_cfg.xdp_flags == XDP_FLAGS_SKB_MODE ? "generic" : "native",
@@ -675,6 +691,24 @@ io_af_xdp_reap(io_af_xdp_queue_s *q)
         q->tx_free[q->tx_free_count++] = *addr;
     }
     xsk_ring_cons__release(&q->comp, n);
+}
+
+/**
+ * Kick the kernel to transmit outstanding TX descriptors.
+ *
+ * This must be done whenever TX descriptors are outstanding (submitted
+ * but not yet completed), not only if new descriptors were queued in the
+ * current round. In copy mode the kernel sends only a limited batch of
+ * descriptors per kick, so the backlog is never drained otherwise and TX
+ * stalls once all TX frames are outstanding.
+ */
+static inline void
+io_af_xdp_kick_tx(io_af_xdp_queue_s *q)
+{
+    if(q->tx_free_count < q->tx_frames &&
+       (q->copy_mode || xsk_ring_prod__needs_wakeup(&q->tx))) {
+        sendto(q->fd, NULL, 0, MSG_DONTWAIT, NULL, 0);
+    }
 }
 
 /**
@@ -845,12 +879,8 @@ io_af_xdp_tx_job(timer_s *timer)
         }
     }
 
-    if(io->queued) {
-        if(xsk_ring_prod__needs_wakeup(&q->tx)) {
-            sendto(q->fd, NULL, 0, MSG_DONTWAIT, NULL, 0);
-        }
-        io->queued = 0;
-    }
+    io_af_xdp_kick_tx(q);
+    io->queued = 0;
     if(pcap) {
         pcapng_fflush();
     }
@@ -1017,11 +1047,9 @@ io_af_xdp_thread_tx_run_fn(io_thread_s *thread)
             bbl_stream_io_stop(io);
         }
 
+        io_af_xdp_kick_tx(q);
         if(io->queued) {
             idle_rounds = 0;
-            if(xsk_ring_prod__needs_wakeup(&q->tx)) {
-                sendto(q->fd, NULL, 0, MSG_DONTWAIT, NULL, 0);
-            }
             io->queued = 0;
         } else if(++idle_rounds >= idle_spin_rounds) {
             nanosleep(&sleep, &rem);

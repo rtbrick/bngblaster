@@ -407,6 +407,9 @@ bgp_session_state_established(bgp_session_s *session)
 
     clock_gettime(CLOCK_MONOTONIC, &session->established_timestamp);
 
+    /* RFC 4271 6.8: the Established connection always wins. */
+    bgp_session_collision_teardown(session);
+
     /* Start BGP keepalive */
     if(session->peer.hold_time < session->config->hold_time) {
         keepalive_interval = session->peer.hold_time/2U;

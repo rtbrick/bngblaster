@@ -21,3 +21,16 @@
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``interface`` Mandatory                                            |
 +-----------------------------------+----------------------------------------------------------------------+
+| **interface-topology**            | | Display NUMA node, local CPU set and I/O thread pinning            |
+|                                   | | (CPU, queue and state) per interface.                              |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``interface``                                                      |
++-----------------------------------+----------------------------------------------------------------------+
+
+The interface topology command helps to verify NUMA locality and CPU
+pinning of the RX and TX threads configured with ``rx-cpuset``,
+``tx-cpuset``, ``rx-auto-cpuset`` or ``tx-auto-cpuset``. The queue
+is shown for DPDK and AF_XDP interfaces only.
+
+``$ sudo bngblaster-cli run.sock interface-topology interface eth1``

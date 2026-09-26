@@ -49,6 +49,7 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | this is also set to a value other than none, so TCP                |
 |                                   | | authentication can be toggled on/off by changing only this         |
 |                                   | | attribute, without removing **tcp-ao-key** from the config.        |
+|                                   | | Any value other than none requires **tcp-ao-key**.                 |
 |                                   | | Default: none (disabled)                                           |
 |                                   | | Values: none, hmac-sha-1-96, hmac-sha-256-128, aes-128-cmac-96,    |
 |                                   | | md5                                                                |

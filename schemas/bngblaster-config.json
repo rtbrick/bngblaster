@@ -3338,7 +3338,7 @@
                 },
                 "tcp-ao-algorithm": {
                     "type": "string",
-                    "description": "TCP authentication algorithm. tcp-ao-key is ignored unless this is also set to a value other than none",
+                    "description": "TCP authentication algorithm. tcp-ao-key is ignored unless this is also set to a value other than none, which requires tcp-ao-key",
                     "enum": [
                         "none",
                         "hmac-sha-1-96",

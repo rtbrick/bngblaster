@@ -46,8 +46,8 @@ When planning changes, focus on source code under `code`. Avoid proposing edits 
 - **C style**:
   - Clear, readable C code in the style of network software (no excessive macros unless necessary).
   - Use descriptive names for functions and variables (e.g., `session_create`, `bngblaster_ctx`).
-  - Use `bbl_` as abrbreviation for BNG Blaster.
-  - Optimize for performance and loss less traffic. 
+  - Use `bbl_` as abbreviation for BNG Blaster.
+  - Optimize for performance and lossless traffic. 
 - **No unnecessary globals**:
   - Encapsulate per-session/per-interface state in structured context objects.
 - **Comments**:
@@ -57,7 +57,7 @@ When planning changes, focus on source code under `code`. Avoid proposing edits 
   - Code should run on modern 64bit Linux systems; avoid platform-specific assumptions unless necessary.
 - **Scaling**:
   - 20 million traffic flows
-  - 200 GBps symetric traffic with DPDK or AF_XDP
+  - 200 Gbps symmetric traffic with DPDK or AF_XDP
 
 When modifying or adding code:
 - Align with the existing style in the repo.

@@ -331,7 +331,8 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                 *(uint64_t*)&session->delegated_ipv6_address[0] = *(uint64_t*)session->delegated_ipv6_prefix.address;
                 session->delegated_ipv6_address[15] = 0x01;
                 session->version++;
-                if(session->access_type == ACCESS_TYPE_PPPOE) {
+                if(session->access_type == ACCESS_TYPE_PPPOE ||
+                   session->access_type == ACCESS_TYPE_PPPOL2TP) {
                     ACTIVATE_ENDPOINT(session->endpoint.ipv6pd);
                 }
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_PD prefix %s/%d\n", session->session_id,
@@ -340,8 +341,13 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
         }
 
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;
-        session->dhcpv6_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
-        session->dhcpv6_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
+        if(eth) {
+            session->dhcpv6_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
+            session->dhcpv6_lease_timestamp.tv_nsec = eth->timestamp.tv_nsec;
+        } else {
+            /* PPPoL2TP (LAC) has no ethernet header. */
+            clock_gettime(CLOCK_MONOTONIC, &session->dhcpv6_lease_timestamp);
+        }
 
         if(session->dhcpv6_state == BBL_DHCP_SELECTING_IA_NA || 
            session->dhcpv6_state == BBL_DHCP_REQUESTING_IA_NA) {

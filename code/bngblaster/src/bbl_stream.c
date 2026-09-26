@@ -1343,10 +1343,13 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
     bbl_access_interface_s *access_interface;
     bbl_network_interface_s *network_interface;
     bbl_a10nsp_interface_s *a10nsp_interface;
+    void *rx_interface;
+    uint16_t rx_type;
 
     if(packets == 0) return;
-    if(stream->rx_flags & STREAM_FLAG_ACCESS) {
-        access_interface = stream->rx_access_interface;
+    rx_type = bbl_stream_rx_interface_get(stream, &rx_interface);
+    if(rx_type == STREAM_FLAG_ACCESS) {
+        access_interface = rx_interface;
         access_interface->stats.stream_rx += packets;
         access_interface->stats.stream_loss += loss;
         if(!stream->rx_fragments) {
@@ -1377,8 +1380,8 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
                 }
             }
         }
-    } else if(stream->rx_flags & STREAM_FLAG_NETWORK) {
-        network_interface = stream->rx_network_interface;
+    } else if(rx_type == STREAM_FLAG_NETWORK) {
+        network_interface = rx_interface;
         network_interface->stats.stream_rx += packets;
         network_interface->stats.stream_loss += loss;
         if(!stream->rx_fragments) {
@@ -1413,8 +1416,8 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
                 }
             }
         }
-    } else if(stream->rx_flags & STREAM_FLAG_A10NSP) {
-        a10nsp_interface = stream->rx_a10nsp_interface;
+    } else if(rx_type == STREAM_FLAG_A10NSP) {
+        a10nsp_interface = rx_interface;
         a10nsp_interface->stats.packets_rx += packets;
         a10nsp_interface->stats.bytes_rx += bytes;
         a10nsp_interface->stats.stream_rx += packets;
@@ -1448,6 +1451,8 @@ bbl_stream_rx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes, uint
 static void
 bbl_stream_rx_wrong_session(bbl_stream_s *stream) 
 {
+    bbl_access_interface_s *access_interface;
+    void *rx_interface;
     uint32_t packets;
     uint32_t packets_delta;
 
@@ -1455,16 +1460,17 @@ bbl_stream_rx_wrong_session(bbl_stream_s *stream)
     packets_delta = packets - stream->last_sync_wrong_session;
     stream->last_sync_wrong_session = packets;
 
-    if(stream->rx_access_interface) {
+    if(bbl_stream_rx_interface_get(stream, &rx_interface) == STREAM_FLAG_ACCESS) {
+        access_interface = rx_interface;
         switch(stream->sub_type) {
             case BBL_SUB_TYPE_IPV4:
-                stream->rx_access_interface->stats.session_ipv4_wrong_session += packets_delta;
+                access_interface->stats.session_ipv4_wrong_session += packets_delta;
                 break;
             case BBL_SUB_TYPE_IPV6:
-                stream->rx_access_interface->stats.session_ipv6_wrong_session += packets_delta;
+                access_interface->stats.session_ipv6_wrong_session += packets_delta;
                 break;
             case BBL_SUB_TYPE_IPV6PD:
-                stream->rx_access_interface->stats.session_ipv6pd_wrong_session += packets_delta;
+                access_interface->stats.session_ipv6pd_wrong_session += packets_delta;
                 break;
             default:
                 break;
@@ -2882,6 +2888,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     char *tx_interface = NULL;
     const char *tx_interface_state = NULL;
     char *rx_interface = NULL;
+    void *rx_interface_ptr;
     char *src_address = NULL;
     char *dst_address = NULL;
     uint16_t dst_port = 0;
@@ -2899,12 +2906,18 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         tx_interface = stream->tx_interface->name;
         tx_interface_state = interface_state_string(stream->tx_interface->state);
     }
-    if(stream->rx_flags & STREAM_FLAG_ACCESS) {
-        rx_interface = stream->rx_access_interface->name;
-    } else if(stream->rx_flags & STREAM_FLAG_NETWORK) {
-        rx_interface = stream->rx_network_interface->name;
-    } else if(stream->rx_flags & STREAM_FLAG_A10NSP) {
-        rx_interface = stream->rx_a10nsp_interface->name;
+    switch(bbl_stream_rx_interface_get(stream, &rx_interface_ptr)) {
+        case STREAM_FLAG_ACCESS:
+            rx_interface = ((bbl_access_interface_s*)rx_interface_ptr)->name;
+            break;
+        case STREAM_FLAG_NETWORK:
+            rx_interface = ((bbl_network_interface_s*)rx_interface_ptr)->name;
+            break;
+        case STREAM_FLAG_A10NSP:
+            rx_interface = ((bbl_a10nsp_interface_s*)rx_interface_ptr)->name;
+            break;
+        default:
+            break;
     }
 
     dst_port = stream->dst_port;
