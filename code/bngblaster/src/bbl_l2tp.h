@@ -99,6 +99,7 @@ typedef struct bbl_l2tp_server_
     uint16_t session_limit;
     uint16_t lcp_keepalive_interval;
     uint8_t  lcp_keepalive_retry;
+    bool     lcp_conf_request;
 
     char *host_name;
     char *client_auth_id;
@@ -303,6 +304,7 @@ typedef struct bbl_l2tp_session_
     uint16_t proxy_auth_response_len;
 
     uint8_t lcp_state;
+    uint16_t lcp_auth; /* authentication protocol requested by LNS */
     uint8_t ipcp_state;
     uint8_t ip6cp_state;
 

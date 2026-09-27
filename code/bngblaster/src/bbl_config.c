@@ -4915,7 +4915,8 @@ json_parse_config(json_t *root)
                 "receive-window-size", "max-retry", "congestion-mode",
                 "data-control-priority", "data-length", "data-offset",
                 "control-tos", "data-control-tos", "hello-interval",
-                "lcp-padding", "lcp-keepalive-interval", "lcp-keepalive-retry"
+                "lcp-padding", "lcp-keepalive-interval", "lcp-keepalive-retry",
+                "lcp-conf-request"
             };
             if(!schema_validate(sub, "l2tp-server", schema, 
             sizeof(schema)/sizeof(schema[0]))) {
@@ -4962,6 +4963,12 @@ json_parse_config(json_t *root)
                 l2tp_server->lcp_keepalive_retry = json_number_value(value);
             } else {
                 l2tp_server->lcp_keepalive_retry = 3;
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "lcp-conf-request");
+            if(value) {
+                l2tp_server->lcp_conf_request = json_boolean_value(value);
+            } else {
+                l2tp_server->lcp_conf_request = true;
             }
         }
     } else if(json_is_object(section)) {

@@ -8,6 +8,8 @@ which verifies the L2TP teardown (CDN/StopCCN) of LAC and LNS.
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import time
+
 import pytest
 
 from helpers import BngBlaster, wait_until
@@ -18,7 +20,7 @@ LNS_ADDRESS = "10.0.0.2"
 EXIT_TIMEOUT = 30
 
 
-def lac_config(ifname, sessions=SESSIONS, ip6cp=False, keepalive=0):
+def lac_config(ifname, sessions=SESSIONS, ip6cp=False, keepalive=0, auth="PAP"):
     return {
         "interfaces": {
             "network": {
@@ -33,7 +35,7 @@ def lac_config(ifname, sessions=SESSIONS, ip6cp=False, keepalive=0):
                     "l2tp-client-group-id": 1,
                     "outer-vlan-min": 1,
                     "outer-vlan-max": 4000,
-                    "authentication-protocol": "PAP"
+                    "authentication-protocol": auth
                 }
             ]
         },
@@ -75,7 +77,7 @@ def lac_config(ifname, sessions=SESSIONS, ip6cp=False, keepalive=0):
     }
 
 
-def lns_config(ifname):
+def lns_config(ifname, lcp_conf_request=True):
     return {
         "interfaces": {
             "network": {
@@ -89,7 +91,8 @@ def lns_config(ifname):
                 "name": "LNS",
                 "address": LNS_ADDRESS,
                 "secret": "test",
-                "max-retry": 3
+                "max-retry": 3,
+                "lcp-conf-request": lcp_conf_request
             }
         ]
     }
@@ -211,4 +214,26 @@ def test_dual_stack(lac_lns):
 
     for session_id in (1, 2):
         wait_until(lambda: ipv6_ready(session_id), 10, message="IP6CP and RA")
+    assert_clean_exit(lac, lns)
+
+
+def test_chap(lac_lns):
+    """The LNS proposes PAP, switches to CHAP after the Conf-Nak of the
+    client and sends the CHAP challenge once LCP is opened."""
+    lac, lns = lac_lns(sessions=2, auth="CHAP")
+    assert_clean_exit(lac, lns)
+
+
+def test_lcp_conf_request_disabled(topology, processes, tmp_path):
+    """Without LCP Conf-Request from LNS (and no proxy LCP from the LAC)
+    the PPP sessions can't complete LCP."""
+    lns = BngBlaster(topology.b, tmp_path, "lns").start(
+        lns_config(topology.if_b, lcp_conf_request=False), logging=("info", "l2tp"))
+    processes.append(lns)
+    lac = BngBlaster(topology.a, tmp_path, "lac").start(
+        lac_config(topology.if_a, sessions=2), logging=("info", "l2tp", "pppoe"))
+    processes.append(lac)
+    wait_until(lambda: len(lns_sessions(lns)) == 2, 10, message="LNS sessions established")
+    time.sleep(3)
+    assert lac_counters(lac)["sessions-established"] == 0
     assert_clean_exit(lac, lns)

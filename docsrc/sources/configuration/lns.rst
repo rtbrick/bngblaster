@@ -57,6 +57,12 @@
 |                                           | | session.                                                          |
 |                                           | | Default: 3 Range: 0 - 255                                         |
 +-------------------------------------------+---------------------------------------------------------------------+
+| **lcp-conf-request**                      | | Send LCP configuration request from LNS after receiving an LCP    |
+|                                           | | configuration request from client (no proxy LCP). The LNS         |
+|                                           | | requests PAP authentication and switches to CHAP if the client    |
+|                                           | | responds with a configuration NAK for CHAP.                       |
+|                                           | | Default: true                                                     |
++-------------------------------------------+---------------------------------------------------------------------+
 | **client-auth-id**                        | | Add optional check based on client-auth-id to support multiple    |
 |                                           | | LNS server configurations with the same IP address.               |
 +-------------------------------------------+---------------------------------------------------------------------+

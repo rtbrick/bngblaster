@@ -1205,6 +1205,47 @@ bbl_l2tp_data_ipv6_dhcpv6_rx(bbl_l2tp_session_s *l2tp_session, bbl_ipv6_s *ipv6)
 }
 
 static void
+bbl_l2tp_lcp_conf_request_tx(bbl_l2tp_session_s *l2tp_session, uint8_t identifier)
+{
+    bbl_lcp_s lcp_tx = {0};
+
+    if(!l2tp_session->lcp_auth) {
+        l2tp_session->lcp_auth = PROTOCOL_PAP;
+    }
+    lcp_tx.code = PPP_CODE_CONF_REQUEST;
+    lcp_tx.identifier = identifier;
+    lcp_tx.auth = l2tp_session->lcp_auth;
+    lcp_tx.magic = (uint32_t)l2tp_session->key.tunnel_id << 16 |
+                    l2tp_session->key.session_id;
+    if(!lcp_tx.magic) lcp_tx.magic = 1;
+    lcp_tx.padding = l2tp_session->tunnel->config->lcp_padding;
+    bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp_tx);
+}
+
+static void
+bbl_l2tp_lcp_opened(bbl_l2tp_session_s *l2tp_session)
+{
+    bbl_chap_s chap_tx = {0};
+    uint8_t challenge[CHALLENGE_LEN];
+    char *name = l2tp_session->tunnel->server->host_name;
+    size_t i;
+
+    l2tp_session->lcp_state = BBL_PPP_OPENED;
+    if(l2tp_session->lcp_auth == PROTOCOL_CHAP) {
+        for(i = 0; i < sizeof(challenge); i++) {
+            challenge[i] = rand();
+        }
+        chap_tx.code = CHAP_CODE_CHALLENGE;
+        chap_tx.identifier = 1;
+        chap_tx.challenge = challenge;
+        chap_tx.challenge_len = sizeof(challenge);
+        chap_tx.name = name;
+        chap_tx.name_len = strlen(name);
+        bbl_l2tp_send_data(l2tp_session, PROTOCOL_CHAP, &chap_tx);
+    }
+}
+
+static void
 bbl_l2tp_data_ipv6_rx(bbl_l2tp_session_s *l2tp_session, bbl_ipv6_s *ipv6)
 {
     if(!ipv6) return;
@@ -1231,7 +1272,6 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                  bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp)
 {
     bbl_lcp_s   *lcp_rx;
-    bbl_lcp_s    lcp_tx;
     bbl_pap_s   *pap_rx;
     bbl_pap_s    pap_tx;
     bbl_chap_s  *chap_rx;
@@ -1282,18 +1322,11 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                 lcp_rx->code = PPP_CODE_CONF_ACK;
                 bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
                 if(l2tp_session->lcp_state == BBL_PPP_LOCAL_ACK) {
-                    l2tp_session->lcp_state = BBL_PPP_OPENED;
-                } else if(l2tp_session->lcp_state != BBL_PPP_OPENED) {
-                    memset(&lcp_tx, 0x0, sizeof(bbl_lcp_s));
+                    bbl_l2tp_lcp_opened(l2tp_session);
+                } else if(l2tp_session->lcp_state != BBL_PPP_OPENED &&
+                          l2tp_session->tunnel->server->lcp_conf_request) {
                     l2tp_session->lcp_state = BBL_PPP_PEER_ACK;
-                    lcp_tx.code = PPP_CODE_CONF_REQUEST;
-                    lcp_tx.identifier = 1;
-                    lcp_tx.auth = PROTOCOL_PAP;
-                    lcp_tx.magic = (uint32_t)l2tp_session->key.tunnel_id << 16 |
-                                    l2tp_session->key.session_id;
-                    if(!lcp_tx.magic) lcp_tx.magic = 1;
-                    lcp_tx.padding = l2tp_session->tunnel->config->lcp_padding;
-                    bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp_tx);
+                    bbl_l2tp_lcp_conf_request_tx(l2tp_session, 1);
                 }
             } else if(lcp_rx->code == PPP_CODE_CONF_ACK) {
                 /* Peer acknowledged our request: LCP is open once we
@@ -1301,9 +1334,19 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                  * never triggers a new Conf-Request (e.g. proxy LCP or
                  * after l2tp-lcp-restart). */
                 if(l2tp_session->lcp_state == BBL_PPP_PEER_ACK) {
-                    l2tp_session->lcp_state = BBL_PPP_OPENED;
+                    bbl_l2tp_lcp_opened(l2tp_session);
                 } else if(l2tp_session->lcp_state != BBL_PPP_OPENED) {
                     l2tp_session->lcp_state = BBL_PPP_LOCAL_ACK;
+                }
+            } else if(lcp_rx->code == PPP_CODE_CONF_NAK) {
+                /* Peer requests another authentication protocol
+                 * than proposed in our Conf-Request. */
+                if(l2tp_session->lcp_state == BBL_PPP_PEER_ACK &&
+                   lcp_rx->auth != l2tp_session->lcp_auth &&
+                   (lcp_rx->auth == PROTOCOL_PAP ||
+                    (lcp_rx->auth == PROTOCOL_CHAP && lcp_rx->alg == PROTOCOL_CHAP_ALG_MD5))) {
+                    l2tp_session->lcp_auth = lcp_rx->auth;
+                    bbl_l2tp_lcp_conf_request_tx(l2tp_session, lcp_rx->identifier+1);
                 }
             }
             break;
