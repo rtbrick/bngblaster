@@ -307,29 +307,34 @@ class GoBgp:
 
 class Frr:
     """FRR daemons running in a network namespace. The daemons run in
-    foreground as root with sockets, pid and config files in the test
-    directory, so that they don't interfere with a system FRR."""
+    foreground as root in their own path space, so that they don't
+    interfere with a system FRR. Logs and config are kept in the test
+    directory."""
 
     def __init__(self, ns, workdir, daemons):
         self.ns = ns
-        self.rundir = Path(workdir) / "frr"
+        self.workdir = Path(workdir) / "frr"
         self.daemons = ("mgmtd", "zebra") + tuple(daemons)
         self.procs = []
         # The mgmtd sockets can't be moved to the test directory and are
         # not removed on exit, so each instance gets its own path space.
+        # The daemons drop CAP_DAC_OVERRIDE, so sockets and pid files are
+        # kept in the path space run directory, as the test directory may
+        # not be accessible for them (e.g. below a 0750 home directory).
         self.pathspace = NETNS_PREFIX + Path(workdir).name
-        self.statedirs = [Path("/var/run/frr", self.pathspace),
-                          Path("/var/lib/frr", self.pathspace)]
+        self.rundir = Path("/var/run/frr", self.pathspace)
+        self.statedirs = [self.rundir, Path("/var/lib/frr", self.pathspace)]
 
     def remove_statedirs(self):
         for statedir in self.statedirs:
             shutil.rmtree(statedir, ignore_errors=True)
 
     def start(self, config):
-        self.rundir.mkdir(exist_ok=True)
+        self.workdir.mkdir(exist_ok=True)
         self.remove_statedirs()
+        self.rundir.mkdir(parents=True)
         # Without password, vtysh authenticates root via PAM.
-        (self.rundir / "vtysh.conf").write_text("username root nopassword\n")
+        (self.workdir / "vtysh.conf").write_text("username root nopassword\n")
         # FRR daemons exit if the user is not member of the frrvty group,
         # which root is usually not, so run with frrvty as primary group.
         try:
@@ -348,7 +353,7 @@ class Frr:
                 config_file = self.rundir / ("%s.conf" % daemon)
                 config_file.write_text("")
                 cmd += ["-f", str(config_file)]
-            with open(str(self.rundir / ("%s.log" % daemon)), "w") as out:
+            with open(str(self.workdir / ("%s.log" % daemon)), "w") as out:
                 proc = subprocess.Popen(self.ns.cmd(cmd), stdout=out, stderr=subprocess.STDOUT)
             self.procs.append(proc)
             vty = self.rundir / ("%s.vty" % daemon)
@@ -356,14 +361,14 @@ class Frr:
                        "%s vty socket" % daemon)
             if proc.poll() is not None:
                 raise RuntimeError("%s exited on start (%d), see %s" % (
-                    daemon, proc.returncode, self.rundir / ("%s.log" % daemon)))
-        config_file = self.rundir / "frr.conf"
+                    daemon, proc.returncode, self.workdir / ("%s.log" % daemon)))
+        config_file = self.workdir / "frr.conf"
         config_file.write_text(config)
         self.ns.exec(self.vtysh_cmd() + ["-f", str(config_file)])
         return self
 
     def vtysh_cmd(self):
-        return [VTYSH_BIN, "--vty_socket", str(self.rundir), "--config_dir", str(self.rundir)]
+        return [VTYSH_BIN, "--vty_socket", str(self.rundir), "--config_dir", str(self.workdir)]
 
     def vtysh(self, command, json_output=True):
         """Run vtysh command, 'json' is appended if json_output is set."""
