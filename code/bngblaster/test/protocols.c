@@ -255,12 +255,64 @@ test_protocols_arp_over_mpls_all(void **unused) {
     test_protocols_arp_over_mpls(true, 0x0f, ARP_REPLY);
 }
 
+/* The 32-bit flow-id is followed by 32 reserved bits, which must be
+ * wire compatible with the former 64-bit little-endian flow-id. */
+static void
+test_protocols_bbl_flow_id(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[256];
+    uint8_t *bbl_start;
+    uint16_t len = 0;
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv4_s ipv4 = {0};
+    bbl_udp_s udp = {0};
+    bbl_bbl_s bbl = {0};
+    bbl_ethernet_header_s *decoded;
+
+    eth.dst = dst;
+    eth.src = src;
+    eth.type = ETH_TYPE_IPV4;
+    eth.next = &ipv4;
+    inet_pton(AF_INET, "192.0.2.1", &ipv4.src);
+    inet_pton(AF_INET, "192.0.2.2", &ipv4.dst);
+    ipv4.ttl = 64;
+    ipv4.protocol = PROTOCOL_IPV4_UDP;
+    ipv4.next = &udp;
+    udp.src = 65056;
+    udp.dst = 65056;
+    udp.protocol = UDP_PROTOCOL_BBL;
+    udp.next = &bbl;
+    bbl.type = BBL_TYPE_UNICAST;
+    bbl.sub_type = BBL_SUB_TYPE_IPV4;
+    bbl.direction = BBL_DIRECTION_DOWN;
+    bbl.flow_id = 0x12345678;
+    bbl.flow_seq = 1;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    bbl_start = buf + len - BBL_HEADER_LEN;
+    assert_int_equal(le64toh(*(uint64_t*)(bbl_start+24)), 0x12345678);
+
+    /* Former 64-bit flow-id encoding. */
+    *(uint64_t*)(bbl_start+24) = htole64(0x87654321);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    assert_non_null(decoded->bbl);
+    assert_int_equal(decoded->bbl->flow_id, 0x87654321);
+    assert_int_equal(decoded->bbl->flow_seq, 1);
+    free(sp);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
         cmocka_unit_test(test_protocols_ethernet_over_mpls_cw),
         cmocka_unit_test(test_protocols_ethernet_over_mpls_no_cw),
         cmocka_unit_test(test_protocols_arp_over_mpls_all),
+        cmocka_unit_test(test_protocols_bbl_flow_id),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
