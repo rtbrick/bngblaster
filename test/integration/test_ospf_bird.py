@@ -182,8 +182,10 @@ def test_dr_election(ospf, version, bbl_priority, bird_priority, bbl_state, bird
     ospf.start(bird={"version": version, "p2p": False, "priority": bird_priority},
                bbl={"p2p": False, "ospf": {"router-priority": bbl_priority}})
     ospf.wait_established()
-    assert ospf.bbl_interface()["state"] == bbl_state
-    assert ospf.frr_neighbor_state() == bird_role
+    wait_until(lambda: ospf.bbl_interface()["state"] == bbl_state, 5,
+               message="BNG Blaster interface state %s" % bbl_state)
+    wait_until(lambda: ospf.frr_neighbor_state() == bird_role, 5,
+               message="BIRD neighbor state %s" % bird_role)
     ospf.teardown()
 
 
@@ -197,8 +199,10 @@ def test_dr_election_existing_dr(ospf, version):
                message="BIRD elected as DR")
     ospf.start_bbl(bbl={"p2p": False, "ospf": {"router-priority": 64}})
     ospf.wait_established()
-    assert ospf.bbl_interface()["state"] == "BACKUP"
-    assert ospf.frr_neighbor_state() == "Full/BDR"
+    wait_until(lambda: ospf.bbl_interface()["state"] == "BACKUP", 5,
+               message="BNG Blaster interface state BACKUP")
+    wait_until(lambda: ospf.frr_neighbor_state() == "Full/BDR", 5,
+               message="BIRD neighbor state Full/BDR")
     ospf.teardown()
 
 

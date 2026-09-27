@@ -59,8 +59,10 @@ def test_dr_election(ospf, bbl_priority, frr_priority, bbl_state, frr_role):
     ospf.start(frr={"p2p": False, "priority": frr_priority},
                bbl={"p2p": False, "ospf": {"router-priority": bbl_priority}})
     ospf.wait_established()
-    assert ospf.bbl_interface()["state"] == bbl_state
-    assert ospf.frr_neighbor_state() == "Full/%s" % frr_role
+    wait_until(lambda: ospf.bbl_interface()["state"] == bbl_state, 5,
+               message="BNG Blaster interface state %s" % bbl_state)
+    wait_until(lambda: ospf.frr_neighbor_state() == "Full/%s" % frr_role, 5,
+               message="FRR neighbor state Full/%s" % frr_role)
     ospf.teardown()
 
 
@@ -73,8 +75,10 @@ def test_dr_election_existing_dr(ospf):
                message="FRR elected as DR")
     ospf.start_bbl(bbl={"p2p": False, "ospf": {"router-priority": 64}})
     ospf.wait_established()
-    assert ospf.bbl_interface()["state"] == "BACKUP"
-    assert ospf.frr_neighbor_state() == "Full/Backup"
+    wait_until(lambda: ospf.bbl_interface()["state"] == "BACKUP", 5,
+               message="BNG Blaster interface state BACKUP")
+    wait_until(lambda: ospf.frr_neighbor_state() == "Full/Backup", 5,
+               message="FRR neighbor state Full/Backup")
     ospf.teardown()
 
 
