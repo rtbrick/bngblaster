@@ -49,6 +49,9 @@ GOBGP_MIN_VERSION = (4, 9)
 FRR_DIR = os.environ.get("FRR_DIR") or ("/usr/lib/frr" if Path("/usr/lib/frr/zebra").is_file() else None)
 VTYSH_BIN = env_path("VTYSH_BIN", shutil.which("vtysh"))
 FRR_MIN_VERSION = (10, 0)
+BIRD_BIN = env_path("BIRD_BIN", shutil.which("bird") or "/usr/sbin/bird")
+BIRDC_BIN = env_path("BIRDC_BIN", shutil.which("birdc") or "/usr/sbin/birdc")
+BIRD_MIN_VERSION = (2, 0)
 
 
 def run(cmd, check=True, timeout=30, cwd=None):
@@ -90,6 +93,17 @@ def frr_version():
     out = run([os.path.join(FRR_DIR, "zebra"), "--version"], check=False).split()
     try:
         return tuple(int(x) for x in out[2].split(".")[:2])
+    except (IndexError, ValueError):
+        return None
+
+
+def bird_version():
+    """Return version tuple from 'BIRD version v2.15.1' (on stderr)."""
+    result = subprocess.run([BIRD_BIN, "--version"], stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, timeout=10)
+    out = result.stdout.split()
+    try:
+        return tuple(int(x) for x in out[-1].lstrip("v").split("-")[0].split(".")[:2])
     except (IndexError, ValueError):
         return None
 
@@ -348,6 +362,44 @@ class Frr:
                     proc.wait(10)
                 except subprocess.TimeoutExpired:
                     proc.kill()
+
+
+class Bird:
+    """BIRD daemon running in foreground in a network namespace with
+    config, control socket and log in the test directory."""
+
+    def __init__(self, ns, workdir):
+        self.ns = ns
+        self.workdir = Path(workdir)
+        self.socket = str(self.workdir / "bird.ctl")
+        self.proc = None
+
+    def start(self, config):
+        config_file = self.workdir / "bird.conf"
+        config_file.write_text(config)
+        cmd = [BIRD_BIN, "-f", "-c", str(config_file), "-s", self.socket,
+               "-P", str(self.workdir / "bird.pid")]
+        with open(str(self.workdir / "bird.log"), "w") as out:
+            self.proc = subprocess.Popen(self.ns.cmd(cmd), stdout=out, stderr=subprocess.STDOUT)
+        wait_until(lambda: os.path.exists(self.socket) or self.proc.poll() is not None,
+                   10, 0.1, "BIRD control socket")
+        if self.proc.poll() is not None:
+            raise RuntimeError("bird exited on start (%d), see %s" % (
+                self.proc.returncode, self.workdir / "bird.log"))
+        return self
+
+    def birdc(self, command):
+        """Run birdc command and return output lines without banner."""
+        out = run([BIRDC_BIN, "-s", self.socket] + command.split())
+        return [line for line in out.splitlines()[1:] if line.strip()]
+
+    def stop(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(10)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
 
 
 AFI_IP, AFI_IP6, AFI_L2VPN = 1, 2, 25

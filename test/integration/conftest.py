@@ -10,7 +10,7 @@ import os
 import pytest
 
 import helpers
-from helpers import BngBlaster, Frr, GoBgp, Netns
+from helpers import Bird, BngBlaster, Frr, GoBgp, Netns
 
 _ids = itertools.count(1)
 
@@ -110,7 +110,7 @@ def processes():
     for proc in started:
         if isinstance(proc, BngBlaster):
             proc.kill()
-        elif isinstance(proc, (GoBgp, Frr)):
+        elif isinstance(proc, (GoBgp, Frr, Bird)):
             proc.stop()
 
 
@@ -135,3 +135,16 @@ def frr_bin():
     if not version or version < helpers.FRR_MIN_VERSION:
         pytest.fail("FRR version %s too old, FRR >= %s required" % (
             version, ".".join(map(str, helpers.FRR_MIN_VERSION))))
+
+
+@pytest.fixture
+def bird_bin():
+    """Skip without BIRD, or fail if BBL_REQUIRE_BIRD is set (CI)."""
+    if not (helpers.BIRD_BIN and helpers.BIRDC_BIN):
+        if os.environ.get("BBL_REQUIRE_BIRD"):
+            pytest.fail("BIRD not found (set BIRD_BIN and BIRDC_BIN)")
+        pytest.skip("BIRD not found (set BIRD_BIN and BIRDC_BIN)")
+    version = helpers.bird_version()
+    if not version or version < helpers.BIRD_MIN_VERSION:
+        pytest.fail("BIRD version %s too old, BIRD >= %s required" % (
+            version, ".".join(map(str, helpers.BIRD_MIN_VERSION))))

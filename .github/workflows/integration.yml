@@ -68,6 +68,13 @@ jobs:
         # FRR daemons are started per test in network namespaces.
         sudo systemctl stop frr
 
+    - name: Install BIRD
+      shell: bash
+      run: |
+        sudo apt install -y bird2
+        # BIRD is started per test in network namespaces.
+        sudo systemctl stop bird
+
     - name: Install Python Dependencies
       shell: bash
       run: |
@@ -82,6 +89,7 @@ jobs:
         BBL_REQUIRE_TCP_MD5: 1
         BBL_REQUIRE_TCP_AO: 1
         BBL_REQUIRE_FRR: 1
+        BBL_REQUIRE_BIRD: 1
       run: |
         uname -r
         grep -E "CONFIG_TCP_(AO|MD5SIG)=" /boot/config-$(uname -r) || true

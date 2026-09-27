@@ -1,5 +1,5 @@
 """
-Shared setup for BNG Blaster ISIS and OSPF against FRR tests
+Shared setup for BNG Blaster ISIS and OSPF against FRR (and BIRD) tests
 
 Namespace A runs the BNG Blaster (10.0.0.1, fd00::1), namespace B
 runs FRR on the kernel interface (10.0.0.2, fd00::2). The emulated
@@ -320,10 +320,10 @@ class OspfSetup(IgpSetup):
         lines += [" ip ospf area 0.0.0.0", "exit"]
         return "\n".join(lines) + "\n"
 
-    def bbl_config(self, p2p=True, ospf=None, mrt=None):
+    def bbl_config(self, p2p=True, ospf=None, mrt=None, version=2):
         instance = {
             "instance-id": 1,
-            "version": 2,
+            "version": version,
             "router-id": BBL_ROUTER_ID,
             "hostname": "BBL",
             "hello-interval": 1,
@@ -336,16 +336,18 @@ class OspfSetup(IgpSetup):
                 "metric": 10
             }]}
         instance.update(ospf or {})
+        network = {
+            "interface": self.topology.if_a,
+            "address": BBL_ADDRESS + "/24",
+            "gateway": FRR_ADDRESS,
+            "ospfv%d-instance-id" % version: 1,
+            "ospfv%d-type" % version: "p2p" if p2p else "broadcast"
+        }
+        if version == 3:
+            network["address-ipv6"] = BBL_ADDRESS6 + "/64"
+            network["gateway-ipv6"] = FRR_ADDRESS6
         return {
-            "interfaces": {
-                "network": {
-                    "interface": self.topology.if_a,
-                    "address": BBL_ADDRESS + "/24",
-                    "gateway": FRR_ADDRESS,
-                    "ospfv2-instance-id": 1,
-                    "ospfv2-type": "p2p" if p2p else "broadcast"
-                }
-            },
+            "interfaces": {"network": network},
             "ospf": [instance]
         }
 

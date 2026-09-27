@@ -10,6 +10,9 @@ Functional tests over veth pairs between network namespaces:
   broadcast, L1/L2/L1L2), database synchronization in both directions
   with routes installed by FRR, and authentication
   (`test_isis_frr.py`, `test_ospf_frr.py`)
+* BNG Blaster OSPFv2 and OSPFv3 against BIRD: adjacency, DR/BDR
+  election, database synchronization in both directions (OSPFv2 only
+  from BNG Blaster to BIRD) and authentication (`test_ospf_bird.py`)
 * All examples of the quickstart guide: PPPoE, DHCP, ISIS, BGP, LDP
   and network traffic (`test_quickstart.py`)
 
@@ -32,6 +35,10 @@ go install github.com/osrg/gobgp/v4/cmd/...@15e9be9198ae51abad50b3d9b42aa63c3b46
   tests are skipped if not installed unless `BBL_REQUIRE_FRR` is set.
   The FRR daemons are started per test (as root, with all sockets and
   logs in the test directory), so the FRR service can be stopped.
+* BIRD 2 (Debian/Ubuntu package `bird2`), tests are skipped if not
+  installed unless `BBL_REQUIRE_BIRD` is set. BIRD is started per test
+  in foreground with config, control socket and log in the test
+  directory, so the BIRD service can be stopped.
 * Linux kernel with `CONFIG_TCP_MD5SIG` and `CONFIG_TCP_AO` (6.7+),
   tests are skipped otherwise unless `BBL_REQUIRE_TCP_MD5` or
   `BBL_REQUIRE_TCP_AO` is set.
@@ -57,7 +64,7 @@ and `frrvty` in the user namespace, e.g. by bind mounting a tmpfs to
 
 Binaries are found via `BNGBLASTER_BIN`, `BGPUPDATE_BIN`, `LDPUPDATE_BIN`,
 `LSPGEN_BIN`, `GOBGPD_BIN`, `GOBGP_BIN`, `FRR_DIR` (daemon directory,
-default `/usr/lib/frr`) and `VTYSH_BIN`, or the build directory,
+default `/usr/lib/frr`), `VTYSH_BIN`, `BIRD_BIN` and `BIRDC_BIN`, or the build directory,
 `~/go/bin` of the invoking user (also with sudo) and `PATH`. Test artifacts are kept in `tmp/integration`
 (owned by the invoking user after sudo runs) unless `--basetemp` is set.
 
