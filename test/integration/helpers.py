@@ -7,6 +7,7 @@ socket client used by the integration tests.
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import grp
 import json
 import os
 import shutil
@@ -319,8 +320,14 @@ class Frr:
         self.rundir.mkdir(exist_ok=True)
         # Without password, vtysh authenticates root via PAM.
         (self.rundir / "vtysh.conf").write_text("username root nopassword\n")
+        # FRR daemons exit if the user is not member of the frrvty group,
+        # which root is usually not, so run with frrvty as primary group.
+        try:
+            group = grp.getgrnam("frrvty").gr_name
+        except KeyError:
+            group = "root"
         for daemon in self.daemons:
-            cmd = [os.path.join(FRR_DIR, daemon), "-u", "root", "-g", "root",
+            cmd = [os.path.join(FRR_DIR, daemon), "-u", "root", "-g", group,
                    "-i", str(self.rundir / ("%s.pid" % daemon)),
                    "-z", str(self.rundir / "zserv.api"),
                    "--vty_socket", str(self.rundir), "-P", "0",
