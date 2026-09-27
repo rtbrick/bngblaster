@@ -5,7 +5,7 @@
 # only if they still point into /usr/bin as we left them.
 set -e
 
-BINARIES="bngblaster bngblaster-cli"
+BINARIES="bngblaster bngblaster-cli lspgen"
 
 case "$1" in
     remove|purge)

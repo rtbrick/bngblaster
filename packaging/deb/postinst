@@ -1,14 +1,14 @@
 #!/bin/sh
 # postinst for bngblaster
 #
-# The bngblaster and bngblaster-cli binaries moved from /usr/sbin to
+# The bngblaster, bngblaster-cli and lspgen binaries moved from /usr/sbin to
 # /usr/bin. Remove any leftover binary at the old /usr/sbin location (from
 # an old manual install, or an old package version that dpkg did not
 # track) and replace it with a symlink into /usr/bin, so older controllers
 # that still invoke the binary from /usr/sbin keep working.
 set -e
 
-BINARIES="bngblaster bngblaster-cli"
+BINARIES="bngblaster bngblaster-cli lspgen"
 
 case "$1" in
     configure)
