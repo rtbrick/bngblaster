@@ -110,8 +110,8 @@ each access interface.
 | **pon-access-line-version**       | | This option allows switching between the versions                  |
 |                                   | | 00 (DRAFT-LIHAWI-00) and 04 (DRAFT-LIHAWI-04) of the RFC           |
 |                                   | | `draft-lihawi-ancp-protocol-access-extension`.                     |
-|                                   | | Values: "00", "04" (string)                                        |
-|                                   | | Default: "04"                                                      |
+|                                   | | Values: "DRAFT-LIHAWI-00", "DRAFT-LIHAWI-04"                       |
+|                                   | | Default: "DRAFT-LIHAWI-04"                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 
 The values specified for **rate-up**, **rate-down** and **dsl-type** defined in the
