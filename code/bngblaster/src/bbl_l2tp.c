@@ -250,6 +250,10 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
                 }
             }
             if(!has_sessions) {
+                /* General request to clear control connection */
+                l2tp_tunnel->result_code = 1;
+                l2tp_tunnel->error_code = 0;
+                l2tp_tunnel->error_message = NULL;
                 bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
                 bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
             }
@@ -942,6 +946,10 @@ bbl_l2tp_stopccn_rx(bbl_network_interface_s *interface,
      * implementations expect a StopCCN back to complete the teardown
      * immediately rather than waiting for their own timer to expire. */
     if(l2tp_tunnel->state < BBL_L2TP_TUNNEL_SEND_STOPCCN) {
+        /* General request to clear control connection */
+        l2tp_tunnel->result_code = 1;
+        l2tp_tunnel->error_code = 0;
+        l2tp_tunnel->error_message = NULL;
         bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
     }
     bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_RCVD_STOPCCN);
