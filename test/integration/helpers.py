@@ -315,9 +315,19 @@ class Frr:
         self.rundir = Path(workdir) / "frr"
         self.daemons = ("mgmtd", "zebra") + tuple(daemons)
         self.procs = []
+        # The mgmtd sockets can't be moved to the test directory and are
+        # not removed on exit, so each instance gets its own path space.
+        self.pathspace = NETNS_PREFIX + Path(workdir).name
+        self.statedirs = [Path("/var/run/frr", self.pathspace),
+                          Path("/var/lib/frr", self.pathspace)]
+
+    def remove_statedirs(self):
+        for statedir in self.statedirs:
+            shutil.rmtree(statedir, ignore_errors=True)
 
     def start(self, config):
         self.rundir.mkdir(exist_ok=True)
+        self.remove_statedirs()
         # Without password, vtysh authenticates root via PAM.
         (self.rundir / "vtysh.conf").write_text("username root nopassword\n")
         # FRR daemons exit if the user is not member of the frrvty group,
@@ -328,6 +338,7 @@ class Frr:
             group = "root"
         for daemon in self.daemons:
             cmd = [os.path.join(FRR_DIR, daemon), "-u", "root", "-g", group,
+                   "-N", self.pathspace,
                    "-i", str(self.rundir / ("%s.pid" % daemon)),
                    "-z", str(self.rundir / "zserv.api"),
                    "--vty_socket", str(self.rundir), "-P", "0",
@@ -369,6 +380,7 @@ class Frr:
                     proc.wait(10)
                 except subprocess.TimeoutExpired:
                     proc.kill()
+        self.remove_statedirs()
 
 
 class Bird:
