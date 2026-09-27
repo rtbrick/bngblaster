@@ -494,6 +494,7 @@ typedef struct ospf_interface_ {
 
     struct timer_ *timer_lsa_flood;
     struct timer_ *timer_lsa_ack;
+    struct timer_ *timer_wait;
 
     struct {
         uint32_t hello_rx;

@@ -306,25 +306,22 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
 
     if(is2way) {
         if(ospf_neighbor->state == OSPF_NBSTATE_INIT) {
-            switch(ospf_interface->state) {
-                case OSPF_IFSTATE_P2P:
-                case OSPF_IFSTATE_BACKUP:
-                case OSPF_IFSTATE_DR:
-                    ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
-                    break;
-                case OSPF_IFSTATE_DR_OTHER:
-                    if(pdu->router_id == ospf_interface->dr ||
-                       pdu->router_id == ospf_interface->bdr) {
-                        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
-                    } else {
-                        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
-                    }
-                    break;
-                default:
-                    break;
+            /* 2-WayReceived */
+            if(ospf_neighbor_adjacency_required(ospf_neighbor)) {
+                ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+            } else {
+                ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
+            }
+        }
+        /* BackupSeen, if neighbor declares itself as BDR or as DR without BDR. */
+        if(ospf_interface->state == OSPF_IFSTATE_WAITING) {
+            ip = ospf_neighbor_dr_id(ospf_neighbor);
+            if(ospf_neighbor->bdr == ip || (ospf_neighbor->dr == ip && !ospf_neighbor->bdr)) {
+                ospf_interface_backup_seen(ospf_interface);
             }
         }
     } else {
+        /* 1-WayReceived */
         ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_INIT);
     }
 

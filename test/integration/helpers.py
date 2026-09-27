@@ -46,12 +46,15 @@ LSPGEN_BIN = env_path("LSPGEN_BIN", REPO / "build/code/lspgen/lspgen")
 GOBGPD_BIN = env_path("GOBGPD_BIN", go_bin("gobgpd"))
 GOBGP_BIN = env_path("GOBGP_BIN", go_bin("gobgp"))
 GOBGP_MIN_VERSION = (4, 9)
+FRR_DIR = os.environ.get("FRR_DIR") or ("/usr/lib/frr" if Path("/usr/lib/frr/zebra").is_file() else None)
+VTYSH_BIN = env_path("VTYSH_BIN", shutil.which("vtysh"))
+FRR_MIN_VERSION = (10, 0)
 
 
-def run(cmd, check=True, timeout=30):
+def run(cmd, check=True, timeout=30, cwd=None):
     """Run command and return stdout."""
     result = subprocess.run(cmd, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
-                            text=True, timeout=timeout)
+                            text=True, timeout=timeout, cwd=cwd)
     if check and result.returncode != 0:
         raise RuntimeError("command %s failed (%d): %s" % (
             " ".join(cmd), result.returncode, result.stderr.strip()))
@@ -78,6 +81,15 @@ def gobgp_version(binary):
     out = run([binary, "--version"], check=False).split()
     try:
         return tuple(int(x) for x in out[-1].split(".")[:2])
+    except (IndexError, ValueError):
+        return None
+
+
+def frr_version():
+    """Return version tuple from 'zebra version 10.7.1'."""
+    out = run([os.path.join(FRR_DIR, "zebra"), "--version"], check=False).split()
+    try:
+        return tuple(int(x) for x in out[2].split(".")[:2])
     except (IndexError, ValueError):
         return None
 
@@ -278,6 +290,66 @@ class GoBgp:
                 self.proc.kill()
 
 
+class Frr:
+    """FRR daemons running in a network namespace. The daemons run in
+    foreground as root with sockets, pid and config files in the test
+    directory, so that they don't interfere with a system FRR."""
+
+    def __init__(self, ns, workdir, daemons):
+        self.ns = ns
+        self.rundir = Path(workdir) / "frr"
+        self.daemons = ("mgmtd", "zebra") + tuple(daemons)
+        self.procs = []
+
+    def start(self, config):
+        self.rundir.mkdir(exist_ok=True)
+        # Without password, vtysh authenticates root via PAM.
+        (self.rundir / "vtysh.conf").write_text("username root nopassword\n")
+        for daemon in self.daemons:
+            cmd = [os.path.join(FRR_DIR, daemon), "-u", "root", "-g", "root",
+                   "-i", str(self.rundir / ("%s.pid" % daemon)),
+                   "-z", str(self.rundir / "zserv.api"),
+                   "--vty_socket", str(self.rundir), "-P", "0",
+                   "--log", "stdout", "--log-level", "debug", "--limit-fds", "1024"]
+            if daemon != "mgmtd":
+                # Empty config instead of /etc/frr/<daemon>.conf
+                config_file = self.rundir / ("%s.conf" % daemon)
+                config_file.write_text("")
+                cmd += ["-f", str(config_file)]
+            with open(str(self.rundir / ("%s.log" % daemon)), "w") as out:
+                proc = subprocess.Popen(self.ns.cmd(cmd), stdout=out, stderr=subprocess.STDOUT)
+            self.procs.append(proc)
+            vty = self.rundir / ("%s.vty" % daemon)
+            wait_until(lambda: vty.exists() or proc.poll() is not None, 10, 0.1,
+                       "%s vty socket" % daemon)
+            if proc.poll() is not None:
+                raise RuntimeError("%s exited on start (%d), see %s" % (
+                    daemon, proc.returncode, self.rundir / ("%s.log" % daemon)))
+        config_file = self.rundir / "frr.conf"
+        config_file.write_text(config)
+        self.ns.exec(self.vtysh_cmd() + ["-f", str(config_file)])
+        return self
+
+    def vtysh_cmd(self):
+        return [VTYSH_BIN, "--vty_socket", str(self.rundir), "--config_dir", str(self.rundir)]
+
+    def vtysh(self, command, json_output=True):
+        """Run vtysh command, 'json' is appended if json_output is set."""
+        if json_output:
+            command += " json"
+        out = self.ns.exec(self.vtysh_cmd() + ["-c", command])
+        return json.loads(out) if json_output else out
+
+    def stop(self):
+        for proc in reversed(self.procs):
+            if proc.poll() is None:
+                proc.terminate()
+                try:
+                    proc.wait(10)
+                except subprocess.TimeoutExpired:
+                    proc.kill()
+
+
 AFI_IP, AFI_IP6, AFI_L2VPN = 1, 2, 25
 SAFI_UNICAST, SAFI_EVPN = 1, 70
 
@@ -298,6 +370,7 @@ def ldpupdate(args, timeout=60):
     return run([sys.executable, LDPUPDATE_BIN] + args, timeout=timeout)
 
 
-def lspgen(args, timeout=60):
-    """Run the IS-IS/OSPF topology generator."""
-    return run([LSPGEN_BIN] + args, timeout=timeout)
+def lspgen(args, timeout=60, cwd=None):
+    """Run the IS-IS/OSPF topology generator. The sequence number cache
+    is written to the working directory."""
+    return run([LSPGEN_BIN] + args, timeout=timeout, cwd=cwd)

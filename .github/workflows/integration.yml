@@ -12,6 +12,8 @@ env:
   BUILD_TYPE: RelWithDebInfo
   # GoBGP master with TCP-AO support (osrg/gobgp#3602), not released yet
   GOBGP_COMMIT: 15e9be9198ae51abad50b3d9b42aa63c3b462834
+  # FRR major release track for ISIS and OSPF tests
+  FRR_VERSION: frr-10
 
 jobs:
   integration:
@@ -55,6 +57,17 @@ jobs:
       shell: bash
       run: GOBIN=$HOME/gobgp go install github.com/osrg/gobgp/v4/cmd/...@$GOBGP_COMMIT
 
+    - name: Install FRR
+      shell: bash
+      run: |
+        curl -s https://deb.frrouting.org/frr/keys.gpg | sudo tee /usr/share/keyrings/frrouting.gpg > /dev/null
+        echo "deb [signed-by=/usr/share/keyrings/frrouting.gpg] https://deb.frrouting.org/frr $(lsb_release -s -c) $FRR_VERSION" \
+          | sudo tee /etc/apt/sources.list.d/frr.list
+        sudo apt update
+        sudo apt install -y frr
+        # FRR daemons are started per test in network namespaces.
+        sudo systemctl stop frr
+
     - name: Install Python Dependencies
       shell: bash
       run: |
@@ -68,6 +81,7 @@ jobs:
         GOBGP_BIN: /home/runner/gobgp/gobgp
         BBL_REQUIRE_TCP_MD5: 1
         BBL_REQUIRE_TCP_AO: 1
+        BBL_REQUIRE_FRR: 1
       run: |
         uname -r
         grep -E "CONFIG_TCP_(AO|MD5SIG)=" /boot/config-$(uname -r) || true

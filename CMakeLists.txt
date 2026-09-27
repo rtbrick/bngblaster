@@ -13,7 +13,7 @@ endif()
 message("Compiler: ${CMAKE_C_COMPILER_ID} Version: ${CMAKE_C_COMPILER_VERSION}")
 
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
-option(BNGBLASTER_INTEGRATION_TESTS "Add integration tests (requires root, pytest and GoBGP)" OFF)
+option(BNGBLASTER_INTEGRATION_TESTS "Add integration tests (requires root, pytest, GoBGP and FRR)" OFF)
 option(BNGBLASTER_DPDK "Build with dpdk support" OFF)
 option(BNGBLASTER_AF_XDP "Build with AF_XDP support" OFF)
 option(BNGBLASTER_TIMER_LOGGING "Build with timer logging support" OFF)

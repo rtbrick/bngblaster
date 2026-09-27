@@ -107,6 +107,14 @@ Interfaces
 
 The BNG Blaster supports P2P and broadcast interfaces only.
 
+On broadcast interfaces, the DR and BDR are elected after the wait
+timer (dead interval) expires or a neighbor declares itself as BDR,
+as described in RFC 2328. Adjacencies are established with the
+DR and BDR only.
+
+Opaque LSAs (e.g. segment routing) are sent only to neighbors
+announcing opaque capability (O-bit) as described in RFC 5250.
+
 The following command returns detailed informations about all
 OSPF interfaces associated with the given OSPF instance (e.g. instance 1).
 

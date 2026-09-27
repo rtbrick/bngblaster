@@ -10,7 +10,7 @@ import os
 import pytest
 
 import helpers
-from helpers import BngBlaster, GoBgp, Netns
+from helpers import BngBlaster, Frr, GoBgp, Netns
 
 _ids = itertools.count(1)
 
@@ -110,7 +110,7 @@ def processes():
     for proc in started:
         if isinstance(proc, BngBlaster):
             proc.kill()
-        elif isinstance(proc, GoBgp):
+        elif isinstance(proc, (GoBgp, Frr)):
             proc.stop()
 
 
@@ -122,3 +122,16 @@ def gobgp_bin():
     if not version or version < helpers.GOBGP_MIN_VERSION:
         pytest.fail("%s version %s too old, GoBGP >= %s with TCP-AO required" % (
             helpers.GOBGPD_BIN, version, ".".join(map(str, helpers.GOBGP_MIN_VERSION))))
+
+
+@pytest.fixture
+def frr_bin():
+    """Skip without FRR, or fail if BBL_REQUIRE_FRR is set (CI)."""
+    if not (helpers.FRR_DIR and helpers.VTYSH_BIN):
+        if os.environ.get("BBL_REQUIRE_FRR"):
+            pytest.fail("FRR not found (set FRR_DIR and VTYSH_BIN)")
+        pytest.skip("FRR not found (set FRR_DIR and VTYSH_BIN)")
+    version = helpers.frr_version()
+    if not version or version < helpers.FRR_MIN_VERSION:
+        pytest.fail("FRR version %s too old, FRR >= %s required" % (
+            version, ".".join(map(str, helpers.FRR_MIN_VERSION))))

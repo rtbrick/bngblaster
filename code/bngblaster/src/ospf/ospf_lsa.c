@@ -324,7 +324,8 @@ ospf_lsa_flood(ospf_lsa_s *lsa)
         /* Add to neighbors retry list. */
         ospf_neighbor = ospf_interface->neighbors;
         while(ospf_neighbor) {
-            if(ospf_neighbor->state > OSPF_NBSTATE_EXSTART && lsa->source.router_id != ospf_neighbor->router_id) {
+            if(ospf_neighbor->state > OSPF_NBSTATE_EXSTART && lsa->source.router_id != ospf_neighbor->router_id &&
+               !ospf_neighbor_lsa_filter(ospf_neighbor, lsa->type)) {
                 flood_interface = true;
                 entry = ospf_lsa_tree_add(lsa, NULL, ospf_neighbor->lsa_retry_tree[lsa->type]);
                 if(entry) {
