@@ -1,12 +1,12 @@
 name: Integration
 
 on:
-  pull_request:
-    branches:
-      - main
-  schedule:
-    - cron: '0 2 * * *'
-  workflow_dispatch:
+  push:
+    paths-ignore:
+    - 'docs/**'
+    - 'docsrc/**'
+    branches-ignore:    
+      - pages
 
 env:
   BUILD_TYPE: RelWithDebInfo
