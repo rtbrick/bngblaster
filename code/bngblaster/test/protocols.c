@@ -306,6 +306,46 @@ test_protocols_bbl_flow_id(void **unused) {
     free(sp);
 }
 
+/* LCP Conf-Request with CHAP authentication option (5 bytes). */
+static void
+test_protocols_lcp_chap(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[256];
+    uint16_t len = 0;
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+
+    bbl_ethernet_header_s eth = {0};
+    bbl_pppoe_session_s pppoe = {0};
+    bbl_lcp_s lcp = {0};
+    bbl_ethernet_header_s *decoded;
+    bbl_lcp_s *decoded_lcp;
+
+    eth.dst = dst;
+    eth.src = src;
+    eth.type = ETH_TYPE_PPPOE_SESSION;
+    eth.next = &pppoe;
+    pppoe.session_id = 1;
+    pppoe.protocol = PROTOCOL_LCP;
+    pppoe.next = &lcp;
+    lcp.code = PPP_CODE_CONF_REQUEST;
+    lcp.identifier = 1;
+    lcp.auth = PROTOCOL_CHAP;
+    lcp.magic = 0x12345678;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    decoded_lcp = (bbl_lcp_s*)((bbl_pppoe_session_s*)decoded->next)->next;
+    assert_int_equal(decoded_lcp->options_len, 5 + 6);
+    assert_int_equal(decoded_lcp->auth, PROTOCOL_CHAP);
+    assert_int_equal(decoded_lcp->alg, PROTOCOL_CHAP_ALG_MD5);
+    assert_int_equal(decoded_lcp->magic, 0x12345678);
+    assert_false(decoded_lcp->unknown_options);
+    free(sp);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -313,6 +353,7 @@ int main() {
         cmocka_unit_test(test_protocols_ethernet_over_mpls_no_cw),
         cmocka_unit_test(test_protocols_arp_over_mpls_all),
         cmocka_unit_test(test_protocols_bbl_flow_id),
+        cmocka_unit_test(test_protocols_lcp_chap),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

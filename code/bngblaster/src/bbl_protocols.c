@@ -1542,6 +1542,7 @@ encode_ppp_lcp(uint8_t *buf, uint16_t *len,
                     } else {
                         *buf = PROTOCOL_CHAP_ALG_MD5;
                     }
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     lcp_len += 5;
                 } else {
                     *buf = 4;
