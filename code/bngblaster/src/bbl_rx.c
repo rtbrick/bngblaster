@@ -85,6 +85,10 @@ bbl_rx_thread(bbl_interface_s *interface,
     if(interface->state == INTERFACE_DISABLED) {
         return true;
     }
+    if(interface->type == LAG_MEMBER_INTERFACE) {
+        /* Access and network interfaces are bound to the LAG. */
+        interface = interface->lag->interface;
+    }
     network_interface = interface->network_vlan[eth->vlan_outer];
     if(network_interface) {
         return bbl_rx_stream_network(network_interface, eth);
