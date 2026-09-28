@@ -14,11 +14,13 @@
 typedef struct bbl_rate_
 {
     uint64_t diff_value[BBL_AVG_SAMPLES];
-    uint32_t cursor;
     uint64_t last_value;
     uint64_t sum;
     uint64_t avg;
     uint64_t avg_max;
+    uint32_t last_msec;
+    uint16_t diff_msec[BBL_AVG_SAMPLES];
+    uint8_t cursor;
 } bbl_rate_s;
 
 typedef struct bbl_stats_ 
@@ -167,7 +169,7 @@ typedef struct bbl_interface_stats_ {
 } bbl_interface_stats_s;
 
 void 
-bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value);
+bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value, struct timespec *now);
 
 void 
 bbl_stats_update_cps();

@@ -24,18 +24,18 @@ void
 bbl_a10nsp_interface_rate_job(timer_s *timer)
 {
     bbl_a10nsp_interface_s *interface = timer->data;
-    bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx, timer->timestamp);
 }
 
 /**

@@ -171,10 +171,10 @@ bbl_session_ncp_close(bbl_session_s *session, bool ipcp) {
 void
 bbl_session_rate_job(timer_s *timer) {
     bbl_session_s *session = timer->data;
-    bbl_compute_avg_rate(&session->stats.rate_packets_tx, session->stats.packets_tx);
-    bbl_compute_avg_rate(&session->stats.rate_packets_rx, session->stats.packets_rx);
-    bbl_compute_avg_rate(&session->stats.rate_bytes_tx, session->stats.bytes_tx);
-    bbl_compute_avg_rate(&session->stats.rate_bytes_rx, session->stats.bytes_rx);
+    bbl_compute_avg_rate(&session->stats.rate_packets_tx, session->stats.packets_tx, timer->timestamp);
+    bbl_compute_avg_rate(&session->stats.rate_packets_rx, session->stats.packets_rx, timer->timestamp);
+    bbl_compute_avg_rate(&session->stats.rate_bytes_tx, session->stats.bytes_tx, timer->timestamp);
+    bbl_compute_avg_rate(&session->stats.rate_bytes_rx, session->stats.bytes_rx, timer->timestamp);
 }
 
 static void

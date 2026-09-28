@@ -1494,7 +1494,7 @@ bbl_stream_setup_established(bbl_stream_s *stream)
 }
 
 static void
-bbl_stream_ctrl(bbl_stream_s *stream)
+bbl_stream_ctrl(bbl_stream_s *stream, struct timespec *now)
 {
     bbl_session_s *session = stream->session;
 
@@ -1513,7 +1513,7 @@ bbl_stream_ctrl(bbl_stream_s *stream)
         bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
     }
     if(g_ctx->config.stream_rate_calc && stream->pps >= 1) {
-        bbl_compute_avg_rate(stream->rate_packets_tx, packets);
+        bbl_compute_avg_rate(stream->rate_packets_tx, packets, now);
     }
     if(unlikely(stream->type == BBL_TYPE_MULTICAST)) {
         return;
@@ -1561,7 +1561,7 @@ bbl_stream_ctrl(bbl_stream_s *stream)
         }
     }
     if(g_ctx->config.stream_rate_calc && stream->pps >= 1) {
-        bbl_compute_avg_rate(stream->rate_packets_rx, packets);
+        bbl_compute_avg_rate(stream->rate_packets_rx, packets, now);
     }
 }
 
@@ -1569,8 +1569,11 @@ void
 bbl_stream_final()
 {
     bbl_stream_s *stream = g_ctx->stream_head;
+    struct timespec now;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
     while(stream) {
-        bbl_stream_ctrl(stream);
+        bbl_stream_ctrl(stream, &now);
         stream = stream->next;
     }
 }
@@ -1909,7 +1912,7 @@ bbl_stream_group_job(timer_s *timer)
     bbl_stream_group_s *group = timer->data;
     bbl_stream_s *stream = group->head;
     while(stream) {
-        bbl_stream_ctrl(stream);
+        bbl_stream_ctrl(stream, timer->timestamp);
         stream = stream->group_next;
     }
 }

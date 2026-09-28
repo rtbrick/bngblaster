@@ -1290,22 +1290,40 @@ bbl_stats_json(bbl_stats_s * stats)
  * Compute a PPS rate using a moving average of <BBL_AVG_SAMPLE> samples.
  */
 void
-bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value)
+bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value, struct timespec *now)
 {
-    if (current_value == 0) return;
+    uint32_t now_msec = now->tv_sec * 1000 + now->tv_nsec / MSEC;
+    uint32_t msec;
+    uint32_t sum_msec = 0;
+    uint64_t diff;
 
-    uint64_t diff = current_value - rate->last_value;
-    uint64_t old_diff = rate->diff_value[rate->cursor];
+    if(current_value == 0 || rate->last_msec == 0) {
+        rate->last_value = current_value;
+        rate->last_msec = now_msec;
+        return;
+    }
 
+    /* The rate job may run late if the main loop is overloaded,
+     * therefore the rate is computed based on the elapsed time
+     * and not on the number of samples. */
+    msec = now_msec - rate->last_msec;
+    if(msec == 0) return;
+    if(msec > UINT16_MAX) msec = UINT16_MAX;
+
+    diff = current_value - rate->last_value;
+    rate->sum = rate->sum - rate->diff_value[rate->cursor] + diff;
     rate->diff_value[rate->cursor] = diff;
+    rate->diff_msec[rate->cursor] = msec;
     rate->cursor = (rate->cursor + 1) % BBL_AVG_SAMPLES;
 
-    rate->sum = rate->sum - old_diff + diff;
-    rate->avg = rate->sum / BBL_AVG_SAMPLES;
-
-    if (rate->avg > rate->avg_max) {
+    for(int i = 0; i < BBL_AVG_SAMPLES; i++) {
+        sum_msec += rate->diff_msec[i];
+    }
+    rate->avg = rate->sum * 1000 / sum_msec;
+    if(rate->avg > rate->avg_max) {
         rate->avg_max = rate->avg;
     }
 
     rate->last_value = current_value;
+    rate->last_msec = now_msec;
 }
