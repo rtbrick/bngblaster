@@ -3077,15 +3077,15 @@ decode_dhcp(uint8_t *buf, uint16_t len,
         if(option == DHCP_OPTION_PAD) {
             continue;
         }
+        if(option == DHCP_OPTION_END) {
+            break;
+        }
         option_len = *buf;
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
         if(option_len > len) {
             return DECODE_ERROR;
         }
         switch(option) {
-            case DHCP_OPTION_END:
-                option_len = len;
-                break;
             case DHCP_OPTION_DHCP_MESSAGE_TYPE:
                 if(option_len != 1) {
                     return DECODE_ERROR;

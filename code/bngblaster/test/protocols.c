@@ -346,6 +346,55 @@ test_protocols_lcp_chap(void **unused) {
     free(sp);
 }
 
+/* DHCP Offer with non-zero bytes after the END option. RFC 2132 3.2: END marks
+ * the end of valid information, so the trailing bytes must be ignored. */
+static void
+test_protocols_dhcp_end_option(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[512] = {0};
+    uint8_t options[] = {
+        0x63, 0x82, 0x53, 0x63,                         /* magic cookie */
+        0x35, 0x01, 0x02,                               /* message type offer */
+        0x36, 0x04, 0x0a, 0x00, 0x00, 0x01,             /* server identifier */
+        0x33, 0x04, 0x00, 0x00, 0x0e, 0x10,             /* lease time 3600 */
+        0xff,                                           /* end */
+        0x10, 0x00, 0x00, 0x1c, 0xa8, 0x0b, 0x01, 0x01  /* trailing data */
+    };
+    uint16_t udp_len = UDP_HDR_LEN + sizeof(struct dhcp_header) + sizeof(options);
+    uint16_t ip_len = 20 + udp_len;
+    uint32_t server;
+
+    bbl_ethernet_header_s *eth;
+    bbl_ipv4_s *ipv4;
+    bbl_udp_s *udp;
+    bbl_dhcp_s *dhcp;
+
+    buf[12] = 0x08; /* ethertype IPv4 */
+    buf[14] = 0x45;
+    buf[16] = ip_len >> 8;
+    buf[17] = ip_len & 0xff;
+    buf[22] = 64;
+    buf[23] = PROTOCOL_IPV4_UDP;
+    buf[35] = DHCP_UDP_SERVER;
+    buf[37] = DHCP_UDP_CLIENT;
+    buf[38] = udp_len >> 8;
+    buf[39] = udp_len & 0xff;
+    buf[42] = 2; /* BOOTREPLY */
+    memcpy(buf + 42 + sizeof(struct dhcp_header), options, sizeof(options));
+    inet_pton(AF_INET, "10.0.0.1", &server);
+
+    assert_int_equal(decode_ethernet(buf, 14 + ip_len, sp, SCRATCHPAD_LEN, &eth), PROTOCOL_SUCCESS);
+    ipv4 = (bbl_ipv4_s*)eth->next;
+    udp = (bbl_udp_s*)ipv4->next;
+    dhcp = (bbl_dhcp_s*)udp->next;
+    assert_int_equal(dhcp->type, DHCP_MESSAGE_OFFER);
+    assert_int_equal(dhcp->server_identifier, server);
+    assert_int_equal(dhcp->lease_time, 3600);
+    free(sp);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -354,6 +403,7 @@ int main() {
         cmocka_unit_test(test_protocols_arp_over_mpls_all),
         cmocka_unit_test(test_protocols_bbl_flow_id),
         cmocka_unit_test(test_protocols_lcp_chap),
+        cmocka_unit_test(test_protocols_dhcp_end_option),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
