@@ -297,8 +297,8 @@ io_thread_init(io_handle_s *io)
     thread->sp = malloc(SCRATCHPAD_LEN);
 
     /* Init thread TXQ */
-    thread->txq = calloc(1, sizeof(bbl_txq_s));
-    if(!(thread->txq && bbl_txq_init(thread->txq, slots))) {
+    thread->txq = bbl_txq_alloc(slots);
+    if(!thread->txq) {
         return false;
     }
 

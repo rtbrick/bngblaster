@@ -92,8 +92,11 @@ bbl_network_interfaces_add()
         network_interface->vlindex |= network_config->vlan;
 
         /* Init TXQ */
-        network_interface->txq = calloc(1, sizeof(bbl_txq_s));
-        bbl_txq_init(network_interface->txq, BBL_TXQ_DEFAULT_SIZE);
+        network_interface->txq = bbl_txq_alloc(BBL_TXQ_DEFAULT_SIZE);
+        if(!network_interface->txq) {
+            LOG(ERROR, "Failed to add network interface %s (TXQ allocation failed)\n", ifname);
+            return false;
+        }
 
         /* Init ethernet */
         network_interface->vlan = network_config->vlan;

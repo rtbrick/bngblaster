@@ -75,8 +75,11 @@ bbl_a10nsp_interfaces_add()
         a10nsp_interface->ifindex = interface->ifindex;
 
         /* Init TXQ */
-        a10nsp_interface->txq = calloc(1, sizeof(bbl_txq_s));
-        bbl_txq_init(a10nsp_interface->txq, BBL_TXQ_DEFAULT_SIZE);
+        a10nsp_interface->txq = bbl_txq_alloc(BBL_TXQ_DEFAULT_SIZE);
+        if(!a10nsp_interface->txq) {
+            LOG(ERROR, "Failed to add a10nsp interface %s (TXQ allocation failed)\n", a10nsp_config->interface);
+            return false;
+        }
 
         /* Init ethernet */
         a10nsp_interface->qinq = a10nsp_config->qinq;

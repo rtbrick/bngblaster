@@ -67,8 +67,11 @@ bbl_access_interfaces_add()
             access_interface->access_type = access_config->access_type;
             
             /* Init TXQ */
-            access_interface->txq = calloc(1, sizeof(bbl_txq_s));
-            bbl_txq_init(access_interface->txq, BBL_TXQ_DEFAULT_SIZE);
+            access_interface->txq = bbl_txq_alloc(BBL_TXQ_DEFAULT_SIZE);
+            if(!access_interface->txq) {
+                LOG(ERROR, "Failed to add access interface %s (TXQ allocation failed)\n", ifname);
+                return false;
+            }
 
             /* Init ethernet */
             memcpy(access_interface->mac, interface->mac, ETH_ADDR_LEN);

@@ -2036,7 +2036,11 @@ bbl_stream_add(bbl_stream_s *stream)
 static bbl_stream_s *
 bbl_stream_alloc(bbl_stream_config_s *config, uint8_t direction, double pps)
 {
-    bbl_stream_s *stream = aligned_alloc(64, sizeof(bbl_stream_s));
+    bbl_stream_s *stream = aligned_alloc(CACHE_LINE_SIZE, sizeof(bbl_stream_s));
+    if(!stream) {
+        LOG(ERROR, "Failed to add stream %s (allocation failed)\n", config->name);
+        return NULL;
+    }
     memset(stream, 0x0, sizeof(bbl_stream_s));
     if(g_ctx->config.stream_rate_calc) {
         stream->rate_packets_rx = calloc(1, sizeof(bbl_rate_s));
@@ -2116,6 +2120,9 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             }
         }
         stream_up = bbl_stream_alloc(config, BBL_DIRECTION_UP, config->pps_upstream);
+        if(!stream_up) {
+            return false;
+        }
         if(config->session_traffic) {
             stream_up->tx_flags |= STREAM_FLAG_SESSION_TRAFFIC;
         }
@@ -2169,6 +2176,9 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
     }
     if(config->direction & BBL_DIRECTION_DOWN) {
         stream_down = bbl_stream_alloc(config, BBL_DIRECTION_DOWN, config->pps);
+        if(!stream_down) {
+            return false;
+        }
         stream_down->session = session;
         switch(stream_down->sub_type) {
             case BBL_SUB_TYPE_IPV4:
@@ -2354,6 +2364,9 @@ bbl_stream_init() {
             if(config->direction & BBL_DIRECTION_DOWN) {
                 for(int i=0; i < config->count; i++) {
                     stream = bbl_stream_alloc(config, BBL_DIRECTION_DOWN, config->pps);
+                    if(!stream) {
+                        return false;
+                    }
                     if(config->type == BBL_SUB_TYPE_IPV4) {
                         /* All IPv4 multicast addresses start with 1110 */
                         if((config->ipv4_destination_address & htobe32(0xf0000000)) == htobe32(0xe0000000)) {
@@ -2443,6 +2456,9 @@ bbl_stream_init() {
             config->ipv4_network_address = source;
 
             stream = bbl_stream_alloc(config, BBL_DIRECTION_DOWN, config->pps);
+            if(!stream) {
+                return false;
+            }
             stream->endpoint = &(g_ctx->multicast_endpoint);
             stream->type = BBL_TYPE_MULTICAST;
             stream->tx_flags |= (STREAM_FLAG_NETWORK|STREAM_FLAG_DOWNSTREAM);
