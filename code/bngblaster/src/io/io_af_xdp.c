@@ -951,7 +951,8 @@ io_af_xdp_thread_tx_run_fn(io_thread_s *thread)
     bbl_stream_s *stream = NULL;
     struct xdp_desc *desc;
     uint16_t io_burst = interface->config->io_burst;
-    uint16_t burst = 0;
+    uint32_t burst = 0;
+    uint32_t used = 0;
     uint64_t now;
     uint64_t addr;
     uint32_t tidx = 0;
@@ -976,34 +977,36 @@ io_af_xdp_thread_tx_run_fn(io_thread_s *thread)
 
         io_af_xdp_reap(q);
 
+        /* Reserve TX ring slots for the whole burst at once and publish
+         * them with a single producer update per round. Submitting per
+         * packet lets NAPI (running on another core) consume the ring in
+         * tiny chunks and bounces the producer cache line for every packet.
+         * The TX ring has as many slots as there are TX frames, so a
+         * reservation limited to tx_free_count can not fail. */
         burst = io_burst;
+        if(burst > q->tx_free_count) {
+            burst = q->tx_free_count;
+        }
+        if(burst && xsk_ring_prod__reserve(&q->tx, burst, &tidx) != burst) {
+            burst = 0;
+        }
+        used = 0;
 
         /* First send all control traffic which has higher priority. */
-        while(burst && (slot = bbl_txq_read_slot(txq))) {
-            if(!q->tx_free_count) {
-                io->stats.no_buffer++;
-                break;
-            }
-            addr = q->tx_free[q->tx_free_count - 1];
+        while(used < burst && (slot = bbl_txq_read_slot(txq))) {
+            addr = q->tx_free[--q->tx_free_count];
             io->buf = xsk_umem__get_data(q->umem_area, addr);
             memcpy(io->buf, slot->packet, slot->packet_len);
 
-            if(unlikely(xsk_ring_prod__reserve(&q->tx, 1, &tidx) != 1)) {
-                io->stats.no_buffer++;
-                break;
-            }
-            q->tx_free_count--;
-            desc = xsk_ring_prod__tx_desc(&q->tx, tidx);
+            desc = xsk_ring_prod__tx_desc(&q->tx, tidx + used);
             desc->addr = addr;
             desc->len = slot->packet_len;
             desc->options = 0;
-            xsk_ring_prod__submit(&q->tx, 1);
+            used++;
 
             io->stats.packets++;
             io->stats.bytes += slot->packet_len;
-            io->queued++;
             bbl_txq_read_next(txq);
-            burst--;
         }
 
         /* Get TX timestamp */
@@ -1011,40 +1014,40 @@ io_af_xdp_thread_tx_run_fn(io_thread_s *thread)
 
         if(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP) {
             now = timespec_to_nsec(&io->timestamp);
-            while(burst) {
-                if(!q->tx_free_count) {
-                    io->stats.no_buffer++;
-                    break;
-                }
-                /* Send traffic streams up to allowed burst. */
+            /* Send traffic streams up to allowed burst. */
+            while(used < burst) {
                 stream = bbl_stream_io_send_iter(io, now);
                 if(unlikely(stream == NULL)) {
                     break;
                 }
-                addr = q->tx_free[q->tx_free_count - 1];
+                addr = q->tx_free[--q->tx_free_count];
                 io->buf = xsk_umem__get_data(q->umem_area, addr);
                 memcpy(io->buf, stream->tx_buf, stream->tx_len);
 
-                if(unlikely(xsk_ring_prod__reserve(&q->tx, 1, &tidx) != 1)) {
-                    io->stats.dropped++;
-                    break;
-                }
-                q->tx_free_count--;
-                desc = xsk_ring_prod__tx_desc(&q->tx, tidx);
+                desc = xsk_ring_prod__tx_desc(&q->tx, tidx + used);
                 desc->addr = addr;
                 desc->len = stream->tx_len;
                 desc->options = 0;
-                xsk_ring_prod__submit(&q->tx, 1);
+                used++;
 
                 stream->tx_packets++;
                 stream->flow_seq++;
                 io->stats.packets++;
                 io->stats.bytes += stream->tx_len;
-                io->queued++;
-                burst--;
             }
         } else {
             bbl_stream_io_stop(io);
+        }
+
+        if(burst < io_burst && used == burst) {
+            /* Round was limited by free TX frames. */
+            io->stats.no_buffer++;
+        }
+        /* Release reserved but unused slots (xsk_ring_prod__cancel). */
+        q->tx.cached_prod -= burst - used;
+        if(used) {
+            xsk_ring_prod__submit(&q->tx, used);
+            io->queued += used;
         }
 
         io_af_xdp_kick_tx(q);
