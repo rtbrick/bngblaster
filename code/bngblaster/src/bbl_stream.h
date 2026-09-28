@@ -96,6 +96,8 @@ typedef struct bbl_stream_config_
     bbl_stream_config_s *next; /* Next stream config */
 } bbl_stream_config_s;
 
+#define BBL_STREAM_GROUP_MAX 256
+
 typedef struct bbl_stream_group_
 {
     double pps;

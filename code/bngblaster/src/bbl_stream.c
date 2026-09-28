@@ -1935,23 +1935,34 @@ bbl_stream_group_init(double pps)
 static void
 bbl_stream_add_group(bbl_stream_s *stream)
 {
-    bbl_stream_group_s *group = g_ctx->stream_groups;
+    bbl_stream_group_s **link = &g_ctx->stream_groups;
+    bbl_stream_group_s *group = *link;
     while(group) {
-        if(group->count < 256 && group->pps == stream->pps) {
+        if(group->pps == stream->pps) {
             break;
         }
-        group = group->next;
+        link = &group->next;
+        group = *link;
     }
     if(!group) {
         group = bbl_stream_group_init(stream->pps);
         group->next = g_ctx->stream_groups;
         g_ctx->stream_groups = group;
+        link = &g_ctx->stream_groups;
     }
     stream->group = group;
     stream->group_next = group->head;
 
     group->head = stream;
     group->count++;
+    if(group->count >= BBL_STREAM_GROUP_MAX) {
+        /* Full groups are removed from the list, which therefore
+         * holds at most one group per PPS. Otherwise every new
+         * group would require to walk all full groups, which is
+         * quadratic with millions of streams. */
+        *link = group->next;
+        group->next = NULL;
+    }
 }
 
 static void
