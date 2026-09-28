@@ -2811,7 +2811,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "priority", "vlan-priority", "inner-vlan-priority",
         "pps", "bps", "Kbps", "Mbps", "length", "ttl", "count",
         "pps-upstream", "bps-upstream", "Kbps-upstream", "Mbps-upstream",
-        "Gbps", "max-packets", "start-delay",
+        "Gbps-upstream", "Gbps", "max-packets", "start-delay",
         "ldp-ipv4-lookup-address", "ldp-ipv6-lookup-address", 
         "access-ipv4-source-address", "access-ipv6-source-address",
         "network-ipv4-address", "network-ipv6-address", "destination-ipv4-address",

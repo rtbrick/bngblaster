@@ -85,6 +85,8 @@
 +--------------------------------+------------------------------------------------------------------+
 | **bps-upstream**               | | Optionally overwrite bps in upstream to support bidirectional  |
 |                                | | streams with different rates for upstream and downstream.      |
+|                                | | The K, M and G prefixes are supported as well,                 |
+|                                | | for example, ``"Gbps-upstream": 1``.                           |
 +--------------------------------+------------------------------------------------------------------+
 | **setup-interval**             | | Set optional setup interval in seconds. If set, sent max 1     |
 |                                | | packet per setup interval until stream becomes verified.       |

@@ -2435,6 +2435,13 @@
                     "description": "Enable stream autostart",
                     "default": true
                 },
+                "count": {
+                    "type": "integer",
+                    "description": "Increment the source port for each instance of this stream",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
                 "source-port": {
                     "type": "integer",
                     "description": "Source port",
