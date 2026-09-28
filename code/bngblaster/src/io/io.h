@@ -26,6 +26,7 @@
 
 #include "io_raw.h"
 #include "io_packet_mmap.h"
+#include "io_loopback.h"
 
 #ifdef BNGBLASTER_DPDK
 #include "io_dpdk.h"

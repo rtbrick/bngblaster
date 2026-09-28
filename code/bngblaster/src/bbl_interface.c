@@ -99,6 +99,7 @@ interface_io_mode_string(io_mode_t mode)
         case IO_MODE_RAW: return "raw";
         case IO_MODE_DPDK: return "dpdk";
         case IO_MODE_AF_XDP: return "af_xdp";
+        case IO_MODE_LOOPBACK: return "loopback";
         default: return "disabled";
     }
 }

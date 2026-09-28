@@ -224,6 +224,8 @@ typedef struct bbl_link_config_
     char *lag_interface;
     uint16_t lacp_priority;
 
+    char *loopback_peer;
+
     void *next; /* pointer to next link config element */
     bbl_interface_s *link;
 } bbl_link_config_s;

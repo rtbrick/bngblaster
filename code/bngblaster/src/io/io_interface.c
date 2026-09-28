@@ -469,6 +469,10 @@ io_interface_init(bbl_interface_s *interface)
     }
 #endif
 
+    if(config->io_mode == IO_MODE_LOOPBACK) {
+        return io_loopback_interface_init(interface);
+    }
+
     if(config->io_mode != IO_MODE_DPDK) {
         address_warning(interface);
         if(!set_kernel_info(interface)) {

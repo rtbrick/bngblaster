@@ -206,7 +206,7 @@ bbl_print_version (void)
         printf("  REF: %s\n", GIT_REF);
         printf("  SHA: %s\n", GIT_SHA);
     }
-    printf("IO Modes: packet_mmap_raw (default), packet_mmap, raw");
+    printf("IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback");
 #ifdef BNGBLASTER_DPDK
     printf(", dpdk");
 #endif

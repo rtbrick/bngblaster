@@ -16,6 +16,7 @@
                         "packet_mmap_raw",
                         "packet_mmap",
                         "raw",
+                        "loopback",
                         "dpdk",
                         "af_xdp"
                     ]
@@ -2302,6 +2303,10 @@
                     "default": 32768,
                     "minimum": 0,
                     "maximum": 65535
+                },
+                "loopback-peer": {
+                    "type": "string",
+                    "description": "Peer link for IO mode loopback"
                 },
                 "tx-cpuset": {
                     "type": "array",

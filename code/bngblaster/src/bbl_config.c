@@ -646,7 +646,8 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         "tx-threads", "rx-threads",
         "tx-auto-cpuset", "rx-auto-cpuset",
         "rx-cpuset", "tx-cpuset", 
-        "lag-interface", "lacp-priority"
+        "lag-interface", "lacp-priority",
+        "loopback-peer"
     };
     if(!schema_validate(link, "links", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -666,6 +667,9 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     
     if(json_unpack(link, "{s:s}", "description", &s) == 0) {
         link_config->description = strdup(s);
+    }
+    if(json_unpack(link, "{s:s}", "loopback-peer", &s) == 0) {
+        link_config->loopback_peer = strdup(s);
     }
     if(json_unpack(link, "{s:s}", "mac", &s) == 0) {
         if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
@@ -688,6 +692,9 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             io_packet_mmap_set_max_stream_len();
         } else if(strcmp(s, "raw") == 0) {
             link_config->io_mode = IO_MODE_RAW;
+        } else if(strcmp(s, "loopback") == 0) {
+            link_config->io_mode = IO_MODE_LOOPBACK;
+            io_loopback_set_max_stream_len();
 #if BNGBLASTER_DPDK
         } else if(strcmp(s, "dpdk") == 0) {
             link_config->io_mode = IO_MODE_DPDK;
@@ -4652,6 +4659,9 @@ json_parse_config(json_t *root)
                 io_packet_mmap_set_max_stream_len();
             } else if(strcmp(s, "raw") == 0) {
                 g_ctx->config.io_mode = IO_MODE_RAW;
+            } else if(strcmp(s, "loopback") == 0) {
+                g_ctx->config.io_mode = IO_MODE_LOOPBACK;
+                io_loopback_set_max_stream_len();
 #if BNGBLASTER_DPDK
             } else if(strcmp(s, "dpdk") == 0) {
                 g_ctx->config.io_mode = IO_MODE_DPDK;

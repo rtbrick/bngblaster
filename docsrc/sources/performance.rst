@@ -341,6 +341,60 @@ DPDK assigns one hardware queue to each RX thread, so you need to increase
 the number of threads to utilize more queues and enhance performance.
 
 
+.. _loopback-usage:
+
+Loopback
+--------
+
+The I/O mode ``loopback`` connects two links of the same BNG Blaster instance
+back to back via in-memory rings, without any kernel interface, driver or NIC
+in between. This allows to measure the I/O performance of the BNG Blaster
+itself (packet generation, stream processing, decoding, ...) independent of
+the underlying I/O stack, which makes it the upper bound of what the BNG Blaster
+can achieve with any other I/O mode. The links do not need to exist in the
+host OS and no special privileges are required.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "io-mode": "loopback",
+            "rx-threads": 2,
+            "tx-threads": 2,
+            "links": [
+                { "interface": "lo-a10nsp", "loopback-peer": "lo-access" },
+                { "interface": "lo-access" }
+            ],
+            "a10nsp": [ { "interface": "lo-a10nsp" } ],
+            "access": [
+                {
+                    "interface": "lo-access",
+                    "type": "ipoe",
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "inner-vlan": 7
+                }
+            ]
+        }
+    }
+
+Every TX thread (or the main thread if TX threads are disabled) owns one
+lock-free single-producer/single-consumer ring to the peer link, which is
+read by exactly one RX thread of the peer. If the peer link has fewer RX than
+TX threads, the rings are distributed round-robin over the available RX threads.
+The ring size is defined by ``io-slots`` of the sending link. Similar to a NIC, a
+full ring is reported as ``no-buffer`` and the affected packets are sent later.
+
+The MAC address is generated automatically, if not explicitly configured
+per link. The maximum stream packet length is 3952 bytes or 12144 bytes with
+``jumbo-frames`` enabled.
+
+.. note::
+
+    Each loopback link runs its own RX and TX threads, so the number of
+    threads required for both links of a loopback pair should not exceed
+    the number of available CPU cores.
+
 .. _af-xdp-usage:
 
 AF_XDP

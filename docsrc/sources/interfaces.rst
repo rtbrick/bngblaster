@@ -537,7 +537,7 @@ ring buffer and sent through RAW packet sockets.
     $ bngblaster -v
     Version: 0.8.1
     Compiler: GNU (7.5.0)
-    IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk, af_xdp
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback, dpdk, af_xdp
 
 Packet MMAP
 ~~~~~~~~~~~
@@ -575,3 +575,12 @@ AF_XDP
 `AF_XDP <https://www.kernel.org/doc/html/latest/networking/af_xdp.html>`_ support
 should be considered as experimental. This I/O mode is detailed explained in the
 :ref:`AF_XDP <af-xdp-usage>` section of the :ref:`performance guide <performance>`.
+
+Loopback
+~~~~~~~~
+
+The I/O mode ``loopback`` connects two links of the same BNG Blaster instance
+back to back via in-memory rings, without any kernel interface, driver or NIC in
+between. This mode is intended to measure the I/O performance of the BNG Blaster
+itself and is detailed explained in the :ref:`Loopback <loopback-usage>` section
+of the :ref:`performance guide <performance>`.
