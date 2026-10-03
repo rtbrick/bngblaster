@@ -10,6 +10,7 @@
 #include <stdarg.h>
 #include <setjmp.h>
 #include <cmocka.h>
+#include <netinet/udp.h>
 
 #include <bbl_def.h>
 #include <bbl_protocols.h>
@@ -363,29 +364,33 @@ test_protocols_dhcp_end_option(void **unused) {
         0x10, 0x00, 0x00, 0x1c, 0xa8, 0x0b, 0x01, 0x01  /* trailing data */
     };
     uint16_t udp_len = UDP_HDR_LEN + sizeof(struct dhcp_header) + sizeof(options);
-    uint16_t ip_len = 20 + udp_len;
+    uint16_t ip_len = sizeof(struct iphdr) + udp_len;
     uint32_t server;
+
+    struct ether_header *eth_hdr = (struct ether_header*)buf;
+    struct iphdr *ip_hdr = (struct iphdr*)(buf + ETH_HDR_LEN);
+    struct udphdr *udp_hdr = (struct udphdr*)((uint8_t*)ip_hdr + sizeof(struct iphdr));
+    struct dhcp_header *dhcp_hdr = (struct dhcp_header*)((uint8_t*)udp_hdr + UDP_HDR_LEN);
 
     bbl_ethernet_header_s *eth;
     bbl_ipv4_s *ipv4;
     bbl_udp_s *udp;
     bbl_dhcp_s *dhcp;
 
-    buf[12] = 0x08; /* ethertype IPv4 */
-    buf[14] = 0x45;
-    buf[16] = ip_len >> 8;
-    buf[17] = ip_len & 0xff;
-    buf[22] = 64;
-    buf[23] = PROTOCOL_IPV4_UDP;
-    buf[35] = DHCP_UDP_SERVER;
-    buf[37] = DHCP_UDP_CLIENT;
-    buf[38] = udp_len >> 8;
-    buf[39] = udp_len & 0xff;
-    buf[42] = 2; /* BOOTREPLY */
-    memcpy(buf + 42 + sizeof(struct dhcp_header), options, sizeof(options));
+    eth_hdr->ether_type = htobe16(ETH_TYPE_IPV4);
+    ip_hdr->version = 4;
+    ip_hdr->ihl = sizeof(struct iphdr) / 4;
+    ip_hdr->tot_len = htobe16(ip_len);
+    ip_hdr->ttl = 64;
+    ip_hdr->protocol = PROTOCOL_IPV4_UDP;
+    udp_hdr->source = htobe16(DHCP_UDP_SERVER);
+    udp_hdr->dest = htobe16(DHCP_UDP_CLIENT);
+    udp_hdr->len = htobe16(udp_len);
+    dhcp_hdr->op = BOOTREPLY;
+    memcpy((uint8_t*)dhcp_hdr + sizeof(struct dhcp_header), options, sizeof(options));
     inet_pton(AF_INET, "10.0.0.1", &server);
 
-    assert_int_equal(decode_ethernet(buf, 14 + ip_len, sp, SCRATCHPAD_LEN, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, ETH_HDR_LEN + ip_len, sp, SCRATCHPAD_LEN, &eth), PROTOCOL_SUCCESS);
     ipv4 = (bbl_ipv4_s*)eth->next;
     udp = (bbl_udp_s*)ipv4->next;
     dhcp = (bbl_dhcp_s*)udp->next;
