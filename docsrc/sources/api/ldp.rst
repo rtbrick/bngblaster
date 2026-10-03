@@ -29,10 +29,10 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **ldp-raw-update-list**           | | List all loaded LDP RAW update files.                              |
 +-----------------------------------+----------------------------------------------------------------------+
-| **ldp-raw-update**                | | Update all matching LDP session.                                   |
+| **ldp-raw-update**                | | Update all matching LDP sessions.                                  |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
-|                                   | | ``file`` Mandatory                                                 |
+|                                   | | ``file`` Mandatory path to LDP RAW update file.                    |
 |                                   | | ``ldp-instance-id``                                                |
 |                                   | | ``local-ipv4-address``                                             |
 |                                   | | ``peer-ipv4-address``                                              |

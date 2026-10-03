@@ -314,7 +314,8 @@ bbl_interactive_window_job(timer_s *timer)
 
     if(g_view_selected == UI_VIEW_DEFAULT) {
         VISIBLE((g_ctx->sessions)) {
-            wprintw(stats_win, "\nSessions      %10u (%u PPPoE / %u IPoE)\n", g_ctx->sessions, g_ctx->sessions_pppoe, g_ctx->sessions_ipoe);
+            wprintw(stats_win, "\nSessions      %10u (%u PPPoE / %u PPPoL2TP / %u IPoE)\n",
+                    g_ctx->sessions, g_ctx->sessions_pppoe, g_ctx->sessions_pppol2tp, g_ctx->sessions_ipoe);
 
             /* Progress bar established sessions */
             wprintw(stats_win, "  Established %10u [", g_ctx->sessions_established);
@@ -388,8 +389,8 @@ bbl_interactive_window_job(timer_s *timer)
                 wprintw(stats_win, "  RX Packets                %10lu (%7lu PPS)\n",
                     g_network_if->stats.li_rx, g_network_if->stats.rate_li_rx.avg);
             }
-            VISIBLE((g_ctx->config.l2tp_server)) {
-                wprintw(stats_win, "\nL2TP LNS Statistics\n");
+            VISIBLE((g_ctx->config.l2tp_server  || g_ctx->config.l2tp_client)) {
+                wprintw(stats_win, "\nL2TP LNS/LAC Statistics\n");
                 wprintw(stats_win, "  Tunnels     %10u\n", g_ctx->l2tp_tunnels);
                 wprintw(stats_win, "  Established %10u\n", g_ctx->l2tp_tunnels_established);
                 wprintw(stats_win, "  Sessions    %10u\n", g_ctx->l2tp_sessions);
@@ -576,17 +577,17 @@ bbl_interactive_window_job(timer_s *timer)
             if(g_ctx->stats.session_traffic_flows) {
                 wprintw(stats_win, "  TX Session Packets IPv4   %10lu |%7lu PPS\n",
                     g_access_if->stats.session_ipv4_tx, g_access_if->stats.rate_session_ipv4_tx.avg);
-                wprintw(stats_win, "  RX Session Packets IPv4   %10lu |%7lu PPS %10lu Loss %lu Wrong Session\n",
+                wprintw(stats_win, "  RX Session Packets IPv4   %10lu |%7lu PPS %10lu Loss %u Wrong Session\n",
                     g_access_if->stats.session_ipv4_rx, g_access_if->stats.rate_session_ipv4_rx.avg,
                     g_access_if->stats.session_ipv4_loss, g_access_if->stats.session_ipv4_wrong_session);
                 wprintw(stats_win, "  TX Session Packets IPv6   %10lu |%7lu PPS\n",
                     g_access_if->stats.session_ipv6_tx, g_access_if->stats.rate_session_ipv6_tx.avg);
-                wprintw(stats_win, "  RX Session Packets IPv6   %10lu |%7lu PPS %10lu Loss %lu Wrong Session\n",
+                wprintw(stats_win, "  RX Session Packets IPv6   %10lu |%7lu PPS %10lu Loss %u Wrong Session\n",
                     g_access_if->stats.session_ipv6_rx, g_access_if->stats.rate_session_ipv6_rx.avg,
                     g_access_if->stats.session_ipv6_loss, g_access_if->stats.session_ipv6_wrong_session);
                 wprintw(stats_win, "  TX Session Packets IPv6PD %10lu |%7lu PPS\n",
                     g_access_if->stats.session_ipv6pd_tx, g_access_if->stats.rate_session_ipv6pd_tx.avg);
-                wprintw(stats_win, "  RX Session Packets IPv6PD %10lu |%7lu PPS %10lu Loss %lu Wrong Session\n",
+                wprintw(stats_win, "  RX Session Packets IPv6PD %10lu |%7lu PPS %10lu Loss %u Wrong Session\n",
                     g_access_if->stats.session_ipv6pd_rx, g_access_if->stats.rate_session_ipv6pd_rx.avg,
                     g_access_if->stats.session_ipv6pd_loss, g_access_if->stats.session_ipv6pd_wrong_session);
             }
@@ -692,6 +693,8 @@ bbl_interactive_window_job(timer_s *timer)
 
                 uint64_t tx_kbps;
                 uint64_t rx_kbps;
+                uint64_t rate_packets_tx_avg;
+                uint64_t rate_packets_rx_avg;
                 uint64_t stream_sum_up_tx_pps = 0;
                 uint64_t stream_sum_up_tx_kbps = 0;
                 uint64_t stream_sum_up_rx_pps = 0;
@@ -706,33 +709,37 @@ bbl_interactive_window_job(timer_s *timer)
                 bbl_stream_s *stream = session->streams.head;
                 i = 0;
                 while(stream) {
-                    tx_kbps = stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000;
-                    if(stream->rate_packets_tx.avg && tx_kbps == 0) {
+                    rate_packets_tx_avg = 0;
+                    rate_packets_rx_avg = 0;
+                    if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg;
+                    tx_kbps = rate_packets_tx_avg * stream->tx_len * 8 / 1000;
+                    if(rate_packets_tx_avg && tx_kbps == 0) {
                         tx_kbps = 1;
                     }
-                    rx_kbps = stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000;
-                    if(stream->rate_packets_rx.avg && rx_kbps == 0) {
+                    if(stream->rate_packets_rx) rate_packets_rx_avg = stream->rate_packets_rx->avg;
+                    rx_kbps = rate_packets_rx_avg * stream->rx_len * 8 / 1000;
+                    if(rate_packets_rx_avg && rx_kbps == 0) {
                         rx_kbps = 1;
                     }
                     if(i >= stats_win_postion && i < 16+stats_win_postion) {
                         wprintw(stats_win, "  %-16.16s | %-9.9s | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name,
                                 stream->direction == BBL_DIRECTION_UP ? "up" : "down",
-                                stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
+                                rate_packets_tx_avg, tx_kbps, rate_packets_rx_avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
                     } else if(i == 16+stats_win_postion) {   
                         wprintw(stats_win, "  ...\n");
                     }
                     i++;
 
                     if(stream->direction == BBL_DIRECTION_UP) {
-                        stream_sum_up_tx_pps += stream->rate_packets_tx.avg;
+                        stream_sum_up_tx_pps += rate_packets_tx_avg;
                         stream_sum_up_tx_kbps += tx_kbps;
-                        stream_sum_up_rx_pps += stream->rate_packets_rx.avg;
+                        stream_sum_up_rx_pps += rate_packets_rx_avg;
                         stream_sum_up_rx_kbps += rx_kbps;
                         stream_sum_up_loss +=  (stream->rx_loss - stream->reset_loss);
                     } else {
-                        stream_sum_down_tx_pps += stream->rate_packets_tx.avg;
+                        stream_sum_down_tx_pps += rate_packets_tx_avg;
                         stream_sum_down_tx_kbps += tx_kbps;
-                        stream_sum_down_rx_pps += stream->rate_packets_rx.avg;
+                        stream_sum_down_rx_pps += rate_packets_rx_avg;
                         stream_sum_down_rx_kbps += rx_kbps;
                         stream_sum_down_loss += (stream->rx_loss - stream->reset_loss);
                     }
@@ -761,22 +768,28 @@ bbl_interactive_window_job(timer_s *timer)
 
         uint64_t tx_kbps;
         uint64_t rx_kbps;
+        uint64_t rate_packets_tx_avg;
+        uint64_t rate_packets_rx_avg;
 
         bbl_stream_s *stream = g_ctx->stream_head;
         i = 0;
         while(stream) {
             if((!stream->session) && stream->tx_network_interface == g_network_if) {
-                tx_kbps = stream->rate_packets_tx.avg * stream->tx_len * 8 / 1000;
-                if(stream->rate_packets_tx.avg && tx_kbps == 0) {
+                rate_packets_tx_avg = 0;
+                rate_packets_rx_avg = 0;
+                if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg;
+                tx_kbps = rate_packets_tx_avg * stream->tx_len * 8 / 1000;
+                if(rate_packets_tx_avg && tx_kbps == 0) {
                     tx_kbps = 1;
                 }
-                rx_kbps = stream->rate_packets_rx.avg * stream->rx_len * 8 / 1000;
-                if(stream->rate_packets_rx.avg && rx_kbps == 0) {
+                if(stream->rate_packets_rx) rate_packets_rx_avg = stream->rate_packets_rx->avg;
+                rx_kbps = rate_packets_rx_avg * stream->rx_len * 8 / 1000;
+                if(rate_packets_rx_avg && rx_kbps == 0) {
                     rx_kbps = 1;
                 }
                 if(i >= stats_win_postion && i < 32+stats_win_postion) {
-                    wprintw(stats_win, "  %-16.16s | %9lu | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, stream->flow_id,
-                            stream->rate_packets_tx.avg, tx_kbps, stream->rate_packets_rx.avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
+                    wprintw(stats_win, "  %-16.16s | %9u | %7lu | %10lu | %7lu | %10lu | %8lu\n", stream->config->name, stream->flow_id,
+                            rate_packets_tx_avg, tx_kbps, rate_packets_rx_avg, rx_kbps, (stream->rx_loss - stream->reset_loss));
                 } else if(i == 32+stats_win_postion) {   
                     wprintw(stats_win, "  ...\n");
                     break;

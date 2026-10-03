@@ -4,7 +4,7 @@ Performance Guide
 =================
 
 The BNG Blaster handles all traffic sent and received (I/O) in the main thread per default.
-With this default behavior, you can achieve between 100.000 and 250.000 PPS bidirectional
+With this default behavior, you can achieve between 100000 and 250000 PPS bidirectional
 traffic in most environments. Depending on the actual setup, this can be even less or much
 more, which is primarily driven by the single-thread performance of the given CPU.
 
@@ -24,7 +24,7 @@ The number of I/O threads can be configured globally for all interfaces or per i
                 {
                     "interface": "eth1",
                     "rx-threads": 4,
-                    "tx-threads": 2,
+                    "tx-threads": 2
                 }
             ]
         }
@@ -50,6 +50,12 @@ CPU cache coherence, which should apply to all modern CPU architectures. TX thre
 for LAG (Link Aggregation) interfaces but RX threads are supported. It is also not possible to capture
 traffic streams send or received on threaded interfaces. All other traffic is still captured on threaded
 interfaces.
+
+RX threads handle received traffic streams directly and redirect all other packets to the main
+thread. Packets longer than 4074 bytes can't be redirected and are counted as ``rx-to-long``.
+Packets dropped because the main thread does not process redirected packets fast enough are
+counted as ``rx-dropped``, except with I/O mode ``packet_mmap`` and ``packet_mmap_raw``, which
+wait for the main thread instead.
 
 .. note::
 
@@ -101,11 +107,26 @@ test environment.
 
     ethtool -C <interface> adaptive-rx off adaptive-tx off rx-usecs 125 tx-usecs 125
 
+The NIC's own on-card RX descriptor ring is a separate, usually much smaller
+buffer than any of the software-side ring/slot settings above (``io-slots``,
+AF_XDP's fill ring, DPDK's descriptor count, ...) - it is the actual DMA
+ring the driver refills via its NAPI poll. On some drivers/NICs it defaults
+far below what the hardware supports (e.g. 512 out of a possible 8160 on an
+Intel i40e we tested), so at high line rates any brief delay in the NAPI
+poll (e.g. from interrupt moderation, see above) can drain it before the
+driver gets to refill it - visible as the ``rx_missed_errors`` counter in
+``ethtool -S <interface>`` increasing even though every software-side ring
+is comfortably sized. Check and, if needed, raise it towards its maximum:
+
+.. code-block:: none
+
+    ethtool -g <interface>
+    ethtool -G <interface> rx 8160 tx 8160
+
 .. note::
 
     We are continuously working to increase performance. Contributions, proposals,
     or recommendations on how to further increase performance are welcome!
-
 
 NUMA
 ----
@@ -324,4 +345,132 @@ remains available if you need exact CPU control.
 
 DPDK assigns one hardware queue to each RX thread, so you need to increase
 the number of threads to utilize more queues and enhance performance.
+
+
+.. _loopback-usage:
+
+Loopback
+--------
+
+The I/O mode ``loopback`` connects two links of the same BNG Blaster instance
+back to back via in-memory rings, without any kernel interface, driver or NIC
+in between. This allows to measure the I/O performance of the BNG Blaster
+itself (packet generation, stream processing, decoding, ...) independent of
+the underlying I/O stack, which makes it the upper bound of what the BNG Blaster
+can achieve with any other I/O mode. The links do not need to exist in the
+host OS and no special privileges are required.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "io-mode": "loopback",
+            "rx-threads": 2,
+            "tx-threads": 2,
+            "links": [
+                { "interface": "lo-a10nsp", "loopback-peer": "lo-access" },
+                { "interface": "lo-access" }
+            ],
+            "a10nsp": [ { "interface": "lo-a10nsp" } ],
+            "access": [
+                {
+                    "interface": "lo-access",
+                    "type": "ipoe",
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "inner-vlan": 7
+                }
+            ]
+        }
+    }
+
+Every TX thread (or the main thread if TX threads are disabled) owns one
+lock-free single-producer/single-consumer ring to the peer link, which is
+read by exactly one RX thread of the peer. If the peer link has fewer RX than
+TX threads, the rings are distributed round-robin over the available RX threads.
+The ring size is defined by ``io-slots`` of the sending link. Similar to a NIC, a
+full ring is reported as ``no-buffer`` and the affected packets are sent later.
+
+The MAC address is generated automatically, if not explicitly configured
+per link. The maximum stream packet length is 3952 bytes or 12144 bytes with
+``jumbo-frames`` enabled.
+
+.. note::
+
+    Each loopback link runs its own RX and TX threads, so the number of
+    threads required for both links of a loopback pair should not exceed
+    the number of available CPU cores.
+
+.. _af-xdp-usage:
+
+AF_XDP
+------
+
+Using the experimental `AF_XDP <https://www.kernel.org/doc/html/latest/networking/af_xdp.html>`_
+support requires building the BNG Blaster from sources with AF_XDP enabled as
+explained in the corresponding :ref:`installation <install-af-xdp>` section.
+
+.. note::
+
+    The official BNG Blaster Debian release packages do not support AF_XDP!
+
+Unlike :ref:`DPDK <dpdk-usage>`, AF_XDP interfaces stay attached to the Linux
+network stack and keep using the normal kernel driver, which makes it a good
+middle ground between the regular ``packet_mmap``/``raw`` modes and DPDK: no
+dedicated driver binding or hugepages are required, while still bypassing
+most of the kernel networking stack for a lot better performance than
+``packet_mmap``.
+
+RX and TX each get their own dedicated, disjoint NIC queues - they are never
+combined onto the same queue, so heavy TX load can't delay that same
+queue's own RX servicing (they would otherwise share one NAPI/IRQ context).
+``rx-threads`` and ``tx-threads`` are fully independent, e.g. more RX than
+TX threads to spread out RX-side protocol processing without paying for
+extra TX threads.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "io-slots": 4096,
+            "links": [
+                {
+                    "interface": "eth1",
+                    "io-mode": "af_xdp",
+                    "rx-threads": 6,
+                    "rx-auto-cpuset": true,
+                    "tx-threads": 2,
+                    "tx-auto-cpuset": true
+                }
+            ]
+        }
+    }
+
+.. note::
+
+    AF_XDP frames are limited to 4096 bytes, so ``jumbo-frames`` are not
+    supported by this I/O mode and the maximum stream packet length is
+    reduced accordingly.
+
+Like DPDK, AF_XDP requires the NIC to actually provide as many hardware
+queues as bngblaster needs, i.e. ``rx-threads`` + ``tx-threads`` (each
+defaulting to 1 if left unset), since RX and TX never share a queue.
+BNG Blaster reconfigures the interface to the required number of combined
+queues automatically via ``ethtool``-equivalent ioctls (the same effect as
+running ``ethtool -L <interface> combined <n>`` beforehand) - if that fails
+(e.g. insufficient privileges, or a driver that splits RX/TX channels
+instead of combined ones), it is logged with a hint to configure it
+manually. Native (driver) mode additionally requires a driver with native
+XDP support; BNG Blaster automatically falls back to generic (SKB) mode -
+which works on any interface, including ``veth`` - if native mode is not
+available.
+
+.. note::
+
+    If the NIC has more queues configured than bngblaster binds AF_XDP
+    sockets to, RSS may hash some flows to a queue nothing is bound to -
+    those packets are passed to the normal kernel stack instead of being
+    redirected to bngblaster, which looks like silent RX loss for the
+    affected flows. This is exactly what the automatic queue
+    reconfiguration above avoids.
 

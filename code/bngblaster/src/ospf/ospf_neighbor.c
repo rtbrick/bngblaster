@@ -86,6 +86,9 @@ ospf_neighbor_dbd_tx(ospf_neighbor_s *ospf_neighbor)
             if(hb_tree_count(ospf_instance->lsdb[type]) == 0){ 
                 continue;
             }
+            if(ospf_neighbor_lsa_filter(ospf_neighbor, type)) {
+                continue;
+            }
             itor = hb_itor_new(ospf_instance->lsdb[type]);
             if(type == ospf_neighbor->dbd_lsa_type_start) {
                 next = hb_itor_search_ge(itor, &ospf_neighbor->dbd_lsa_start);
@@ -258,6 +261,11 @@ ospf_neighbor_update_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
         g_ctx->routing_sessions--;
         ospf_lsa_self_update_request(ospf_interface->instance);
     }
+
+    /* NeighborChange if bidirectional communication is established or lost. */
+    if((old < OSPF_NBSTATE_2WAY) != (state < OSPF_NBSTATE_2WAY)) {
+        ospf_interface_neighbor_change(ospf_interface);
+    }
 }
 
 void
@@ -359,27 +367,83 @@ ospf_neighbor_full(ospf_neighbor_s *ospf_neighbor)
 }
 
 /**
+ * ospf_neighbor_dr_id:
+ *
+ * @param ospf_neighbor OSPF neighbor
+ * @return identifier used in the DR/BDR fields
+ * (interface address for OSPFv2 and router-id for OSPFv3)
+ */
+uint32_t
+ospf_neighbor_dr_id(ospf_neighbor_s *ospf_neighbor)
+{
+    if(ospf_neighbor->version == OSPF_VERSION_2) {
+        return ospf_neighbor->ipv4;
+    }
+    return ospf_neighbor->router_id;
+}
+
+/**
+ * ospf_neighbor_adjacency_required:
+ *
+ * Check if an adjacency should be established
+ * with the neighbor (RFC2328 section 10.4).
+ *
+ * @param ospf_neighbor OSPF neighbor
+ */
+bool
+ospf_neighbor_adjacency_required(ospf_neighbor_s *ospf_neighbor)
+{
+    ospf_interface_s *ospf_interface = ospf_neighbor->interface;
+    uint32_t id = ospf_neighbor_dr_id(ospf_neighbor);
+
+    switch(ospf_interface->state) {
+        case OSPF_IFSTATE_P2P:
+        case OSPF_IFSTATE_DR:
+        case OSPF_IFSTATE_BACKUP:
+            return true;
+        case OSPF_IFSTATE_DR_OTHER:
+            return ospf_interface->dr == id || ospf_interface->bdr == id;
+        default:
+            return false;
+    }
+}
+
+/**
  * ospf_neighbor_adjok:
  *
- * Check active (state > 2WAY) OSPF adjcencies if they are 
- * still allowed and clear if not.
+ * Event AdjOK? as described in RFC2328, establish
+ * (2WAY) or clear (> 2WAY) adjacencies as required.
  *
  * @param ospf_neighbor OSPF neighbor
  */
 void
 ospf_neighbor_adjok(ospf_neighbor_s *ospf_neighbor)
 {
-    ospf_interface_s *ospf_interface = ospf_neighbor->interface;
+    bool required = ospf_neighbor_adjacency_required(ospf_neighbor);
 
-    if(ospf_neighbor->state > OSPF_NBSTATE_2WAY) {
-        if(!(ospf_interface->state == OSPF_IFSTATE_P2P || 
-             ospf_interface->state == OSPF_IFSTATE_DR || 
-             ospf_interface->state == OSPF_IFSTATE_BACKUP ||
-             ospf_interface->dr == ospf_neighbor->router_id || 
-             ospf_interface->bdr == ospf_neighbor->router_id)) {
-            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
-        }
+    if(ospf_neighbor->state == OSPF_NBSTATE_2WAY && required) {
+        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+    } else if(ospf_neighbor->state > OSPF_NBSTATE_2WAY && !required) {
+        ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_2WAY);
     }
+}
+
+/**
+ * ospf_neighbor_lsa_filter:
+ *
+ * Opaque LSA are sent to opaque capable (O-bit)
+ * OSPFv2 neighbors only (RFC5250 section 3.3).
+ *
+ * @param ospf_neighbor OSPF neighbor
+ * @param lsa_type LSA type
+ * @return true if LSA type must not be sent to neighbor
+ */
+bool
+ospf_neighbor_lsa_filter(ospf_neighbor_s *ospf_neighbor, uint8_t lsa_type)
+{
+    return ospf_neighbor->version == OSPF_VERSION_2 &&
+           lsa_type >= OSPF_LSA_TYPE_9 && lsa_type <= OSPF_LSA_TYPE_11 &&
+           !(ospf_neighbor->options & OSPFV2_DBD_OPTION_O);
 }
 
 /**
@@ -420,7 +484,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     }
 
     if(ospf_interface->version == OSPF_VERSION_2) {
-        if(pdu->pdu_len < OSPFV2_DBD_LEN_MIN) {
+        if(pdu->packet_len < OSPFV2_DBD_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
@@ -430,7 +494,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
         dd = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_DBD_DD_SEQ));
         OSPF_PDU_CURSOR_SET(pdu, OSPFV2_OFFSET_DBD_LSA);
     } else {
-        if(pdu->pdu_len < OSPFV3_DBD_LEN_MIN) {
+        if(pdu->packet_len < OSPFV3_DBD_LEN_MIN) {
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
@@ -447,8 +511,8 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     }
 
     if((dd == ospf_neighbor->rx.dd) && (options == ospf_neighbor->rx.options) && 
-       (((OSPF_DBD_FLAG_I|OSPF_DBD_FLAG_M|OSPF_DBD_FLAG_MS) && flags) ==
-        ((OSPF_DBD_FLAG_I|OSPF_DBD_FLAG_M|OSPF_DBD_FLAG_MS) && ospf_neighbor->rx.flags))) {
+       (((OSPF_DBD_FLAG_I|OSPF_DBD_FLAG_M|OSPF_DBD_FLAG_MS) & flags) ==
+        ((OSPF_DBD_FLAG_I|OSPF_DBD_FLAG_M|OSPF_DBD_FLAG_MS) & ospf_neighbor->rx.flags))) {
         /* Duplicate received! */
         if(!ospf_neighbor->master) {
             ospf_neighbor_dbd_tx(ospf_neighbor);

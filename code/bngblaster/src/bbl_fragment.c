@@ -51,6 +51,8 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
     bbl_bbl_s bbl;
 
     uint16_t offset;
+    uint16_t length;
+    time_t timestamp;
 
     while(fragment) {
         if(fragment->id == ipv4->id &&
@@ -79,21 +81,32 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
         return;
     }
 
-    if(eth->length > fragment->max_length) {
-        fragment->max_length = eth->length;
+    if(eth) {
+        length = eth->length;
+        timestamp = eth->timestamp.tv_sec;
+    } else {
+        /* PPPoL2TP (LAC) traffic has no ethernet header. */
+        struct timespec now;
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        length = ipv4->len;
+        timestamp = now.tv_sec;
+    }
+
+    if(length > fragment->max_length) {
+        fragment->max_length = length;
     }
     if(offset > fragment->max_offset) {
         fragment->max_offset = offset;
     }
 
     fragment->fragments++;
-    fragment->timestamp = eth->timestamp.tv_sec;
+    fragment->timestamp = timestamp;
 
     memcpy(fragment->buf+offset, ipv4->payload, ipv4->payload_len);
     fragment->received += ipv4->payload_len;
 
     if(!(ipv4->offset & IPV4_MF)) {
-        /* Last fragment recieved. */
+        /* Last fragment received. */
         fragment->expected = offset + ipv4->payload_len;
     }
     if(fragment->received == fragment->expected) {
@@ -119,28 +132,24 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
                 bbl.outer_vlan_id = 0;
                 bbl.inner_vlan_id = 0;
             }
-            bbl.flow_id = *(uint64_t*)(bbl_start+24);
+            bbl.flow_id = *(uint32_t*)(bbl_start+24);
             bbl.flow_seq = *(uint64_t*)(bbl_start+32);
             bbl.timestamp.tv_sec = *(uint32_t*)(bbl_start+40);
             bbl.timestamp.tv_nsec = *(uint32_t*)(bbl_start+44);
 
-            eth->bbl = &bbl;
-            eth->length = fragment->max_length;
-
-            if(access_interface) {
-                stream = bbl_stream_rx(eth, NULL);
-                if(stream && stream->rx_access_interface == NULL) {
-                    stream->rx_access_interface = access_interface;
-                }
-            } else if (network_interface) {
-                stream = bbl_stream_rx(eth, network_interface->mac);
-                if(stream && stream->rx_network_interface != network_interface) {
-                    if(stream->rx_network_interface) {
-                        /* RX interface has changed! */
-                        stream->rx_interface_changes++;
-                        stream->rx_interface_changed_epoch = eth->timestamp.tv_sec;
+            if(eth) {
+                eth->bbl = &bbl;
+                eth->length = fragment->max_length;
+                if(access_interface) {
+                    stream = bbl_stream_rx(eth, NULL);
+                    if(stream) {
+                        bbl_stream_rx_interface_set(stream, STREAM_FLAG_ACCESS, access_interface, timestamp);
                     }
-                    stream->rx_network_interface = network_interface;
+                } else if(network_interface) {
+                    stream = bbl_stream_rx(eth, network_interface->mac);
+                    if(stream) {
+                        bbl_stream_rx_interface_set(stream, STREAM_FLAG_NETWORK, network_interface, timestamp);
+                    }
                 }
             }
             if(stream) {

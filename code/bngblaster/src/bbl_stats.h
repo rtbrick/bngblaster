@@ -14,11 +14,13 @@
 typedef struct bbl_rate_
 {
     uint64_t diff_value[BBL_AVG_SAMPLES];
-    uint32_t cursor;
     uint64_t last_value;
     uint64_t sum;
     uint64_t avg;
     uint64_t avg_max;
+    uint32_t last_msec;
+    uint16_t diff_msec[BBL_AVG_SAMPLES];
+    uint8_t cursor;
 } bbl_rate_s;
 
 typedef struct bbl_stats_ 
@@ -153,10 +155,21 @@ typedef struct bbl_interface_stats_ {
     uint64_t to_long;
     uint64_t no_buffer;
     uint64_t polled;
+    uint64_t dropped; /* offered more than could locally be transmitted */
+
+    /* NIC-level counters (DPDK only, 0 otherwise). These reflect drops
+     * that happen in the NIC/driver before bngblaster's own RX/TX loop
+     * ever sees the packet, e.g. ring overflow from a poll thread not
+     * being scheduled promptly enough - a class of loss otherwise
+     * invisible to software-side accounting. */
+    uint64_t hw_rx_missed; /* RX packets dropped by the NIC, no free descriptor */
+    uint64_t hw_rx_nombuf; /* RX packets dropped, mbuf pool exhausted */
+    uint64_t hw_rx_errors; /* RX packets dropped due to NIC-detected errors */
+    uint64_t hw_tx_errors; /* TX packets the NIC failed to transmit */
 } bbl_interface_stats_s;
 
 void 
-bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value);
+bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value, struct timespec *now);
 
 void 
 bbl_stats_update_cps();

@@ -13,7 +13,9 @@ endif()
 message("Compiler: ${CMAKE_C_COMPILER_ID} Version: ${CMAKE_C_COMPILER_VERSION}")
 
 option(BNGBLASTER_TESTS "Build unit tests (requires cmocka)" OFF)
+option(BNGBLASTER_INTEGRATION_TESTS "Add integration tests (requires root, pytest, GoBGP, FRR and BIRD)" OFF)
 option(BNGBLASTER_DPDK "Build with dpdk support" OFF)
+option(BNGBLASTER_AF_XDP "Build with AF_XDP support" OFF)
 option(BNGBLASTER_TIMER_LOGGING "Build with timer logging support" OFF)
 option(BNGBLASTER_CPU_NATIVE "Build for native CPU type" OFF)
 
@@ -44,10 +46,22 @@ endif()
 # libdict will be statically linked
 find_library(libdict NAMES libdict.a REQUIRED)
 
-if(BNGBLASTER_TESTS)
+if(BNGBLASTER_TESTS OR BNGBLASTER_INTEGRATION_TESTS)
     include(CTest)
 endif()
 add_subdirectory(code)
+
+if(BNGBLASTER_INTEGRATION_TESTS)
+    find_package(Python3 REQUIRED COMPONENTS Interpreter)
+    add_test(NAME IntegrationTests
+             COMMAND ${Python3_EXECUTABLE} -m pytest -v ${CMAKE_SOURCE_DIR}/test/integration)
+    set_tests_properties(IntegrationTests PROPERTIES
+                         LABELS integration
+                         ENVIRONMENT "BNGBLASTER_BIN=$<TARGET_FILE:bngblaster>")
+endif()
+
+install(FILES schemas/bngblaster-config.json DESTINATION share/bngblaster)
+install(FILES packaging/bash-completion/bngblaster-cli DESTINATION share/bash-completion/completions)
 
 # cpack
 set(CPACK_GENERATOR "DEB")
@@ -65,6 +79,7 @@ set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")
 set(CPACK_DEBIAN_PACKAGE_DESCRIPTION "RtBrick BNG Blaster")
 set(CPACK_PACKAGE_CONTACT "RtBrick <bngblaster@rtbrick.com>")
 set(CPACK_DEBIAN_PACKAGE_HOMEPAGE "https://github.com/rtbrick/bngblaster")
+set(CPACK_DEBIAN_PACKAGE_CONTROL_EXTRA "${CMAKE_CURRENT_SOURCE_DIR}/packaging/deb/postinst;${CMAKE_CURRENT_SOURCE_DIR}/packaging/deb/postrm")
 if (NOT DEFINED BNGBLASTER_VERSION)
     set(CPACK_PACKAGE_VERSION ${PROJECT_VERSION})
 else()

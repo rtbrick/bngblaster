@@ -167,9 +167,9 @@ IPTV Zapping Test
 ~~~~~~~~~~~~~~~~~
 
 A key element of IPTV services is the delay in changing channels.
-How long does it take to change from one channel to another, is
-the right channel received and the old channel stopped without overlap
-between the old and new channel? Overlapping channels may lead to traffic 
+How long does it take to change from one channel to another? Is
+the right channel received, and is the old channel stopped without overlap
+between the old and new channel? Overlapping channels may lead to traffic
 congestion if both channels are sent at the same time.
 
 Verify that fast channel changes (zapping) work reliably as well.
@@ -180,8 +180,8 @@ measure the resulting join/leave delays and possible multicast traffic loss.
 The join delay is the time in milliseconds between sending join and receiving
 the first multicast packet of the requested group. The leave delay is the time between
 sending leave and the last multicast packet received for this group. Multicast packets
-received for the leaved group after the first packet of the joined group is received 
-are counted as overlap.
+received for the previous group after the first packet of the newly joined group
+has been received are counted as overlap.
 
 The following configuration shows an example of the ``igmp`` section
 for a typical zapping test.

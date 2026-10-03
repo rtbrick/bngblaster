@@ -3,36 +3,24 @@
 IPoE
 ----
 
-In addition to its versatile testing capabilities, the BNG Blaster excels in emulating 
-IP over Ethernet (IPoE) subscribers, providing support for both static and dynamic address 
-assignments. This functionality is particularly valuable for testing and validating the 
-performance and behavior of network infrastructure components that handle IPoE-based connections.
+The BNG Blaster excels in emulating IP over Ethernet (IPoE) subscribers, allowing network
+administrators, developers, and service providers to simulate subscriber connections that
+utilize Ethernet as the underlying link layer protocol. This functionality is particularly
+valuable for testing and validating the performance and behavior of network infrastructure
+components that handle IPoE-based connections.
 
-The BNG Blaster's IPoE emulation allows network administrators, developers, and service providers 
-to simulate subscriber connections that utilize Ethernet as the underlying link layer protocol. 
-This emulation extends to address assignment, offering the flexibility to configure both static 
-and dynamic IP address assignment methods.
+IPoE subscribers can be addressed either statically or dynamically. For static addressing,
+the BNG Blaster enables users to define and assign specific IP addresses to individual
+subscribers or groups of subscribers, facilitating accurate testing of network configurations
+and policies that rely on static IP address allocation. For dynamic addressing, the BNG Blaster
+supports DHCP (Dynamic Host Configuration Protocol) to dynamically allocate IP addresses to
+subscribers, allowing realistic testing of scenarios where IPoE subscribers obtain their
+addresses dynamically, similar to real-world deployments.
 
-For scenarios where IP addresses are statically assigned to subscribers, the BNG Blaster enables 
-users to define and assign specific IP addresses to individual subscribers or groups of subscribers. 
-This facilitates accurate testing of network configurations and policies that rely on static IP 
-address allocation.
-
-In cases where dynamic IP address assignment is required, the BNG Blaster supports protocols 
-like DHCP (Dynamic Host Configuration Protocol) to dynamically allocate IP addresses to subscribers. 
-This dynamic address assignment capability allows for realistic testing of scenarios where IPoE subscribers 
-obtain IP addresses dynamically, similar to real-world deployments.
-
-Furthermore, the BNG Blaster provides support for different VLAN (Virtual Local Area Network) modes, 
-including 1:1 and N:1 configurations. In the 1:1 VLAN mode, each IPoE subscriber is associated with a 
-dedicated VLAN, ensuring isolation and individual control over their network traffic. On the other hand, 
-the N:1 VLAN mode allows multiple IPoE subscribers to share a common VLAN.
-
-By supporting various IP address assignment methods and VLAN configurations, the BNG Blaster offers a 
-comprehensive and realistic emulation environment for testing IPoE-based network infrastructures. 
-Whether it's validating static IP address configurations, evaluating dynamic IP allocation mechanisms, 
-or assessing VLAN-based deployments, the BNG Blaster's IPoE emulation capabilities enable thorough testing 
-and optimization of network components and services.
+The BNG Blaster also provides support for different VLAN (Virtual Local Area Network) modes,
+including 1:1 and N:1 configurations. In the 1:1 VLAN mode, each IPoE subscriber is associated
+with a dedicated VLAN, ensuring isolation and individual control over their network traffic.
+On the other hand, the N:1 VLAN mode allows multiple IPoE subscribers to share a common VLAN.
 
 Static Addresses
 ~~~~~~~~~~~~~~~~
@@ -54,7 +42,7 @@ statically as shown in the example below.
                 "address": "200.0.0.1",
                 "address-iter": "0.0.0.4",
                 "gateway": "200.0.0.2",
-                "gateway-iter": "0.0.0.4",
+                "gateway-iter": "0.0.0.4"
             }
         ]
         }
@@ -79,7 +67,7 @@ The most common case for IPoE is using DHCPv4/v6 as shown below.
         ]
         },
         "dhcp": {
-            "enable": true,
+            "enable": true
         },
         "dhcpv6": {
             "enable": true

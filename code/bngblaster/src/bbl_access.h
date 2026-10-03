@@ -14,6 +14,7 @@ typedef struct bbl_access_interface_
 {
     char *name; /* interface name */
     uint32_t ifindex; /* interface index */
+    access_type_t access_type; /* pppoe, ipoe or l2tp */
 
     /* parent */
     bbl_interface_s *interface; 
@@ -77,19 +78,20 @@ typedef struct bbl_access_interface_
         uint32_t dhcpv6_timeout;
 
         uint32_t ipv4_fragmented_rx;
+        
+        uint32_t session_ipv4_wrong_session;
+        uint32_t session_ipv6_wrong_session;
+        uint32_t session_ipv6pd_wrong_session;
 
         uint64_t session_ipv4_tx;
         uint64_t session_ipv4_rx;
         uint64_t session_ipv4_loss;
-        uint64_t session_ipv4_wrong_session;
         uint64_t session_ipv6_tx;
         uint64_t session_ipv6_rx;
         uint64_t session_ipv6_loss;
-        uint64_t session_ipv6_wrong_session;
         uint64_t session_ipv6pd_tx;
         uint64_t session_ipv6pd_rx;
         uint64_t session_ipv6pd_loss;
-        uint64_t session_ipv6pd_wrong_session;
 
         uint64_t stream_tx;
         uint64_t stream_rx;
@@ -133,11 +135,18 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
 void
 bbl_access_rx_established_pppoe(bbl_access_interface_s *interface, 
                                 bbl_session_s *session, 
-                                bbl_ethernet_header_s *eth);
+                                struct timespec *timestamp);
 
 void
 bbl_access_rx_handler(bbl_access_interface_s *interface, 
                       bbl_ethernet_header_s *eth);
+
+void
+bbl_ppp_rx(bbl_access_interface_s *interface,
+           bbl_session_s *session,
+           bbl_ethernet_header_s *eth,
+           uint16_t protocol,
+           void *next);
 
 int
 bbl_access_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));

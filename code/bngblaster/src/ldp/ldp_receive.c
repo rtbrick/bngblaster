@@ -95,7 +95,7 @@ ldp_notification(ldp_session_s *session, uint8_t *start, uint16_t length)
         ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
         (e_bit ? "fatal error" : "advisory"),
         status_code, keyval_get_key(ldp_status_names, status_code), 
-        (f_bit ? " wit forwarding bit set" : ""));
+        (f_bit ? " with forwarding bit set" : ""));
 
     return true;
 }
@@ -160,6 +160,10 @@ ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
         }
         switch(fec_afi) {
             case IANA_AFI_IPV4:
+                if(prefix_length > (IPV4_ADDR_LEN*8)) {
+                    LOG_NOARG(DEBUG, "ldp_label_mapping E6\n");
+                    return false;
+                }
                 ipv4prefix.len = prefix_length;
                 ipv4prefix.address = 0;
                 memcpy((uint8_t*)&ipv4prefix.address, fec_element+LDP_FEC_LEN_MIN, prefix_bytes);
@@ -171,6 +175,10 @@ ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
                 ldb_db_add_ipv4(session, &ipv4prefix, label);
                 break;
             case IANA_AFI_IPV6:
+                if(prefix_length > (IPV6_ADDR_LEN*8)) {
+                    LOG_NOARG(DEBUG, "ldp_label_mapping E7\n");
+                    return false;
+                }
                 ipv6prefix.len = prefix_length;
                 memset(&ipv6prefix.address, 0x0, sizeof(ipv6addr_t));
                 memcpy((uint8_t*)&ipv6prefix.address, fec_element+LDP_FEC_LEN_MIN, prefix_bytes);

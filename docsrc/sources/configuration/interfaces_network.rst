@@ -69,7 +69,7 @@
 | **ospfv3-type**                   | | OSPFv3 interface type (p2p or broadcast).                          |
 |                                   | | Default: broadcast                                                 |
 +-----------------------------------+----------------------------------------------------------------------+
-| **ospfv3-metric**                 | |  OSPFv3 interface metric.                                          |
+| **ospfv3-metric**                 | | OSPFv3 interface metric.                                           |
 |                                   | | Default: 10                                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ldp-instance-id**               | | Assign the interface to a LDP instance.                            |
@@ -117,6 +117,6 @@
 | **a10nsp**                        | | Enable A10NSP switch emulation (experimental).                     |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-| **a10nsp-tx-label**               | | Transport label used for A10NSP services in dowstream direction.   |
+| **a10nsp-tx-label**               | | Transport label used for A10NSP services in downstream direction.  |
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+

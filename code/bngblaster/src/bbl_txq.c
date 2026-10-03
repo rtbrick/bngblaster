@@ -10,7 +10,7 @@
 #include "bbl.h"
 #include "bbl_session.h"
 
-bool
+static bool
 bbl_txq_init(bbl_txq_s *txq, uint16_t size)
 {
     txq->ring = calloc(1, size * sizeof(bbl_txq_slot_t));
@@ -22,6 +22,31 @@ bbl_txq_init(bbl_txq_s *txq, uint16_t size)
     txq->write  = 0;
     txq->next   = 1;
     return true;
+}
+
+/**
+ * bbl_txq_alloc
+ *
+ * Allocate and init TXQ. The TXQ must be cache line
+ * aligned to prevent false sharing between producer
+ * and consumer thread.
+ *
+ * @param size number of send slots
+ * @return TXQ or NULL
+ */
+bbl_txq_s *
+bbl_txq_alloc(uint16_t size)
+{
+    bbl_txq_s *txq = aligned_alloc(CACHE_LINE_SIZE, sizeof(bbl_txq_s));
+    if(!txq) {
+        return NULL;
+    }
+    memset(txq, 0x0, sizeof(bbl_txq_s));
+    if(!bbl_txq_init(txq, size)) {
+        free(txq);
+        return NULL;
+    }
+    return txq;
 }
 
 bool

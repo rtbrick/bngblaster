@@ -159,6 +159,13 @@ extern unsigned char debug_flags;
 #define TCP_LISTEN_BACKLOG       1
 #define LWIP_CALLBACK_API        1
 
+/* TCP-AO (RFC 5925) support: per-pcb state via tcp_ext_arg and the
+ * TX/RX option hooks declared in lwip_hooks.h (see bbl_tcp_ao.c). A second
+ * ext_arg id is used purely to reach the "passive_open" hook for listen
+ * sockets (see bbl_tcp.c's pre_accept_cb), independent of the TCP-AO one. */
+#define LWIP_HOOK_FILENAME       "lwip_hooks.h"
+#define LWIP_TCP_PCB_NUM_EXT_ARGS 2
+
 /* ---------- ARP options ---------- */
 #define LWIP_ARP                 1
 

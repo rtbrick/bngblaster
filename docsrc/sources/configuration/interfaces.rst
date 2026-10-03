@@ -43,7 +43,7 @@
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **mac-modifier**                  | | Third byte of access session MAC address (0-255). This option      |
-|                                   | | allows to run multiple BNG Blaster instances with disjoint session |
+|                                   | | allows running multiple BNG Blaster instances with disjoint session|
 |                                   | | MAC addresses.                                                     |
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+

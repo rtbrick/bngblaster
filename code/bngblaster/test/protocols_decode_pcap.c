@@ -123,6 +123,6 @@ main(int argc, char **argv) {
         }
     }
     avg = sum / 100;
-    printf("Packets Decoded: %d Errors: %d Unkown: %d\n", g_packets, g_decode_errors, g_decode_unknown);
+    printf("Packets Decoded: %d Errors: %d Unknown: %d\n", g_packets, g_decode_errors, g_decode_unknown);
     printf("Time Min: %.9f seconds Avg: %.9f seconds Max %.9f seconds\n", min, avg, max);
 }

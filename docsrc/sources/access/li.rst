@@ -1,7 +1,7 @@
 .. _li:
 
-Legal Interception (LI)
------------------------
+Lawful Interception (LI)
+------------------------
 
 The BNG Blaster can be used to emulate a mediation device providing detailed statistics
 about the received flows. Today only the BCM QMX LI header format is supported but further

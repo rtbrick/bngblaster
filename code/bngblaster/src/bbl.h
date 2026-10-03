@@ -44,6 +44,7 @@
 #include "bbl_lag.h"
 #include "bbl_access.h"
 #include "bbl_network.h"
+#include "bbl_vpws.h"
 #include "bbl_a10nsp.h"
 #include "bbl_li.h"
 #include "bbl_cfm.h"

@@ -100,8 +100,10 @@ bbl_http_client_receive_cb(void *arg, uint8_t *buf, uint16_t len)
     bool close = false;
 
     if(buf) {
-        if(client->response_idx+len > HTTP_CLIENT_RESPONSE_LIMIT) {
-            len = HTTP_CLIENT_RESPONSE_LIMIT - client->response_idx;
+        /* Keep one byte reserved so the response buffer stays a valid
+         * zero terminated string for logging. */
+        if(client->response_idx+len > HTTP_CLIENT_RESPONSE_LIMIT-1) {
+            len = (HTTP_CLIENT_RESPONSE_LIMIT-1) - client->response_idx;
             /* Close TCP session after response buffer is full. */
             close = true;
         }

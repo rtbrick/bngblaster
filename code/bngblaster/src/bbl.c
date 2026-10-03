@@ -11,6 +11,10 @@
  * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include <sys/mman.h>
+#include <sys/resource.h>
+#include <sys/syscall.h>
+#include <linux/capability.h>
 #include "bbl.h"
 #include "bbl_pcap.h"
 #include "bbl_interactive.h"
@@ -18,6 +22,7 @@
 #include "bbl_stream.h"
 #include "bbl_dhcp.h"
 #include "bbl_dhcpv6.h"
+#include "bbl_l2tp.h"
 
 static unsigned int ctrl_job_period_ns = MSEC100;
 
@@ -157,6 +162,7 @@ struct keyval_ log_names[] = {
     { TCP,           "tcp" },
     { LAG,           "lag" },
     { DPDK,          "dpdk" },
+    { AFXDP,         "af_xdp" },
     { PACKET,        "packet" },
     { HTTP,          "http" },
 #ifdef BNGBLASTER_TIMER_LOGGING
@@ -200,9 +206,12 @@ bbl_print_version (void)
         printf("  REF: %s\n", GIT_REF);
         printf("  SHA: %s\n", GIT_SHA);
     }
-    printf("IO Modes: packet_mmap_raw (default), packet_mmap, raw");
+    printf("IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback");
 #ifdef BNGBLASTER_DPDK
     printf(", dpdk");
+#endif
+#ifdef BNGBLASTER_AF_XDP
+    printf(", af_xdp");
 #endif
     printf("\n");
 }
@@ -230,6 +239,11 @@ bbl_smear_job(timer_s *timer)
         /* Adding 1 nanoseconds to enforce a dedicated timer bucket. */
         timer_smear_bucket(&g_ctx->timer_root, g_ctx->config.lcp_keepalive_interval, 1);
     }
+    /* Rate Computation (per-session, per-interface and L2TP tunnel control
+     * timers all share the plain 1 second bucket). Sessions in particular
+     * are created back-to-back during session setup, which would otherwise
+     * cluster their periodic rate timers into a thundering herd. */
+    timer_smear_bucket(&g_ctx->timer_root, 1, 0);
 }
 
 void
@@ -239,6 +253,7 @@ bbl_ctrl_job(timer_s *timer)
     bbl_session_s *session;
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
 
     uint32_t i;
 
@@ -270,6 +285,7 @@ bbl_ctrl_job(timer_s *timer)
         g_init_phase = false;
         LOG_NOARG(INFO, "All network interfaces resolved\n");
         clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_resolved);
+
     }
 
     if(g_teardown) {
@@ -379,6 +395,14 @@ bbl_ctrl_job(timer_s *timer)
                                 }
                             }
                             break;
+                        case ACCESS_TYPE_PPPOL2TP:
+                            /* PPP over L2TP (LAC) */
+                            session->session_state = BBL_L2TP_WAIT;
+                            l2tp_tunnel = bbl_l2tp_client_session_get_tunnel(session);
+                            if(l2tp_tunnel) {
+                                bbl_l2tp_client_session_connect(l2tp_tunnel, session);
+                            }
+                            break;
                     }
                     bbl_session_tx_qnode_insert(session);
                     /* Remove from idle queue */
@@ -401,6 +425,51 @@ logfile_fflush_job(timer_s *timer)
     UNUSED(timer);
     if(g_log_fp) {
         fflush(g_log_fp);
+    }
+}
+
+/**
+ * Lock all current and future memory pages into RAM for
+ * DPDK and AF_XDP I/O modes, where a page fault in a RX/TX
+ * thread (e.g. first touch of a newly allocated page while
+ * traffic is running) can cause packet loss.
+ *
+ * With MCL_FUTURE, all allocations beyond RLIMIT_MEMLOCK fail
+ * without CAP_IPC_LOCK. Therefore memory is locked only if
+ * the limit is unlimited or the process has CAP_IPC_LOCK.
+ */
+static void
+bbl_mlockall(void)
+{
+    bbl_link_config_s *link_config = g_ctx->config.link_config;
+    bool required = false;
+    struct rlimit rlim;
+    struct __user_cap_header_struct cap_header = { _LINUX_CAPABILITY_VERSION_3, 0 };
+    struct __user_cap_data_struct cap_data[_LINUX_CAPABILITY_U32S_3] = {0};
+    bool privileged = false;
+
+    if(g_ctx->config.io_mode == IO_MODE_DPDK || g_ctx->config.io_mode == IO_MODE_AF_XDP) {
+        required = true;
+    }
+    while(link_config && !required) {
+        if(link_config->io_mode == IO_MODE_DPDK || link_config->io_mode == IO_MODE_AF_XDP) {
+            required = true;
+        }
+        link_config = link_config->next;
+    }
+    if(!required) return;
+
+    if(syscall(SYS_capget, &cap_header, cap_data) == 0) {
+        privileged = cap_data[CAP_TO_INDEX(CAP_IPC_LOCK)].effective & CAP_TO_MASK(CAP_IPC_LOCK);
+    }
+    if(!privileged) {
+        if(getrlimit(RLIMIT_MEMLOCK, &rlim) != 0 || rlim.rlim_cur != RLIM_INFINITY) {
+            LOG_NOARG(INFO, "Skip locking memory pages (requires CAP_IPC_LOCK or unlimited RLIMIT_MEMLOCK)\n");
+            return;
+        }
+    }
+    if(mlockall(MCL_CURRENT | MCL_FUTURE) != 0) {
+        LOG(ERROR, "Failed to lock memory pages (%s)\n", strerror(errno));
     }
 }
 
@@ -548,6 +617,9 @@ main(int argc, char *argv[])
         }
     }
     g_monkey = g_ctx->config.monkey_autostart;
+
+    /* Lock memory pages for DPDK and AF_XDP. */
+    bbl_mlockall();
 
     if(username) g_ctx->config.username = username;
     if(password) g_ctx->config.password = password;

@@ -6,19 +6,19 @@
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id`` Mandatory                                           |
 |                                   | | ``group`` Mandatory                                                |
-|                                   | | ``source1``                                                        |
-|                                   | | ``source2``                                                        |
-|                                   | | ``source3``                                                        |
+|                                   | | ``source1`` first IGMPv3/SSM source address for the group.         |
+|                                   | | ``source2`` second IGMPv3/SSM source address for the group.        |
+|                                   | | ``source3`` third IGMPv3/SSM source address for the group.         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **igmp-join-iter**                | | Join multiple groups over all sessions.                            |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``group`` Mandatory                                                |
-|                                   | | ``group-iter``                                                     |
-|                                   | | ``group-count``                                                    |
-|                                   | | ``source1``                                                        |
-|                                   | | ``source2``                                                        |
-|                                   | | ``source3``                                                        |
+|                                   | | ``group-iter`` address step used to iterate over multiple groups.  |
+|                                   | | ``group-count`` number of groups to iterate over.                  |
+|                                   | | ``source1`` first IGMPv3/SSM source address for the group.         |
+|                                   | | ``source2`` second IGMPv3/SSM source address for the group.        |
+|                                   | | ``source3`` third IGMPv3/SSM source address for the group.         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **igmp-leave**                    | | Leave group.                                                       |
 |                                   | |                                                                    |
@@ -37,7 +37,7 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **zapping-stop**                  | | Stop IGMP zapping test.                                            |
 +-----------------------------------+----------------------------------------------------------------------+
-| **zapping-stats**                 | | Return IGMP zapping stats.                                         |
+| **zapping-stats**                 | | Display IGMP zapping stats.                                        |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``reset``                                                          |

@@ -14,17 +14,36 @@ bbl_rx_stream_network(bbl_network_interface_s *interface,
                       bbl_ethernet_header_s *eth) 
 {
     bbl_stream_s *stream;
+    bbl_ethernet_header_s *inner;
+    bbl_ethernet_header_s *inner_cw;
+
+    if(eth->type == ETH_TYPE_ETH && eth->mpls) {
+        /* Ethernet over MPLS (e.g. EVPN VPWS) */
+        inner = eth->next;
+        inner_cw = eth->next_cw;
+        if(inner_cw && inner_cw->bbl) {
+            /* Ambiguous control word, use the stream expectation. */
+            if(!inner->bbl) {
+                inner = inner_cw;
+            } else {
+                stream = bbl_stream_index_get(inner_cw->bbl->flow_id);
+                if(stream && stream->config->rx_control_word) {
+                    inner = inner_cw;
+                }
+            }
+        }
+        /* Keep other frames unchanged for the VPWS handler (e.g. ARP). */
+        if(!inner->bbl) return false;
+        inner->mpls = eth->mpls;
+        inner->timestamp = eth->timestamp;
+        /* Verify the outer destination MAC, the inner one is the customer MAC. */
+        inner->dst = eth->dst;
+        eth = inner;
+    }
     if(!eth->bbl) return false;
     stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {
-        if(stream->rx_network_interface != interface) {
-            if(stream->rx_network_interface) {
-                /* RX interface has changed! */
-                stream->rx_interface_changes++;
-                stream->rx_interface_changed_epoch = eth->timestamp.tv_sec;
-            }
-            stream->rx_network_interface = interface;
-        }
+        bbl_stream_rx_interface_set(stream, STREAM_FLAG_NETWORK, interface, eth->timestamp.tv_sec);
         return true;
     }
     return false;
@@ -38,9 +57,7 @@ bbl_rx_stream_access(bbl_access_interface_s *interface,
     if(!eth->bbl) return false;
     stream = bbl_stream_rx(eth, NULL);
     if(stream) {
-        if(stream->rx_access_interface == NULL) {
-            stream->rx_access_interface = interface;
-        }
+        bbl_stream_rx_interface_set(stream, STREAM_FLAG_ACCESS, interface, eth->timestamp.tv_sec);
         return true;
     }
     return false;
@@ -54,9 +71,7 @@ bbl_rx_stream_a10nsp(bbl_a10nsp_interface_s *interface,
     if(!eth->bbl) return false;
     stream = bbl_stream_rx(eth, interface->mac);
     if(stream) {
-        if(stream->rx_a10nsp_interface == NULL) {
-            stream->rx_a10nsp_interface = interface;
-        }
+        bbl_stream_rx_interface_set(stream, STREAM_FLAG_A10NSP, interface, eth->timestamp.tv_sec);
         return true;
     }
     return false;
@@ -69,6 +84,10 @@ bbl_rx_thread(bbl_interface_s *interface,
     bbl_network_interface_s *network_interface;
     if(interface->state == INTERFACE_DISABLED) {
         return true;
+    }
+    if(interface->type == LAG_MEMBER_INTERFACE) {
+        /* Access and network interfaces are bound to the LAG. */
+        interface = interface->lag->interface;
     }
     network_interface = interface->network_vlan[eth->vlan_outer];
     if(network_interface) {

@@ -42,6 +42,12 @@ bgp_init()
         session->interface = network_interface;
         session->af = config->af;
 
+        if(config->learn_routes) {
+            if(!(bgp_rib_init(session) && bgp_evpn_init(session))) {
+                return false;
+            }
+        }
+
         if(session->af == AF_INET) {
             if(config->ipv4_local_address) {
                 session->ipv4_local_address = config->ipv4_local_address;
@@ -84,6 +90,7 @@ bgp_init()
             session->local_address_str,
             session->peer_address_str);
 
+        bgp_session_listen(session);
         bgp_session_connect(session, 1);
         g_ctx->routing_sessions++;
 
@@ -110,6 +117,7 @@ void
 bgp_teardown()
 {
     bgp_session_s *session  = g_ctx->bgp_sessions;
+    bgp_session_listen_teardown();
     while(session) {
         if(!session->teardown) {
             LOG(BGP, "BGP (%s %s - %s) teardown session\n",

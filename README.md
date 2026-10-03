@@ -18,9 +18,10 @@ the evaluation of network functionalities at large. Contrary to its nomenclature
 the BNG Blaster isn't restricted only to BNG (Broadband Network Gateway) testing.
 
 It simulates a massive number of PPPoE and IPoE (DHCP) subscribers, encompassing 
-IPTV and L2TP (LNS). Additionally, it supports all common routing protocols such 
-as IS-IS, OSPF, LDP and BGP. This allows for comprehensive testing of both BNG 
-and non-BNG routers, enabling end-to-end evaluations.
+IPTV and L2TP (LAC and LNS). Additionally, it supports all common routing protocols 
+such as IS-IS, OSPF, LDP and BGP, including BGP EVPN and TCP authentication 
+(TCP-AO and MD5). This allows for comprehensive testing of both BNG and non-BNG 
+routers, enabling end-to-end evaluations.
 
 The included traffic generator serves various functions. It can be used to verify 
 forwarding, conduct QoS tests, and measure convergence times. With the capacity to 
@@ -28,7 +29,8 @@ handle millions of separate tracked flows, it allows for thorough verification o
 every forwarding state within a complete internet routing table. Furthermore, it 
 enables the transmission of traffic to each specific QoS queue present in 
 service edge routers with detailed per-flow statistics like receive rate, loss 
-or latency.
+or latency. EVPN VPWS services can be verified with Ethernet over MPLS traffic 
+streams. For high-rate tests, the BNG Blaster supports DPDK and AF_XDP.
 
 The BNG Blaster is used by leading network operators like Deutsche Telekom AG
 with their famous Access 4.0 project, network hard- and software vendors like

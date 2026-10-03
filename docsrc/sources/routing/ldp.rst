@@ -18,7 +18,7 @@ LDP is defined by the IETF (RFC 5036).
 Configuration
 ~~~~~~~~~~~~~
 
-Following an example LDP configuration with one instance
+Following is an example LDP configuration with one instance
 attached to a network interface function.
 
 .. code-block:: json
@@ -30,7 +30,7 @@ attached to a network interface function.
                     "interface": "eth1",
                     "address": "10.0.1.2/24",
                     "gateway": "10.0.1.1",
-                    "ldp-instance-id": 1,
+                    "ldp-instance-id": 1
                 }
             ]
         },
@@ -82,8 +82,8 @@ LDP Sessions
 LDP peers exchange messages over a TCP session which is initiated by 
 the peer with the larger transport IP address (active peer). 
 
-The LDP transport IP address can be explicitly configured for the 
-LDP instance using the option `ipv4-transport-address`. The `lsr-id`
+The LDP transport IP address can be explicitly configured for the
+LDP instance using the option ``ipv4-transport-address``. The ``lsr-id``
 is used as a transport IP address if not explicitly configured.
 
 .. note:: 
@@ -128,8 +128,8 @@ Traffic streams send from network interface functions (downstream)
 can be configured to dynamically resolve the outer MPLS 
 label using the learned label mappings.
 
-The traffic stream configuration options `ldp-ipv4-lookup-address`
-and `ldp-ipv6-lookup-address` specifies the lookup IPv4 or IPv6 address. 
+The traffic stream configuration options ``ldp-ipv4-lookup-address``
+and ``ldp-ipv6-lookup-address`` specify the lookup IPv4 or IPv6 address.
 This means that traffic will not start until this address is found in the 
 corresponding label database of the sending network interface function. 
 
@@ -179,7 +179,7 @@ corresponding label database of the sending network interface function.
         ]
     }
 
-The `ldp-ipv4-lookup-address` and `ldp-ipv6-lookup-address` are mutually exclusive 
+The ``ldp-ipv4-lookup-address`` and ``ldp-ipv6-lookup-address`` are mutually exclusive
 and must exactly match the prefix address as shown in the LDP database. This means
 that if the prefix is `10.0.0.0/24`, the lookup address should be `10.0.0.0`.
 
@@ -191,9 +191,9 @@ that if the prefix is `10.0.0.0/24`, the lookup address should be `10.0.0.0`.
 RAW Update Files
 ~~~~~~~~~~~~~~~~
 
-The BNG Blaster can inject LDP PDU from a pre-compiled 
-RAW update file into the defined sessions. A RAW update file is not
-more than a pre-compiled binary stream of LDP PDU.
+The BNG Blaster can inject LDP PDU from a pre-compiled
+RAW update file into the defined sessions. A RAW update file is nothing
+more than a pre-compiled binary stream of LDP PDUs.
 
 .. code-block:: none
 
@@ -222,23 +222,23 @@ more than a pre-compiled binary stream of LDP PDU.
 Those files can be created using the included LDP RAW update generator
 script ``ldpupdate`` or manually using libraries like scapy. 
 
-The configured ``raw-update-file`` under the LDP instance is loaded 
-during BNG Blaster startup phase and send it as soon as the session is 
-established. 
+The configured ``raw-update-file`` under the LDP instance is loaded
+during BNG Blaster startup phase and sent as soon as the session is
+established.
 
-The ``ldp-raw-update`` :ref:`command <api>` allows to send further updates during
+The ``ldp-raw-update`` :ref:`command <api>` allows sending further updates during
 the session lifetime.
 
 ``$ sudo bngblaster-cli run.sock ldp-raw-update file update1.ldp``
 
 This allows loading label mappings after the LDP session has
-started and manually trigger a series of changes using incremental
+started and manually triggering a series of changes using incremental
 updates files.
 
-All LDP RAW update files are loaded once and can then be used for 
-multiple sessions. Meaning if two or more sessions reference the 
-same file identified by file name, this file is loaded once into 
-memory and used by multiple sessions. 
+All LDP RAW update files are loaded once and can then be used for
+multiple sessions. This means that if two or more sessions reference the
+same file identified by file name, this file is loaded once into
+memory and used by multiple sessions.
 
 LDP RAW Update Generator
 ~~~~~~~~~~~~~~~~~~~~~~~~
@@ -276,7 +276,7 @@ streams for use with the BNG Blaster.
     --log-level {warning,info,debug}
                             logging Level
 
-The python LDP RAW update generator is a python script that uses
-scapy to build LDP PDU. Therefore this tool can be easily 
-modified, extend or used as a blueprint for your own tools to generate
-valid LDP update streams. 
+The Python LDP RAW update generator is a Python script that uses
+scapy to build LDP PDU. Therefore this tool can be easily
+modified, extended, or used as a blueprint for your own tools to generate
+valid LDP update streams.

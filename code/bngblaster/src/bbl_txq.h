@@ -48,8 +48,8 @@ typedef struct bbl_txq_ {
     atomic_uint_least16_t read; /* current read slot */
 } bbl_txq_s;
 
-bool
-bbl_txq_init(bbl_txq_s *txq, uint16_t slots);
+bbl_txq_s *
+bbl_txq_alloc(uint16_t slots);
 
 bool
 bbl_txq_is_empty(bbl_txq_s *txq);

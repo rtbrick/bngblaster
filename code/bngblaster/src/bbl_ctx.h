@@ -35,6 +35,7 @@ typedef struct bbl_ctx_
     uint32_t interfaces;
     uint32_t sessions;
     uint32_t sessions_pppoe;
+    uint32_t sessions_pppol2tp;
     uint32_t sessions_ipoe;
     uint32_t sessions_established;
     uint32_t sessions_established_max;
@@ -75,13 +76,13 @@ typedef struct bbl_ctx_
     bbl_stream_s **stream_index;
     bbl_stream_s *stream_head;
     bbl_stream_s *stream_tail;
-    uint64_t streams;
+    uint32_t streams;
 
     bbl_stream_group_s *stream_groups;
 
     uint16_t next_tunnel_id;
 
-    uint64_t flow_id;
+    uint32_t flow_id;
 
     char *ctrl_socket_path;
     bbl_ctrl_thread_s *ctrl_thread;
@@ -95,6 +96,7 @@ typedef struct bbl_ctx_
     bbl_icmp_client_s *icmp_clients;
     bgp_session_s *bgp_sessions;
     bgp_raw_update_s *bgp_raw_updates;
+    uint32_t bgp_evpn_version; /* incremented with every EVPN route change */
     isis_instance_s *isis_instances;
     ospf_instance_s *ospf_instances;
     ldp_instance_s *ldp_instances;
@@ -140,7 +142,7 @@ typedef struct bbl_ctx_
     endpoint_state_t multicast_endpoint;
     bool zapping;
 
-    double total_pps; /* Sum of all sream PPS */
+    double total_pps; /* Sum of all stream PPS */
 
     /* Config options */
     struct {
@@ -363,7 +365,7 @@ typedef struct bbl_ctx_
         bool stream_rate_calc; /* Enable/disable stream rate calculation */
         bool stream_delay_calc; /* Enable/disable stream delay calculation */
         bool stream_udp_checksum; /* Enable/disable stream UDP checksum calculation */
-        uint64_t stream_burst_ms; /* Max bust size per stream in milliseconds */
+        uint64_t stream_burst_ms; /* Max burst size per stream in milliseconds */
 
         /* Session Traffic */
         bool session_traffic_autostart;
@@ -377,6 +379,9 @@ typedef struct bbl_ctx_
 
         /* L2TP Server Config (LNS) */
         bbl_l2tp_server_s *l2tp_server;
+
+        /* L2TP Client Config (LAC) */
+        struct bbl_l2tp_client_ *l2tp_client;
     } config;
 } bbl_ctx_s;
 

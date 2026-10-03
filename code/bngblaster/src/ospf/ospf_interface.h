@@ -10,6 +10,9 @@
 #define __BBL_OSPF_INTERFACE_H__
 
 void
+ospf_interface_backup_seen(ospf_interface_s *ospf_interface);
+
+void
 ospf_interface_neighbor_change(ospf_interface_s *ospf_interface);
 
 bool 

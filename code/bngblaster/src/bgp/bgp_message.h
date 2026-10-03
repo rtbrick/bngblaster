@@ -13,9 +13,15 @@ void
 bgp_push_open_message(bgp_session_s *session);
 
 void
+bgp_push_open_message_buf(io_buffer_t *buffer, bgp_config_s *config);
+
+void
 bgp_push_keepalive_message(bgp_session_s *session);
 
 void
 bgp_push_notification_message(bgp_session_s *session);
+
+void
+bgp_push_notification_message_buf(io_buffer_t *buffer, uint8_t error_code, uint8_t error_subcode);
 
 #endif

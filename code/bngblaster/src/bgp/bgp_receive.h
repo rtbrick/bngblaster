@@ -9,7 +9,10 @@
 #ifndef __BBL_BGP_RECEIVE_H__
 #define __BBL_BGP_RECEIVE_H__
 
-void 
+void
 bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len);
+
+bool
+bgp_open_parse(bgp_session_s *session, uint8_t *start, uint16_t length);
 
 #endif

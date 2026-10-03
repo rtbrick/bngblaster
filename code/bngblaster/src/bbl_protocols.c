@@ -789,8 +789,12 @@ encode_bbl(uint8_t *buf, uint16_t *len,
         *(uint32_t*)buf = bbl->mc_group;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     }
-    *(uint64_t*)buf = bbl->flow_id;
-    BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
+    /* 32-bit flow-id followed by 32 reserved bits, which is wire
+     * compatible with the former 64-bit little-endian flow-id. */
+    *(uint32_t*)buf = bbl->flow_id;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    *(uint32_t*)buf = 0;
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
     *(uint64_t*)buf = bbl->flow_seq;
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint64_t));
     *(uint32_t*)buf = bbl->timestamp.tv_sec;
@@ -956,7 +960,8 @@ encode_icmpv6(uint8_t *buf, uint16_t *len,
                 BUMP_WRITE_BUFFER(buf, len, ETH_ADDR_LEN);
                 break;
             case IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT:
-                *buf = 0x60; /* Flags */
+                /* Flags (default solicited and override) */
+                *buf = icmp->flags ? icmp->flags : (IPV6_ICMPV6_NA_FLAG_SOLICITED|IPV6_ICMPV6_NA_FLAG_OVERRIDE);
                 BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
                 /* Target address */
                 memcpy(buf, icmp->prefix.address, IPV6_ADDR_LEN);
@@ -1401,7 +1406,7 @@ encode_ppp_ip6cp(uint8_t *buf, uint16_t *len,
         ip6cp_len = ip6cp->options_len + 4;
         *ip6cp_len_field = htobe16(ip6cp_len);
     } else {
-        /* Constuct options ... */
+        /* Construct options ... */
         ip6cp_len = 4;
         *buf = PPP_IP6CP_OPTION_IDENTIFIER;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
@@ -1537,6 +1542,7 @@ encode_ppp_lcp(uint8_t *buf, uint16_t *len,
                     } else {
                         *buf = PROTOCOL_CHAP_ALG_MD5;
                     }
+                    BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
                     lcp_len += 5;
                 } else {
                     *buf = 4;
@@ -2383,6 +2389,11 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         }
         if(eth->type == ETH_TYPE_ETH) {
+            if(eth->mpls_cw) {
+                /* Preferred PW MPLS control word without sequencing */
+                *(uint32_t*)buf = 0;
+                BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+            }
             return encode_ethernet(buf, len, (bbl_ethernet_header_s*)eth->next);
         }
     } else if(eth->type == ISIS_PROTOCOL_IDENTIFIER) {
@@ -2646,7 +2657,7 @@ decode_icmpv6(uint8_t *buf, uint16_t len,
                 }
                 if(option == ICMPV6_OPTION_DEST_LINK_LAYER) {
                     if(option_len != 8) {
-                        // Maleformed ICMPv6 packet
+                        // Malformed ICMPv6 packet
                         return DECODE_ERROR;
                     }
                     icmpv6->mac = buf;
@@ -2999,6 +3010,9 @@ decode_dhcp_agent(uint8_t *buf, uint16_t len,
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
         tlv_length = *buf;
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(tlv_length > len) {
+            return DECODE_ERROR;
+        }
         switch (tlv_type) {
             case ACCESS_LINE_ACI:
                 if(sp_len > tlv_length) {
@@ -3063,15 +3077,15 @@ decode_dhcp(uint8_t *buf, uint16_t len,
         if(option == DHCP_OPTION_PAD) {
             continue;
         }
+        if(option == DHCP_OPTION_END) {
+            break;
+        }
         option_len = *buf;
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
         if(option_len > len) {
             return DECODE_ERROR;
         }
         switch(option) {
-            case DHCP_OPTION_END:
-                option_len = len;
-                break;
             case DHCP_OPTION_DHCP_MESSAGE_TYPE:
                 if(option_len != 1) {
                     return DECODE_ERROR;
@@ -3214,8 +3228,9 @@ decode_bbl(uint8_t *buf, uint16_t len,
         bbl->mc_group = *(uint32_t*)buf;
         BUMP_BUFFER(buf, len, sizeof(uint32_t));
     }
-    bbl->flow_id = *(uint64_t*)buf;
-    BUMP_BUFFER(buf, len, sizeof(uint64_t));
+    bbl->flow_id = *(uint32_t*)buf;
+    BUMP_BUFFER(buf, len, sizeof(uint32_t));
+    BUMP_BUFFER(buf, len, sizeof(uint32_t)); /* reserved */
     bbl->flow_seq = *(uint64_t*)buf;
     BUMP_BUFFER(buf, len, sizeof(uint64_t));
     bbl->timestamp.tv_sec = *(uint32_t*)buf;
@@ -3301,6 +3316,11 @@ decode_ldp_hello(uint8_t *buf, uint16_t len,
      * and PDU length fields. */
     if(pdu_len > len) {
         return UNKNOWN_PROTOCOL;
+    }
+    /* The PDU must at least carry the LDP identifier (6 byte) followed
+     * by a message header (4 byte). */
+    if(pdu_len < 10) {
+        return DECODE_ERROR;
     }
     len = pdu_len;
 
@@ -4370,6 +4390,9 @@ decode_pppoe_vendor(uint8_t *buf, uint16_t len,
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
         tlv_length = *buf;
         BUMP_BUFFER(buf, len, sizeof(uint8_t));
+        if(tlv_length > len) {
+            return DECODE_ERROR;
+        }
         switch (tlv_type) {
             case ACCESS_LINE_ACI:
                 if(sp_len > tlv_length) {
@@ -4640,6 +4663,7 @@ decode_ethernet(uint8_t *buf, uint16_t len,
 {
     bbl_ethernet_header_s *eth;
     bbl_mpls_s *mpls;
+    bool cw_valid = false;
 
     if(len < 14 || sp_len < sizeof(bbl_ethernet_header_s)) {
         return DECODE_ERROR;
@@ -4664,7 +4688,7 @@ decode_ethernet(uint8_t *buf, uint16_t len,
         if(len < 4) {
             return DECODE_ERROR;
         }
-        if(eth->type == ETH_TYPE_QINQ) {
+        if(eth->type == NB_ETH_TYPE_QINQ) {
             eth->qinq = true;
         }
         eth->vlan_outer_priority = *buf >> 5;
@@ -4733,9 +4757,35 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                 eth->type = NB_ETH_TYPE_IPV6; 
                 break;
             default: 
-                /* Try to decode as ethernet */
+                /* Ethernet over MPLS with or without PW control word
+                 * (first nibble zero, RFC 4385). A zero first byte is
+                 * ambiguous and decoded both ways, if both are valid the
+                 * receiver decides based on signaling (next_cw). A control
+                 * word with flags set is only assumed if the frame can't be
+                 * decoded without, to not decode frames with destination
+                 * MAC address 0x01-0x0f (e.g. 02:...) twice. */
+                if(*buf == 0 && len > 4) {
+                    sp_len /= 2;
+                    cw_valid = decode_ethernet(buf+4, len-4, sp+sp_len, sp_len,
+                                               (bbl_ethernet_header_s**)&eth->next_cw) == PROTOCOL_SUCCESS;
+                    if(!cw_valid) {
+                        eth->next_cw = NULL;
+                    }
+                }
                 if(decode_ethernet(buf, len, sp, sp_len, (bbl_ethernet_header_s**)&eth->next) == PROTOCOL_SUCCESS) {
                     eth->type = ETH_TYPE_ETH;
+                    return PROTOCOL_SUCCESS;
+                } else if(cw_valid) {
+                    eth->type = ETH_TYPE_ETH;
+                    eth->mpls_cw = true;
+                    eth->next = eth->next_cw;
+                    eth->next_cw = NULL;
+                    return PROTOCOL_SUCCESS;
+                } else if(*buf && (*buf & 0xf0) == 0 && len > 4 &&
+                          decode_ethernet(buf+4, len-4, sp, sp_len,
+                                          (bbl_ethernet_header_s**)&eth->next) == PROTOCOL_SUCCESS) {
+                    eth->type = ETH_TYPE_ETH;
+                    eth->mpls_cw = true;
                     return PROTOCOL_SUCCESS;
                 } else {
                     return UNKNOWN_PROTOCOL;

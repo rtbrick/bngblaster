@@ -37,7 +37,8 @@ typedef enum {
     IO_MODE_PACKET_MMAP,        /* packet_mmap ring */
     IO_MODE_RAW,                /* raw sockets */
     IO_MODE_DPDK,               /* DPDK */
-    IO_MODE_AF_XDP              /* AF_XDP */
+    IO_MODE_AF_XDP,             /* AF_XDP */
+    IO_MODE_LOOPBACK            /* in-memory loopback between two links */
 } __attribute__ ((__packed__)) io_mode_t;
 
 typedef struct io_bucket_ {
@@ -66,11 +67,23 @@ typedef struct io_handle_ {
     volatile bool update_streams;
 
 #ifdef BNGBLASTER_DPDK
-    struct rte_eth_dev_tx_buffer *tx_buffer;
     struct rte_mempool *mbuf_pool;
     struct rte_mbuf *mbuf;
     uint16_t queue;
 #endif
+
+#ifdef BNGBLASTER_AF_XDP
+    /* Shared per (interface, queue) AF_XDP context. The RX and TX
+     * io_handle_s of a given queue point to the same context, since
+     * AF_XDP binds RX and TX rings to a single combined socket. */
+    struct io_af_xdp_queue_ *af_xdp_queue;
+    uint16_t af_xdp_queue_id;
+#endif
+
+    /* Loopback rings, exactly one for TX and
+     * one or more for RX IO handles. */
+    struct io_loopback_ring_ **loopback_rings;
+    uint16_t loopback_ring_count;
 
     uint8_t *ring; /* ring buffer */
     unsigned int cursor; /* ring buffer cursor */

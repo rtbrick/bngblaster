@@ -4,7 +4,7 @@
 
 +--------------------------------+------------------------------------------------------------------+
 | Attribute                      | Description                                                      |
-+--------------------------------+------------------------------------------------------------------+
++================================+==================================================================+
 | **name**                       | | Mandatory stream name.                                         |
 +--------------------------------+------------------------------------------------------------------+
 | **stream-group-id**            | | Stream group identifier.                                       |
@@ -30,7 +30,7 @@
 |                                | | See chapter Stream Iterators for details.                      |
 |                                | | Default: 0 Range: 0 - 65535                                    |
 +--------------------------------+------------------------------------------------------------------+
-| **source-port-max**            | | Max source port before reset to `destination-port`.            |
+| **source-port-max**            | | Max source port before reset to `source-port`.                 |
 |                                | | Default: 65535 Range: 0 - 65535                                |
 +--------------------------------+------------------------------------------------------------------+
 | **destination-port**           | | Overwrite the default destination port.                        |
@@ -42,7 +42,7 @@
 |                                | | stream. See chapter Stream Iterators for details.              |
 |                                | | Default: 0 Range: 0 - 65535                                    |
 +--------------------------------+------------------------------------------------------------------+
-| **destination-port-max**.      | | Max destination port before reset to `destination-port`.       |
+| **destination-port-max**       | | Max destination port before reset to `destination-port`.       |
 |                                | | Default: 65535 Range: 0 - 65535                                |
 +--------------------------------+------------------------------------------------------------------+
 | **ipv4-df**                    | | Set IPv4 DF bit.                                               |
@@ -85,6 +85,8 @@
 +--------------------------------+------------------------------------------------------------------+
 | **bps-upstream**               | | Optionally overwrite bps in upstream to support bidirectional  |
 |                                | | streams with different rates for upstream and downstream.      |
+|                                | | The K, M and G prefixes are supported as well,                 |
+|                                | | for example, ``"Gbps-upstream": 1``.                           |
 +--------------------------------+------------------------------------------------------------------+
 | **setup-interval**             | | Set optional setup interval in seconds. If set, sent max 1     |
 |                                | | packet per setup interval until stream becomes verified.       |
@@ -147,6 +149,62 @@
 | **ldp-ipv4-lookup-address**    | | Dynamically resolve outer label.                               |
 +--------------------------------+------------------------------------------------------------------+
 | **ldp-ipv6-lookup-address**    | | Dynamically resolve outer label.                               |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-evpn-rd**                | | Dynamically resolve inner label from a BGP EVPN route          |
+|                                | | with this route distinguisher (e.g. 65001:100 or 10.0.0.1:5).  |
+|                                | | Requires a BGP session with learn-routes and family evpn.      |
+|                                | | Not supported with tx-label2.                                  |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-evpn-ethernet-tag**      | | Ethernet tag of the BGP EVPN route. Without bgp-evpn-mac and   |
+|                                | | bgp-evpn-prefix, the label of the Ethernet A-D per EVI route   |
+|                                | | (type 1) is used for EVPN VPWS (E-LINE) where stream packets   |
+|                                | | are sent as Ethernet over MPLS to the destination-mac.         |
+|                                | | EVPN VPWS requires this option to be set explicitly, RAW       |
+|                                | | streams and destination-mac (unless vpws-arp is enabled).      |
+|                                | | Default: 0 Range: 0 - 4294967294 (VPWS)                        |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-evpn-esi**               | | ESI of the Ethernet A-D route (type 1). Not supported with     |
+|                                | | bgp-evpn-mac or bgp-evpn-prefix.                               |
+|                                | | Default: 00:00:00:00:00:00:00:00:00:00                         |
++--------------------------------+------------------------------------------------------------------+
+| **vpws-vlan**                  | | Customer VLAN within the EVPN VPWS service. All vpws-*         |
+|                                | | options require EVPN VPWS.                                     |
+|                                | | Range: 1 - 4094                                                |
++--------------------------------+------------------------------------------------------------------+
+| **vpws-inner-vlan**            | | Customer inner VLAN within the EVPN VPWS service.              |
+|                                | | Requires vpws-vlan.                                            |
+|                                | | Range: 1 - 4094                                                |
++--------------------------------+------------------------------------------------------------------+
+| **vpws-vlan-priority**         | | Customer VLAN priority. Requires vpws-vlan.                    |
+|                                | | Default: 0 Range: 0 - 7                                        |
++--------------------------------+------------------------------------------------------------------+
+| **vpws-inner-vlan-priority**   | | Customer inner VLAN priority. Requires vpws-inner-vlan.        |
+|                                | | Default: 0 Range: 0 - 7                                        |
++--------------------------------+------------------------------------------------------------------+
+| **vpws-qinq**                  | | Customer outer VLAN ethertype 0x88a8 instead of 0x8100.        |
+|                                | | Requires vpws-vlan.                                            |
+|                                | | Default: false                                                 |
++--------------------------------+------------------------------------------------------------------+
+| **vpws-arp**                   | | Reply to ARP, IPv6 neighbor solicitation and ICMP/ICMPv6       |
+|                                | | echo requests for the network-ipv4-address or                  |
+|                                | | network-ipv6-address received within the EVPN VPWS service.    |
+|                                | | Without destination-mac, the stream waits until the customer   |
+|                                | | MAC is learned from those requests. Requires stream type ipv4  |
+|                                | | with network-ipv4-address or ipv6 with network-ipv6-address.   |
+|                                | | Default: false                                                 |
++--------------------------------+------------------------------------------------------------------+
+| **rx-control-word**            | | Expect pseudowire control word for received Ethernet over      |
+|                                | | MPLS traffic (e.g. EVPN VPWS).                                 |
+|                                | | Default: false                                                 |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-evpn-mac**               | | Use label2 of the MAC/IP advertisement route (type 2).         |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-evpn-ip**                | | IP address of the MAC/IP advertisement route (type 2).         |
+|                                | | Requires bgp-evpn-mac.                                         |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-evpn-prefix**            | | Use the label of the IP prefix route (type 5). The address     |
+|                                | | family must match the stream type. Not supported with          |
+|                                | | bgp-evpn-mac.                                                  |
 +--------------------------------+------------------------------------------------------------------+
 | **nat**                        | | Enable NAT support.                                            |
 |                                | | Default: false                                                 |

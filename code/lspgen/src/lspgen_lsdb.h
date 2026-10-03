@@ -16,7 +16,7 @@
 #define LSDB_MAX_LINK_ID_SIZE 16    /* enough space for various protocols */
 
 /*
- * Inital hash bucket size. Good to pick prime numbers.
+ * Initial hash bucket size. Good to pick prime numbers.
  * Should give enough initial space for roughly 1000 nodes and 5000 links.
  */
 #define LSDB_NODE_HSIZE 997    /* hash table initial bucket size */

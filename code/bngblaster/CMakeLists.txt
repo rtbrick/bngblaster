@@ -11,7 +11,7 @@ endforeach()
 add_executable(bngblaster ${COMMON_SOURCES} ${BBL_SOURCES})
 
 set(PLATFORM_SPECIFIC_LIBS "-lpthread")
-string(APPEND CMAKE_C_FLAGS "-pthread -Wno-error=sequence-point")
+string(APPEND CMAKE_C_FLAGS " -pthread -Wno-error=sequence-point")
 
 # Add curses support
 
@@ -58,6 +58,36 @@ if(BNGBLASTER_DPDK)
     endif()    
 endif()
 
+# Add AF_XDP support
+#
+# The AF_XDP socket API (xsk.h) was removed from libbpf with version 1.0
+# and moved to libxdp (xdp/xsk.h). Prefer libxdp if available, otherwise
+# fall back to the deprecated API of libbpf < 1.0.
+if(BNGBLASTER_AF_XDP)
+    message(STATUS "Build bngblaster with AF_XDP support")
+    find_package(PkgConfig REQUIRED)
+    pkg_check_modules(LIBXDP "libxdp")
+    pkg_check_modules(LIBBPF "libbpf")
+    if(LIBXDP_FOUND AND LIBBPF_FOUND)
+        message(STATUS "Found libxdp ${LIBXDP_VERSION} via pkg-config")
+        add_definitions(-DBNGBLASTER_AF_XDP -DBNGBLASTER_LIBXDP)
+        include_directories(${LIBXDP_INCLUDE_DIRS} ${LIBBPF_INCLUDE_DIRS})
+        target_link_libraries(bngblaster ${LIBXDP_LIBRARIES} ${LIBBPF_LIBRARIES})
+    elseif(LIBBPF_FOUND)
+        if(LIBBPF_VERSION VERSION_GREATER_EQUAL "1.0")
+            message(FATAL_ERROR "libbpf ${LIBBPF_VERSION} does not provide the AF_XDP socket API "
+                                "(removed in libbpf 1.0), install libxdp (e.g. libxdp-dev) "
+                                "required for BNGBLASTER_AF_XDP")
+        endif()
+        message(STATUS "Found libbpf ${LIBBPF_VERSION} via pkg-config")
+        add_definitions(-DBNGBLASTER_AF_XDP)
+        include_directories(${LIBBPF_INCLUDE_DIRS})
+        target_link_libraries(bngblaster ${LIBBPF_LIBRARIES})
+    else()
+        message(FATAL_ERROR "libxdp or libbpf < 1.0 not found, required for BNGBLASTER_AF_XDP")
+    endif()
+endif()
+
 if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
     target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 endif()
@@ -76,7 +106,7 @@ else()
   message(WARNING "IPO is not supported: ${output}")
 endif()
 
-install(TARGETS bngblaster DESTINATION sbin)
+install(TARGETS bngblaster DESTINATION bin)
 
 # Build tests only if required
 if(BNGBLASTER_TESTS)

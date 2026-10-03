@@ -13,7 +13,7 @@ The BNG Blaster considers a session only as established if all configured
 protocols are established. This could occur if the device under test (your BNG)
 is configured for IPv4 only but the BNG Blaster is configured for IPv4 and IPv6. 
 
-The idea here is to prevent potential failures will be overseen. 
+The idea here is to prevent potential failures from being overlooked.
 
 **DHCPv6 does not start for PPPoE sessions?**
 

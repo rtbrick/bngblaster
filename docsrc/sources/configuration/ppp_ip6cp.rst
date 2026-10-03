@@ -5,7 +5,7 @@
 +----------------------------------+-------------------------------------------------------------------+
 | Attribute                        | Description                                                       |
 +==================================+===================================================================+
-| **enable**                       | | This option allows to enable or disable the IP6CP protocol.     |
+| **enable**                       | | This option allows enabling or disabling the IP6CP protocol.    |
 |                                  | | Default: true                                                   |
 +----------------------------------+-------------------------------------------------------------------+
 | **conf-request-timeout**         | | IP6CP configuration request timeout in seconds.                 |

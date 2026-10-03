@@ -11,7 +11,7 @@ The control socket is an unix domain stream socket that
 allows interacting with the BNG Blaster using JSON RPC. 
 
 We developed this interface for the BNG Blaster Controller 
-but it can be also used by other tools. One example is the 
+it can also be used by other tools. One example is the 
 included CLI tool ``bngblaster-cli``. You can use this for 
 interactive communication with the BNG Blaster.
 
@@ -24,13 +24,13 @@ the actual command with optional arguments.
 .. code-block:: json
 
     {
-        "command": "<command>"
+        "command": "<command>",
         "arguments": {
             "<argument-key>": "<argument-value>"
         }
     }
 
-Following an example RPC request with corresponding response.
+The following is an example RPC request with its corresponding response.
 
 ``$ cat command.json | jq .``
 
@@ -55,12 +55,12 @@ Following an example RPC request with corresponding response.
         }
     }
 
-The response contains at least the status element with the 
-value ``ok`` and status code ``2xx`` if request was successfully. 
-The status can be also set to ``warning`` or ``error`` with 
+The response contains at least the status element with the
+value ``ok`` and status code ``2xx`` if the request was successful.
+The status can also be set to ``warning`` or ``error`` with
 corresponding error code and an optional error message.
 
-``$ cat command.json | sudo nc -U test.socket | jq .``
+``$ cat command.json | sudo nc -U run.sock | jq .``
 
 .. code-block:: json
 
@@ -73,7 +73,7 @@ corresponding error code and an optional error message.
 
 The ``session-id`` is the same as used for ``{session-global}`` in the
 configuration. This number starts with 1 and is increased
-per session added. In example if username is configured as
+per session added. For example, if the username is configured as
 ``user{session-global}@rtbrick.com`` and logged in user is
 ``user10@rtbrick.com`` the ``session-id`` of this user is ``10``.
 
@@ -116,6 +116,13 @@ for interactive communication with the BNG Blaster.
         bngblaster-cli run.sock igmp-info session-id 1
         bngblaster-cli run.sock l2tp-csurq tunnel-id 1 sessions [1,2]
 
+Bash completion for ``bngblaster-cli`` is installed to
+``/usr/share/bash-completion/completions/bngblaster-cli`` and picked up
+automatically by the ``bash-completion`` package (or can be sourced manually).
+It completes the socket path, the command name and its arguments by querying
+the ``commands`` endpoint of the running instance referenced by the socket
+path already typed, so suggestions always match that instance.
+
 ``$ sudo bngblaster-cli run.sock session-counters | jq .``
 
 .. code-block:: json
@@ -148,9 +155,16 @@ Test
 +===================================+======================================================================+
 | **test-info**                     | | Display information about the running test instance.               |
 +-----------------------------------+----------------------------------------------------------------------+
-| **test-stop**                     | | Stop/teardown the test.                                            |
+| **test-stop**                     | | Stop/teardown the test (graceful, global).                         |
 +-----------------------------------+----------------------------------------------------------------------+
-| **terminate**                     | | Stop/teardown the test.                                            |
+| **terminate**                     | | Deprecated. Terminate the given ``session-id``, or                 |
+|                                   | | stop/teardown the whole test if no ``session-id`` is               |
+|                                   | | given. Use ``session-start``/``session-stop`` instead              |
+|                                   | | for terminating single sessions.                                   |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``session-id``                                                     |
+|                                   | | ``reconnect-delay``                                                |
 +-----------------------------------+----------------------------------------------------------------------+
 | **monkey-start**                  | | Start monkey test.                                                 |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -159,7 +173,7 @@ Test
 
 Interfaces
 ----------
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`interfaces <interfaces>` section.
 
 .. include:: interfaces.rst
@@ -170,14 +184,14 @@ Sessions
 
 PPP
 ---
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`PPPoE <pppoe>` section.
 
 .. include:: ppp.rst
 
 L2TP
 ----
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`L2TP <l2tp>` section.
 
 .. include:: l2tp.rst
@@ -196,35 +210,35 @@ Traffic
 
 Streams
 -------
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`streams <streams>` section.
 
 .. include:: streams.rst
 
 ISIS
 ----
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`ISIS <isis>` section.
 
 .. include:: isis.rst
 
 OSPF
 ----
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`OSPF <ospf>` section.
 
 .. include:: ospf.rst
 
 BGP
 ---
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`BGP <bgp>` section.
 
 .. include:: bgp.rst
 
 LDP
 ---
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`LDP <ldp>` section.
 
 .. include:: ldp.rst
@@ -235,21 +249,21 @@ CFM
 
 Legal Interception (LI)
 -----------------------
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`Legal Interception (LI) <li>` section.
 
 .. include:: li.rst
 
 HTTP
 ----
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`HTTP <http>` section.
 
 .. include:: http.rst
 
 ICMP
 ----
-This is explained detailed in the 
+This is explained in detail in the
 :ref:`ICMP <icmp>` section.
 
 .. include:: icmp.rst

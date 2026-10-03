@@ -1,4 +1,4 @@
-The link configuration is optional and allows to define per interface link configurations. An explicit
+The link configuration is optional and allows defining per interface link configurations. An explicit
 link configuration with the global default settings is automatically generated if no link is defined
 for interface links referenced by interface functions. 
 
@@ -20,6 +20,9 @@ for interface links referenced by interface functions.
 +-----------------------------------+----------------------------------------------------------------------+
 | **lacp-priority**                 | | LACP interface priority.                                           |
 |                                   | | Default: 32768                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **loopback-peer**                 | | Peer link for I/O mode ``loopback``. It is sufficient to define    |
+|                                   | | the peer on one of both links.                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tx-cpuset**                     | | Optionally pin TX threads to CPU cores (cpuset). Manual pinning    |
 |                                   | | overrides automatic CPU placement.                                 |

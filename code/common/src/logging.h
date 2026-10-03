@@ -45,6 +45,7 @@ enum {
     LSP,
     LAG,
     DPDK,
+    AFXDP,
     PACKET,
     HTTP,
     TIMER,

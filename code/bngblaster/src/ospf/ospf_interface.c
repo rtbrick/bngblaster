@@ -33,7 +33,7 @@ ospf_interface_elect_dr_bdr(ospf_interface_s *ospf_interface)
 
     neighbor = &self;
     while(neighbor) {
-        /* Iterate over all neighbors with staet >= 2WAY ... */
+        /* Iterate over all neighbors with state >= 2WAY ... */
         if(neighbor->state >= OSPF_NBSTATE_2WAY && neighbor->priority > 0) {
             if(ospf_interface->version == OSPF_VERSION_2) {
                 neighbor_id = neighbor->ipv4;
@@ -124,7 +124,6 @@ ospf_interface_update_state(ospf_interface_s *ospf_interface, uint8_t state)
 {
     if(ospf_interface->state == state) return;
  
-    ospf_neighbor_s *neighbor = ospf_interface->neighbors;
     uint8_t old = ospf_interface->state;
 
     ospf_interface->state = state;
@@ -142,50 +141,99 @@ ospf_interface_update_state(ospf_interface_s *ospf_interface, uint8_t state)
                            0, 10 * MSEC, ospf_interface, &ospf_interface_flood_job);
     }
 
-    if(old > OSPF_IFSTATE_P2P) {
-        /* This refers to the event "AdjOK?" as described in RFC2328 */
-        while(neighbor) {
-            ospf_neighbor_adjok(neighbor);
-            neighbor = neighbor->next;
-        }
-    }
     ospf_lsa_self_update_request(ospf_interface->instance);
 }
 
-void
-ospf_interface_neighbor_change(ospf_interface_s *ospf_interface)
+/**
+ * ospf_interface_election:
+ *
+ * Elect DR/BDR, update the interface state and
+ * check all adjacencies (RFC2328 section 9.4).
+ *
+ * @param ospf_interface OSPF interface
+ */
+static void
+ospf_interface_election(ospf_interface_s *ospf_interface)
 {
     ospf_config_s *config = ospf_interface->instance->config;
+    ospf_neighbor_s *neighbor;
     uint32_t id;
-
-    switch (ospf_interface->state) {
-        case OSPF_IFSTATE_DOWN:
-        case OSPF_IFSTATE_LOOPBACK:
-        case OSPF_IFSTATE_P2P:
-            return;
-        default:
-            break;
-    }
-
 
     if(ospf_interface_elect_dr_bdr(ospf_interface)) {
         ospf_interface_elect_dr_bdr(ospf_interface);
+    }
 
-        if(ospf_interface->version == OSPF_VERSION_2) {
-            id = ospf_interface->interface->ip.address;
-        } else {
-            id = config->router_id;
-        }
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        id = ospf_interface->interface->ip.address;
+    } else {
+        id = config->router_id;
+    }
 
-        if(ospf_interface->dr == id) {
-            ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_DR);
-        } else if(ospf_interface->dr && ospf_interface->bdr == id) {
-            ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_BACKUP);
-        } else if(ospf_interface->dr) {
-            ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_DR_OTHER);
-        } else {
-            ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_WAITING);
-        }
+    if(ospf_interface->dr == id) {
+        ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_DR);
+    } else if(ospf_interface->bdr == id) {
+        ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_BACKUP);
+    } else {
+        ospf_interface_update_state(ospf_interface, OSPF_IFSTATE_DR_OTHER);
+    }
+
+    /* This refers to the event "AdjOK?" as described in RFC2328 */
+    neighbor = ospf_interface->neighbors;
+    while(neighbor) {
+        ospf_neighbor_adjok(neighbor);
+        neighbor = neighbor->next;
+    }
+}
+
+static void
+ospf_interface_wait_job(timer_s *timer)
+{
+    ospf_interface_s *ospf_interface = timer->data;
+    if(ospf_interface->state == OSPF_IFSTATE_WAITING) {
+        ospf_interface_election(ospf_interface);
+    }
+}
+
+/**
+ * ospf_interface_backup_seen:
+ *
+ * Event BackupSeen, a neighbor declares itself as BDR or as
+ * DR without BDR, ends the waiting period.
+ *
+ * @param ospf_interface OSPF interface
+ */
+void
+ospf_interface_backup_seen(ospf_interface_s *ospf_interface)
+{
+    if(ospf_interface->state == OSPF_IFSTATE_WAITING) {
+        timer_del(ospf_interface->timer_wait);
+        ospf_interface_election(ospf_interface);
+    }
+}
+
+/**
+ * ospf_interface_neighbor_change:
+ *
+ * Event NeighborChange, ignored in state Waiting where
+ * the election is triggered by BackupSeen or wait timer
+ * and during teardown where all neighbors are cleared.
+ *
+ * @param ospf_interface OSPF interface
+ */
+void
+ospf_interface_neighbor_change(ospf_interface_s *ospf_interface)
+{
+    if(ospf_interface->instance->teardown) {
+        return;
+    }
+    switch(ospf_interface->state) {
+        case OSPF_IFSTATE_DR_OTHER:
+        case OSPF_IFSTATE_BACKUP:
+        case OSPF_IFSTATE_DR:
+            ospf_interface_election(ospf_interface);
+            break;
+        default:
+            break;
     }
 }
 
@@ -193,6 +241,15 @@ void
 ospf_interface_hello_job(timer_s *timer)
 {
     ospf_interface_s *ospf_interface = timer->data;
+
+    if(ospf_interface->state == OSPF_IFSTATE_WAITING && !ospf_interface->timer_wait) {
+        /* Start the wait timer with the first hello, because one-shot
+         * timers added before would be shortened by the timer smearing
+         * on startup. */
+        timer_add(&g_ctx->timer_root, &ospf_interface->timer_wait, "OSPF WAIT",
+                  ospf_interface->instance->config->dead_interval, 0, ospf_interface,
+                  &ospf_interface_wait_job);
+    }
 
     switch(ospf_interface->version) {
         case OSPF_VERSION_2:

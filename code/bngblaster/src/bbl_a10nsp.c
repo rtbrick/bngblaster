@@ -24,18 +24,18 @@ void
 bbl_a10nsp_interface_rate_job(timer_s *timer)
 {
     bbl_a10nsp_interface_s *interface = timer->data;
-    bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx, timer->timestamp);
 }
 
 /**
@@ -75,8 +75,11 @@ bbl_a10nsp_interfaces_add()
         a10nsp_interface->ifindex = interface->ifindex;
 
         /* Init TXQ */
-        a10nsp_interface->txq = calloc(1, sizeof(bbl_txq_s));
-        bbl_txq_init(a10nsp_interface->txq, BBL_TXQ_DEFAULT_SIZE);
+        a10nsp_interface->txq = bbl_txq_alloc(BBL_TXQ_DEFAULT_SIZE);
+        if(!a10nsp_interface->txq) {
+            LOG(ERROR, "Failed to add a10nsp interface %s (TXQ allocation failed)\n", a10nsp_config->interface);
+            return false;
+        }
 
         /* Init ethernet */
         a10nsp_interface->qinq = a10nsp_config->qinq;
@@ -775,17 +778,16 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
     uint8_t key;
 
     while(stream) {
-        if(stream->direction == BBL_DIRECTION_DOWN && 
-           stream->tx_a10nsp_interface && 
+        if(stream->direction == BBL_DIRECTION_DOWN && stream->tx_flags & STREAM_FLAG_A10NSP &&
            stream->tx_a10nsp_interface != interface) {
-            if(stream->threaded || (interface->interface && interface->interface->io.tx && interface->interface->io.tx->thread)) {
-                LOG(ERROR, "A10NSP (ID: %u) Failed to change TX interface of stream %lu from %s to %s\n",
+            if((stream->tx_flags & STREAM_FLAG_THREADED) || (interface->interface && interface->interface->io.tx && interface->interface->io.tx->thread)) {
+                LOG(ERROR, "A10NSP (ID: %u) Failed to change TX interface of stream %u from %s to %s\n",
                     session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
             } else {
-                LOG(DEBUG, "A10NSP (ID: %u) Change TX interface of stream %lu from %s to %s\n",
+                LOG(DEBUG, "A10NSP (ID: %u) Change TX interface of stream %u from %s to %s\n",
                     session->session_id, stream->flow_id, stream->tx_a10nsp_interface->name, interface->name);
 
-                if(stream->lag) {
+                if(stream->tx_flags & STREAM_FLAG_LAG) {
                     /* Remove stream from LAG interface */
                     lag = stream->tx_a10nsp_interface->interface->lag;
                     stream_next = lag->stream_head;
@@ -798,7 +800,7 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                             } else {
                                 lag->stream_head = stream->lag_next;
                             }
-                            stream->lag = false;
+                            stream->tx_flags &= (uint16_t)~STREAM_FLAG_LAG;
                             stream->lag_next = NULL;
                             stream_next = NULL;
                         } else {
@@ -812,7 +814,7 @@ bbl_a10nsp_dynamic(bbl_a10nsp_interface_s *interface,
                 /* Move stream */
                 if(interface->interface->type == LAG_INTERFACE) {
                     lag = interface->interface->lag;
-                    stream->lag = true;
+                    stream->tx_flags |= STREAM_FLAG_LAG;
                     stream->lag_next = lag->stream_head;
                     lag->stream_head = stream;
                     lag->stream_count++;

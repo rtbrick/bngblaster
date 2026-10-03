@@ -24,4 +24,13 @@ bgp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), js
 int
 bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
+int
+bgp_ctrl_evpn_routes(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
+bgp_ctrl_routes(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
+bgp_ctrl_routes_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
 #endif

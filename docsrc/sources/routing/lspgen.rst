@@ -94,7 +94,7 @@ the ``system-id`` of the root node from the generated toplogy must be referenced
             {
                 "instance-id": 1,
                 "area": [
-                    "49.0001/24",
+                    "49.0001/24"
                 ],
                 "system-id": "1921.6800.1001",
                 "router-id": "192.168.1.1",
@@ -135,13 +135,13 @@ and local link IPv4 address (``remote-router-id:local-ipv4-address``).
                 "instance-id": 1,
                 "version": 2,
                 "router-id": "10.0.0.11",
-                "hostname": "R1"
+                "hostname": "R1",
                 "external": {
                     "mrt-file": "ospf.mrt",
                     "connections": [
                         {
                             "router-id": "10.10.0.1",
-                            "local-ipv4-address": "10.0.0.1",
+                            "local-ipv4-address": "10.0.0.1"
                         }
                     ]
                 }
@@ -226,7 +226,7 @@ shows the configuration for a topology with three nodes.
                         "metric": 10
                     },
                     {
-                        "remote_node_id": "0204.0000.0003.00",
+                        "remote_node_id": "1337.0000.0003.00",
                         "metric": 10
                     }
                 ]
@@ -268,7 +268,7 @@ shows the configuration for a topology with three nodes.
                 ]
             },
             {
-                "node_id": "1337.0000.3",
+                "node_id": "1337.0000.0003",
                 "hostname": "R3",
                 "area_list": [
                     "49.1337/24"
@@ -283,7 +283,7 @@ shows the configuration for a topology with three nodes.
                     {
                         "ipv4_prefix": "10.13.37.3/32",
                         "metric": 0,
-                        "segment_id": 30003,
+                        "segment_id": 30004,
                         "node_flag": true
                     }
                 ],

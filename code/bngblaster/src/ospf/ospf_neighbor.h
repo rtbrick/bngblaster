@@ -21,8 +21,17 @@ ospf_neighbor_new(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu);
 void
 ospf_neighbor_full(ospf_neighbor_s *ospf_neighbor);
 
+uint32_t
+ospf_neighbor_dr_id(ospf_neighbor_s *ospf_neighbor);
+
+bool
+ospf_neighbor_adjacency_required(ospf_neighbor_s *ospf_neighbor);
+
 void
 ospf_neighbor_adjok(ospf_neighbor_s *ospf_neighbor);
+
+bool
+ospf_neighbor_lsa_filter(ospf_neighbor_s *ospf_neighbor, uint8_t lsa_type);
 
 void
 ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface, 

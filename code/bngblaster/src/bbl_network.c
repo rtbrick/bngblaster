@@ -14,22 +14,22 @@
 void
 bbl_network_interface_rate_job(timer_s *timer) {
     bbl_network_interface_s *interface = timer->data;
-    bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_mc_tx, interface->stats.mc_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_li_rx, interface->stats.li_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_rx, interface->stats.l2tp_data_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_tx, interface->stats.l2tp_data_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx);
-    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx);
+    bbl_compute_avg_rate(&interface->stats.rate_packets_tx, interface->stats.packets_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_packets_rx, interface->stats.packets_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_tx, interface->stats.bytes_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_bytes_rx, interface->stats.bytes_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_mc_tx, interface->stats.mc_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_li_rx, interface->stats.li_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_rx, interface->stats.l2tp_data_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_l2tp_data_tx, interface->stats.l2tp_data_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_stream_tx, interface->stats.stream_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_stream_rx, interface->stats.stream_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_tx, interface->stats.session_ipv4_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv4_rx, interface->stats.session_ipv4_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_tx, interface->stats.session_ipv6_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6_rx, interface->stats.session_ipv6_rx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_tx, interface->stats.session_ipv6pd_tx, timer->timestamp);
+    bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx, timer->timestamp);
 }
 
 /**
@@ -67,7 +67,7 @@ bbl_network_interfaces_add()
             LOG(ERROR, "Failed to add network interface %s (duplicate)\n", ifname);
             return false;
         }
-        if(interface->access && network_config->vlan == 0) {
+        if(interface->access && interface->access->access_type != ACCESS_TYPE_PPPOL2TP && network_config->vlan == 0) {
             LOG(ERROR, "Failed to add network interface %s (untagged not allowed on access interfaces)\n", ifname);
             return false;
         }
@@ -92,8 +92,11 @@ bbl_network_interfaces_add()
         network_interface->vlindex |= network_config->vlan;
 
         /* Init TXQ */
-        network_interface->txq = calloc(1, sizeof(bbl_txq_s));
-        bbl_txq_init(network_interface->txq, BBL_TXQ_DEFAULT_SIZE);
+        network_interface->txq = bbl_txq_alloc(BBL_TXQ_DEFAULT_SIZE);
+        if(!network_interface->txq) {
+            LOG(ERROR, "Failed to add network interface %s (TXQ allocation failed)\n", ifname);
+            return false;
+        }
 
         /* Init ethernet */
         network_interface->vlan = network_config->vlan;
@@ -498,6 +501,12 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
         case ETH_TYPE_ARP:
             bbl_network_rx_arp(interface, eth);
             return;
+        case ETH_TYPE_ETH:
+            /* Ethernet over MPLS (e.g. EVPN VPWS) */
+            if(eth->mpls && bbl_vpws_rx(interface, eth)) {
+                return;
+            }
+            break;
         case ETH_TYPE_IPV4:
             ipv4 = (bbl_ipv4_s*)eth->next;
             if(ipv4->protocol == PROTOCOL_IPV4_UDP) {

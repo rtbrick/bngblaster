@@ -304,6 +304,10 @@
     (_buf) += _size; \
     *(uint16_t*)(_len) += _size
 
+/* ICMPv6 neighbor advertisement flags */
+#define IPV6_ICMPV6_NA_FLAG_SOLICITED   0x40
+#define IPV6_ICMPV6_NA_FLAG_OVERRIDE    0x20
+
 /* IPv6 Addresses */
 static const ipv6addr_t ipv6_link_local_prefix = {0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00};
 static const ipv6addr_t ipv6_link_local_address = {0xFE, 0x80, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, 0x01};
@@ -324,6 +328,7 @@ static const uint8_t all_dr_routers_mac[ETH_ADDR_LEN] = {0x01, 0x00, 0x5e, 0x00,
 
 typedef enum protocol_error_ {
     PROTOCOL_SUCCESS = 0,
+    PROTOCOL_QUEUED,  /* packet enqueued internally; caller must not transmit write_buf */
     SEND_ERROR,
     DECODE_ERROR,
     ENCODE_ERROR,
@@ -633,7 +638,7 @@ typedef struct bbl_bbl_ {
     uint16_t     inner_vlan_id;
     uint32_t     mc_source;
     uint32_t     mc_group;
-    uint64_t     flow_id;
+    uint32_t     flow_id;
     uint64_t     flow_seq;
     struct timespec timestamp;
 } bbl_bbl_s;
@@ -655,12 +660,14 @@ typedef struct bbl_ethernet_header_ {
 
     bool      lwip;
     bool      qinq; /* ethertype 0x88a8 */
+    bool      mpls_cw; /* pseudowire control word after MPLS labels (RFC 4385) */
 
     uint8_t    *dst; /* destination MAC address */
     uint8_t    *src; /* source MAC address */
     bbl_bbl_s  *bbl;  /* BBL stream header */
     bbl_mpls_s *mpls; /* MPLS */
     void       *next; /* next header */
+    void       *next_cw; /* Ethernet over MPLS decoded with control word if ambiguous */
 
     uint16_t raw_len; /* raw packet */
     struct timespec timestamp; /* receive timestamp */

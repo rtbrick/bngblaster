@@ -247,15 +247,28 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
     sleep.tv_sec = 0;
     sleep.tv_nsec = 10000; /* 0.01ms */
 
+    /* Number of consecutive rounds without any packet available before we
+     * back off with a nanosleep. Real traffic can arrive in an uneven
+     * pattern, so a single check finding the ring momentarily empty is not
+     * a reliable idle signal on its own (the next packet may already be
+     * only microseconds away) - we only throttle once idleness looks
+     * sustained rather than after a single empty check. */
+    uint32_t idle_rounds = 0;
+    const uint32_t idle_spin_rounds = 10000;
+
     while(thread->active) {
         frame_ptr = ring + (cursor * frame_size);
         tphdr = (struct tpacket2_hdr*)frame_ptr;
         if(!(tphdr->tp_status & TP_STATUS_USER)) {
             /* If no buffer is available poll kernel */
             //poll_kernel(io, POLLIN);
-            nanosleep(&sleep, &rem);
+            if(++idle_rounds >= idle_spin_rounds) {
+                nanosleep(&sleep, &rem);
+                idle_rounds = 0;
+            }
             continue;
         }
+        idle_rounds = 0;
 
         /* Get RX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
@@ -279,7 +292,6 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
             frame_ptr = ring + (cursor * frame_size);
             tphdr = (struct tpacket2_hdr*)frame_ptr;
         }
-        nanosleep(&sleep, &rem);
     }
 }
 
@@ -304,14 +316,22 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
 
     struct timespec sleep, rem;
     sleep.tv_sec = 0;
-    sleep.tv_nsec = 10;
+    sleep.tv_nsec = 10000; /* 0.01ms */
+
+    /* Number of consecutive rounds without anything queued before we back
+     * off with a nanosleep. With many independently paced stream instances,
+     * a single round finding nothing due is common even under heavy
+     * aggregate load (the next stream may become due microseconds later),
+     * so we only throttle once idleness looks sustained rather than after
+     * a single empty round. */
+    uint32_t idle_rounds = 0;
+    const uint32_t idle_spin_rounds = 10000;
 
     assert(io->mode == IO_MODE_PACKET_MMAP);
     assert(io->direction == IO_EGRESS);
     assert(io->thread);
 
     while(thread->active) {
-        nanosleep(&sleep, &rem);
         if(io->update_streams) {
             io_stream_update_pps(io);
         }
@@ -381,14 +401,24 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
         }
 
         if(io->queued) {
+            idle_rounds = 0;
             /* Notify kernel. */
             if(sendto(io->fd, NULL, 0, 0, NULL, 0) < 0) {
-                LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n", 
+                LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n",
                     interface->name, strerror(errno), errno);
                 io->stats.io_errors++;
+                nanosleep(&sleep, &rem);
             } else {
                 io->queued = 0;
             }
+        } else if(++idle_rounds >= idle_spin_rounds) {
+            /* Nothing was queued for many consecutive rounds in a row.
+             * Only now back off, instead of busy-spinning forever, or
+             * sleeping after every single empty round (which would also
+             * throttle bursty-but-busy streams that just missed being
+             * due by a few microseconds). */
+            nanosleep(&sleep, &rem);
+            idle_rounds = 0;
         }
     }
 }

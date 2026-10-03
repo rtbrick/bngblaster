@@ -21,7 +21,7 @@
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **group**                         | | Multicast group base address (e.g. 239.0.0.1).                     |
-|                                   | | If group is set to 293.0.0.1 with group-iter of 0.0.0.2,           |
+|                                   | | If group is set to 239.0.0.1 with group-iter of 0.0.0.2,           |
 |                                   | | source 1.1.1.1 and group-count 3, the result are the following     |
 |                                   | | three groups (S.G):                                                |
 |                                   | | `1.1.1.1,239.0.0.1, 1.1.1.1,239.0.0.3, 1.1.1.1,239.0.0.5`          |
@@ -58,7 +58,7 @@
 |                                   | | Default: 1000                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **send-multicast-traffic**        | | If enabled, the BNG Blaster generates multicast traffic on the     |
-|                                   | | network interface based on the specified  group and source         |
+|                                   | | network interface based on the specified group and source          |
 |                                   | | attributes mentioned before. This traffic includes some special    |
 |                                   | | signatures for faster processing and more detailed analysis.       |
 |                                   | | Default: false                                                     |

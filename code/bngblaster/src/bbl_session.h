@@ -21,12 +21,18 @@ typedef struct vlan_session_key_ {
  */
 typedef struct bbl_session_
 {
+    uint32_t version;
     uint32_t session_id; /* BNG Blaster internal session identifier */
     uint16_t session_group_id;
 
     session_state_t session_state;
+    struct {
+        endpoint_state_t ipv4;
+        endpoint_state_t ipv6;
+        endpoint_state_t ipv6pd;
+    } endpoint;
+
     uint32_t send_requests;
-    uint32_t version;
 
     CIRCLEQ_ENTRY(bbl_session_) session_idle_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_teardown_qnode;
@@ -34,6 +40,7 @@ typedef struct bbl_session_
     CIRCLEQ_ENTRY(bbl_session_) session_tx_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_network_tx_qnode;
     CIRCLEQ_ENTRY(bbl_session_) session_a10nsp_tx_qnode;
+    CIRCLEQ_ENTRY(bbl_session_) session_l2tp_qnode;
 
     bbl_access_config_s *access_config;
     bbl_access_interface_s *access_interface; /* where this session is attached to */
@@ -69,12 +76,6 @@ typedef struct bbl_session_
     access_type_t access_type;
 
     struct {
-        endpoint_state_t ipv4;
-        endpoint_state_t ipv6;
-        endpoint_state_t ipv6pd;
-    } endpoint;
-
-    struct {
         uint32_t ifindex;
         uint16_t outer_vlan_id;
         uint16_t inner_vlan_id;
@@ -88,6 +89,9 @@ typedef struct bbl_session_
     /* Set to true if session is tunnelled via L2TP. */
     bool l2tp;
     bbl_l2tp_session_s *l2tp_session;
+    /* Set (LAC mode only) while the session is queued on a tunnel's
+     * pending_session_qhead, waiting for the tunnel to be established. */
+    bbl_l2tp_tunnel_s *l2tp_tunnel;
 
     /* Set to true if session is connected to
      * BNG Blaster A10NSP Interface */

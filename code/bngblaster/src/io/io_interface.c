@@ -129,7 +129,7 @@ append_cpu(uint16_t *cpuset, uint16_t *count, uint16_t max, uint16_t cpu)
 static void
 order_cpuset_physical_first(uint16_t **cpuset, uint16_t count)
 {
-    uint16_t *ordered = NULL;;
+    uint16_t *ordered = NULL;
     uint16_t ordered_count = 0;
     uint16_t i;
     uint16_t j;
@@ -200,7 +200,7 @@ io_interface_init_topology(bbl_interface_s *interface, int numa_node_hint)
     bool use_numa = false;
     bool use_online = false;
 
-    if(numa_node_hint >= -1) {
+    if(numa_node_hint >= 0) {
         numa_node = numa_node_hint;
     }
 
@@ -469,6 +469,10 @@ io_interface_init(bbl_interface_s *interface)
     }
 #endif
 
+    if(config->io_mode == IO_MODE_LOOPBACK) {
+        return io_loopback_interface_init(interface);
+    }
+
     if(config->io_mode != IO_MODE_DPDK) {
         address_warning(interface);
         if(!set_kernel_info(interface)) {
@@ -487,11 +491,23 @@ io_interface_init(bbl_interface_s *interface)
         if(*(uint32_t*)config->mac) {
             memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
         }
-        if(!io_interface_init_rx(interface)) {
+        if(config->io_mode == IO_MODE_AF_XDP) {
+#ifdef BNGBLASTER_AF_XDP
+            if(!io_af_xdp_interface_init(interface)) {
+                return false;
+            }
+#else
+            LOG(ERROR, "IO mode af_xdp requested for interface %s but BNG Blaster "
+                "was built without AF_XDP support\n", interface->name);
             return false;
-        }
-        if(!io_interface_init_tx(interface)) {
-            return false;
+#endif
+        } else {
+            if(!io_interface_init_rx(interface)) {
+                return false;
+            }
+            if(!io_interface_init_tx(interface)) {
+                return false;
+            }
         }
     }
     return true;

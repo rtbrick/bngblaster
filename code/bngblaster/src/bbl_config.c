@@ -646,7 +646,8 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         "tx-threads", "rx-threads",
         "tx-auto-cpuset", "rx-auto-cpuset",
         "rx-cpuset", "tx-cpuset", 
-        "lag-interface", "lacp-priority"
+        "lag-interface", "lacp-priority",
+        "loopback-peer"
     };
     if(!schema_validate(link, "links", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -666,6 +667,9 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     
     if(json_unpack(link, "{s:s}", "description", &s) == 0) {
         link_config->description = strdup(s);
+    }
+    if(json_unpack(link, "{s:s}", "loopback-peer", &s) == 0) {
+        link_config->loopback_peer = strdup(s);
     }
     if(json_unpack(link, "{s:s}", "mac", &s) == 0) {
         if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
@@ -688,10 +692,18 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             io_packet_mmap_set_max_stream_len();
         } else if(strcmp(s, "raw") == 0) {
             link_config->io_mode = IO_MODE_RAW;
+        } else if(strcmp(s, "loopback") == 0) {
+            link_config->io_mode = IO_MODE_LOOPBACK;
+            io_loopback_set_max_stream_len();
 #if BNGBLASTER_DPDK
         } else if(strcmp(s, "dpdk") == 0) {
             link_config->io_mode = IO_MODE_DPDK;
             g_ctx->dpdk = true;
+#endif
+#if BNGBLASTER_AF_XDP
+        } else if(strcmp(s, "af_xdp") == 0) {
+            link_config->io_mode = IO_MODE_AF_XDP;
+            io_af_xdp_set_max_stream_len();
 #endif
         } else {
             fprintf(stderr, "JSON config error: Invalid value for links->io-mode\n");
@@ -1099,7 +1111,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "http-client-group-id", "icmp-client-group-id",
         "cfm-cc", "cfm-level", "cfm-interval", "cfm-md-name", "cfm-md-name-format",
         "cfm-ma-id", "cfm-ma-name", "cfm-ma-name-format", "cfm-seq",
-        "cfm-vlan-priority"
+        "cfm-vlan-priority", "l2tp-client-group-id"
     };
     if(!schema_validate(access_interface, "access", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1161,6 +1173,8 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
             access_config->access_type = ACCESS_TYPE_IPOE;
             access_config->ipv4_enable = g_ctx->config.ipoe_ipv4_enable;
             access_config->ipv6_enable = g_ctx->config.ipoe_ipv6_enable;
+        } else if(strcmp(s, "pppol2tp") == 0) {
+            access_config->access_type = ACCESS_TYPE_PPPOL2TP;
         } else {
             fprintf(stderr, "JSON config error: Invalid value for access->type\n");
             return false;
@@ -1474,7 +1488,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->arp_client_group_id = json_number_value(value);
     }
 
-    JSON_OBJ_GET_BOOL(access_interface, value, "network", "cfm-cc");
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "cfm-cc");
     if(value && json_boolean_value(value)) {
         access_config->cfm = calloc(1, sizeof(bbl_cfm_config_s));
         if(!json_parse_cfm_config(access_interface, access_config->cfm)) {
@@ -1482,12 +1496,18 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         }
     }
 
-    if(access_config->access_type == ACCESS_TYPE_PPPOE) {
-        /* Disable IPv4 on PPPoE if IPCP is disabled. */
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "l2tp-client-group-id", 0, 65535);
+    if(value) {
+        access_config->l2tp_client_group_id = json_number_value(value);
+    }
+
+    if(access_config->access_type == ACCESS_TYPE_PPPOE ||
+       access_config->access_type == ACCESS_TYPE_PPPOL2TP) {
+        /* Disable IPv4 on PPPoE/PPPoL2TP if IPCP is disabled. */
         if(!access_config->ipcp_enable) {
             access_config->ipv4_enable = false;
         }
-        /* Disable IPv6 on PPPoE if IP6CP is disabled. */
+        /* Disable IPv6 on PPPoE/PPPoL2TP if IP6CP is disabled. */
         if(!access_config->ip6cp_enable) {
             access_config->ipv6_enable = false;
             access_config->dhcpv6_enable = false;
@@ -1585,21 +1605,23 @@ static bool
 json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
 {
     json_t *value, *sub = NULL;
-    const char *s = NULL;    
+    const char *s = NULL;
+    const char *tcp_ao_key_str = NULL;
     int i, size;
     uint32_t family;
 
     g_ctx->tcp = true;
 
     const char *schema[] = {
-        "network-interface", 
+        "network-interface",
         "local-address", "peer-address",
         "local-ipv4-address", "peer-ipv4-address",
         "local-ipv6-address", "peer-ipv6-address",
         "local-as", "peer-as", "hold-time", "tos", "ttl",
-        "id", "reconnect", "start-traffic",
+        "id", "reconnect", "start-traffic", "learn-routes",
         "teardown-time", "raw-update-file",
-        "family", "extended-nexthop"
+        "family", "extended-nexthop",
+        "tcp-ao-key", "tcp-ao-key-id", "tcp-ao-rnext-key-id", "tcp-ao-algorithm"
     };
     if(!schema_validate(bgp, "bgp", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1690,6 +1712,58 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         bgp_config->ttl = json_number_value(value);
     }
 
+    /* The key is ignored without algorithm (auth can be toggled via
+     * algorithm only), but an algorithm without key is rejected instead
+     * of silently running the session without authentication. */
+    if(json_unpack(bgp, "{s:s}", "tcp-ao-algorithm", &s) == 0 &&
+       strcmp(s, "none") != 0) {
+        uint16_t min_key_len;
+
+        if(!bbl_tcp_ao_algo_from_string(s, &bgp_config->tcp_ao_algo)) {
+            fprintf(stderr, "JSON config error: Invalid value for bgp->tcp-ao-algorithm\n");
+            return false;
+        }
+        if(json_unpack(bgp, "{s:s}", "tcp-ao-key", &tcp_ao_key_str) != 0) {
+            fprintf(stderr, "JSON config error: bgp->tcp-ao-key is mandatory for bgp->tcp-ao-algorithm %s\n", s);
+            return false;
+        }
+
+        /* The RFC-recommended minimum is not enforced so BNG Blaster can also
+         * test interop with peers that accept shorter keys (e.g. some vendors
+         * do not enforce it either). Operators should still prefer keys that
+         * meet the minimum below for real deployments. */
+        min_key_len = bbl_tcp_ao_min_key_len(bgp_config->tcp_ao_algo);
+        if(strlen(tcp_ao_key_str) < min_key_len) {
+            fprintf(stderr, "JSON config warning: bgp->tcp-ao-key is shorter than the recommended "
+                    "minimum of %u characters for algorithm %s\n",
+                    min_key_len, bbl_tcp_ao_algo_string(bgp_config->tcp_ao_algo));
+        }
+        bgp_config->tcp_ao_key = strdup(tcp_ao_key_str);
+
+        if(bgp_config->tcp_ao_algo == TCP_AO_ALGO_MD5) {
+            /* RFC 2385 TCP MD5 signatures have no KeyID/RNextKeyID. */
+            if(json_object_get(bgp, "tcp-ao-key-id") || json_object_get(bgp, "tcp-ao-rnext-key-id")) {
+                fprintf(stderr, "JSON config error: bgp->tcp-ao-key-id and tcp-ao-rnext-key-id are not supported for algorithm md5\n");
+                return false;
+            }
+        } else {
+            JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "tcp-ao-key-id", 0, 255);
+            if(!value) {
+                fprintf(stderr, "JSON config error: bgp->tcp-ao-key-id is mandatory for TCP-AO\n");
+                return false;
+            }
+            bgp_config->tcp_ao_key_id = json_number_value(value);
+
+            JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "tcp-ao-rnext-key-id", 0, 255);
+            if(value) {
+                bgp_config->tcp_ao_rnext_key_id = json_number_value(value);
+            } else {
+                bgp_config->tcp_ao_rnext_key_id = bgp_config->tcp_ao_key_id;
+            }
+        }
+        bgp_config->tcp_ao_enabled = true;
+    }
+
     bgp_config->id = htobe32(0x01020304);
     if(json_unpack(bgp, "{s:s}", "id", &s) == 0) {
         if(!inet_pton(AF_INET, s, &bgp_config->id)) {
@@ -1710,6 +1784,11 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         bgp_config->start_traffic = json_boolean_value(value);
     } else {
         bgp_config->start_traffic = false;
+    }
+
+    JSON_OBJ_GET_BOOL(bgp, value, "bgp", "learn-routes");
+    if(value) {
+        bgp_config->learn_routes = json_boolean_value(value);
     }
 
     JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "teardown-time", 0, 65535);
@@ -2153,7 +2232,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->external_auto_refresh  = json_boolean_value(value);
     }
 
-    /* Value range choosen from smallest configurable on IOS-XR (lsp-mtu) and maximum on JunOS (max-lsp-size) */
+    /* Value range chosen from smallest configurable on IOS-XR (lsp-mtu) and maximum on JunOS (max-lsp-size) */
     JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-buffer-size", 128, 9192);
     if(value) {
         isis_config->lsp_buffer_size = json_number_value(value);
@@ -2503,6 +2582,227 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
     return true;
 }
 
+/* Customer VLAN tags within EVPN VPWS services. */
+static bool
+json_parse_stream_vpws(json_t *stream, bbl_stream_config_s *stream_config)
+{
+    json_t *value = NULL;
+    bool vpws = stream_config->bgp_evpn &&
+                stream_config->bgp_evpn_key.route_type == BGP_EVPN_ROUTE_AD;
+
+    if(!vpws) {
+        if(json_object_get(stream, "vpws-vlan") ||
+           json_object_get(stream, "vpws-inner-vlan") ||
+           json_object_get(stream, "vpws-vlan-priority") ||
+           json_object_get(stream, "vpws-inner-vlan-priority") ||
+           json_object_get(stream, "vpws-qinq") ||
+           json_object_get(stream, "vpws-arp")) {
+            fprintf(stderr, "JSON config error: stream->vpws-* requires EVPN VPWS (bgp-evpn-rd and bgp-evpn-ethernet-tag)\n");
+            return false;
+        }
+        return true;
+    }
+    if(stream_config->stream_group_id) {
+        fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id (EVPN VPWS requires RAW streams)\n");
+        return false;
+    }
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "vpws-vlan", 1, 4094);
+    if(value) {
+        stream_config->vpws_vlan = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "vpws-inner-vlan", 1, 4094);
+    if(value) {
+        if(!stream_config->vpws_vlan) {
+            fprintf(stderr, "JSON config error: Missing value for stream->vpws-vlan\n");
+            return false;
+        }
+        stream_config->vpws_inner_vlan = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "vpws-vlan-priority", 0, 7);
+    if(value) {
+        stream_config->vpws_vlan_priority = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "vpws-inner-vlan-priority", 0, 7);
+    if(value) {
+        stream_config->vpws_inner_vlan_priority = json_number_value(value);
+    }
+    JSON_OBJ_GET_BOOL(stream, value, "stream", "vpws-qinq");
+    if(value) {
+        stream_config->vpws_qinq = json_boolean_value(value);
+    }
+    if(!stream_config->vpws_vlan &&
+       (json_object_get(stream, "vpws-vlan-priority") || json_object_get(stream, "vpws-qinq"))) {
+        fprintf(stderr, "JSON config error: Missing value for stream->vpws-vlan\n");
+        return false;
+    }
+    if(!stream_config->vpws_inner_vlan && json_object_get(stream, "vpws-inner-vlan-priority")) {
+        fprintf(stderr, "JSON config error: Missing value for stream->vpws-inner-vlan\n");
+        return false;
+    }
+    JSON_OBJ_GET_BOOL(stream, value, "stream", "vpws-arp");
+    if(value) {
+        stream_config->vpws_arp = json_boolean_value(value);
+    }
+    if(stream_config->vpws_arp) {
+        if(stream_config->type == BBL_SUB_TYPE_IPV4) {
+            if(!stream_config->ipv4_network_address) {
+                fprintf(stderr, "JSON config error: Missing value for stream->network-ipv4-address (required for stream->vpws-arp)\n");
+                return false;
+            }
+        } else if(stream_config->type == BBL_SUB_TYPE_IPV6) {
+            if(!*(uint64_t*)stream_config->ipv6_network_address) {
+                fprintf(stderr, "JSON config error: Missing value for stream->network-ipv6-address (required for stream->vpws-arp)\n");
+                return false;
+            }
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for stream->vpws-arp (requires stream type ipv4 or ipv6)\n");
+            return false;
+        }
+    } else if(!stream_config->destination_mac_overwrite) {
+        /* The customer MAC is learned with vpws-arp enabled. */
+        fprintf(stderr, "JSON config error: Missing value for stream->destination-mac (required for EVPN VPWS without vpws-arp)\n");
+        return false;
+    }
+    return true;
+}
+
+/* EVPN routes are only learned by BGP sessions
+ * with learn-routes and family evpn enabled. */
+static bool
+json_bgp_evpn_learning()
+{
+    bgp_config_s *bgp_config = g_ctx->config.bgp_config;
+    while(bgp_config) {
+        if(bgp_config->learn_routes && (bgp_config->family & BGP_EVPN)) {
+            return true;
+        }
+        bgp_config = bgp_config->next;
+    }
+    return false;
+}
+
+/* Build the EVPN route key used to resolve the VPN label. */
+static bool
+json_parse_stream_bgp_evpn(json_t *stream, bbl_stream_config_s *stream_config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+    bgp_evpn_key_s *key = &stream_config->bgp_evpn_key;
+    uint8_t *mac = key->mac;
+    ipv4_prefix ipv4;
+    ipv6_prefix ipv6;
+    bool has_mac = false;
+    bool has_prefix = false;
+    bool has_ethernet_tag = false;
+    bool has_esi = false;
+
+    memset(key, 0x0, sizeof(bgp_evpn_key_s));
+    if(json_unpack(stream, "{s:s}", "bgp-evpn-rd", &s) != 0) {
+        if(json_object_get(stream, "bgp-evpn-ethernet-tag") ||
+           json_object_get(stream, "bgp-evpn-esi") ||
+           json_object_get(stream, "bgp-evpn-mac") ||
+           json_object_get(stream, "bgp-evpn-ip") ||
+           json_object_get(stream, "bgp-evpn-prefix")) {
+            fprintf(stderr, "JSON config error: Missing value for stream->bgp-evpn-rd\n");
+            return false;
+        }
+        return json_parse_stream_vpws(stream, stream_config);
+    }
+    if(!bgp_evpn_scan_rd(s, key->rd)) {
+        fprintf(stderr, "JSON config error: Invalid value for stream->bgp-evpn-rd\n");
+        return false;
+    }
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "bgp-evpn-ethernet-tag", 0, 4294967295);
+    if(value) {
+        key->ethernet_tag = json_number_value(value);
+        has_ethernet_tag = true;
+    }
+    if(json_unpack(stream, "{s:s}", "bgp-evpn-esi", &s) == 0) {
+        if(!bgp_evpn_scan_esi(s, key->esi)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->bgp-evpn-esi\n");
+            return false;
+        }
+        has_esi = true;
+    }
+    if(json_unpack(stream, "{s:s}", "bgp-evpn-mac", &s) == 0) {
+        if(sscanf(s, "%hhx:%hhx:%hhx:%hhx:%hhx:%hhx",
+                  &mac[0], &mac[1], &mac[2], &mac[3], &mac[4], &mac[5]) < 6) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->bgp-evpn-mac\n");
+            return false;
+        }
+        has_mac = true;
+    }
+    if(json_unpack(stream, "{s:s}", "bgp-evpn-ip", &s) == 0) {
+        if(!has_mac) {
+            fprintf(stderr, "JSON config error: Missing value for stream->bgp-evpn-mac\n");
+            return false;
+        }
+        if(inet_pton(AF_INET, s, key->ip) == 1) {
+            key->ip_af = AF_INET;
+            key->ip_len = 32;
+        } else if(inet_pton(AF_INET6, s, key->ip) == 1) {
+            key->ip_af = AF_INET6;
+            key->ip_len = 128;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for stream->bgp-evpn-ip\n");
+            return false;
+        }
+    }
+    if(json_unpack(stream, "{s:s}", "bgp-evpn-prefix", &s) == 0) {
+        if(has_mac) {
+            fprintf(stderr, "JSON config error: Invalid combination of stream->bgp-evpn-mac and bgp-evpn-prefix\n");
+            return false;
+        }
+        if(scan_ipv4_prefix(s, &ipv4)) {
+            key->ip_af = AF_INET;
+            key->ip_len = ipv4.len;
+            memcpy(key->ip, &ipv4.address, IPV4_ADDR_LEN);
+        } else if(scan_ipv6_prefix(s, &ipv6)) {
+            key->ip_af = AF_INET6;
+            key->ip_len = ipv6.len;
+            memcpy(key->ip, &ipv6.address, IPV6_ADDR_LEN);
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for stream->bgp-evpn-prefix\n");
+            return false;
+        }
+        bgp_evpn_mask_ip(key->ip, key->ip_af, key->ip_len);
+        if((key->ip_af == AF_INET) != (stream_config->type == BBL_SUB_TYPE_IPV4)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->bgp-evpn-prefix (address family must match stream type)\n");
+            return false;
+        }
+        has_prefix = true;
+    }
+    if(has_esi && (has_mac || has_prefix)) {
+        fprintf(stderr, "JSON config error: Invalid combination of stream->bgp-evpn-esi and bgp-evpn-mac or bgp-evpn-prefix\n");
+        return false;
+    }
+    if(has_mac) {
+        key->route_type = BGP_EVPN_ROUTE_MAC_IP;
+    } else if(has_prefix) {
+        key->route_type = BGP_EVPN_ROUTE_IP_PREFIX;
+    } else if(has_ethernet_tag) {
+        /* EVPN VPWS (E-LINE) using the per-EVI A-D route. */
+        if(key->ethernet_tag == BGP_EVPN_MAX_ET) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->bgp-evpn-ethernet-tag\n");
+            return false;
+        }
+        key->route_type = BGP_EVPN_ROUTE_AD;
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for stream->bgp-evpn-mac, bgp-evpn-prefix or bgp-evpn-ethernet-tag\n");
+        return false;
+    }
+    if(stream_config->tx_mpls2) {
+        fprintf(stderr, "JSON config error: Invalid combination of stream->bgp-evpn-rd and tx-label2\n");
+        return false;
+    }
+    if(!json_bgp_evpn_learning()) {
+        fprintf(stderr, "JSON config error: Invalid value for stream->bgp-evpn-rd (requires BGP session with learn-routes and family evpn)\n");
+        return false;
+    }
+    stream_config->bgp_evpn = true;
+    return json_parse_stream_vpws(stream, stream_config);
+}
+
 static bool
 json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
 {
@@ -2518,14 +2818,18 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "priority", "vlan-priority", "inner-vlan-priority",
         "pps", "bps", "Kbps", "Mbps", "length", "ttl", "count",
         "pps-upstream", "bps-upstream", "Kbps-upstream", "Mbps-upstream",
-        "Gbps", "max-packets", "start-delay",
+        "Gbps-upstream", "Gbps", "max-packets", "start-delay",
         "ldp-ipv4-lookup-address", "ldp-ipv6-lookup-address", 
         "access-ipv4-source-address", "access-ipv6-source-address",
         "network-ipv4-address", "network-ipv6-address", "destination-ipv4-address",
         "destination-ipv6-address", "destination-mac", "ipv4-df", "tx-label1",
         "tx-label1-exp", "tx-label1-ttl", "tx-label2",
         "tx-label2-exp", "tx-label2-ttl", "rx-label1",
-        "rx-label2", "nat", "raw-tcp", "setup-interval"
+        "rx-label2", "nat", "raw-tcp", "setup-interval",
+        "bgp-evpn-rd", "bgp-evpn-ethernet-tag", "bgp-evpn-esi",
+        "bgp-evpn-mac", "bgp-evpn-ip", "bgp-evpn-prefix",
+        "vpws-vlan", "vpws-inner-vlan", "vpws-vlan-priority",
+        "vpws-inner-vlan-priority", "vpws-qinq", "vpws-arp", "rx-control-word"
     };
     if(!schema_validate(stream, "streams", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -2912,6 +3216,15 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         stream_config->tx_mpls2_ttl = 255;
     }
 
+    if(!json_parse_stream_bgp_evpn(stream, stream_config)) {
+        return false;
+    }
+
+    JSON_OBJ_GET_BOOL(stream, value, "stream", "rx-control-word");
+    if(value) {
+        stream_config->rx_control_word = json_boolean_value(value);
+    }
+
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "rx-label1", 0, 1048575);
     if(value) {
         stream_config->rx_mpls1 = true;
@@ -2928,11 +3241,11 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if(value) {
         stream_config->nat = json_boolean_value(value);
         if(stream_config->nat && stream_config->type != BBL_SUB_TYPE_IPV4) {
-            fprintf(stderr, "JSON config error: NAT support can't be enabledd for IPv6 stream %s\n", stream_config->name);
+            fprintf(stderr, "JSON config error: NAT support can't be enabled for IPv6 stream %s\n", stream_config->name);
             return false;
         }
         if(stream_config->nat && stream_config->direction == BBL_DIRECTION_DOWN) {
-            fprintf(stderr, "JSON config error: NAT support can't be enabledd for downstream only stream %s\n", stream_config->name);
+            fprintf(stderr, "JSON config error: NAT support can't be enabled for downstream only stream %s\n", stream_config->name);
             return false;
         }
     }
@@ -3319,6 +3632,120 @@ json_parse_http_server_config(json_t *http, bbl_http_server_config_s *http_serve
     return true;
 }
 
+/**
+ * json_parse_l2tp_tunnel_config
+ *
+ * Parses the tunnel-level configuration options shared between the
+ * "l2tp-server" (LNS) and "l2tp-client" (LAC) configuration sections.
+ *
+ * @param sub JSON object of the l2tp-server/l2tp-client entry
+ * @param scope section name used in error messages ("l2tp-server" or "l2tp-client")
+ * @param config shared tunnel configuration to populate
+ */
+static bool
+json_parse_l2tp_tunnel_config(json_t *sub, const char *scope, bbl_l2tp_tunnel_config_s *config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+
+    if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
+        config->secret = strdup(s);
+    }
+    value = json_object_get(sub, "receive-window-size");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 1 && json_number_value(value) <= 65535)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->receive-window-size (1 - 65535)\n", scope);
+            return false;
+        }
+        config->receive_window = json_number_value(value);
+    } else {
+        config->receive_window = 16;
+    }
+    value = json_object_get(sub, "max-retry");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 1 && json_number_value(value) <= 65535)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->max-retry (1 - 65535)\n", scope);
+            return false;
+        }
+        config->max_retry = json_number_value(value);
+    } else {
+        config->max_retry = 5;
+    }
+    if(json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
+        if(strcmp(s, "default") == 0) {
+            config->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+        } else if(strcmp(s, "slow") == 0) {
+            config->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
+        } else if(strcmp(s, "aggressive") == 0) {
+            config->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for %s->congestion-mode\n", scope);
+            return false;
+        }
+    } else {
+        config->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
+    }
+    value = json_object_get(sub, "data-control-priority");
+    if(value) {
+        if(!json_is_boolean(value)) {
+            fprintf(stderr, "JSON config error: Invalid boolean value for %s->data-control-priority\n", scope);
+            return false;
+        }
+        config->data_control_priority = json_boolean_value(value);
+    }
+    value = json_object_get(sub, "data-length");
+    if(value) {
+        if(!json_is_boolean(value)) {
+            fprintf(stderr, "JSON config error: Invalid boolean value for %s->data-length\n", scope);
+            return false;
+        }
+        config->data_length = json_boolean_value(value);
+    }
+    value = json_object_get(sub, "data-offset");
+    if(value) {
+        if(!json_is_boolean(value)) {
+            fprintf(stderr, "JSON config error: Invalid boolean value for %s->data-offset\n", scope);
+            return false;
+        }
+        config->data_offset = json_boolean_value(value);
+    }
+    value = json_object_get(sub, "control-tos");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= 255)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->control-tos (0 - 255)\n", scope);
+            return false;
+        }
+        config->control_tos = json_number_value(value);
+    }
+    value = json_object_get(sub, "data-control-tos");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= 255)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->data-control-tos (0 - 255)\n", scope);
+            return false;
+        }
+        config->data_control_tos = json_number_value(value);
+    }
+    value = json_object_get(sub, "hello-interval");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= 65535)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->hello-interval (0 - 65535)\n", scope);
+            return false;
+        }
+        config->hello_interval = json_number_value(value);
+    } else {
+        config->hello_interval = 30;
+    }
+    value = json_object_get(sub, "lcp-padding");
+    if(value) {
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= 65535)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->lcp-padding (0 - 65535)\n", scope);
+            return false;
+        }
+        config->lcp_padding = json_number_value(value);
+    }
+    return true;
+}
+
 static bool
 json_parse_config(json_t *root)
 {
@@ -3329,6 +3756,7 @@ json_parse_config(json_t *root)
 
     bbl_access_line_profile_s   *access_line_profile    = NULL;
     bbl_l2tp_server_s           *l2tp_server            = NULL;
+    bbl_l2tp_client_s           *l2tp_client            = NULL;
 
     bbl_lag_config_s            *lag_config             = NULL;
     bbl_link_config_s           *link_config            = NULL;
@@ -3359,7 +3787,7 @@ json_parse_config(json_t *root)
         "isis", "ospf",
         "bgp", "bgp-raw-update-files", 
         "ldp", "ldp-raw-update-files",
-        "l2tp-server", "icmp-client",
+        "l2tp-server", "l2tp-client", "icmp-client",
         "http-client", "http-server",
         "arp-client"
     };
@@ -3876,7 +4304,7 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.igmp_zap_interval = json_number_value(value);
         }
-        JSON_OBJ_GET_NUMBER(section, value, "igmp", "zapping-view-duration", 1, 65535);
+        JSON_OBJ_GET_NUMBER(section, value, "igmp", "zapping-view-duration", 0, 65535);
         if(value) {
             g_ctx->config.igmp_zap_view_duration = json_number_value(value);
         }
@@ -4047,7 +4475,7 @@ json_parse_config(json_t *root)
             "ipv6pd-pps", "ipv4-label", "ipv4-address",
             "ipv6-label", "ipv6-address"
         };
-        if(!schema_validate(section, "traffic", schema, 
+        if(!schema_validate(section, "session-traffic", schema, 
         sizeof(schema)/sizeof(schema[0]))) {
             return false;
         }
@@ -4231,10 +4659,18 @@ json_parse_config(json_t *root)
                 io_packet_mmap_set_max_stream_len();
             } else if(strcmp(s, "raw") == 0) {
                 g_ctx->config.io_mode = IO_MODE_RAW;
+            } else if(strcmp(s, "loopback") == 0) {
+                g_ctx->config.io_mode = IO_MODE_LOOPBACK;
+                io_loopback_set_max_stream_len();
 #if BNGBLASTER_DPDK
             } else if(strcmp(s, "dpdk") == 0) {
                 g_ctx->config.io_mode = IO_MODE_DPDK;
                 g_ctx->dpdk = true;
+#endif
+#if BNGBLASTER_AF_XDP
+            } else if(strcmp(s, "af_xdp") == 0) {
+                g_ctx->config.io_mode = IO_MODE_AF_XDP;
+                io_af_xdp_set_max_stream_len();
 #endif
             } else {
                 fprintf(stderr, "JSON config error: Invalid value for interfaces->io-mode\n");
@@ -4489,7 +4925,8 @@ json_parse_config(json_t *root)
                 "receive-window-size", "max-retry", "congestion-mode",
                 "data-control-priority", "data-length", "data-offset",
                 "control-tos", "data-control-tos", "hello-interval",
-                "lcp-padding"
+                "lcp-padding", "lcp-keepalive-interval", "lcp-keepalive-retry",
+                "lcp-conf-request"
             };
             if(!schema_validate(sub, "l2tp-server", schema, 
             sizeof(schema)/sizeof(schema[0]))) {
@@ -4512,9 +4949,6 @@ json_parse_config(json_t *root)
             if(json_unpack(sub, "{s:s}", "client-auth-id", &s) == 0) {
                 l2tp_server->client_auth_id = strdup(s);
             }
-            if(json_unpack(sub, "{s:s}", "secret", &s) == 0) {
-                l2tp_server->secret = strdup(s);
-            }
             if(json_unpack(sub, "{s:s}", "address", &s) == 0) {
                 if(!inet_pton(AF_INET, s, &ipv4)) {
                     fprintf(stderr, "JSON config error: Invalid value for l2tp-server->address\n");
@@ -4525,67 +4959,122 @@ json_parse_config(json_t *root)
                 add_secondary_ipv4(ipv4);
             } else {
                 fprintf(stderr, "JSON config error: Missing value for l2tp-server->address\n");
+                return false;
             }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "receive-window-size", 1, 65535);
+            if(!json_parse_l2tp_tunnel_config(sub, "l2tp-server", &l2tp_server->config)) {
+                return false;
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "lcp-keepalive-interval", 0, 65535);
             if(value) {
-                l2tp_server->receive_window = json_number_value(value);
+                l2tp_server->lcp_keepalive_interval = json_number_value(value);
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "lcp-keepalive-retry", 0, 255);
+            if(value) {
+                l2tp_server->lcp_keepalive_retry = json_number_value(value);
             } else {
-                l2tp_server->receive_window = 16;
+                l2tp_server->lcp_keepalive_retry = 3;
             }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "max-retry", 1, 65535);
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "lcp-conf-request");
             if(value) {
-                l2tp_server->max_retry = json_number_value(value);
+                l2tp_server->lcp_conf_request = json_boolean_value(value);
             } else {
-                l2tp_server->max_retry = 5;
+                l2tp_server->lcp_conf_request = true;
             }
-            if(json_unpack(sub, "{s:s}", "congestion-mode", &s) == 0) {
-                if(strcmp(s, "default") == 0) {
-                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
-                } else if(strcmp(s, "slow") == 0) {
-                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_SLOW;
-                } else if(strcmp(s, "aggressive") == 0) {
-                    l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_AGGRESSIVE;
-                } else {
-                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->congestion-mode\n");
-                    return false;
-                }
-            } else {
-                l2tp_server->congestion_mode = BBL_L2TP_CONGESTION_DEFAULT;
-            }
-            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "data-control-priority");
-            if(value) {
-                l2tp_server->data_control_priority = json_boolean_value(value);
-            }
-            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "data-length");
-            if(value) {
-                l2tp_server->data_length = json_boolean_value(value);
-            }
-            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "data-offset");
-            if(value) {
-                l2tp_server->data_offset = json_boolean_value(value);
-            }
-
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "control-tos", 0, 255);
-            if(value) {
-                l2tp_server->control_tos = json_number_value(value);
-            } 
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "data-control-tos", 0, 255);
-            if(value) {
-                l2tp_server->data_control_tos = json_number_value(value);
-            } 
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "hello-interval", 0, 65535);
-            if(value) {
-                l2tp_server->hello_interval = json_number_value(value);
-            } else {
-                l2tp_server->hello_interval = 30;
-            }
-            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-server", "lcp-padding", 0, 65535);
-            if(value) {
-                l2tp_server->lcp_padding = json_number_value(value);
-            } 
         }
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
+    }
+
+    /* L2TP Client Configuration (LAC) */
+    section = json_object_get(root, "l2tp-client");
+    if(json_is_array(section)) {
+        if(!g_ctx->config.network_config) {
+            fprintf(stderr, "JSON config error: Failed to add L2TP client because of missing or incomplete network interface config\n");
+            return false;
+        }
+        size = json_array_size(section);
+        for(i = 0; i < size; i++) {
+            sub = json_array_get(section, i);
+
+            const char *schema[] = {
+                "group-id", "name", "secret", "server-address", "client-address",
+                "network-interface", "receive-window-size", "max-retry", "congestion-mode",
+                "data-control-priority", "data-length", "data-offset", "control-tos",
+                "data-control-tos", "hello-interval", "lcp-padding", "lcp-start",
+                "calling-number", "called-number"
+            };
+            if(!schema_validate(sub, "l2tp-client", schema, sizeof(schema)/sizeof(schema[0]))) {
+                return false;
+            }
+
+            if(!l2tp_client) {
+                g_ctx->config.l2tp_client = calloc(1, sizeof(bbl_l2tp_client_s));
+                l2tp_client = g_ctx->config.l2tp_client;
+            } else {
+                l2tp_client->next = calloc(1, sizeof(bbl_l2tp_client_s));
+                l2tp_client = l2tp_client->next;
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "group-id", 1, 65535);
+            if(value) {
+                l2tp_client->group_id = json_number_value(value);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-client->group-id\n");
+                return false;
+            }
+            if(json_unpack(sub, "{s:s}", "name", &s) == 0) {
+                l2tp_client->name = strdup(s);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-client->name\n");
+                return false;
+            }
+            if(json_unpack(sub, "{s:s}", "network-interface", &s) == 0) {
+                l2tp_client->network_interface = strdup(s);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-client->network-interface\n");
+                return false;
+            }
+            if(json_unpack(sub, "{s:s}", "client-address", &s) == 0) {
+                if(!inet_pton(AF_INET, s, &ipv4)) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->client-address\n");
+                    return false;
+                }
+                l2tp_client->client_address = ipv4;
+            }
+            if(json_unpack(sub, "{s:s}", "server-address", &s) == 0) {
+                if(!inet_pton(AF_INET, s, &ipv4)) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->server-address\n");
+                    return false;
+                }
+                l2tp_client->server_ip = ipv4;
+                CIRCLEQ_INIT(&l2tp_client->tunnel_qhead);
+            } else {
+                fprintf(stderr, "JSON config error: Missing value for l2tp-client->server-address\n");
+                return false;
+            }
+            if(!json_parse_l2tp_tunnel_config(sub, "l2tp-client", &l2tp_client->config)) {
+                return false;
+            }
+            if(json_unpack(sub, "{s:s}", "lcp-start", &s) == 0) {
+                if(strcmp(s, "iccn-tx") == 0) {
+                    l2tp_client->lcp_start = BBL_L2TP_LCP_START_ICCN_TX;
+                } else if(strcmp(s, "iccn-ack") == 0) {
+                    l2tp_client->lcp_start = BBL_L2TP_LCP_START_ICCN_ACK;
+                } else {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->lcp-start\n");
+                    return false;
+                }
+            } else {
+                l2tp_client->lcp_start = BBL_L2TP_LCP_START_ICCN_TX;
+            }
+            if(json_unpack(sub, "{s:s}", "calling-number", &s) == 0) {
+                l2tp_client->calling_number = strdup(s);
+            }
+            if(json_unpack(sub, "{s:s}", "called-number", &s) == 0) {
+                l2tp_client->called_number = strdup(s);
+            }
+        }
+    } else if(json_is_object(section)) {
+        fprintf(stderr, "JSON config error: List expected in L2TP client configuration but dictionary found\n");
     }
 
     /* ARP Client Configuration */

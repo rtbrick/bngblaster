@@ -49,6 +49,7 @@
 
 #define OSPF_TX_BUF_LEN                     1500
 #define OSPF_MAX_SELF_LSA_LEN               UINT16_MAX
+#define OSPF_MAX_HOSTNAME_LEN               UINT8_MAX
 
 #define OSPF_OPTION_IPV6_BIT                0x01
 #define OSPF_OPTION_E_BIT                   0x02
@@ -473,7 +474,7 @@ typedef struct ospf_interface_ {
     ospf_interface_s *next;
     
     uint8_t version;    /* OSPF version */
-    uint8_t type;       /* OSPF inteface type (P2P, broadcast, ...) */
+    uint8_t type;       /* OSPF interface type (P2P, broadcast, ...) */
     uint8_t state;
 
     uint8_t *frag_buf;
@@ -493,6 +494,7 @@ typedef struct ospf_interface_ {
 
     struct timer_ *timer_lsa_flood;
     struct timer_ *timer_lsa_ack;
+    struct timer_ *timer_wait;
 
     struct {
         uint32_t hello_rx;
@@ -544,11 +546,11 @@ typedef struct ospf_pdu_ {
     uint16_t packet_len;
 
     uint8_t *mac; /* source MAC address */
-    void    *source; /* souce IPv4/v6 address*/
+    void    *source; /* source IPv4/v6 address*/
     void    *destination; /* destination IPv4/v6 address*/
 
     uint16_t cur; /* current position */
-    uint8_t *pdu; /* whole PDU inlcuding trailer */
+    uint8_t *pdu; /* whole PDU including trailer */
     uint16_t pdu_len;
     uint16_t pdu_buf_len;
 } ospf_pdu_s;

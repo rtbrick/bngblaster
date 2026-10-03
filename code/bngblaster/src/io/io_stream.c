@@ -175,20 +175,20 @@ io_stream_update_pps(io_handle_s *io)
                 stream->io_next = NULL;
                 /* Add stream to new bucket. */
                 if(io == stream->io) {
-                    LOG(DEBUG, "Update stream %s flow-id %lu pps from %0.2lf to %0.2lf\n", 
+                    LOG(DEBUG, "Update stream %s flow-id %u pps from %0.2lf to %0.2lf\n", 
                         stream->config->name, stream->flow_id,
                         io_bucket->pps, stream->pps);
                     io_stream_add(io, stream);
                 } else {
-                    LOG(DEBUG, "Update stream %s flow-id %lu IO interface from %s to %s\n", 
+                    LOG(DEBUG, "Update stream %s flow-id %u IO interface from %s to %s\n", 
                         stream->config->name, stream->flow_id,
                         io->interface->name, stream->io->interface->name);
                     stream->io->update_streams = true;
                     io_stream_add(stream->io, stream);
                 }
                 if(stream->pps < 1.0) {
-                    stream->rate_packets_rx.avg = 0;
-                    stream->rate_packets_tx.avg = 0;
+                    if(stream->rate_packets_rx) stream->rate_packets_rx->avg = 0;
+                    if(stream->rate_packets_tx) stream->rate_packets_tx->avg = 0;
                 }
                 stream->update_pps = false;
             } else {

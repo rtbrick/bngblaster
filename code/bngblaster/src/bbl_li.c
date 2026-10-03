@@ -25,7 +25,7 @@ bbl_li_packet_type_string(uint8_t packet_type)
         case 5: return "ipv4";
         case 6: return "ipv6";
         case 7: return "ethernet";
-        default: return "unkown";
+        default: return "unknown";
     }
 }
 
@@ -36,7 +36,7 @@ bbl_li_sub_packet_type_string(uint8_t sub_packet_type)
         case 1: return "single-tagged";
         case 2: return "double-tagged";
         case 3: return "untagged";
-        default: return "unkown";
+        default: return "unknown";
     }
 }
 
