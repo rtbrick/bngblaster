@@ -229,7 +229,9 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
         }
         idle_rounds = 0;
         /* Process packet */
-        io_thread_rx_handler(thread, io);
+        if(io_thread_rx_handler(thread, io) == IO_FULL) {
+            io->stats.dropped++;
+        }
     }
 }
 

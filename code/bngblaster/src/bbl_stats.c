@@ -528,6 +528,14 @@ bbl_stats_stdout(bbl_stats_s *stats) {
             if(interface_stats_rx.no_buffer) {
                 printf("  RX No Buffer:      %16lu\n", interface_stats_rx.no_buffer);
             }
+            if(interface_stats_rx.to_long) {
+                printf("  RX To Long:        %16lu (too long to redirect from RX thread)\n",
+                    interface_stats_rx.to_long);
+            }
+            if(interface_stats_rx.dropped) {
+                printf("  RX Dropped:        %16lu (RX thread redirect queue full)\n",
+                    interface_stats_rx.dropped);
+            }
             if(interface_stats_rx.hw_rx_missed) {
                 printf("  RX HW Missed:      %16lu (NIC ring overflow, no free descriptor)\n",
                     interface_stats_rx.hw_rx_missed);
@@ -939,6 +947,8 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set_new(jobj_sub, "rx-polled", json_integer(interface_stats_rx.bytes));
             json_object_set_new(jobj_sub, "rx-io-error", json_integer(interface_stats_rx.io_errors));
             json_object_set_new(jobj_sub, "rx-no-buffer", json_integer(interface_stats_rx.no_buffer));
+            json_object_set_new(jobj_sub, "rx-to-long", json_integer(interface_stats_rx.to_long));
+            json_object_set_new(jobj_sub, "rx-dropped", json_integer(interface_stats_rx.dropped));
             json_object_set_new(jobj_sub, "rx-hw-missed", json_integer(interface_stats_rx.hw_rx_missed));
             json_object_set_new(jobj_sub, "rx-hw-no-mbuf", json_integer(interface_stats_rx.hw_rx_nombuf));
             json_object_set_new(jobj_sub, "rx-hw-errors", json_integer(interface_stats_rx.hw_rx_errors));

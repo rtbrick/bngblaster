@@ -51,6 +51,12 @@ for LAG (Link Aggregation) interfaces but RX threads are supported. It is also n
 traffic streams send or received on threaded interfaces. All other traffic is still captured on threaded
 interfaces.
 
+RX threads handle received traffic streams directly and redirect all other packets to the main
+thread. Packets longer than 4074 bytes can't be redirected and are counted as ``rx-to-long``.
+Packets dropped because the main thread does not process redirected packets fast enough are
+counted as ``rx-dropped``, except with I/O mode ``packet_mmap`` and ``packet_mmap_raw``, which
+wait for the main thread instead.
+
 .. note::
 
     The BNG Blaster is currently tested for 8 million PPS with 10 million flows, which is not a

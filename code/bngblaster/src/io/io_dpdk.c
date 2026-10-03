@@ -477,7 +477,9 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
             io->buf = rte_pktmbuf_mtod(packet, uint8_t *);
             io->buf_len = packet->pkt_len;
             /* Process packet */
-            io_thread_rx_handler(thread, io);
+            if(io_thread_rx_handler(thread, io) == IO_FULL) {
+                io->stats.dropped++;
+            }
             rte_pktmbuf_free(packet);
         }
     }

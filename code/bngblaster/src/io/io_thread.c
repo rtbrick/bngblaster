@@ -27,6 +27,7 @@ redirect(io_thread_s *thread, io_handle_s *io)
     assert(io->direction == IO_INGRESS);
     assert(io->thread != NULL);
     if(io->buf_len > BBL_TXQ_BUFFER_LEN) {
+        io->stats.to_long++;
         return IO_ERROR;
     }
 

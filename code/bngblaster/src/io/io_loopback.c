@@ -360,7 +360,9 @@ io_loopback_thread_rx_run_fn(io_thread_s *thread)
                 io->buf_len = slot->len;
                 io->vlan_tci = 0;
                 /* Process packet */
-                io_thread_rx_handler(thread, io);
+                if(io_thread_rx_handler(thread, io) == IO_FULL) {
+                    io->stats.dropped++;
+                }
             }
             io_loopback_ring_release(ring, rcvd);
         }
