@@ -944,7 +944,7 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set_new(jobj_sub, "rx-bytes", json_integer(interface_stats_rx.bytes));
             json_object_set_new(jobj_sub, "rx-protocol-error", json_integer(interface_stats_rx.protocol_errors));
             json_object_set_new(jobj_sub, "rx-unknown", json_integer(interface_stats_rx.unknown));
-            json_object_set_new(jobj_sub, "rx-polled", json_integer(interface_stats_rx.bytes));
+            json_object_set_new(jobj_sub, "rx-polled", json_integer(interface_stats_rx.polled));
             json_object_set_new(jobj_sub, "rx-io-error", json_integer(interface_stats_rx.io_errors));
             json_object_set_new(jobj_sub, "rx-no-buffer", json_integer(interface_stats_rx.no_buffer));
             json_object_set_new(jobj_sub, "rx-to-long", json_integer(interface_stats_rx.to_long));
