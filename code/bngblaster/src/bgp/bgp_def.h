@@ -30,6 +30,12 @@
 #define BGP_MSG_NOTIFICATION        3
 #define BGP_MSG_KEEPALIVE           4
 
+/* NOTIFICATION UPDATE Message Error (RFC 4271) */
+#define BGP_ERROR_UPDATE                    3
+#define BGP_ERROR_UPDATE_OPTIONAL_ATTRIBUTE 9
+#define BGP_ERROR_UPDATE_INVALID_NETWORK    10
+#define BGP_ERROR_UPDATE_MALFORMED_AS_PATH  11
+
 #define BGP_CAPABILITY              2
 #define BGP_CAPABILITY_4_BYTE_AS    65
 
@@ -67,6 +73,19 @@
 #define BGP_PA_MP_UNREACH_NLRI      15
 #define BGP_PA_EXT_COMMUNITIES      16
 #define BGP_PA_PMSI_TUNNEL          22
+
+/* Path attribute lengths */
+#define BGP_PA_MED_LEN              4
+#define BGP_PA_LOCAL_PREF_LEN       4
+
+/* AS_PATH segments: Type (1), Count (1), AS numbers (RFC 4271, RFC 5065) */
+#define BGP_AS_SET                  1
+#define BGP_AS_SEQUENCE             2
+#define BGP_AS_CONFED_SEQUENCE      3
+#define BGP_AS_CONFED_SET           4
+#define BGP_AS_SEGMENT_HDR_LEN      2
+#define BGP_AS2_LEN                 2
+#define BGP_AS4_LEN                 4
 
 /* EVPN (RFC 7432, RFC 9136) */
 #define BGP_EVPN_ROUTE_AD           1 /* Ethernet Auto-Discovery */

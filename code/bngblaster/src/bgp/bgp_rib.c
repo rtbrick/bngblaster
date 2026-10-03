@@ -17,7 +17,25 @@
 #define BGP_RIB_ATTR_KEY_LEN(_attr) (sizeof(bgp_rib_attr_s) - BGP_RIB_ATTR_KEY_OFFSET + (_attr)->len)
 
 /* Normalized AS_PATH might be twice the size of the received one. */
-static uint8_t g_attr_buf[sizeof(bgp_rib_attr_s) + 3*BGP_MAX_MESSAGE_SIZE];
+#define BGP_RIB_ATTR_BUF_LEN        (sizeof(bgp_rib_attr_s) + 3 * BGP_MAX_MESSAGE_SIZE)
+
+/* Labeled unicast NLRI label field (RFC 8277): label (20 bits),
+ * reserved (3 bits) and bottom of stack (1 bit). */
+#define BGP_RIB_LABEL_LEN           3
+#define BGP_RIB_LABEL_BITS          (BGP_RIB_LABEL_LEN * 8)
+#define BGP_RIB_LABEL_SHIFT         4
+#define BGP_RIB_LABEL_BOS           0x000001
+#define BGP_RIB_LABEL_WITHDRAW      0x800000
+
+/* AS_PATH string: an AS number is formatted with a separator and up
+ * to 5 digits for a 2-octet AS (2 bytes) or 10 digits for a 4-octet
+ * AS (4 bytes), which is less than 6 times the size of the AS_PATH. */
+#define BGP_RIB_AS_PATH_STR_LEN     (BGP_MAX_MESSAGE_SIZE * 6)
+#define BGP_RIB_AS_STR_LEN          11
+#define BGP_RIB_AS_SEG_OPEN_LEN     2 /* separator and opening bracket */
+#define BGP_RIB_AS_SEG_CLOSE_LEN    2 /* closing bracket and NUL */
+
+static uint8_t g_attr_buf[BGP_RIB_ATTR_BUF_LEN];
 
 static int
 bgp_rib_route_compare(void *key1, void *key2)
@@ -113,7 +131,7 @@ bgp_rib_attr_build(bgp_session_s *session, bgp_update_s *update, uint8_t nexthop
     uint8_t *data = attr->data;
     uint8_t *as_path = update->as_path;
     uint16_t len = update->as_path_len;
-    uint8_t as_size = session->peer.as4 ? 4 : 2;
+    uint8_t as_size = session->peer.as4 ? BGP_AS4_LEN : BGP_AS2_LEN;
     uint16_t seg_len;
     uint8_t count, i;
 
@@ -124,11 +142,11 @@ bgp_rib_attr_build(bgp_session_s *session, bgp_update_s *update, uint8_t nexthop
     }
     if(update->med) {
         attr->flags |= BGP_RIB_ATTR_MED;
-        attr->med = read_be_uint(update->med, 4);
+        attr->med = read_be_uint(update->med, BGP_PA_MED_LEN);
     }
     if(update->local_pref) {
         attr->flags |= BGP_RIB_ATTR_LOCAL_PREF;
-        attr->local_pref = read_be_uint(update->local_pref, 4);
+        attr->local_pref = read_be_uint(update->local_pref, BGP_PA_LOCAL_PREF_LEN);
     }
     attr->nexthop_af = nexthop_af;
     if(nexthop_af == AF_INET) {
@@ -137,22 +155,22 @@ bgp_rib_attr_build(bgp_session_s *session, bgp_update_s *update, uint8_t nexthop
         memcpy(attr->nexthop, nexthop, IPV6_ADDR_LEN);
     }
 
-    /* AS_PATH segments: Type (1), Count (1), AS numbers */
     while(len) {
-        if(len < 2) {
+        if(len < BGP_AS_SEGMENT_HDR_LEN) {
             return NULL;
         }
         count = as_path[1];
-        seg_len = 2 + count * as_size;
+        seg_len = BGP_AS_SEGMENT_HDR_LEN + count * as_size;
         if(seg_len > len) {
             return NULL;
         }
         data[0] = as_path[0];
         data[1] = count;
         for(i = 0; i < count; i++) {
-            write_be_uint(data+2+(i*4), 4, read_be_uint(as_path+2+(i*as_size), as_size));
+            write_be_uint(data+BGP_AS_SEGMENT_HDR_LEN+(i*BGP_AS4_LEN), BGP_AS4_LEN,
+                          read_be_uint(as_path+BGP_AS_SEGMENT_HDR_LEN+(i*as_size), as_size));
         }
-        data += 2 + count * 4;
+        data += BGP_AS_SEGMENT_HDR_LEN + count * BGP_AS4_LEN;
         as_path += seg_len;
         len -= seg_len;
     }
@@ -277,7 +295,7 @@ bgp_rib_nlri(bgp_session_s *session, uint16_t afi, uint8_t safi,
 {
     bgp_rib_route_s key;
     bgp_rib_attr_s *attr = NULL;
-    uint8_t max_bits = afi == BGP_AFI_IPV4 ? 32 : 128;
+    uint8_t max_bits = afi == BGP_AFI_IPV4 ? IPV4_ADDR_LEN * 8 : IPV6_ADDR_LEN * 8;
     uint8_t bits, bytes;
     uint32_t label;
     bool first;
@@ -291,18 +309,18 @@ bgp_rib_nlri(bgp_session_s *session, uint16_t afi, uint8_t safi,
         if(safi == BGP_SAFI_LABELED_UNICAST) {
             first = true;
             while(true) {
-                if(bits < 24 || len < 3) {
+                if(bits < BGP_RIB_LABEL_BITS || len < BGP_RIB_LABEL_LEN) {
                     goto EXIT;
                 }
-                label = read_be_uint(buf, 3);
-                buf += 3; len -= 3; bits -= 24;
+                label = read_be_uint(buf, BGP_RIB_LABEL_LEN);
+                buf += BGP_RIB_LABEL_LEN; len -= BGP_RIB_LABEL_LEN; bits -= BGP_RIB_LABEL_BITS;
                 if(first) {
-                    key.label = label >> 4;
+                    key.label = label >> BGP_RIB_LABEL_SHIFT;
                     first = false;
                 }
                 /* Stop at bottom of stack. Withdrawn routes carry a single
                  * label field which is ignored (0x800000 or 0x000000). */
-                if(!tmp || (label & 0x01) || label == 0x800000) {
+                if(!tmp || (label & BGP_RIB_LABEL_BOS) || label == BGP_RIB_LABEL_WITHDRAW) {
                     break;
                 }
             }
@@ -310,7 +328,7 @@ bgp_rib_nlri(bgp_session_s *session, uint16_t afi, uint8_t safi,
         if(bits > max_bits) {
             goto EXIT;
         }
-        bytes = (bits + 7) / 8;
+        bytes = BITS_TO_BYTES(bits);
         if(bytes > len) {
             goto EXIT;
         }
@@ -360,7 +378,7 @@ bgp_rib_afi_safi(uint16_t afi, uint8_t safi)
 static bool
 bgp_rib_error(bgp_session_s *session, uint8_t error_subcode)
 {
-    session->error_code = 3; /* UPDATE Message Error */
+    session->error_code = BGP_ERROR_UPDATE;
     session->error_subcode = error_subcode;
     return false;
 }
@@ -388,13 +406,13 @@ bgp_rib_update(bgp_session_s *session, bgp_update_s *update)
     if(update->withdrawn_len) {
         if(!bgp_rib_nlri(session, BGP_AFI_IPV4, BGP_SAFI_UNICAST,
                          update->withdrawn, update->withdrawn_len, NULL)) {
-            return bgp_rib_error(session, 10); /* Invalid Network Field */
+            return bgp_rib_error(session, BGP_ERROR_UPDATE_INVALID_NETWORK);
         }
     }
     if(update->mp_unreach && bgp_rib_afi_safi(update->mp_unreach_afi, update->mp_unreach_safi)) {
         if(!bgp_rib_nlri(session, update->mp_unreach_afi, update->mp_unreach_safi,
                          update->mp_unreach_nlri, update->mp_unreach_nlri_len, NULL)) {
-            return bgp_rib_error(session, 9); /* Optional Attribute Error */
+            return bgp_rib_error(session, BGP_ERROR_UPDATE_OPTIONAL_ATTRIBUTE);
         }
     }
 
@@ -402,11 +420,11 @@ bgp_rib_update(bgp_session_s *session, bgp_update_s *update)
     if(update->nlri_len) {
         tmp = bgp_rib_attr_build(session, update, update->next_hop ? AF_INET : 0, update->next_hop);
         if(!tmp) {
-            return bgp_rib_error(session, 11); /* Malformed AS_PATH */
+            return bgp_rib_error(session, BGP_ERROR_UPDATE_MALFORMED_AS_PATH);
         }
         if(!bgp_rib_nlri(session, BGP_AFI_IPV4, BGP_SAFI_UNICAST,
                          update->nlri, update->nlri_len, tmp)) {
-            return bgp_rib_error(session, 10); /* Invalid Network Field */
+            return bgp_rib_error(session, BGP_ERROR_UPDATE_INVALID_NETWORK);
         }
     }
     if(update->mp_reach && bgp_rib_afi_safi(update->mp_reach_afi, update->mp_reach_safi)) {
@@ -418,11 +436,11 @@ bgp_rib_update(bgp_session_s *session, bgp_update_s *update)
         }
         tmp = bgp_rib_attr_build(session, update, nexthop_af, update->mp_reach_nexthop);
         if(!tmp) {
-            return bgp_rib_error(session, 11); /* Malformed AS_PATH */
+            return bgp_rib_error(session, BGP_ERROR_UPDATE_MALFORMED_AS_PATH);
         }
         if(!bgp_rib_nlri(session, update->mp_reach_afi, update->mp_reach_safi,
                          update->mp_reach_nlri, update->mp_reach_nlri_len, tmp)) {
-            return bgp_rib_error(session, 9); /* Optional Attribute Error */
+            return bgp_rib_error(session, BGP_ERROR_UPDATE_OPTIONAL_ATTRIBUTE);
         }
     }
     return true;
@@ -439,31 +457,48 @@ bgp_rib_update(bgp_session_s *session, bgp_update_s *update)
 char *
 bgp_rib_format_as_path(bgp_rib_attr_s *attr)
 {
-    static char buffer[BGP_MAX_MESSAGE_SIZE * 6];
+    static char buffer[BGP_RIB_AS_PATH_STR_LEN];
     uint8_t *data = attr->data;
     uint16_t len = attr->as_path_len;
     uint8_t type, count, i;
     size_t idx = 0;
+    size_t room;
+    uint16_t seg_len;
+    int n;
     bool set;
 
     buffer[0] = '\0';
-    while(len >= 2) {
+    while(len >= BGP_AS_SEGMENT_HDR_LEN) {
         type = data[0];
         count = data[1];
-        set = (type == 1 || type == 4); /* AS_SET or AS_CONFED_SET */
-        if(idx) buffer[idx++] = ' ';
-        if(set) buffer[idx++] = type == 1 ? '{' : '[';
-        else if(type == 3) buffer[idx++] = '(';
-        for(i = 0; i < count; i++) {
-            idx += snprintf(buffer+idx, sizeof(buffer)-idx, "%s%u",
-                            i ? (set ? "," : " ") : "",
-                            (uint32_t)read_be_uint(data+2+(i*4), 4));
+        seg_len = BGP_AS_SEGMENT_HDR_LEN + count * BGP_AS4_LEN;
+        if(len < seg_len ||
+           sizeof(buffer) - idx < BGP_RIB_AS_SEG_OPEN_LEN + BGP_RIB_AS_STR_LEN + BGP_RIB_AS_SEG_CLOSE_LEN) {
+            break;
         }
-        if(set) buffer[idx++] = type == 1 ? '}' : ']';
-        else if(type == 3) buffer[idx++] = ')';
+        set = (type == BGP_AS_SET || type == BGP_AS_CONFED_SET);
+        if(idx) buffer[idx++] = ' ';
+        if(set) buffer[idx++] = type == BGP_AS_SET ? '{' : '[';
+        else if(type == BGP_AS_CONFED_SEQUENCE) buffer[idx++] = '(';
+        for(i = 0; i < count; i++) {
+            room = sizeof(buffer) - idx - BGP_RIB_AS_SEG_CLOSE_LEN;
+            n = snprintf(buffer+idx, room, "%s%u",
+                         i ? (set ? "," : " ") : "",
+                         (uint32_t)read_be_uint(data+BGP_AS_SEGMENT_HDR_LEN+(i*BGP_AS4_LEN), BGP_AS4_LEN));
+            if(n < 0 || (size_t)n >= room) {
+                break;
+            }
+            idx += n;
+        }
+        if(set) buffer[idx++] = type == BGP_AS_SET ? '}' : ']';
+        else if(type == BGP_AS_CONFED_SEQUENCE) buffer[idx++] = ')';
         buffer[idx] = '\0';
-        data += 2 + count * 4;
-        len -= 2 + count * 4;
+        if(i < count) {
+            /* Truncated */
+            break;
+        }
+        data += seg_len;
+        len -= seg_len;
     }
     return buffer;
 }
