@@ -182,6 +182,11 @@ In our tests, the profile changed only the distribution of PPPoE traffic.
 IPoE and MPLS (single label) traffic was distributed over all queues with
 and without the profile, with identical results.
 
+The profile supports only PPPoE with a single VLAN tag. Double-tagged PPPoE,
+with outer type 0x8100 or 0x88a8 (``qinq``), was still received on a single
+queue with the profile loaded, so the recommendations for
+:ref:`traffic received on a single queue <single-queue>` apply.
+
 For :ref:`DPDK <dpdk-usage>`, the profile must be loaded via DPDK instead
 of the kernel driver.
 
@@ -568,6 +573,26 @@ Otherwise threads are delayed for short periods, which shows up as bursts of
 **Buffers:** Short delays of RX threads can be absorbed with larger buffers.
 In our tests, a NIC RX ring of 8160 with ``io-slots-rx`` of 16384 removed the
 remaining loss caused by such delays (see the NIC RX ring requirements above).
+
+.. _single-queue:
+
+**Single queue:** If RSS can't distribute the received traffic, e.g. PPPoE
+without the :ref:`DDP profile <ddp-pppoe>` or double-tagged PPPoE, all packets
+of an interface are handled by one queue and one RX thread. In our tests, this
+worked without loss up to about 2.4 Mpps per interface and with up to 0.5% loss
+at 6.35 Mpps. In this case, the CPU handling the interrupt of this queue is
+important. The kernel processes the received packets of a queue (NAPI) on the
+CPU of its interrupt, which took about a third of a CPU core in our tests. If
+this is the CPU of the RX thread of the same queue, both share one core, which
+increased the loss from below 0.5% to up to 21% in our tests. Pin the interrupt
+of the active queue to a CPU without a busy BNG Blaster thread and stop
+``irqbalance``, which moves interrupts automatically.
+
+.. code-block:: none
+
+    systemctl stop irqbalance
+    grep <interface> /proc/interrupts
+    echo <cpu> > /proc/irq/<irq>/smp_affinity_list
 
 **Virtual machines:** The virtual CPUs of a VM may share physical cores with
 each other or with the host. In our tests, a VM with 14 virtual CPUs on a host
