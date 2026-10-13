@@ -90,12 +90,20 @@ hardware support from the network adapter and the driver.
 
 Some network interfaces are not able to distribute traffic for PPPoE/L2TP or even
 MPLS traffic. Even double-tagged VLANs with default the default type 0x8100 is
-often not supported.
+often not supported. If RSS does not work for the received traffic, all packets
+of an interface are received on the same queue and therefore handled by a single
+RX thread, regardless of the number of RX threads configured. This can be verified
+with the per-queue counters of the network interface while traffic is running.
+
+.. code-block:: none
+
+    ethtool -S <interface> | grep -E "rx-[0-9]+\.packets"
 
 Therefore best results can be reached with single tagged IPoE traffic. Depending
 on the actual network adapter, there are different options to address this
-limitation. For instance, Intel adapters support different
-Dynamic Device Personalization (DDP) to support RSS for PPPoE traffic.
+limitation. For instance, Intel 700 Series adapters require a Dynamic Device
+Personalization (DDP) profile to support RSS for PPPoE traffic as explained in
+:ref:`PPPoE RSS on Intel 700 Series <ddp-pppoe>`.
 
 You can also boost the performance by adjusting some driver settings. For example,
 we found that the following setting improved the performance for
@@ -122,6 +130,52 @@ is comfortably sized. Check and, if needed, raise it towards its maximum:
 
     ethtool -g <interface>
     ethtool -G <interface> rx 8160 tx 8160
+
+With :ref:`AF_XDP <af-xdp-usage>`, the NIC RX ring is filled with frames of the
+AF_XDP socket, defined per RX thread by ``io-slots-rx`` (rounded up to the next
+power of two). The NIC RX ring should not exceed half of those frames, otherwise
+the frames still waiting to be processed are missing to refill the ring, which
+results in even more ``rx_missed_errors``. For example, a NIC RX ring of 8160
+requires ``io-slots-rx`` of 16384.
+
+.. _ddp-pppoe:
+
+PPPoE RSS on Intel 700 Series
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Intel 700 Series (X710, XXV710, XL710) can't parse PPPoE with its default
+parser, so all PPPoE traffic of an interface is received on the same queue.
+The Intel DDP profile *PPPoE and PPPoL2TPv2* adds PPPoE parsing, so that RSS
+hashes the IP header inside PPPoE. Please contact Intel if you need this profile.
+
+With the Linux kernel driver (e.g. I/O modes ``af_xdp`` or ``packet_mmap``),
+version 1.1.6.1 of this profile (file ``ppp-oe-ol2tpv2.pkg``) is required.
+The older version 1.0.0.0 (file ``ppp-oe-ol2tpv2.pkgo``) could be loaded with
+the kernel driver in our tests, but PPPoE traffic was still received on a
+single queue.
+
+The profile is loaded with ``ethtool`` from the firmware directory
+``/lib/firmware/intel/i40e/ddp/``, with the file name only. It applies to all
+ports of the adapter, so it is sufficient to load it via one port.
+
+.. code-block:: none
+
+    cp ppp-oe-ol2tpv2.pkg /lib/firmware/intel/i40e/ddp/
+    ethtool -f <interface> ppp-oe-ol2tpv2.pkg 100
+
+The profile is not persistent and must be loaded again after every reboot
+or reload of the i40e driver. It can be removed with:
+
+.. code-block:: none
+
+    ethtool -f <interface> - 100
+
+In our tests, the profile changed only the distribution of PPPoE traffic.
+IPoE and MPLS (single label) traffic was distributed over all queues with
+and without the profile, with identical results.
+
+For :ref:`DPDK <dpdk-usage>`, the profile must be loaded via DPDK instead
+of the kernel driver.
 
 .. note::
 
@@ -474,3 +528,122 @@ available.
     affected flows. This is exactly what the automatic queue
     reconfiguration above avoids.
 
+
+AF_XDP Tuning
+~~~~~~~~~~~~~
+
+The following recommendations are based on tests with PPPoE traffic between
+two directly connected 10G ports of an Intel X710 adapter (i40e driver),
+using native zero-copy mode.
+
+**RX threads:** The RX performance per thread depends on the CPU and packet
+size. In our tests, a single RX thread received up to about 1.9 Mpps per queue
+without loss, while loss started at around 2.1 Mpps per queue. RSS does not
+distribute traffic perfectly evenly, so plan enough RX threads to keep the
+busiest queue below this limit. Typically, more RX than TX threads are
+required.
+
+**TX threads:** TX threads permanently poll and therefore use a full CPU core
+each, even if not sending at their limit. In our tests, a single TX thread
+sent at least 3.2 Mpps (the actual limit was not reached).
+
+**CPU cores:** Each RX and TX thread should have its own physical CPU core,
+including SMT siblings. The total number of RX and TX threads of all links
+plus the main thread should not exceed the number of physical cores.
+Otherwise threads are delayed for short periods, which shows up as bursts of
+``rx_missed_errors`` even if the average CPU load looks fine.
+
+**Buffers:** Short delays of RX threads can be absorbed with larger buffers.
+In our tests, a NIC RX ring of 8160 with ``io-slots-rx`` of 16384 removed the
+remaining loss caused by such delays (see the NIC RX ring requirements above).
+
+**Virtual machines:** The virtual CPUs of a VM may share physical cores with
+each other or with the host. In our tests, a VM with 14 virtual CPUs on a host
+with 8 physical cores provided only the performance of about 8 cores if all
+virtual CPUs were busy. Short interruptions by the host cause bursts of
+``rx_missed_errors``. If possible, pin the virtual CPUs to dedicated physical
+cores of the host and use the large buffers explained above.
+
+**PCIe:** Small packets require many PCIe transactions per byte. With an
+Intel X710 4-port adapter in a PCIe 3.0 x4 slot, two ports with bidirectional
+traffic of 128-byte packets reached only about 92% of line rate (6.5 Mpps per
+port and direction), independent of the number of threads. Unidirectional
+traffic or larger packets (1400 bytes) reached line rate without loss. Check
+the negotiated PCIe link width and speed of the adapter, and use a slot with
+the full width supported by the adapter for small packets at line rate.
+
+.. code-block:: none
+
+    lspci -vv -s <pci-address> | grep -E "LnkCap:|LnkSta:"
+
+**Monitoring:** The following counters of ``ethtool -S <interface>`` help to
+identify the bottleneck. ``rx_missed_errors`` counts packets dropped because no
+free RX descriptor was available, which is caused by delayed or overloaded RX
+threads. The per-queue counters ``rx-<n>.packets`` show how RSS distributes
+the traffic over the RX threads.
+
+The following configuration was tested with 650 PPPoE sessions with one
+bidirectional stream of 10 Mbps and 128 bytes per session (6.35 Mpps per port
+and direction) without loss, with NIC RX rings set to 8160 and the
+:ref:`DDP profile <ddp-pppoe>` loaded.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "io-mode": "af_xdp",
+            "rx-threads": 4,
+            "tx-threads": 2,
+            "io-slots": 4096,
+            "links": [
+                {
+                    "interface": "eth1",
+                    "io-slots-tx": 1024,
+                    "io-slots-rx": 16384,
+                    "rx-cpuset": [1, 2, 3, 4],
+                    "tx-cpuset": [5, 6]
+                },
+                {
+                    "interface": "eth2",
+                    "io-slots-tx": 1024,
+                    "io-slots-rx": 16384,
+                    "rx-cpuset": [7, 8, 9, 10],
+                    "tx-cpuset": [11, 12]
+                }
+            ],
+            "a10nsp": [
+                {
+                    "__comment__": "PPPoE Server",
+                    "interface": "eth1"
+                }
+            ],
+            "access": [
+                {
+                    "__comment__": "PPPoE Client",
+                    "interface": "eth2",
+                    "type": "pppoe",
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "ipv6": false,
+                    "stream-group-id": 1
+                }
+            ]
+        },
+        "sessions": {
+            "count": 650
+        },
+        "dhcpv6": {
+            "enable": false
+        },
+        "streams": [
+            {
+                "stream-group-id": 1,
+                "name": "S1",
+                "type": "ipv4",
+                "direction": "both",
+                "Mbps": 10,
+                "length": 128,
+                "a10nsp-interface": "eth1"
+            }
+        ]
+    }
