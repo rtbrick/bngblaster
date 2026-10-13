@@ -71,8 +71,6 @@ wait for the main thread instead.
     hard limitation but everything above should be considered with caution. It is also possible to
     scale far beyond using DPDK-enabled interfaces.
 
-A single stream will be always handled by a single thread to prevent re-ordering.
-
 It is also recommended to increase the hardware and software queue size of your
 network interface links to the maximum for higher throughput as explained
 in the :ref:`Operating System Settings <interfaces>`.
@@ -97,7 +95,7 @@ CPUs based on their source and destination addresses and ports. RSS requires
 hardware support from the network adapter and the driver.
 
 Some network interfaces are not able to distribute traffic for PPPoE/L2TP or even
-MPLS traffic. Even double-tagged VLANs with default the default type 0x8100 is
+MPLS traffic. Even double-tagged VLANs with the default type 0x8100 are
 often not supported. If RSS does not work for the received traffic, all packets
 of an interface are received on the same queue and therefore handled by a single
 RX thread, regardless of the number of RX threads configured. This can be verified
@@ -109,9 +107,10 @@ with the per-queue counters of the network interface while traffic is running.
 
 Therefore best results can be reached with single tagged IPoE traffic. Depending
 on the actual network adapter, there are different options to address this
-limitation. For instance, Intel 700 Series adapters require a Dynamic Device
-Personalization (DDP) profile to support RSS for PPPoE traffic as explained in
-:ref:`PPPoE RSS on Intel 700 Series <ddp-pppoe>`.
+limitation. For instance, Intel 700 Series adapters support RSS for PPPoE traffic
+with a Dynamic Device Personalization (DDP) profile as explained in
+:ref:`PPPoE RSS on Intel 700 Series <ddp-pppoe>`, or by extending the hash
+fields as explained in :ref:`RSS by VLAN and MAC on Intel 700 Series <rss-vlan-mac>`.
 
 You can also boost the performance by adjusting some driver settings. For example,
 we found that the following setting improved the performance for
@@ -123,10 +122,11 @@ test environment.
 
     ethtool -C <interface> adaptive-rx off adaptive-tx off rx-usecs 125 tx-usecs 125
 
-The NIC's own on-card RX descriptor ring is a separate, usually much smaller
-buffer than any of the software-side ring/slot settings above (``io-slots``,
-AF_XDP's fill ring, DPDK's descriptor count, ...) - it is the actual DMA
-ring the driver refills via its NAPI poll. On some drivers/NICs it defaults
+The NIC RX descriptor ring is a separate, usually much smaller buffer than
+any of the software-side ring/slot settings above (``io-slots``, AF_XDP's
+fill ring, DPDK's descriptor count, ...) - it is the ring of receive buffers
+the NIC writes received packets to via DMA, which the driver refills via
+its NAPI poll. On some drivers/NICs it defaults
 far below what the hardware supports (e.g. 512 out of a possible 8160 on an
 Intel i40e we tested), so at high line rates any brief delay in the NAPI
 poll (e.g. from interrupt moderation, see above) can drain it before the
@@ -182,9 +182,9 @@ In our tests, the profile changed only the distribution of PPPoE traffic.
 IPoE and MPLS (single label) traffic was distributed over all queues with
 and without the profile, with identical results.
 
-The profile supports only PPPoE with a single VLAN tag. Double-tagged PPPoE,
-with outer type 0x8100 or 0x88a8 (``qinq``), was still received on a single
-queue with the profile loaded. For double-tagged PPPoE, see
+The profile did not distribute double-tagged PPPoE in our tests. Double-tagged
+PPPoE, with outer type 0x8100 or 0x88a8 (``qinq``), was still received on a
+single queue with the profile loaded, while single-tagged PPPoE was distributed. For double-tagged PPPoE, see
 :ref:`RSS by VLAN and MAC on Intel 700 Series <rss-vlan-mac>`.
 
 For :ref:`DPDK <dpdk-usage>`, the profile must be loaded via DPDK instead
@@ -226,8 +226,9 @@ tests:
 +----------------------------------+------------------+------------------+
 
 VLANs means outer and inner VLAN, MACs means source and destination MAC address.
-The register is written via the debugfs command file of any port of the
-adapter (PCI address), with debugfs mounted.
+The register is written via the debugfs command file of one port of the
+adapter (PCI address), with debugfs mounted. As the register is global, this
+applies to all ports of the adapter.
 
 .. code-block:: none
 
@@ -623,7 +624,7 @@ using native zero-copy mode.
 
 **RX threads:** The RX performance per thread depends on the CPU and packet
 size. In our tests, a single RX thread received up to 2.4 Mpps per queue
-without loss and processed more than 6 Mpps with up to 0.1% loss. The loss is
+without loss and processed more than 6 Mpps with 0.1% to 0.5% loss. The loss is
 caused by short delays of the RX thread, not by its CPU capacity, so
 distributing the traffic over more queues reduces loss even if a single thread
 could process the full rate. RSS does not distribute traffic perfectly evenly,
@@ -636,11 +637,12 @@ sent at least 5.8 Mpps (the actual limit was not reached), so one TX thread
 per 10G interface was sufficient. Using fewer TX threads leaves more CPU
 cores for RX threads.
 
-**CPU cores:** Each RX and TX thread should have its own physical CPU core,
-including SMT siblings. The total number of RX and TX threads of all links
-plus the main thread should not exceed the number of physical cores.
-Otherwise threads are delayed for short periods, which shows up as bursts of
-``rx_missed_errors`` even if the average CPU load looks fine.
+**CPU cores:** Each RX and TX thread should have its own CPU. The total number
+of RX and TX threads of all links plus the main thread must not exceed the
+number of available CPUs, otherwise threads are delayed for short periods,
+which shows up as bursts of ``rx_missed_errors`` even if the average CPU load
+looks fine. Ideally, busy threads run on different physical cores, as SMT
+siblings share the resources of one physical core.
 
 **Buffers:** Short delays of RX threads can be absorbed with larger buffers.
 In our tests, a NIC RX ring of 8160 with ``io-slots-rx`` of 16384 removed the
@@ -678,7 +680,8 @@ cores of the host and use the large buffers explained above.
 Intel X710 4-port adapter in a PCIe 3.0 x4 slot, two ports with bidirectional
 traffic of 128-byte packets reached only about 92% of line rate (6.5 Mpps per
 port and direction), independent of the number of threads. Unidirectional
-traffic or larger packets (1400 bytes) reached line rate without loss. Check
+traffic of 128-byte packets reached line rate, and bidirectional traffic of
+1400-byte packets reached line rate without loss. Check
 the negotiated PCIe link width and speed of the adapter, and use a slot with
 the full width supported by the adapter for small packets at line rate.
 
