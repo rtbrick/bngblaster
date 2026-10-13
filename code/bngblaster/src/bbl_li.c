@@ -189,7 +189,7 @@ bbl_li_ctrl_flows(int fd, uint32_t session_id __attribute__((unused)), json_t *a
                      "code", 200,
                      "li-flows", flows);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

@@ -10,6 +10,10 @@
 #ifndef __BBL_CTRL_H__
 #define __BBL_CTRL_H__
 
+/* Print JSON reals with 15 significant digits (e.g. 85.62 instead
+ * of 85.620000000000005). */
+#define BBL_JSON_REAL_PRECISION JSON_REAL_PRECISION(15)
+
 typedef struct bbl_ctrl_thread_ {
     int socket;
 

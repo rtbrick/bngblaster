@@ -70,7 +70,7 @@ ldp_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_t
                      "code", 200,
                      "ldp-adjacencies", adjacencies);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -212,7 +212,7 @@ ldp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
                      "code", 200,
                      "ldp-sessions", sessions);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -335,7 +335,7 @@ ldp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
                      "filtered", filtered);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -368,7 +368,7 @@ ldp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), js
                      "code", 200,
                      "ldp-raw-update-list", updates);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -451,7 +451,7 @@ ldp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
                      "filtered", filtered);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -547,7 +547,7 @@ ldb_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *a
                          "code", 200,
                          "ldp-database", database);
         if(root) {
-            result = json_dumpfd(root, fd, 0);
+            result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
             json_decref(root);
         } else {
             result = bbl_ctrl_status(fd, "error", 500, "internal error");

@@ -158,7 +158,7 @@ bgp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json_t *a
                      "code", 200,
                      "bgp-sessions", sessions);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -273,7 +273,7 @@ bgp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
                      "filtered", filtered);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -305,7 +305,7 @@ bgp_ctrl_raw_update_list(int fd, uint32_t session_id __attribute__((unused)), js
                      "code", 200,
                      "bgp-raw-update-list", updates);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -399,7 +399,7 @@ bgp_ctrl_disconnect(int fd, uint32_t session_id __attribute__((unused)), json_t 
                      "filtered", filtered);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -636,7 +636,7 @@ bgp_ctrl_evpn_routes(int fd, uint32_t session_id __attribute__((unused)), json_t
                      "code", 200,
                      "bgp-evpn-routes", sessions);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -930,7 +930,7 @@ bgp_ctrl_routes(int fd, uint32_t session_id __attribute__((unused)), json_t *arg
                      "code", 200,
                      "bgp-routes", sessions);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -984,7 +984,7 @@ bgp_ctrl_routes_stats(int fd, uint32_t session_id __attribute__((unused)), json_
                      "code", 200,
                      "bgp-routes-stats", sessions);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

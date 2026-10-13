@@ -408,7 +408,7 @@ bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *
         "interfaces", jobj_array);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -472,7 +472,7 @@ bbl_interface_ctrl_topology(int fd, uint32_t session_id __attribute__((unused)),
                      "code", 200,
                      "interfaces", jobj_array);
     if(root) {
-        result = json_dumpfd(root, fd, JSON_INDENT(4));
+        result = json_dumpfd(root, fd, JSON_INDENT(4)|BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

@@ -194,7 +194,7 @@ isis_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_
                      "code", 200,
                      "isis-adjacencies", adjacencies);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -292,7 +292,7 @@ isis_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *
                          "code", 200,
                          "isis-database", database);
         if(root) {
-            result = json_dumpfd(root, fd, 0);
+            result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
             json_decref(root);
         } else {
             result = bbl_ctrl_status(fd, "error", 500, "internal error");

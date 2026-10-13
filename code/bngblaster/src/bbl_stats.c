@@ -894,10 +894,10 @@ bbl_stats_json(bbl_stats_s * stats)
         json_object_set_new(jobj, "sessions-established", json_integer(g_ctx->sessions_established_max));
         json_object_set_new(jobj, "sessions-flapped", json_integer(g_ctx->sessions_flapped));
         json_object_set_new(jobj, "setup-time-ms", json_integer(g_ctx->stats.setup_time));
-        json_object_set_new(jobj, "setup-rate-cps", json_real(g_ctx->stats.cps));
-        json_object_set_new(jobj, "setup-rate-cps-min", json_real(g_ctx->stats.cps_min));
-        json_object_set_new(jobj, "setup-rate-cps-avg", json_real(g_ctx->stats.cps_avg));
-        json_object_set_new(jobj, "setup-rate-cps-max", json_real(g_ctx->stats.cps_max));
+        json_object_set_new(jobj, "setup-rate-cps", json_real(bbl_round(g_ctx->stats.cps, 100)));
+        json_object_set_new(jobj, "setup-rate-cps-min", json_real(bbl_round(g_ctx->stats.cps_min, 100)));
+        json_object_set_new(jobj, "setup-rate-cps-avg", json_real(bbl_round(g_ctx->stats.cps_avg, 100)));
+        json_object_set_new(jobj, "setup-rate-cps-max", json_real(bbl_round(g_ctx->stats.cps_max, 100)));
         json_object_set_new(jobj, "dhcp-sessions-established", json_integer(g_ctx->dhcp_established_max));
         json_object_set_new(jobj, "dhcpv6-sessions-established", json_integer(g_ctx->dhcpv6_established_max));
     }
@@ -1192,25 +1192,25 @@ bbl_stats_json(bbl_stats_s * stats)
         json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6pd-avg", json_integer(stats->avg_up_ipv6pd_rx_first_seq));
         json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6pd-max", json_integer(stats->max_up_ipv6pd_rx_first_seq));
 
-        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv4-min-seconds", json_real(stats->min_down_ipv4_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv4-avg-seconds", json_real(stats->avg_down_ipv4_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv4-max-seconds", json_real(stats->max_down_ipv4_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6-min-seconds", json_real(stats->min_down_ipv6_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6-avg-seconds", json_real(stats->avg_down_ipv6_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6-max-seconds", json_real(stats->max_down_ipv6_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6pd-min-seconds", json_real(stats->min_down_ipv6pd_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6pd-avg-seconds", json_real(stats->avg_down_ipv6pd_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6pd-max-seconds", json_real(stats->max_down_ipv6pd_rx_seconds));
+        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv4-min-seconds", json_real(bbl_round(stats->min_down_ipv4_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv4-avg-seconds", json_real(bbl_round(stats->avg_down_ipv4_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv4-max-seconds", json_real(bbl_round(stats->max_down_ipv4_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6-min-seconds", json_real(bbl_round(stats->min_down_ipv6_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6-avg-seconds", json_real(bbl_round(stats->avg_down_ipv6_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6-max-seconds", json_real(bbl_round(stats->max_down_ipv6_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6pd-min-seconds", json_real(bbl_round(stats->min_down_ipv6pd_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6pd-avg-seconds", json_real(bbl_round(stats->avg_down_ipv6pd_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-downstream-ipv6pd-max-seconds", json_real(bbl_round(stats->max_down_ipv6pd_rx_seconds, 1000000)));
 
-        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv4-min-seconds", json_real(stats->min_up_ipv4_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv4-avg-seconds", json_real(stats->avg_up_ipv4_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv4-max-seconds", json_real(stats->max_up_ipv4_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6-min-seconds", json_real(stats->min_up_ipv6_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6-avg-seconds", json_real(stats->avg_up_ipv6_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6-max-seconds", json_real(stats->max_up_ipv6_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6pd-min-seconds", json_real(stats->min_up_ipv6pd_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6pd-avg-seconds", json_real(stats->avg_up_ipv6pd_rx_seconds));
-        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6pd-max-seconds", json_real(stats->max_up_ipv6pd_rx_seconds));
+        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv4-min-seconds", json_real(bbl_round(stats->min_up_ipv4_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv4-avg-seconds", json_real(bbl_round(stats->avg_up_ipv4_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv4-max-seconds", json_real(bbl_round(stats->max_up_ipv4_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6-min-seconds", json_real(bbl_round(stats->min_up_ipv6_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6-avg-seconds", json_real(bbl_round(stats->avg_up_ipv6_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6-max-seconds", json_real(bbl_round(stats->max_up_ipv6_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6pd-min-seconds", json_real(bbl_round(stats->min_up_ipv6pd_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6pd-avg-seconds", json_real(bbl_round(stats->avg_up_ipv6pd_rx_seconds, 1000000)));
+        json_object_set_new(jobj_sub, "first-seq-rx-upstream-ipv6pd-max-seconds", json_real(bbl_round(stats->max_up_ipv6pd_rx_seconds, 1000000)));
 
         json_object_set_new(jobj, "session-traffic", jobj_sub);
     }
@@ -1289,7 +1289,7 @@ bbl_stats_json(bbl_stats_s * stats)
     }
 
     json_object_set_new(root, "report", jobj);
-    if(json_dump_file(root, g_ctx->config.json_report_filename, JSON_REAL_PRECISION(4)) != 0) {
+    if(json_dump_file(root, g_ctx->config.json_report_filename, BBL_JSON_REAL_PRECISION) != 0) {
         LOG(ERROR, "Failed to create JSON report file %s\n", g_ctx->config.json_report_filename);
     }
     chmod(g_ctx->config.json_report_filename, 0666);
@@ -1297,10 +1297,11 @@ bbl_stats_json(bbl_stats_s * stats)
 }
 
 /*
- * Compute a PPS rate using a moving average of <BBL_AVG_SAMPLE> samples.
+ * Compute a rate using a moving average of <BBL_AVG_SAMPLE> samples,
+ * multiplied by scale.
  */
-void
-bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value, struct timespec *now)
+static inline void
+bbl_compute_avg_rate_scaled(bbl_rate_s *rate, uint64_t current_value, struct timespec *now, uint64_t scale)
 {
     uint32_t now_msec = now->tv_sec * 1000 + now->tv_nsec / MSEC;
     uint32_t msec;
@@ -1329,11 +1330,26 @@ bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value, struct timespec *
     for(int i = 0; i < BBL_AVG_SAMPLES; i++) {
         sum_msec += rate->diff_msec[i];
     }
-    rate->avg = rate->sum * 1000 / sum_msec;
+    rate->avg = rate->sum * 1000 * scale / sum_msec;
     if(rate->avg > rate->avg_max) {
         rate->avg_max = rate->avg;
     }
 
     rate->last_value = current_value;
     rate->last_msec = now_msec;
+}
+
+void
+bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value, struct timespec *now)
+{
+    bbl_compute_avg_rate_scaled(rate, current_value, now, 1);
+}
+
+/*
+ * Compute a stream PPS rate in 1/100 packets per second.
+ */
+void
+bbl_compute_stream_rate(bbl_rate_s *rate, uint64_t current_value, struct timespec *now)
+{
+    bbl_compute_avg_rate_scaled(rate, current_value, now, BBL_STREAM_RATE_SCALE);
 }

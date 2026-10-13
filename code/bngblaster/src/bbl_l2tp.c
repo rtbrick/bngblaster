@@ -2194,7 +2194,7 @@ bbl_l2tp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json
                      "code", 200,
                      "l2tp-sessions", sessions);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -2432,7 +2432,7 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
                      "code", 200,
                      "l2tp-tunnels", tunnels);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

@@ -374,7 +374,7 @@ bbl_lag_json(bbl_lag_s *lag)
             "packets-rx", member->interface->io.rx->stats.packets,
             "packets-tx", member->interface->io.tx->stats.packets,
             "stream-count", member->interface->io.tx->stream_count,
-            "stream-pps", member->interface->io.tx->stream_pps,
+            "stream-pps", bbl_round(member->interface->io.tx->stream_pps, 100),
             "lacp-state", lacp_state_string(member->lacp_state),
             "lacp", jobj_lacp);
         if(jobj_member) {
@@ -426,7 +426,7 @@ bbl_lag_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t *a
         "lag-info", jobj_array);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

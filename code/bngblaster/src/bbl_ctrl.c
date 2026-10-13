@@ -217,7 +217,7 @@ bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message)
     int result = 0;
     json_t *root = json_pack("{sssiss*}", "status", status, "code", code, "message", message);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     }
     return result;
@@ -242,7 +242,7 @@ bbl_ctrl_test_info(int fd, uint32_t session_id __attribute__((unused)), json_t *
                      "state", test_state(),
                      "duration", test_duration());
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -485,7 +485,7 @@ bbl_ctrl_commands(int fd, uint32_t session_id __attribute__((unused)), json_t *a
         "commands", jobj_c_array);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

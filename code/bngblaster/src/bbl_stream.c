@@ -1513,7 +1513,7 @@ bbl_stream_ctrl(bbl_stream_s *stream, struct timespec *now)
         bbl_stream_tx_stats(stream, packets_delta, bytes_delta);
     }
     if(g_ctx->config.stream_rate_calc && stream->pps >= 1) {
-        bbl_compute_avg_rate(stream->rate_packets_tx, packets, now);
+        bbl_compute_stream_rate(stream->rate_packets_tx, packets, now);
     }
     if(unlikely(stream->type == BBL_TYPE_MULTICAST)) {
         return;
@@ -1561,7 +1561,7 @@ bbl_stream_ctrl(bbl_stream_s *stream, struct timespec *now)
         }
     }
     if(g_ctx->config.stream_rate_calc && stream->pps >= 1) {
-        bbl_compute_avg_rate(stream->rate_packets_rx, packets, now);
+        bbl_compute_stream_rate(stream->rate_packets_rx, packets, now);
     }
 }
 
@@ -2872,21 +2872,28 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
     }
 }
 
+/* Convert a stream rate (1/100 PPS) to Mbps. */
+static double
+bbl_stream_rate_mbps(uint64_t rate, uint16_t len)
+{
+    return bbl_round((double)(rate * len * 8) / (BBL_STREAM_RATE_SCALE * 1000000.0), 1000000);
+}
+
 static json_t *
 bbl_stream_summary_json(bbl_stream_s *stream)
 {
     json_t *jobj;
-    uint64_t rate_packets_tx_avg = 0;
-    uint64_t rate_packets_rx_avg = 0;
+    double rx_pps = 0;
+    double tx_pps = 0;
 
     if(stream->rate_packets_rx) {
-        rate_packets_rx_avg = stream->rate_packets_rx->avg;
+        rx_pps = (double)stream->rate_packets_rx->avg / BBL_STREAM_RATE_SCALE;
     }
     if(stream->rate_packets_tx) {
-        rate_packets_tx_avg = stream->rate_packets_tx->avg;
+        tx_pps = (double)stream->rate_packets_tx->avg / BBL_STREAM_RATE_SCALE;
     }
 
-    jobj = json_pack("{si ss* ss ss ss sb sb sb ss* sI sI sI sI sI sI sI}",
+    jobj = json_pack("{si ss* ss ss ss sb sb sb ss* sI sI sI sI sI sf sf}",
         "flow-id", stream->flow_id,
         "name", stream->config->name,
         "type", stream_type_string(stream),
@@ -2901,8 +2908,8 @@ bbl_stream_summary_json(bbl_stream_s *stream)
         "rx-packets", stream->rx_packets - stream->reset_packets_rx,
         "rx-bytes", (stream->rx_packets - stream->reset_packets_rx) * stream->rx_len,
         "rx-loss", stream->rx_loss - stream->reset_loss,
-        "rx-pps", rate_packets_rx_avg,
-        "tx-pps", rate_packets_tx_avg);
+        "rx-pps", rx_pps,
+        "tx-pps", tx_pps);
     if(jobj && stream->session) {
         json_object_set_new(jobj, "session-id", json_integer(stream->session->session_id));
         json_object_set_new(jobj, "session-traffic", json_boolean(stream->tx_flags & STREAM_FLAG_SESSION_TRAFFIC));
@@ -2923,6 +2930,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     char *dst_address = NULL;
     uint16_t dst_port = 0;
 
+    /* Stream rates in 1/100 packets per second */
     uint64_t rate_packets_tx_avg = 0;
     uint64_t rate_packets_rx_avg = 0;
     uint64_t rate_packets_tx_avg_max = 0;
@@ -2976,7 +2984,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     }
 
     if(stream->type == BBL_TYPE_UNICAST) {
-        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* ss* sI sI sI sI si si si si si si sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sf sf sf sI sI sI }",
+        root = json_pack("{sI ss* ss ss ss sb sb sb ss sI ss sI ss ss* ss* ss* sI sI sI sI si si si si si si sI sI sI sI sI sI sI sI sf sf sf sf sI sI sI sf sf sf sI sI sI }",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -3011,16 +3019,16 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "rx-wrong-order", stream->rx_wrong_order,
             "rx-delay-us-min", stream->rx_min_delay_us,
             "rx-delay-us-max", stream->rx_max_delay_us,
-            "rx-pps", rate_packets_rx_avg,
-            "tx-pps", rate_packets_tx_avg,
-            "rx-pps-max", rate_packets_rx_avg_max,
-            "tx-pps-max", rate_packets_tx_avg_max,
-            "tx-bps-l2", rate_packets_tx_avg * stream->tx_len * 8,
-            "rx-bps-l2", rate_packets_rx_avg * stream->rx_len * 8,
-            "rx-bps-l3", rate_packets_rx_avg * stream->config->length * 8,
-            "tx-mbps-l2", (double)(rate_packets_tx_avg * stream->tx_len * 8) / 1000000.0,
-            "rx-mbps-l2", (double)(rate_packets_rx_avg * stream->rx_len * 8) / 1000000.0,
-            "rx-mbps-l3", (double)(rate_packets_rx_avg * stream->config->length * 8) / 1000000.0,
+            "rx-pps", (double)rate_packets_rx_avg / BBL_STREAM_RATE_SCALE,
+            "tx-pps", (double)rate_packets_tx_avg / BBL_STREAM_RATE_SCALE,
+            "rx-pps-max", (double)rate_packets_rx_avg_max / BBL_STREAM_RATE_SCALE,
+            "tx-pps-max", (double)rate_packets_tx_avg_max / BBL_STREAM_RATE_SCALE,
+            "tx-bps-l2", rate_packets_tx_avg * stream->tx_len * 8 / BBL_STREAM_RATE_SCALE,
+            "rx-bps-l2", rate_packets_rx_avg * stream->rx_len * 8 / BBL_STREAM_RATE_SCALE,
+            "rx-bps-l3", rate_packets_rx_avg * stream->config->length * 8 / BBL_STREAM_RATE_SCALE,
+            "tx-mbps-l2", bbl_stream_rate_mbps(rate_packets_tx_avg, stream->tx_len),
+            "rx-mbps-l2", bbl_stream_rate_mbps(rate_packets_rx_avg, stream->rx_len),
+            "rx-mbps-l3", bbl_stream_rate_mbps(rate_packets_rx_avg, stream->config->length),
             "tx-first-epoch", stream->tx_first_epoch,
             "rx-first-epoch", stream->rx_first_epoch,
             "rx-last-epoch", stream->rx_last_epoch);
@@ -3079,7 +3087,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             json_object_set_new(root, "lag-member-interface-state", json_string(interface_state_string(io->interface->state)));
         }
     } else {
-        root = json_pack("{sI ss* ss ss ss sb sb ss* ss* sI sI sI sI sI sf}",
+        root = json_pack("{sI ss* ss ss ss sb sb ss* ss* sI sI sf sf sI sf}",
             "flow-id", stream->flow_id,
             "name", stream->config->name,
             "type", stream_type_string(stream),
@@ -3091,10 +3099,10 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "tx-interface-state", tx_interface_state,
             "tx-len", stream->tx_len,
             "tx-packets", stream->tx_packets - stream->reset_packets_tx,
-            "tx-pps", rate_packets_tx_avg,
-            "tx-pps-max", rate_packets_tx_avg_max,
-            "tx-bps-l2", rate_packets_tx_avg * stream->tx_len * 8,
-            "tx-mbps-l2", (double)(rate_packets_tx_avg * stream->tx_len * 8) / 1000000.0);
+            "tx-pps", (double)rate_packets_tx_avg / BBL_STREAM_RATE_SCALE,
+            "tx-pps-max", (double)rate_packets_tx_avg_max / BBL_STREAM_RATE_SCALE,
+            "tx-bps-l2", rate_packets_tx_avg * stream->tx_len * 8 / BBL_STREAM_RATE_SCALE,
+            "tx-mbps-l2", bbl_stream_rate_mbps(rate_packets_tx_avg, stream->tx_len));
     }
     if(root && debug) {
         /* Add debug informations. */
@@ -3267,7 +3275,7 @@ bbl_stream_ctrl_stats(int fd, uint32_t session_id __attribute__((unused)), json_
                              "verified-flows", g_ctx->stats.stream_traffic_flows_verified,
                              "total-pps", g_ctx->total_pps);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     }
     return result;
@@ -3304,7 +3312,7 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
                          "code", 200,
                          "stream-info", json_stream);
         if(root) {
-            result = json_dumpfd(root, fd, 0);
+            result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
             json_decref(root);
         } else {
             result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -3371,7 +3379,7 @@ bbl_stream_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
         "stream-summary", jobj_array);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -3424,7 +3432,7 @@ bbl_stream_ctrl_session(int fd, uint32_t session_id, json_t *arguments __attribu
                          "streams", json_streams);
 
         if(root) {
-            result = json_dumpfd(root, fd, 0);
+            result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
             json_decref(root);
         } else {
             result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -3475,7 +3483,7 @@ bbl_stream_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), jso
                      "code", 200,
                      "streams-pending", json_streams);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

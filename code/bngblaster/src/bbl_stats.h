@@ -168,8 +168,21 @@ typedef struct bbl_interface_stats_ {
     uint64_t hw_tx_errors; /* TX packets the NIC failed to transmit */
 } bbl_interface_stats_s;
 
+/* Stream packet rates are stored in 1/100 packets per second. */
+#define BBL_STREAM_RATE_SCALE 100
+
+/* Round JSON real values to the given scale (e.g. 100 for 2 decimals). */
+static inline double
+bbl_round(double value, double scale)
+{
+    return round(value * scale) / scale;
+}
+
 void 
 bbl_compute_avg_rate(bbl_rate_s *rate, uint64_t current_value, struct timespec *now);
+
+void 
+bbl_compute_stream_rate(bbl_rate_s *rate, uint64_t current_value, struct timespec *now);
 
 void 
 bbl_stats_update_cps();

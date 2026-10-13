@@ -2197,7 +2197,7 @@ bbl_access_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), 
                      "code", 200,
                      "access-interfaces", interfaces);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

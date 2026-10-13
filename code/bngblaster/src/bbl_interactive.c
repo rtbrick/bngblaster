@@ -711,12 +711,12 @@ bbl_interactive_window_job(timer_s *timer)
                 while(stream) {
                     rate_packets_tx_avg = 0;
                     rate_packets_rx_avg = 0;
-                    if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg;
+                    if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg / BBL_STREAM_RATE_SCALE;
                     tx_kbps = rate_packets_tx_avg * stream->tx_len * 8 / 1000;
                     if(rate_packets_tx_avg && tx_kbps == 0) {
                         tx_kbps = 1;
                     }
-                    if(stream->rate_packets_rx) rate_packets_rx_avg = stream->rate_packets_rx->avg;
+                    if(stream->rate_packets_rx) rate_packets_rx_avg = stream->rate_packets_rx->avg / BBL_STREAM_RATE_SCALE;
                     rx_kbps = rate_packets_rx_avg * stream->rx_len * 8 / 1000;
                     if(rate_packets_rx_avg && rx_kbps == 0) {
                         rx_kbps = 1;
@@ -777,12 +777,12 @@ bbl_interactive_window_job(timer_s *timer)
             if((!stream->session) && stream->tx_network_interface == g_network_if) {
                 rate_packets_tx_avg = 0;
                 rate_packets_rx_avg = 0;
-                if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg;
+                if(stream->rate_packets_tx) rate_packets_tx_avg = stream->rate_packets_tx->avg / BBL_STREAM_RATE_SCALE;
                 tx_kbps = rate_packets_tx_avg * stream->tx_len * 8 / 1000;
                 if(rate_packets_tx_avg && tx_kbps == 0) {
                     tx_kbps = 1;
                 }
-                if(stream->rate_packets_rx) rate_packets_rx_avg = stream->rate_packets_rx->avg;
+                if(stream->rate_packets_rx) rate_packets_rx_avg = stream->rate_packets_rx->avg / BBL_STREAM_RATE_SCALE;
                 rx_kbps = rate_packets_rx_avg * stream->rx_len * 8 / 1000;
                 if(rate_packets_rx_avg && rx_kbps == 0) {
                     rx_kbps = 1;

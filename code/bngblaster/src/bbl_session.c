@@ -1760,7 +1760,7 @@ bbl_session_ctrl_pending(int fd, uint32_t session_id __attribute__((unused)), js
                      "code", 200,
                      "sessions-pending", json_sessions);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -1804,7 +1804,7 @@ bbl_session_ctrl_counters(int fd, uint32_t session_id __attribute__((unused)), j
                             );
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     }
     return result;
@@ -1840,7 +1840,7 @@ bbl_session_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute
                          "session-info", session_json);
 
         if(root) {
-            result = json_dumpfd(root, fd, 0);
+            result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
             json_decref(root);
         } else {
             result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -2241,7 +2241,7 @@ bbl_session_ctrl_traffic_stats(int fd, uint32_t session_id __attribute__((unused
                              "total-flows", g_ctx->stats.session_traffic_flows,
                              "verified-flows", g_ctx->stats.session_traffic_flows_verified);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     }
     return result;
@@ -2375,7 +2375,7 @@ bbl_session_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
         "session-summary", jobj_array);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

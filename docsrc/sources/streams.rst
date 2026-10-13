@@ -401,15 +401,28 @@ Each flow can be queried separately using jsonpath expression with name and dire
         "rx-loss": 0,
         "rx-delay-us-min": 50,
         "rx-delay-us-max": 10561,
-        "rx-pps": 99,
-        "tx-pps": 99,
-        "tx-bps-l2": 90288,
-        "rx-bps-l2": 99792,
-        "rx-bps-l3": 79200,
-        "tx-mbps-l2": 0.090288,
-        "rx-mbps-l2": 0.099792,
-        "rx-mbps-l3": 0.0792
+        "rx-pps": 99.2,
+        "tx-pps": 99.2,
+        "tx-bps-l2": 90470,
+        "rx-bps-l2": 99993,
+        "rx-bps-l3": 79360,
+        "tx-mbps-l2": 0.09047,
+        "rx-mbps-l2": 0.099993,
+        "rx-mbps-l3": 0.07936
     }
+
+The stream rates ``rx-pps`` and ``tx-pps`` and the rates in bits per second
+derived from them are moving averages over the last 5 seconds with a
+resolution of 1/100 packets per second. Because the moving average counts
+whole packets, it can differ from the configured rate by up to one packet
+per window (0.2 PPS). The ``rx-pps-max`` and ``tx-pps-max`` values are the
+highest moving averages seen. Rates are only calculated for streams with at
+least 1 PPS and with the traffic option ``stream-rate-calculation`` enabled.
+
+The JSON report is generated after all streams are stopped, so the rates
+in the report may already be lower than during the test. The average rate
+over the whole test can be calculated from the stream output as
+``rx-packets / (rx-last-epoch - rx-first-epoch)``.
 
 Start/Stop Traffic
 ~~~~~~~~~~~~~~~~~~

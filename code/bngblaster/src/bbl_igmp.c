@@ -430,7 +430,7 @@ bbl_igmp_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__(
                          "code", 200,
                          "igmp-groups", groups);
         if(root) {
-            result = json_dumpfd(root, fd, 0);
+            result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
             json_decref(root);
         } else {
             result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -491,7 +491,7 @@ bbl_igmp_ctrl_zapping_stats(int fd, uint32_t session_id __attribute__((unused)),
                      "multicast-not-received", stats.mc_not_received);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

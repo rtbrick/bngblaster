@@ -116,7 +116,7 @@ ospf_ctrl_database(int fd, uint32_t session_id __attribute__((unused)), json_t *
                      "code", 200,
                      "ospf-database", database);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -174,7 +174,7 @@ ospf_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t
                      "code", 200,
                      "ospf-interfaces", interfaces);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
@@ -231,7 +231,7 @@ ospf_ctrl_neighbors(int fd, uint32_t session_id __attribute__((unused)), json_t 
                      "code", 200,
                      "ospf-neighbors", neighbors);
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");

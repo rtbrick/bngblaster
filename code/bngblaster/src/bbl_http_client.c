@@ -414,7 +414,7 @@ bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute_
                      "http-clients", json_clients);
 
     if(root) {
-        result = json_dumpfd(root, fd, 0);
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
     } else {
         result = bbl_ctrl_status(fd, "error", 500, "internal error");
