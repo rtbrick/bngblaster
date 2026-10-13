@@ -545,11 +545,13 @@ two directly connected 10G ports of an Intel X710 adapter (i40e driver),
 using native zero-copy mode.
 
 **RX threads:** The RX performance per thread depends on the CPU and packet
-size. In our tests, a single RX thread received up to about 1.9 Mpps per queue
-without loss, while loss started at around 2.1 Mpps per queue. RSS does not
-distribute traffic perfectly evenly, so plan enough RX threads to keep the
-busiest queue below this limit. Typically, more RX than TX threads are
-required.
+size. In our tests, a single RX thread received up to 2.4 Mpps per queue
+without loss and processed more than 6 Mpps with up to 0.1% loss. The loss is
+caused by short delays of the RX thread, not by its CPU capacity, so
+distributing the traffic over more queues reduces loss even if a single thread
+could process the full rate. RSS does not distribute traffic perfectly evenly,
+so plan enough RX threads to keep the busiest queue well below this limit.
+Typically, more RX than TX threads are required.
 
 **TX threads:** TX threads permanently poll and therefore use a full CPU core
 each, even if not sending at their limit. In our tests, a single TX thread
