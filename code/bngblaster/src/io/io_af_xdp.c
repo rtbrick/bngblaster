@@ -138,6 +138,50 @@ io_af_xdp_check_mtu(bbl_interface_s *interface)
 }
 
 /**
+ * The NIC RX ring is filled with frames of the AF_XDP socket. If the
+ * ring exceeds half of those frames, the frames still waiting to be
+ * processed are missing to refill the ring. A small ring can't absorb
+ * short delays of the RX thread. Both cause RX loss, visible only as
+ * rx_missed_errors in the NIC statistics, so warn about it.
+ */
+static void
+io_af_xdp_check_rx_ring(bbl_interface_s *interface)
+{
+    struct ifreq ifr = {0};
+    struct ethtool_ringparam ring = {0};
+    uint32_t rx_frames = next_pow2(interface->config->io_slots_rx);
+    uint32_t rx_ring_limit = rx_frames / 2;
+    int fd;
+
+    fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if(fd == -1) {
+        return;
+    }
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+    ring.cmd = ETHTOOL_GRINGPARAM;
+    ifr.ifr_data = (void*)&ring;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1 || !ring.rx_pending) {
+        close(fd);
+        return;
+    }
+    close(fd);
+
+    if(ring.rx_pending > rx_ring_limit) {
+        LOG(INFO, "Warning: AF_XDP NIC RX ring %u of interface %s exceeds half of "
+            "the %u RX frames (io-slots-rx), which causes RX loss, please increase "
+            "io-slots-rx to %u or reduce the NIC RX ring (e.g. 'ethtool -G %s rx %u')\n",
+            ring.rx_pending, interface->name, rx_frames, next_pow2(ring.rx_pending * 2),
+            interface->name, rx_ring_limit);
+    } else if(ring.rx_pending < 2048 && ring.rx_max_pending > ring.rx_pending) {
+        rx_ring_limit = ring.rx_max_pending < 4096 ? ring.rx_max_pending : 4096;
+        LOG(INFO, "Warning: AF_XDP NIC RX ring %u of interface %s is small (max %u), "
+            "please increase it (e.g. 'ethtool -G %s rx %u') with io-slots-rx of at least %u\n",
+            ring.rx_pending, interface->name, ring.rx_max_pending,
+            interface->name, rx_ring_limit, next_pow2(rx_ring_limit * 2));
+    }
+}
+
+/**
  * With RX VLAN offload enabled (the default on most drivers), the NIC
  * strips the VLAN tag in hardware and reports it out-of-band via the skb
  * (skb->vlan_tci) instead of leaving it in the frame data - that is how
@@ -1105,6 +1149,8 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
     if(!io_af_xdp_set_channels(interface, total_queues)) {
         return false;
     }
+
+    io_af_xdp_check_rx_ring(interface);
 
     if(!io_af_xdp_constrain_rss(interface, rx_queues, total_queues)) {
         return false;
