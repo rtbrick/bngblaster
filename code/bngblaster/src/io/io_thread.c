@@ -266,6 +266,8 @@ io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io)
     CPU_SET(cpu, &thread->cpuset);
     thread->selected_cpu = cpu;
     *cursor = (start + 1) % interface->local_cpuset_count;
+    LOG(INFO, "Warning: No free CPU for %s thread of interface %s, sharing CPU %u with another thread\n",
+        io->direction == IO_INGRESS ? "RX" : "TX", interface->name, cpu);
     return true;
 }
 
@@ -373,6 +375,21 @@ io_thread_start_all()
     struct timespec sleep = {0};
     struct timespec rem = {0};
     char name[16]; /* thread names are limited to 15 characters */
+    cpu_set_t cpuset;
+    int threads = 0;
+
+    /* Each I/O thread and the main thread should have its own CPU,
+     * otherwise threads are delayed, which causes packet loss. */
+    while(thread) {
+        threads++;
+        thread = thread->next;
+    }
+    if(threads && sched_getaffinity(0, sizeof(cpuset), &cpuset) == 0 &&
+       threads + 1 > CPU_COUNT(&cpuset)) {
+        LOG(INFO, "Warning: %d I/O threads plus main thread exceed %d available CPUs\n",
+            threads, CPU_COUNT(&cpuset));
+    }
+    thread = g_ctx->io_threads;
 
     sleep.tv_nsec = 7800179; /* prime number between 7 and 8ms */
     while(thread) {
