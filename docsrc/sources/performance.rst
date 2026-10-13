@@ -184,11 +184,83 @@ and without the profile, with identical results.
 
 The profile supports only PPPoE with a single VLAN tag. Double-tagged PPPoE,
 with outer type 0x8100 or 0x88a8 (``qinq``), was still received on a single
-queue with the profile loaded, so the recommendations for
-:ref:`traffic received on a single queue <single-queue>` apply.
+queue with the profile loaded. For double-tagged PPPoE, see
+:ref:`RSS by VLAN and MAC on Intel 700 Series <rss-vlan-mac>`.
 
 For :ref:`DPDK <dpdk-usage>`, the profile must be loaded via DPDK instead
 of the kernel driver.
+
+.. _rss-vlan-mac:
+
+RSS by VLAN and MAC on Intel 700 Series
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Without the DDP profile, the Intel 700 Series hashes all non-IP traffic,
+including PPPoE, only on the Ethernet type. All PPPoE packets have the same
+Ethernet type, so they are received on the same queue. The fields used for
+this hash can be extended by VLAN and MAC addresses. If each session has its
+own VLAN or MAC address, as usual with the BNG Blaster, the traffic is then
+distributed over all queues. This works for single-tagged, double-tagged and
+QinQ (outer type 0x88a8) PPPoE, without the DDP profile.
+
+.. warning::
+
+    This method writes a NIC register directly via the debugfs interface of
+    the i40e driver. It is a lab tweak and not an official interface of the
+    driver. The register is global for all ports of the adapter and applies
+    to all non-IP traffic. It is not persistent and must be set again after
+    a reboot or reset of the adapter.
+
+The register ``GLQF_HASH_INSET`` defines the hash fields for the packet type
+*L2 payload* (63) in two 32-bit words. The following values were used in our
+tests:
+
++----------------------------------+------------------+------------------+
+| Hash fields                      | Low (0x2677F8)   | High (0x2677FC)  |
++==================================+==================+==================+
+| Ethernet type (default)          | 0x00004000       | 0x00000000       |
++----------------------------------+------------------+------------------+
+| Ethernet type, VLANs             | 0x04004000       | 0x00800000       |
++----------------------------------+------------------+------------------+
+| Ethernet type, VLANs, MACs       | 0x04004000       | 0xFC800000       |
++----------------------------------+------------------+------------------+
+
+VLANs means outer and inner VLAN, MACs means source and destination MAC address.
+The register is written via the debugfs command file of any port of the
+adapter (PCI address), with debugfs mounted.
+
+.. code-block:: none
+
+    F=/sys/kernel/debug/i40e/<pci-address>/command
+
+    # hash on Ethernet type, VLANs and MAC addresses
+    echo "write 0x2677F8 0x04004000" > $F
+    echo "write 0x2677FC 0xFC800000" > $F
+
+    # verify (result is shown in the kernel log)
+    echo "read 0x2677F8" > $F
+    echo "read 0x2677FC" > $F
+    dmesg | tail -2
+
+    # restore default (Ethernet type only)
+    echo "write 0x2677F8 0x00004000" > $F
+    echo "write 0x2677FC 0x00000000" > $F
+
+For QinQ, the MAC addresses are required. The NIC does not recognize the outer
+type 0x88a8 as VLAN by default, so the VLANs are not available for the hash.
+The MAC addresses are always at the same position, and each BNG Blaster session
+uses its own client MAC address (destination MAC address in downstream and
+source MAC address in upstream direction).
+
+In our tests with 650 PPPoE sessions (6.3 Mpps per interface and direction,
+128-byte packets, 4 RX threads per interface, :ref:`AF_XDP <af-xdp-usage>`),
+the traffic was distributed evenly over all 4 queues without loss for
+single-tagged, double-tagged and QinQ PPPoE. With the default hash, all
+traffic was received on one queue with up to 0.5% loss.
+
+Unlike the DDP profile, which hashes the IP header inside PPPoE, this method
+requires a different VLAN or MAC address per session. The DDP profile and this
+method were not tested together.
 
 .. note::
 
@@ -577,7 +649,8 @@ remaining loss caused by such delays (see the NIC RX ring requirements above).
 .. _single-queue:
 
 **Single queue:** If RSS can't distribute the received traffic, e.g. PPPoE
-without the :ref:`DDP profile <ddp-pppoe>` or double-tagged PPPoE, all packets
+without the :ref:`DDP profile <ddp-pppoe>` or
+:ref:`RSS by VLAN and MAC <rss-vlan-mac>`, all packets
 of an interface are handled by one queue and one RX thread. In our tests, this
 worked without loss up to about 2.4 Mpps per interface and with up to 0.5% loss
 at 6.35 Mpps. In this case, the CPU handling the interrupt of this queue is
