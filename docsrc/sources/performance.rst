@@ -38,6 +38,14 @@ multiple RX threads but only one TX thread.
 It is also possible to start dedicated threads for TX but remain RX in the main thread or
 vice versa by setting the number of threads to zero (default).
 
+The I/O threads are named by direction, thread index and interface, for example
+``rx0-eth1`` or ``tx1-eth2``. Long names are truncated to 15 characters.
+This allows to monitor the CPU usage and placement of each thread.
+
+.. code-block:: none
+
+    top -H -p $(pgrep -x bngblaster)
+
 With multithreading, you should be able to scale up to 8 million PPS bidirectional, depending on
 the actual configuration and setup. This allows starting 1 million flows with 1 PPS per flow over
 at least 4 TX threads to verify all prefixes of a BGP full table for example.

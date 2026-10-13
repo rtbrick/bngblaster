@@ -372,11 +372,18 @@ io_thread_start_all()
     io_thread_s *thread = g_ctx->io_threads;
     struct timespec sleep = {0};
     struct timespec rem = {0};
+    char name[16]; /* thread names are limited to 15 characters */
 
     sleep.tv_nsec = 7800179; /* prime number between 7 and 8ms */
     while(thread) {
         thread->active = true;
         pthread_create(&thread->thread, NULL, io_thread_main, (void *)thread);
+        /* Thread name with direction first, so that it is kept
+         * if long interface names are truncated (e.g. rx0-eth1). */
+        snprintf(name, sizeof(name), "%s%d-%s",
+                 thread->io->direction == IO_INGRESS ? "rx" : "tx",
+                 thread->io->id, thread->io->interface->name);
+        pthread_setname_np(thread->thread, name);
         if(thread->set_cpu_affinity) {
             if(pthread_setaffinity_np(thread->thread, sizeof(cpu_set_t), &thread->cpuset)) {
                 LOG_NOARG(ERROR, "Failed to set thread CPU affinity\n");

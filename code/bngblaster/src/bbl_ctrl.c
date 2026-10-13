@@ -735,6 +735,7 @@ bbl_ctrl_socket_init()
         LOG_NOARG(ERROR, "Failed to create ctrl thread\n");
         return false;
     }
+    pthread_setname_np(ctrl->thread, "bbl-ctrl");
 
     /* Start ctrl main job */
     timer_add_periodic(&g_ctx->timer_root, &ctrl->main.timer, "CTRL Socket Main Timer", 
