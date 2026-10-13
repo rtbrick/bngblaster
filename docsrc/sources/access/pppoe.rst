@@ -135,6 +135,36 @@ PPP IP6CP (IPv6)
 ^^^^^^^^^^^^^^^^
 .. include:: ../configuration/ppp_ip6cp.rst
 
+DHCPv6
+~~~~~~
+
+DHCPv6 over PPPoE is started after an ICMPv6 router advertisement with the
+managed (M) or other-config (O) flag is received. Per default, only IA_PD is
+requested, and the IPv6 address of the session is assigned via SLAAC from the
+router advertisement prefix.
+
+With the access interface option ``dhcpv6-ia-na`` enabled, IA_NA is requested
+in addition. An address received via IA_NA is used as the IPv6 address of
+the session instead of the SLAAC address, which is required if the router
+advertisement does not contain a prefix with the autonomous (A) flag.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "access": [
+                {
+                    "interface": "eth1",
+                    "type": "pppoe",
+                    "dhcpv6-ia-na": true
+                }
+            ]
+        }
+    }
+
+The IPv6 address of the session is shown as ``ipv6-address``
+in the ``session-info`` command output.
+
 LCP Vendor Extension
 ~~~~~~~~~~~~~~~~~~~~
 

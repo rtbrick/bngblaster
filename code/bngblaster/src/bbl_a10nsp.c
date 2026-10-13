@@ -450,6 +450,14 @@ bbl_a10nsp_pppoe_dhcpv6_handler(bbl_a10nsp_interface_s *interface,
     dhcpv6->oro = false;
     dhcpv6->dns1 = NULL;
     dhcpv6->dns2 = NULL;
+    if(dhcpv6->ia_na_iaid) {
+        dhcpv6->ia_na_option_len = 0;
+        dhcpv6->ia_na_address = (void*)&mock_ipv6_ia_na;
+        dhcpv6->ia_na_t1 = 300;
+        dhcpv6->ia_na_t2 = 600;
+        dhcpv6->ia_na_preferred_lifetime = 900;
+        dhcpv6->ia_na_valid_lifetime = 1800;
+    }
     if(dhcpv6->ia_pd_iaid) {
         dhcpv6->ia_pd_option_len = 0;
         dhcpv6->ia_pd_prefix = (void*)&mock_ipv6_ia_pd;

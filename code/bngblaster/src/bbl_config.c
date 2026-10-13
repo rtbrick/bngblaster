@@ -1104,7 +1104,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "access-line-profile-id", "ipcp", "dhcp",
         "dhcp-vendor-class-id",
         "ipv4", "ip6cp", "dhcpv6",
-        "dhcpv6-ldra", "ipv6", "igmp-autostart",
+        "dhcpv6-ldra", "dhcpv6-ia-na", "ipv6", "igmp-autostart",
         "igmp-version", "session-traffic-autostart", 
         "session-group-id", "stream-group-id",
         "session-limit", "arp-client-group-id",
@@ -1446,6 +1446,16 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->dhcpv6_ldra = json_boolean_value(value);
     } else {
         access_config->dhcpv6_ldra = g_ctx->config.dhcpv6_ldra;
+    }
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "dhcpv6-ia-na");
+    if(value) {
+        access_config->dhcpv6_ia_na = json_boolean_value(value);
+    } else if(access_config->access_type == ACCESS_TYPE_IPOE) {
+        access_config->dhcpv6_ia_na = g_ctx->config.dhcpv6_ia_na;
+    } else {
+        /* IA_NA is optional for PPP, where the address
+         * is usually assigned via SLAAC. */
+        access_config->dhcpv6_ia_na = false;
     }
     JSON_OBJ_GET_BOOL(access_interface, value, "access", "ipv6");
     if(value) {

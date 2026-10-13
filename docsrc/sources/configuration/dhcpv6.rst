@@ -8,7 +8,8 @@
 | **enable**                        | | This option allows enabling or disabling DHCPv6.                   |
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
-| **ia-na**                         | | This option allows enabling or disabling DHCPv6 IA_NA.             |
+| **ia-na**                         | | This option allows enabling or disabling DHCPv6 IA_NA for IPoE.    |
+|                                   | | IA_NA for PPPoE is enabled per access interface (dhcpv6-ia-na).    |
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ia-pd**                         | | This option allows enabling or disabling DHCPv6 IA_PD.             |

@@ -2084,6 +2084,10 @@
                     "type": "boolean",
                     "description": "Overwrite DHCPv6 LDRA"
                 },
+                "dhcpv6-ia-na": {
+                    "type": "boolean",
+                    "description": "Overwrite DHCPv6 IA_NA (default false for PPPoE and PPPoL2TP)"
+                },
                 "igmp-autostart": {
                     "type": "boolean",
                     "description": "Overwrite IGMP autostart"

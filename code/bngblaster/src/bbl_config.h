@@ -108,6 +108,7 @@ typedef struct bbl_access_config_
     bool ip6cp_enable;
     bool dhcpv6_enable;
     bool dhcpv6_ldra;
+    bool dhcpv6_ia_na;
 
     bool session_traffic_autostart;
 

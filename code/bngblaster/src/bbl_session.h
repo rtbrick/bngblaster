@@ -235,6 +235,7 @@ typedef struct bbl_session_
     bool dhcpv6_requested;
     bool dhcpv6_established;
     bool dhcpv6_release_restart; /* Restart DHCPv6 after release */
+    bool ipv6_address_ia_na; /* IPv6 address assigned via DHCPv6 IA_NA (PPP) */
     uint8_t dhcpv6_retry;
     uint8_t dhcpv6_duid[DUID_LEN];
     uint8_t dhcpv6_server_duid[DHCPV6_BUFFER];

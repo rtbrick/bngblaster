@@ -1404,6 +1404,7 @@ bbl_access_lcp_restart(bbl_session_s *session)
         session->delegated_ipv6_prefix.len = 0;
         session->icmpv6_ra_received = false;
         memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+        session->ipv6_address_ia_na = false;
         memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
         memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
         if(session->dhcpv6_state > BBL_DHCP_DISABLED) {

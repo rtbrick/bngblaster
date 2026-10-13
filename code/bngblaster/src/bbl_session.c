@@ -472,6 +472,7 @@ bbl_session_reset(bbl_session_s *session) {
     if(!ipv6_addr_not_zero(&session->access_config->static_ip6)) {
         memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
     }
+    session->ipv6_address_ia_na = false;
     memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
     memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
     memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
@@ -1531,6 +1532,9 @@ bbl_session_json(bbl_session_s *session, bool debug)
             "a10nsp", a10nsp_session,
             "l2tp", l2tp_session);
 
+        if(root && ipv6_addr_not_zero(&session->ipv6_address)) {
+            json_object_set_new(root, "ipv6-address", json_string(format_ipv6_address(&session->ipv6_address)));
+        }
         if(root && session->access_type == ACCESS_TYPE_PPPOL2TP) {
             /* There is no PPPoE server in front of a PPPoL2TP session. */
             json_object_del(root, "pppoe-session-id");

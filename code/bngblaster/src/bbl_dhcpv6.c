@@ -47,7 +47,17 @@ bbl_dhcpv6_stop(bbl_session_s *session)
         session->ipv6_prefix.len = 0;
         memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
         ENABLE_ENDPOINT(session->endpoint.ipv6);
+    } else if(session->ipv6_address_ia_na) {
+        if(session->ipv6_prefix.len) {
+            /* Fall back to the SLAAC address. */
+            *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
+            *(uint64_t*)&session->ipv6_address[8] = session->ip6cp_ipv6_identifier;
+        } else {
+            memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+            ENABLE_ENDPOINT(session->endpoint.ipv6);
+        }
     }
+    session->ipv6_address_ia_na = false;
     session->delegated_ipv6_prefix.len = 0;
     memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
     ENABLE_ENDPOINT(session->endpoint.ipv6pd);
@@ -134,8 +144,7 @@ bbl_dhcpv6_start(bbl_session_s *session)
         }
         session->dhcpv6_xid = rand() & 0xffffff;
 
-        if(g_ctx->config.dhcpv6_ia_na && 
-           session->access_type == ACCESS_TYPE_IPOE) {
+        if(session->access_config->dhcpv6_ia_na) {
             session->dhcpv6_ia_na_iaid = g_dhcpv6_iaid++;
         }
         if(g_ctx->config.dhcpv6_ia_pd) {
@@ -317,7 +326,8 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                 memcpy(&session->dhcpv6_dns2, dhcpv6->dns2, IPV6_ADDR_LEN);
             }
         }
-        if(session->access_type == ACCESS_TYPE_IPOE && dhcpv6->ia_na_address && dhcpv6->ia_na_valid_lifetime) {
+        if((session->access_type == ACCESS_TYPE_IPOE || session->dhcpv6_ia_na_iaid) &&
+           dhcpv6->ia_na_address && dhcpv6->ia_na_valid_lifetime) {
             /* IA_NA */
             t1 = dhcpv6->ia_na_t1;
             t2 = dhcpv6->ia_na_t2;
@@ -328,8 +338,14 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
             session->dhcpv6_lease_time = dhcpv6->ia_na_valid_lifetime;
             if(memcmp(&session->ipv6_address, dhcpv6->ia_na_address, sizeof(ipv6addr_t)) != 0) {
                 memcpy(&session->ipv6_address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
-                memcpy(&session->ipv6_prefix.address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
-                session->ipv6_prefix.len = 128;
+                if(session->access_type == ACCESS_TYPE_IPOE) {
+                    memcpy(&session->ipv6_prefix.address, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
+                    session->ipv6_prefix.len = 128;
+                } else {
+                    /* Keep the RA prefix for SLAAC fallback. */
+                    session->ipv6_address_ia_na = true;
+                    ACTIVATE_ENDPOINT(session->endpoint.ipv6);
+                }
                 session->version++;
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_NA address %s/128\n", session->session_id,
                     format_ipv6_address(&session->ipv6_address));
