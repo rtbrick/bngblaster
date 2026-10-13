@@ -213,6 +213,7 @@ typedef struct bbl_session_
     dhcp_state_t dhcp_state;
     bool dhcp_requested;
     bool dhcp_established;
+    bool dhcp_release_restart; /* Restart DHCP after release */
     uint8_t  dhcp_retry;
     uint32_t dhcp_xid;
     uint32_t dhcp_address;
@@ -233,6 +234,7 @@ typedef struct bbl_session_
     dhcp_state_t dhcpv6_state;
     bool dhcpv6_requested;
     bool dhcpv6_established;
+    bool dhcpv6_release_restart; /* Restart DHCPv6 after release */
     uint8_t dhcpv6_retry;
     uint8_t dhcpv6_duid[DUID_LEN];
     uint8_t dhcpv6_server_duid[DHCPV6_BUFFER];

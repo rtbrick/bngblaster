@@ -26,6 +26,12 @@ void
 bbl_dhcp_restart(bbl_session_s *session);
 
 void
+bbl_dhcp_release(bbl_session_s *session);
+
+void
+bbl_dhcp_release_done(bbl_session_s *session);
+
+void
 bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp);
 
 int

@@ -516,10 +516,7 @@ bbl_tx_dhcpv6_timeout(timer_s *timer)
             bbl_session_tx_qnode_insert(session);
         } else {
             if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
-                session->dhcpv6_state = BBL_DHCP_INIT;
-                if(session->session_state == BBL_TERMINATING) {
-                    bbl_session_clear(session);
-                }
+                bbl_dhcpv6_release_done(session);
             } else {
                 bbl_dhcpv6_restart(session);
             }
@@ -1047,19 +1044,19 @@ bbl_dhcp_timeout(timer_s *timer)
     bbl_session_s *session = timer->data;
     if(!(session->dhcp_state == BBL_DHCP_INIT ||
          session->dhcp_state == BBL_DHCP_BOUND)) {
+        if(session->dhcp_state == BBL_DHCP_RELEASE &&
+           session->dhcp_retry >= g_ctx->config.dhcp_release_retry) {
+            bbl_dhcp_release_done(session);
+            return;
+        }
         session->access_interface->stats.dhcp_timeout++;
         if(session->dhcp_retry < g_ctx->config.dhcp_retry) {
             session->send_requests |= BBL_SEND_DHCP_REQUEST;
             bbl_session_tx_qnode_insert(session);
+        } else if(session->dhcp_state == BBL_DHCP_RELEASE) {
+            bbl_dhcp_release_done(session);
         } else {
-            if(session->dhcp_state == BBL_DHCP_RELEASE) {
-                bbl_dhcp_stop(session, false);
-                if(session->session_state == BBL_TERMINATING) {
-                    bbl_session_clear(session);
-                }
-            } else {
-                bbl_dhcp_restart(session);
-            }
+            bbl_dhcp_restart(session);
         }
     }
 }
@@ -1211,10 +1208,9 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
             timer_add(&g_ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 
                       g_ctx->config.dhcp_release_interval, 0, session, &bbl_dhcp_timeout);
         } else {
-            bbl_dhcp_stop(session, false);
-            if(session->session_state == BBL_TERMINATING) {
-                bbl_session_clear(session);
-            }
+            /* Complete release after the last one is sent. */
+            timer_add(&g_ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 
+                      0, 0, session, &bbl_dhcp_timeout);
         }
     } else {
         timer_add(&g_ctx->timer_root, &session->timer_dhcp_retry, "DHCP timeout", 

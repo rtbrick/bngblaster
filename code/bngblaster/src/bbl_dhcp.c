@@ -24,6 +24,7 @@ bbl_dhcp_stop(bbl_session_s *session, bool keep_address)
     LOG(DHCP, "DHCP (ID: %u) Stop DHCP\n", session->session_id);
 
     session->dhcp_state = BBL_DHCP_INIT;
+    session->dhcp_release_restart = false;
 
     /* Reset session IP configuration */
     ENABLE_ENDPOINT(session->endpoint.ipv4);
@@ -100,7 +101,7 @@ bbl_dhcp_release(bbl_session_s *session)
             session->dhcp_request_timestamp.tv_sec = 0;
             session->dhcp_request_timestamp.tv_nsec = 0;
             if(!g_ctx->config.dhcp_release_retry) {
-                bbl_dhcp_stop(session, false);
+                bbl_dhcp_release_done(session);
             } else {
                 LOG(DHCP, "DHCP (ID: %u) Release DHCP\n", session->session_id);
                 session->dhcp_state = BBL_DHCP_RELEASE;
@@ -112,6 +113,28 @@ bbl_dhcp_release(bbl_session_s *session)
             break;
         default:
             break;
+    }
+}
+
+/**
+ * bbl_dhcp_release_done
+ *
+ * This function completes a DHCP release after a reply
+ * is received or all release retries are sent.
+ *
+ * @param session session
+ */
+void
+bbl_dhcp_release_done(bbl_session_s *session)
+{
+    bool restart = session->dhcp_release_restart;
+
+    bbl_dhcp_stop(session, false);
+    if(session->session_state == BBL_TERMINATING) {
+        bbl_session_clear(session);
+    } else if(restart) {
+        bbl_dhcp_start(session);
+        bbl_session_tx_qnode_insert(session);
     }
 }
 
@@ -187,8 +210,10 @@ void
 bbl_dhcp_s2(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
-    LOG(DHCP, "DHCP (ID: %u) Lease expired\n", session->session_id);
-    bbl_dhcp_restart(session);
+    if(session->dhcp_state > BBL_DHCP_INIT && session->dhcp_state < BBL_DHCP_RELEASE) {
+        LOG(DHCP, "DHCP (ID: %u) Lease expired\n", session->session_id);
+        bbl_dhcp_restart(session);
+    }
 }
 
 static void
@@ -382,10 +407,8 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
             }
             break;
         case BBL_DHCP_RELEASE:
-            session->dhcp_state = BBL_DHCP_INIT;
-            if(session->session_state == BBL_TERMINATING) {
-                bbl_session_clear(session);
-            }
+            bbl_dhcp_release_done(session);
+            break;
         default:
             break;
     }

@@ -57,6 +57,7 @@ bbl_dhcpv6_stop(bbl_session_s *session)
     timer_del(session->timer_dhcpv6_t2);
     session->version++;
     session->dhcpv6_state = BBL_DHCP_INIT;
+    session->dhcpv6_release_restart = false;
     session->dhcpv6_ia_na_t1 = 0;
     session->dhcpv6_ia_na_t2 = 0;
     session->dhcpv6_ia_na_preferred_lifetime = 0;
@@ -82,6 +83,28 @@ bbl_dhcpv6_stop(bbl_session_s *session)
         g_ctx->dhcpv6_requested--;
     }
     session->dhcpv6_requested = false;
+}
+
+/**
+ * bbl_dhcpv6_release_done
+ *
+ * This function completes a DHCPv6 release after a reply
+ * is received or all release retries are sent.
+ *
+ * @param session session
+ */
+void
+bbl_dhcpv6_release_done(bbl_session_s *session)
+{
+    bool restart = session->dhcpv6_release_restart;
+
+    bbl_dhcpv6_stop(session);
+    if(session->session_state == BBL_TERMINATING) {
+        bbl_session_clear(session);
+    } else if(restart) {
+        bbl_dhcpv6_start(session);
+        bbl_session_tx_qnode_insert(session);
+    }
 }
 
 /**
@@ -270,10 +293,7 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
 
         /* Handle DHCPv6 teardown */
         if(session->dhcpv6_state == BBL_DHCP_RELEASE) {
-            session->dhcpv6_state = BBL_DHCP_INIT;
-            if(session->session_state == BBL_TERMINATING) {
-                bbl_session_clear(session);
-            }
+            bbl_dhcpv6_release_done(session);
             return;
         }
 
