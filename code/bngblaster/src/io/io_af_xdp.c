@@ -46,6 +46,13 @@
 
 #define AF_XDP_BURST 256
 
+/* In zero-copy mode, a TX kick (sendto) only wakes up the driver, which
+ * then sends all descriptors in the TX ring. Kicking for every round,
+ * often with only a few new packets, costs a syscall per round. Kick
+ * only if enough descriptors are pending or after a short interval. */
+#define AF_XDP_TX_KICK_BATCH        64
+#define AF_XDP_TX_KICK_INTERVAL_NS  10000
+
 extern bool g_init_phase;
 extern bool g_traffic;
 
@@ -77,6 +84,9 @@ typedef struct io_af_xdp_queue_ {
     int fd;
     uint32_t queue_id;
     bool copy_mode; /* copy (not zero-copy) mode, TX requires sendto() kick */
+
+    uint32_t tx_kick_pending; /* TX descriptors submitted since last kick */
+    uint64_t tx_kick_last; /* timestamp of last kick (nsec) */
 } io_af_xdp_queue_s;
 
 /* Conservative worst-case per-packet overhead (double VLAN tag, ...) added
@@ -1094,9 +1104,16 @@ io_af_xdp_thread_tx_run_fn(io_thread_s *thread)
         if(used) {
             xsk_ring_prod__submit(&q->tx, used);
             io->queued += used;
+            q->tx_kick_pending += used;
         }
 
-        io_af_xdp_kick_tx(q);
+        now = timespec_to_nsec(&io->timestamp);
+        if(q->copy_mode || q->tx_kick_pending >= AF_XDP_TX_KICK_BATCH ||
+           now - q->tx_kick_last >= AF_XDP_TX_KICK_INTERVAL_NS) {
+            io_af_xdp_kick_tx(q);
+            q->tx_kick_pending = 0;
+            q->tx_kick_last = now;
+        }
         if(io->queued) {
             idle_rounds = 0;
             io->queued = 0;
