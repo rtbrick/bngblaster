@@ -553,7 +553,9 @@ required.
 
 **TX threads:** TX threads permanently poll and therefore use a full CPU core
 each, even if not sending at their limit. In our tests, a single TX thread
-sent at least 3.2 Mpps (the actual limit was not reached).
+sent at least 5.8 Mpps (the actual limit was not reached), so one TX thread
+per 10G interface was sufficient. Using fewer TX threads leaves more CPU
+cores for RX threads.
 
 **CPU cores:** Each RX and TX thread should have its own physical CPU core,
 including SMT siblings. The total number of RX and TX threads of all links
