@@ -2138,6 +2138,7 @@ bbl_l2tp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json
     json_t *root, *sessions;
 
     bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
+    bbl_l2tp_client_s *l2tp_client = g_ctx->config.l2tp_client;
     bbl_l2tp_tunnel_s *l2tp_tunnel;
     bbl_l2tp_session_s *l2tp_session;
     l2tp_key_t l2tp_key = {0};
@@ -2187,6 +2188,15 @@ bbl_l2tp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json
                 }
             }
             l2tp_server = l2tp_server->next;
+        }
+        while(l2tp_client) {
+            CIRCLEQ_FOREACH(l2tp_tunnel, &l2tp_client->tunnel_qhead, tunnel_qnode) {
+                CIRCLEQ_FOREACH(l2tp_session, &l2tp_tunnel->session_qhead, session_qnode) {
+                    if(!l2tp_session->key.session_id) continue; /* skip tunnel session */
+                    json_array_append_new(sessions, l2tp_session_json(l2tp_session));
+                }
+            }
+            l2tp_client = l2tp_client->next;
         }
     }
     root = json_pack("{ss si so}",

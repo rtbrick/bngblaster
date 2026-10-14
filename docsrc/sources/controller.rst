@@ -190,7 +190,7 @@ Command
 ``POST /api/v1/instances/<instance-name>/_command``
 
 The JSON body of this API call will be passed to the bngblaster instance 
-control socket (``/var/bngbnlaster/<instance-name>/run.sock``). The result will 
+control socket (``/var/bngblaster/<instance-name>/run.sock``). The result will 
 be passed back to the client.
 
 Example:

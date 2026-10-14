@@ -2340,8 +2340,7 @@ bbl_session_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
                 json_array_append_new(jobj_array, jobj);
             }
         }
-    }
-    if(sessions) {
+    } else if(sessions) {
         size = json_array_size(sessions);
         for(int i = 0; i < size; i++) {
             jobj = json_array_get(sessions, i);

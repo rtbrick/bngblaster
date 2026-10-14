@@ -118,9 +118,14 @@ for interface links referenced by interface functions.
 
     {
         "interfaces": {
-            "tx-interval": 0.1,
-            "rx-interval": 0.1,
-            "io-slots": 4096
+            "links": [
+                {
+                    "interface": "eth1",
+                    "io-mode": "packet_mmap_raw",
+                    "io-slots": 4096,
+                    "rx-threads": 1
+                }
+            ]
         }
     }
 
@@ -165,8 +170,6 @@ for all kinds of interface functions.
             ]
         }
     }
-
-.. _io-modes:
 
 Interface Functions
 -------------------
@@ -309,12 +312,14 @@ Untagged
 .. code-block:: json
 
     {
-        "access": {
-            "interface": "eth1",
-            "outer-vlan-min": 0,
-            "outer-vlan-max": 0,
-            "inner-vlan-min": 0,
-            "inner-vlan-max": 0
+        "interfaces": {
+            "access": {
+                "interface": "eth1",
+                "outer-vlan-min": 0,
+                "outer-vlan-max": 0,
+                "inner-vlan-min": 0,
+                "inner-vlan-max": 0
+            }
         }
     }
 
@@ -323,12 +328,14 @@ Single Tagged
 .. code-block:: json
 
     {
-        "access": {
-            "interface": "eth1",
-            "outer-vlan-min": 1,
-            "outer-vlan-max": 4049,
-            "inner-vlan-min": 0,
-            "inner-vlan-max": 0
+        "interfaces": {
+            "access": {
+                "interface": "eth1",
+                "outer-vlan-min": 1,
+                "outer-vlan-max": 4049,
+                "inner-vlan-min": 0,
+                "inner-vlan-max": 0
+            }
         }
     }
 
@@ -338,12 +345,14 @@ Double Tagged
 .. code-block:: json
 
     {
-        "access": {
-            "interface": "eth1",
-            "outer-vlan-min": 1,
-            "outer-vlan-max": 4049,
-            "inner-vlan-min": 7,
-            "inner-vlan-max": 7
+        "interfaces": {
+            "access": {
+                "interface": "eth1",
+                "outer-vlan-min": 1,
+                "outer-vlan-max": 4049,
+                "inner-vlan-min": 7,
+                "inner-vlan-max": 7
+            }
         }
     }
 
@@ -352,13 +361,15 @@ Triple Tagged
 .. code-block:: json
 
     {
-        "access": {
-            "interface": "eth1",
-            "outer-vlan-min": 10,
-            "outer-vlan-max": 20,
-            "inner-vlan-min": 128,
-            "inner-vlan-max": 4000,
-            "third-vlan": 7
+        "interfaces": {
+            "access": {
+                "interface": "eth1",
+                "outer-vlan-min": 10,
+                "outer-vlan-max": 20,
+                "inner-vlan-min": 128,
+                "inner-vlan-max": 4000,
+                "third-vlan": 7
+            }
         }
     }
 
@@ -368,49 +379,51 @@ or VLAN ranges as shown in the example below.
 .. code-block:: json
 
     {
-        "access": [
-            {
-                "interface": "eth1",
-                "type": "pppoe",
-                "session-group-id": 1,
-                "username": "pta@rtbrick.com",
-                "outer-vlan-min": 1000,
-                "outer-vlan-max": 1999,
-                "inner-vlan-min": 7,
-                "inner-vlan-max": 7
-            },
-            {
-                "interface": "eth1",
-                "type": "pppoe",
-                "session-group-id": 2,
-                "username": "l2tp@rtbrick.com",
-                "outer-vlan-min": 2000,
-                "outer-vlan-max": 2999,
-                "inner-vlan-min": 7,
-                "inner-vlan-max": 7
-            },
-            {
-                "interface": "eth3",
-                "type": "pppoe",
-                "session-group-id": 1,
-                "username": "test@rtbrick.com",
-                "outer-vlan-min": 128,
-                "outer-vlan-max": 4000,
-                "inner-vlan-min": 7,
-                "inner-vlan-max": 7
-            },
-            {
-                "interface": "eth4",
-                "type": "ipoe",
-                "session-group-id": 3,
-                "outer-vlan-min": 8,
-                "outer-vlan-max": 9,
-                "address": "200.0.0.1",
-                "address-iter": "0.0.0.4",
-                "gateway": "200.0.0.2",
-                "gateway-iter": "0.0.0.4"
-            }
-        ]
+        "interfaces": {
+            "access": [
+                {
+                    "interface": "eth1",
+                    "type": "pppoe",
+                    "session-group-id": 1,
+                    "username": "pta@rtbrick.com",
+                    "outer-vlan-min": 1000,
+                    "outer-vlan-max": 1999,
+                    "inner-vlan-min": 7,
+                    "inner-vlan-max": 7
+                },
+                {
+                    "interface": "eth1",
+                    "type": "pppoe",
+                    "session-group-id": 2,
+                    "username": "l2tp@rtbrick.com",
+                    "outer-vlan-min": 2000,
+                    "outer-vlan-max": 2999,
+                    "inner-vlan-min": 7,
+                    "inner-vlan-max": 7
+                },
+                {
+                    "interface": "eth3",
+                    "type": "pppoe",
+                    "session-group-id": 1,
+                    "username": "test@rtbrick.com",
+                    "outer-vlan-min": 128,
+                    "outer-vlan-max": 4000,
+                    "inner-vlan-min": 7,
+                    "inner-vlan-max": 7
+                },
+                {
+                    "interface": "eth4",
+                    "type": "ipoe",
+                    "session-group-id": 3,
+                    "outer-vlan-min": 8,
+                    "outer-vlan-max": 9,
+                    "address": "200.0.0.1",
+                    "address-iter": "0.0.0.4",
+                    "gateway": "200.0.0.2",
+                    "gateway-iter": "0.0.0.4"
+                }
+            ]
+        }
     }
 
 
@@ -430,23 +443,25 @@ section using this mode.
 .. code-block:: json
 
     {
-        "access": [
-            {
-                "interface": "eth1",
-                "type": "pppoe",
-                "vlan-mode": "N:1",
-                "username": "test@rtbrick.com",
-                "outer-vlan": 7
-            },
-            {
-                "interface": "eth2",
-                "type": "pppoe",
-                "vlan-mode": "N:1",
-                "username": "test@rtbrick.com",
-                "outer-vlan": 2000,
-                "inner-vlan": 7
-            }
-        ]
+        "interfaces": {
+            "access": [
+                {
+                    "interface": "eth1",
+                    "type": "pppoe",
+                    "vlan-mode": "N:1",
+                    "username": "test@rtbrick.com",
+                    "outer-vlan": 7
+                },
+                {
+                    "interface": "eth2",
+                    "type": "pppoe",
+                    "vlan-mode": "N:1",
+                    "username": "test@rtbrick.com",
+                    "outer-vlan": 2000,
+                    "inner-vlan": 7
+                }
+            ]
+        }
     }
 
 One or more access interface blocks can be grouped using the ``session-group-id``, 
@@ -458,28 +473,30 @@ all odd VLAN identifiers to session group 2.
 .. code-block:: json
 
     {
-        "access": [
-            {
-                "interface": "eth1",
-                "type": "pppoe",
-                "session-group-id": 1,
-                "username": "even@rtbrick.com",
-                "outer-vlan-min": 1000,
-                "outer-vlan-max": 1998,
-                "outer-vlan-step": 2,
-                "inner-vlan": 7
-            },
-            {
-                "interface": "eth1",
-                "type": "pppoe",
-                "session-group-id": 2,
-                "username": "odd@rtbrick.com",
-                "outer-vlan-min": 1001,
-                "outer-vlan-max": 1999,
-                "outer-vlan-step": 2,
-                "inner-vlan": 7
-            }
-        ]
+        "interfaces": {
+            "access": [
+                {
+                    "interface": "eth1",
+                    "type": "pppoe",
+                    "session-group-id": 1,
+                    "username": "even@rtbrick.com",
+                    "outer-vlan-min": 1000,
+                    "outer-vlan-max": 1998,
+                    "outer-vlan-step": 2,
+                    "inner-vlan": 7
+                },
+                {
+                    "interface": "eth1",
+                    "type": "pppoe",
+                    "session-group-id": 2,
+                    "username": "odd@rtbrick.com",
+                    "outer-vlan-min": 1001,
+                    "outer-vlan-max": 1999,
+                    "outer-vlan-step": 2,
+                    "inner-vlan": 7
+                }
+            ]
+        }
     }
 
 
@@ -525,6 +542,8 @@ as shown in the example below.
     with network or access interface functions!
 
 
+.. _io-modes:
+
 I/O Modes
 ---------
 
@@ -535,8 +554,12 @@ ring buffer and sent through RAW packet sockets.
 .. code-block:: none
 
     $ bngblaster -v
-    Version: 0.8.1
-    Compiler: GNU (7.5.0)
+    Version: 0.9.39
+    Build OS: ubuntu-22.04
+    Compiler: GNU (11.4.0)
+    GIT:
+      REF: refs/tags/0.9.39
+      SHA: 56f126bd03a12d0ddc2b4e7f286aaf601afa1b4b
     IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback, dpdk, af_xdp
 
 Packet MMAP
@@ -551,8 +574,8 @@ traffic without doing expensive system calls. Sending and transmitting traffic v
 Packet MMAP is as easy as copying a packet into a buffer and setting a flag.
 
 Using I/O mode ``packet_mmap_raw`` or ``packet_mmap`` limits the maximum
-stream packet length to 3936 bytes on most systems. The actual limit is dynamically
-calculated based on pagesize (typically 4096) minus overhead.
+stream packet length to 3936 bytes on most systems unless ``jumbo-frames`` is enabled.
+The actual limit is dynamically calculated based on pagesize (typically 4096) minus overhead.
 
 RAW
 ~~~

@@ -181,7 +181,7 @@ bbl_igmp_ctrl_join_iter(int fd, uint32_t session_id __attribute__((unused)), jso
     } else {
         return bbl_ctrl_status(fd, "error", 400, "missing group address");
     }
-    if(json_unpack(arguments, "{s:d}", "group-iter", &s) == 0) {
+    if(json_unpack(arguments, "{s:s}", "group-iter", &s) == 0) {
         if(!inet_pton(AF_INET, s, &group_iter)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid group-iter");
         }

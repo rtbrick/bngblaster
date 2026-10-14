@@ -976,7 +976,7 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set_new(jobj_sub, "tx-packets", json_integer(network_interface->stats.packets_tx));
             json_object_set_new(jobj_sub, "tx-multicast-packets", json_integer(network_interface->stats.mc_tx));
             json_object_set_new(jobj_sub, "rx-packets", json_integer(network_interface->stats.packets_rx));
-            if(g_ctx->stats.session_traffic_flows) {
+            if(g_ctx->stats.stream_traffic_flows) {
                 json_object_set_new(jobj_sub, "tx-stream-packets", json_integer(network_interface->stats.stream_tx));
                 json_object_set_new(jobj_sub, "rx-stream-packets", json_integer(network_interface->stats.stream_rx));
                 json_object_set_new(jobj_sub, "rx-stream-packets-loss", json_integer(network_interface->stats.stream_loss));
@@ -1020,7 +1020,7 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set_new(jobj_sub, "rx-packets", json_integer(access_interface->stats.packets_rx));
             json_object_set_new(jobj_sub, "rx-multicast-packets", json_integer(access_interface->stats.mc_rx));
             json_object_set_new(jobj_sub, "rx-multicast-packets-loss", json_integer(access_interface->stats.mc_loss));
-            if(g_ctx->stats.session_traffic_flows) {
+            if(g_ctx->stats.stream_traffic_flows) {
                 json_object_set_new(jobj_sub, "tx-stream-packets", json_integer(access_interface->stats.stream_tx));
                 json_object_set_new(jobj_sub, "rx-stream-packets", json_integer(access_interface->stats.stream_rx));
                 json_object_set_new(jobj_sub, "rx-stream-packets-loss", json_integer(access_interface->stats.stream_loss));
@@ -1104,7 +1104,7 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set_new(jobj_sub, "name", json_string(interface->name));
             json_object_set_new(jobj_sub, "tx-packets", json_integer(a10nsp_interface->stats.packets_tx));
             json_object_set_new(jobj_sub, "rx-packets", json_integer(a10nsp_interface->stats.packets_rx));
-            if(g_ctx->stats.session_traffic_flows) {
+            if(g_ctx->stats.stream_traffic_flows) {
                 json_object_set_new(jobj_sub, "tx-stream-packets", json_integer(a10nsp_interface->stats.stream_tx));
                 json_object_set_new(jobj_sub, "rx-stream-packets", json_integer(a10nsp_interface->stats.stream_rx));
                 json_object_set_new(jobj_sub, "rx-stream-packets-loss", json_integer(a10nsp_interface->stats.stream_loss));

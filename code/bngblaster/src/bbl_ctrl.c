@@ -141,7 +141,7 @@ const schema_arg_s schema_cfm[] = {
     ARG_NUM("session-id"), ARG_STR("network-interface"), ARG_END
 };
 const schema_arg_s schema_igmp[] = {
-    ARG_NUM("session-id"), ARG_STR("group"), ARG_NUM("group-iter"), ARG_NUM("group-count"),
+    ARG_NUM("session-id"), ARG_STR("group"), ARG_STR("group-iter"), ARG_NUM("group-count"),
     ARG_STR("source1"), ARG_STR("source2"), ARG_STR("source3"), ARG_BOOL("reset"),
     ARG_END
 };
@@ -391,7 +391,7 @@ static const struct action actions[] = {
     {"ldp-sessions", ldp_ctrl_sessions, schema_ldp, true},
     {"ldp-database", ldb_ctrl_database, schema_ldp, true},
     {"ldp-disconnect", ldp_ctrl_disconnect, schema_ldp, false},
-    {"ldp-teardown", ldp_ctrl_teardown, schema_ldp, true},
+    {"ldp-teardown", ldp_ctrl_teardown, schema_ldp, false},
     {"ldp-raw-update-list", ldp_ctrl_raw_update_list, schema_ldp, true},
     {"ldp-raw-update", ldp_ctrl_raw_update, schema_ldp, false},
     {"monkey-start", bbl_ctrl_monkey_start, schema_no_args, false},

@@ -452,7 +452,7 @@ bbl_dhcp_ctrl_action(int fd, uint32_t session_id, json_t *arguments, dhcp_ctrl_a
         }
     }
 
-    bool keep_address = false;
+    int keep_address = 0; /* json_unpack 'b' requires int */
     json_unpack(arguments, "{s:b}", "keep-address", &keep_address);
 
     if(action == DHCP_ACTION_RELEASE && g_ctx->config.dhcp_release_retry == 0) {

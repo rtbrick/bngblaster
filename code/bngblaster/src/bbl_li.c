@@ -101,9 +101,9 @@ bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s 
                 inner_ipv6 = (bbl_ipv6_s*)inner_pppoe->next;
             }
         } else if(inner_eth->type == ETH_TYPE_IPV4) {
-            inner_ipv4 = (bbl_ipv4_s*)eth->next;
+            inner_ipv4 = (bbl_ipv4_s*)inner_eth->next;
         } else if(inner_eth->type == ETH_TYPE_IPV6) {
-            inner_ipv6 = (bbl_ipv6_s*)eth->next;
+            inner_ipv6 = (bbl_ipv6_s*)inner_eth->next;
         }
     }
 

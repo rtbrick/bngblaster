@@ -139,6 +139,8 @@ def assert_clean_exit(lac, lns):
 def test_setup_traffic_teardown(lac_lns):
     lac, lns = lac_lns()
     assert len(lns_tunnels(lns)) == 2
+    # l2tp-sessions lists the LAC sessions as well.
+    assert len(lns_sessions(lac)) == SESSIONS
 
     lac.ctrl("session-traffic-start")
     wait_until(lambda: all(s["data-ipv4-packets-rx"] >= 20 for s in lns_sessions(lns)),

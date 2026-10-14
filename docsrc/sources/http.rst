@@ -156,8 +156,9 @@ HTTP Client States:
 + ``connecting``: TCP session connecting (handshake)
 + ``connected``: TCP session established
 + ``closing``: TCP session teardown
++ ``closed``: request completed or stopped, can be restarted with ``http-clients-start``
 + ``session-down``: underlying PPPoE or IPoE session is not established
-+ ``retry-wait``: wait random seconds (1-30 seconds) before next connection attempt
++ ``retry-wait``: wait random seconds (0-29 seconds) before next connection attempt
 
 
 HTTP Server

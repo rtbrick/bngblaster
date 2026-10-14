@@ -4,7 +4,8 @@ Installation
 ============
 
 The BNG Blaster should run on any modern Linux distribution
-but is primarily tested on Debian Bookworm and Ubuntu 22.04 LTS.
+but is built and tested on Ubuntu 22.04, 24.04 and 26.04 LTS
+and Debian Bookworm and Trixie.
 
 Install Ubuntu
 --------------
@@ -13,9 +14,6 @@ Install dependencies:
 
 .. code-block:: none
 
-    # Ubuntu 18.04 and 20.04
-    sudo apt install -y libssl1.1 libncurses5 libjansson4
-    # Debian Bookworm, Ubuntu 22.04 and newer
     sudo apt install -y libssl3 libncurses6 libjansson4
 
 
@@ -26,6 +24,8 @@ Download and install the Debian package: https://github.com/rtbrick/bngblaster/r
     sudo dpkg -i <package>
 
 This command installs the BNG Blaster to ``/usr/bin/bngblaster``.
+The Debian package also creates compatibility symlinks in ``/usr/sbin``
+for ``bngblaster``, ``bngblaster-cli`` and ``lspgen``.
 
 Build from Sources
 ------------------
@@ -39,31 +39,21 @@ and the following standard dependencies:
 
 .. code-block:: none
 
-    sudo apt install -y unzip
+    sudo apt install -y wget unzip
 
-    # install libdict for Ubuntu 18.04 LTS
-    wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
-    unzip libdict-debian.zip
-
-    # install libdict for Ubuntu 22.04 LTS
-    wget https://github.com/rtbrick/libdict/releases/download/1.0.6/libdict-ubuntu-22.04.zip
-    unzip libdict-ubuntu-22.04.zip
-
-    # install libdict for Debian Bookworm
-    wget https://github.com/rtbrick/libdict/releases/download/1.0.6/libdict-bookworm.zip
-    unzip libdict-bookworm.zip
-
+    # install libdict 1.0.6, where <os> is one of
+    # ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, bookworm or trixie
+    wget https://github.com/rtbrick/libdict/releases/download/1.0.6/libdict-<os>.zip
+    unzip libdict-<os>.zip
     sudo dpkg -i libdict_1.0.6_amd64.deb
     sudo dpkg -i libdict-dev_1.0.6_amd64.deb
 
     # install other dependencies
-    sudo apt install -y cmake \
+    sudo apt install -y build-essential cmake \
         libpcap-dev \
-        libcunit1-dev \
-        libncurses5-dev \
+        libncurses-dev \
         libssl-dev \
-        libjansson-dev \
-        libnuma-dev
+        libjansson-dev
 
 Build
 ^^^^^
@@ -107,9 +97,9 @@ manually building the version, as shown below:
 
     $ bngblaster -v
     GIT:
-    REF: dev
-    SHA: df453a5ee9dbf6440aefbfb9630fa0f06e326d44
-    IO Modes: packet_mmap_raw (default), packet_mmap, raw
+      REF: dev
+      SHA: df453a5ee9dbf6440aefbfb9630fa0f06e326d44
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback
 
 Install
 ^^^^^^^
@@ -120,7 +110,23 @@ Then BNG Blaster can be installed using the make install target.
 
     sudo make install
 
-This command installs the BNG Blaster to ``/usr/bin/bngblaster``.
+This command installs ``bngblaster``, ``bngblaster-cli``, ``lspgen``,
+``bgpupdate`` and ``ldpupdate`` to ``/usr/bin``.
+
+Build Options
+^^^^^^^^^^^^^
+
+The following cmake options are disabled by default:
+
+* ``BNGBLASTER_TESTS``: build unit tests (requires CMocka)
+* ``BNGBLASTER_INTEGRATION_TESTS``: add integration tests
+  (requires root, pytest, GoBGP, FRR and BIRD)
+* ``BNGBLASTER_CPU_NATIVE``: optimize for the native CPU of the build host
+  (``-march=native``), the binary might not run on other CPUs
+* ``BNGBLASTER_TIMER_LOGGING``: enable the ``timer`` and ``timer-detail``
+  logging flags
+* ``BNGBLASTER_DPDK``: build with :ref:`DPDK <install-dpdk>` support
+* ``BNGBLASTER_AF_XDP``: build with :ref:`AF_XDP <install-af-xdp>` support
 
 Build and Run Unit Tests
 ^^^^^^^^^^^^^^^^^^^^^^^^
@@ -146,10 +152,16 @@ The option ``BNGBLASTER_TESTS`` enables to build unit tests.
     $ make test
     Running tests...
     Test project
-        Start 1: TestProtocols
-    1/1 Test #1: TestProtocols ....................   Passed    0.00 sec
+        Start 1: TestUtils
+    1/4 Test #1: TestUtils ........................   Passed    0.00 sec
+        Start 2: TestChecksum
+    2/4 Test #2: TestChecksum .....................   Passed    0.00 sec
+        Start 3: TestTimer
+    3/4 Test #3: TestTimer ........................   Passed    0.00 sec
+        Start 4: TestProtocols
+    4/4 Test #4: TestProtocols ....................   Passed    0.00 sec
 
-    100% tests passed, 0 tests failed out of 1
+    100% tests passed, 0 tests failed out of 4
 
     Total Test time (real) =   0.00 sec
 
@@ -171,8 +183,8 @@ https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html
 
 .. code-block:: none
 
-    # install meson 
-    sudo apt install meson ninja-build 
+    # install meson and libnuma
+    sudo apt install meson ninja-build libnuma-dev
 
     # download DPDK
     wget https://fast.dpdk.org/rel/dpdk-25.11.tar.xz
@@ -212,7 +224,7 @@ The installed version should now show ``dpdk`` as new IO mode.
     sudo bngblaster -v
     Version: DEV
     Compiler: GNU (11.2.0)
-    IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback, dpdk
 
 
 .. _install-af-xdp:
@@ -268,7 +280,7 @@ The installed version should now show ``af_xdp`` as new IO mode.
     sudo bngblaster -v
     Version: DEV
     Compiler: GNU (11.4.0)
-    IO Modes: packet_mmap_raw (default), packet_mmap, raw, af_xdp
+    IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback, af_xdp
 
 
 Running BNG Blaster

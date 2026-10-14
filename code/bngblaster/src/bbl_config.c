@@ -1023,6 +1023,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             } else if(strcmp(s, "broadcast") == 0) {
                 network_config->ospfv2_type = OSPF_INTERFACE_BROADCAST;
             } else {
+                fprintf(stderr, "JSON config error: Invalid value for network->ospfv2-type\n");
                 return false;
             }
         } else {
@@ -3064,7 +3065,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         }
     } else {
         /* pps config has priority over bps */
-        value = json_object_get(stream, "bps");
+        value = json_object_get(stream, "bps-upstream");
         if(value) {
             bps = json_number_value(value);
             if(bps <= 0) {
@@ -3073,7 +3074,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             }
             stream_config->pps_upstream = bps / (stream_config->length * 8);
         }
-        value = json_object_get(stream, "Kbps");
+        value = json_object_get(stream, "Kbps-upstream");
         if(value) {
             bps = json_number_value(value);
             if(bps <= 0) {
@@ -3082,7 +3083,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
             }
             stream_config->pps_upstream = (bps*1000) / (stream_config->length * 8);
         }
-        value = json_object_get(stream, "Mbps");
+        value = json_object_get(stream, "Mbps-upstream");
         if(value) {
             bps = json_number_value(value);
             if(bps <= 0) {
