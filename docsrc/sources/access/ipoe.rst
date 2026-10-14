@@ -103,7 +103,7 @@ detailed information for IPoE sessions.
     {
         "status": "ok",
         "code": 200,
-        "session-information": {
+        "session-info": {
             "type": "ipoe",
             "session-id": 1,
             "session-state": "Established",

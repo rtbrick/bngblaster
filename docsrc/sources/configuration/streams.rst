@@ -8,17 +8,19 @@
 | **name**                       | | Mandatory stream name.                                         |
 +--------------------------------+------------------------------------------------------------------+
 | **stream-group-id**            | | Stream group identifier.                                       |
-|                                | | Default: 0 (raw)                                               |
+|                                | | Default: 0 (raw) Range: 0 - 65535                              |
 +--------------------------------+------------------------------------------------------------------+
 | **type**                       | | Mandatory stream type (`ipv4`, `ipv6`, or `ipv6pd`).           |
 +--------------------------------+------------------------------------------------------------------+
 | **direction**                  | | Stream direction (`upstream`, `downstream`, or `both`).        |
-|                                | | Default: `both`                                                |
+|                                | | RAW streams (stream-group-id 0) support `downstream` only.     |
+|                                | | Default: `both` (session streams), `downstream` (RAW streams)  |
 +--------------------------------+------------------------------------------------------------------+
 | **autostart**                  | | Enable stream autostart.                                       |
 |                                | | Default: true                                                  |
 +--------------------------------+------------------------------------------------------------------+
-| **count**                      | | Increment the source port for each instance of this stream.    |
+| **count**                      | | Number of instances of this stream                             |
+|                                | | (per session for session streams).                             |
 |                                | | Default: 1 Range: 1 - 65535                                    |
 +--------------------------------+------------------------------------------------------------------+
 | **source-port**                | | Overwrite the default source port.                             |
@@ -60,6 +62,7 @@
 |                                | | Default: **vlan-priority** Range: 0 - 7                        |
 +--------------------------------+------------------------------------------------------------------+
 | **length**                     | | Layer 3 (IP header + payload) traffic length.                  |
+|                                | | The maximum length also depends on the I/O mode.               |
 |                                | | Default: 128 Range: 76 - 9000                                  |
 +--------------------------------+------------------------------------------------------------------+
 | **ttl**                        | | TTL.                                                           |
@@ -127,24 +130,28 @@
 |                                | | Default: 0                                                     |
 +--------------------------------+------------------------------------------------------------------+
 | **tx-label1**                  | | MPLS send (TX) label (outer label).                            |
+|                                | | Range: 0 - 1048575                                             |
 +--------------------------------+------------------------------------------------------------------+
 | **tx-label1-exp**              | | EXP bits of the first label (outer label).                     |
-|                                | | Default: 0                                                     |
+|                                | | Default: 0 Range: 0 - 7                                        |
 +--------------------------------+------------------------------------------------------------------+
 | **tx-label1-ttl**              | | TTL of the first label (outer label).                          |
-|                                | | Default: 255                                                   |
+|                                | | Default: 255 Range: 0 - 255                                    |
 +--------------------------------+------------------------------------------------------------------+
 | **tx-label2**                  | | MPLS send (TX) label (inner label).                            |
+|                                | | Range: 0 - 1048575                                             |
 +--------------------------------+------------------------------------------------------------------+
 | **tx-label2-exp**              | | EXP bits of the second label (inner label).                    |
-|                                | | Default: 0                                                     |
+|                                | | Default: 0 Range: 0 - 7                                        |
 +--------------------------------+------------------------------------------------------------------+
 | **tx-label2-ttl**              | | TTL of the second label (inner label).                         |
-|                                | | Default: 255                                                   |
+|                                | | Default: 255 Range: 0 - 255                                    |
 +--------------------------------+------------------------------------------------------------------+
 | **rx-label1**                  | | Expected receive MPLS label (outer label).                     |
+|                                | | Range: 0 - 1048575                                             |
 +--------------------------------+------------------------------------------------------------------+
 | **rx-label2**                  | | Expected receive MPLS label (inner label).                     |
+|                                | | Range: 0 - 1048575                                             |
 +--------------------------------+------------------------------------------------------------------+
 | **ldp-ipv4-lookup-address**    | | Dynamically resolve outer label.                               |
 +--------------------------------+------------------------------------------------------------------+
@@ -161,7 +168,7 @@
 |                                | | are sent as Ethernet over MPLS to the destination-mac.         |
 |                                | | EVPN VPWS requires this option to be set explicitly, RAW       |
 |                                | | streams and destination-mac (unless vpws-arp is enabled).      |
-|                                | | Default: 0 Range: 0 - 4294967294 (VPWS)                        |
+|                                | | Default: 0 Range: 0 - 4294967295 (max 4294967294 for VPWS)     |
 +--------------------------------+------------------------------------------------------------------+
 | **bgp-evpn-esi**               | | ESI of the Ethernet A-D route (type 1). Not supported with     |
 |                                | | bgp-evpn-mac or bgp-evpn-prefix.                               |

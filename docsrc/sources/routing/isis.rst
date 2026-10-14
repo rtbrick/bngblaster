@@ -212,10 +212,10 @@ learned via MRT files or injected via ``isis-lsp-update`` :ref:`command <api>`.
     }
 
 The BNG Blaster automatically purges all LSPs of type
-``self`` and ``external`` during teardown. This is done by
-generating LSPs with newer sequence numbers and a lifetime
-of 30 seconds only. This lifetime is enough to flood the purge
-LSP over the whole network under test. 
+``self`` during teardown. This is done by flooding LSPs with
+newer sequence numbers and a remaining lifetime of 0.
+LSPs of type ``external`` are purged the same way if
+``external->purge`` is enabled (default ``true``).
 
 Flooding
 ~~~~~~~~

@@ -53,7 +53,7 @@ the actual U interface for traffic received on the A10NSP interface. This functi
 as the intermediate agent functionality.
 
 The BNG Blaster A10NSP interface emulates such a layer two provider interface. This interface type accepts 
-all DHCPv4 and PPPoE sessions received, to verify forwarding and header enrichment.
+all PPPoE, DHCPv4 and DHCPv6 sessions received, to verify forwarding and header enrichment.
 
 Following is a basic PPPoE/A10NSP configuration example, which is
 explained in detail in the configuration section.
@@ -103,7 +103,7 @@ explained in detail in the configuration section.
         },
         "streams": [
             {
-                "stream-group-id": 2,
+                "stream-group-id": 1,
                 "name": "PPPOE-S1",
                 "type": "ipv4",
                 "direction": "both",
@@ -113,7 +113,7 @@ explained in detail in the configuration section.
                 "a10nsp-interface": "eth4"
             },
             {
-                "stream-group-id": 2,
+                "stream-group-id": 1,
                 "name": "PPPOE-S2",
                 "type": "ipv4",
                 "direction": "both",

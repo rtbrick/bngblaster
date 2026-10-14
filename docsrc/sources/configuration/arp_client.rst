@@ -5,14 +5,14 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | Attribute                         | Description                                                          |
 +===================================+======================================================================+
-| **arp-client-group-id**           | | ARP client identifier.                                             |
+| **arp-client-group-id**           | | Mandatory ARP client identifier.                                   |
 |                                   | | This identifier is used to create ARP clients for IPoE sessions.   |
 |                                   | | Range: 1 - 65535                                                   |
 +-----------------------------------+----------------------------------------------------------------------+
 | **target-ip**                     | | Mandatory IPv4 address to be resolved.                             |
 +-----------------------------------+----------------------------------------------------------------------+
 | **interval**                      | | ARP request interval in seconds.                                   |
-|                                   | | Default: 1.0                                                       |
+|                                   | | Default: 1 Range: 1 - 255                                          |
 +-----------------------------------+----------------------------------------------------------------------+
 | **vlan-priority**                 | | VLAN priority.                                                     |
 |                                   | | Default: 0 Range: 0 - 7                                            |

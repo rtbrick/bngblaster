@@ -5,7 +5,8 @@
 +----------------------------------+------------------------------------------------------------+
 | Attribute                        | Description                                                |
 +==================================+============================================================+
-| **instance-id**                  | | LDP instance identifier.                                 |
+| **instance-id**                  | | Mandatory LDP instance identifier.                       |
+| **instance-id**                  | | Range: 0 - 65535                                         |
 +----------------------------------+------------------------------------------------------------+
 | **keepalive-time**               | | LDP session keepalive time in seconds.                   |
 |                                  | | The **keepalive-time** defines the local LDP session     |
@@ -51,5 +52,5 @@
 | **raw-update-file**              | | LDP RAW update file.                                     |
 +----------------------------------+------------------------------------------------------------+
 | **tos**                          | | TOS/TC for all LDP control traffic.                      |
-|                                  | | Default: 0                                               |
+|                                  | | Default: 0 Range: 0 - 255                                |
 +----------------------------------+------------------------------------------------------------+

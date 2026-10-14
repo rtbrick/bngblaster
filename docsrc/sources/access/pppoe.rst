@@ -193,7 +193,7 @@ detailed information for PPPoE sessions.
     {
         "status": "ok",
         "code": 200,
-        "session-information": {
+        "session-info": {
             "type": "pppoe",
             "session-id": 1,
             "session-state": "Established",

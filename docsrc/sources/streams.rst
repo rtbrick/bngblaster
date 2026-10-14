@@ -183,7 +183,9 @@ static (RAW) TCP header.
 This option can be used stand-alone to verify firewall filters or together 
 with the new NAT option to verify NAT TCP streams. 
 
-For now, TCP flags (SYN, …) are statically set to SYN but this could be adapted if needed.
+TCP flags default to SYN and can be changed at runtime using the ``stream-update``
+command argument ``tcp-flags`` with one of the values ``ack``, ``fin``, ``fin-ack``,
+``syn``, ``syn-ack``, ``rst``, ``push`` or ``push-ack``.
 
 Stream Iterators
 ~~~~~~~~~~~~~~~~
@@ -295,14 +297,18 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "rx-loss": 0,
                     "rx-delay-us-min": 37,
                     "rx-delay-us-max": 98595,
-                    "rx-pps": 1000,
-                    "tx-pps": 1000,
+                    "rx-pps": 1000.0,
+                    "tx-pps": 1000.0,
+                    "rx-pps-max": 1000.0,
+                    "tx-pps-max": 1000.0,
                     "tx-bps-l2": 8240000,
                     "rx-bps-l2": 8112000,
                     "rx-bps-l3": 8000000,
                     "tx-mbps-l2": 8.24,
                     "rx-mbps-l2": 8.112,
-                    "rx-mbps-l3": 8.0
+                    "rx-mbps-l3": 8.0,
+                    "rx-first-epoch": 1700000001,
+                    "rx-last-epoch": 1700000055
                 },
                 {
                     "name": "BestEffort",
@@ -320,14 +326,18 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "rx-loss": 0,
                     "rx-delay-us-min": 43,
                     "rx-delay-us-max": 98903,
-                    "rx-pps": 1000,
-                    "tx-pps": 1000,
+                    "rx-pps": 1000.0,
+                    "tx-pps": 1000.0,
+                    "rx-pps-max": 1000.0,
+                    "tx-pps-max": 1000.0,
                     "tx-bps-l2": 8112000,
                     "rx-bps-l2": 8208000,
                     "rx-bps-l3": 8000000,
                     "tx-mbps-l2": 8.112,
                     "rx-mbps-l2": 8.208,
-                    "rx-mbps-l3": 8.0
+                    "rx-mbps-l3": 8.0,
+                    "rx-first-epoch": 1700000001,
+                    "rx-last-epoch": 1700000055
                 },
                 {
                     "name": "Voice",
@@ -345,14 +355,18 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "rx-loss": 0,
                     "rx-delay-us-min": 41,
                     "rx-delay-us-max": 96548,
-                    "rx-pps": 100,
-                    "tx-pps": 100,
+                    "rx-pps": 100.0,
+                    "tx-pps": 100.0,
+                    "rx-pps-max": 100.0,
+                    "tx-pps-max": 100.0,
                     "tx-bps-l2": 811200,
                     "rx-bps-l2": 820800,
                     "rx-bps-l3": 800000,
                     "tx-mbps-l2": 0.8112,
                     "rx-mbps-l2": 0.8208,
-                    "rx-mbps-l3": 0.8
+                    "rx-mbps-l3": 0.8,
+                    "rx-first-epoch": 1700000001,
+                    "rx-last-epoch": 1700000055
                 }
             ]
         }
@@ -403,12 +417,16 @@ Each flow can be queried separately using jsonpath expression with name and dire
         "rx-delay-us-max": 10561,
         "rx-pps": 99.2,
         "tx-pps": 99.2,
+        "rx-pps-max": 100.0,
+        "tx-pps-max": 100.0,
         "tx-bps-l2": 90470,
         "rx-bps-l2": 99993,
         "rx-bps-l3": 79360,
         "tx-mbps-l2": 0.09047,
         "rx-mbps-l2": 0.099993,
-        "rx-mbps-l3": 0.07936
+        "rx-mbps-l3": 0.07936,
+        "rx-first-epoch": 1700000001,
+        "rx-last-epoch": 1700000273
     }
 
 The stream rates ``rx-pps`` and ``tx-pps`` and the rates in bits per second
@@ -458,7 +476,7 @@ and ``multicast-traffic-start/stop`` can modify the state of these streams at an
 
 ``$ sudo bngblaster-cli run.sock stream-start session-group-id 1 direction upstream``
 
-The configuration ``{"session-traffic": []}`` defines another kind of stream called :ref:`session-traffic <session-traffic>`. 
+The configuration ``{"session-traffic": {}}`` defines another kind of stream called :ref:`session-traffic <session-traffic>`. 
 The configuration ``{"session-traffic": {"autostart": true/false}}`` controls the initial state 
 of :ref:`session-traffic <session-traffic>`. The commands ``session-traffic-start/stop`` 
 can modify the state of these streams at any time.

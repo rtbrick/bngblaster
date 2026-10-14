@@ -26,8 +26,8 @@
 |                                           | | received window size.                                             |
 |                                           | | Default: default                                                  |
 +-------------------------------------------+---------------------------------------------------------------------+
-| **hello-interval**                        | | Set hello interval.                                               |
-|                                           | | Default: 30 Range: 1 - 65535                                      |
+| **hello-interval**                        | | Set hello interval in seconds (0 disables hello).                 |
+|                                           | | Default: 30 Range: 0 - 65535                                      |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **data-control-priority**                 | | Set the priority bit in the L2TP header for all non-IP data       |
 |                                           | | packets (LCP, IPCP, ...).                                         |

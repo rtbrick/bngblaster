@@ -11,6 +11,10 @@ terminate request, flap IPCP (IPv4) and IP6CP (IPv6) independently,
 and more. This works similarly for IPoE by flapping DHCPv4 and
 DHCPv6 sessions.
 
+Monkey testing is supported for PPPoE and IPoE sessions only
+(not for ``pppol2tp``). Sessions in state idle, terminating or
+terminated are skipped.
+
 Monkey testing must be enabled per access function and starts automatically 
 per default, which can be changed using the monkey-autostart option. It is 
 also required to enable session auto-reconnect for monkey testing!

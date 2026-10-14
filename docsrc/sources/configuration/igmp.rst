@@ -44,9 +44,9 @@
 |                                   | | Default: 0 (disabled)                                              |
 +-----------------------------------+----------------------------------------------------------------------+
 | **zapping-wait**                  | | Wait for multicast traffic before zapping to the next channel.     |
-|                                   | | Default: false                                                     |
+|                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
-| **view-duration**                 | | Define the view duration in seconds.                               |
+| **zapping-view-duration**         | | Define the view duration in seconds.                               |
 |                                   | | Default: 0 (disabled)                                              |
 +-----------------------------------+----------------------------------------------------------------------+
 | **max-join-delay**                | | Maximum join delay in milliseconds.                                |
@@ -68,7 +68,7 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **multicast-traffic-length**      | | Multicast traffic IP length.                                       |
 |                                   | | Only applicable with **send-multicast-traffic** enabled!           |
-|                                   | | Default: 0                                                         |
+|                                   | | Default: 0 (minimum stream length) Range: 128 - 1500               |
 +-----------------------------------+----------------------------------------------------------------------+
 | **multicast-traffic-tos**         | | Multicast traffic TOS priority.                                    |
 |                                   | | Only applicable with **send-multicast-traffic** enabled!           |

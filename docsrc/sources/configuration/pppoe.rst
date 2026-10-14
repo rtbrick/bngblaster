@@ -9,7 +9,7 @@
 |                       | | Default: 0 (infinity)                                          |
 +-----------------------+------------------------------------------------------------------+
 | **reconnect**         | | Automatically reconnect sessions if terminated.                |
-|                       | | Default: false                                                 |
+|                       | | Default: **sessions->reconnect** (false)                       |
 +-----------------------+------------------------------------------------------------------+
 | **discovery-timeout** | | PPPoE discovery (PADI and PADR) timeout in seconds.            |
 |                       | | Default: 5                                                     |

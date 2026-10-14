@@ -14,8 +14,10 @@
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``group`` Mandatory                                                |
-|                                   | | ``group-iter`` address step used to iterate over multiple groups.  |
-|                                   | | ``group-count`` number of groups to iterate over.                  |
+|                                   | | ``group-iter`` IPv4 address step used to iterate over multiple     |
+|                                   | | groups (e.g. ``0.0.0.1``). Default: ``0.0.0.1``                    |
+|                                   | | ``group-count`` number of groups to iterate over. The groups       |
+|                                   | | are assigned round-robin to all sessions.                          |
 |                                   | | ``source1`` first IGMPv3/SSM source address for the group.         |
 |                                   | | ``source2`` second IGMPv3/SSM source address for the group.        |
 |                                   | | ``source3`` third IGMPv3/SSM source address for the group.         |

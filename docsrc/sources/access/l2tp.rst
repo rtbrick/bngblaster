@@ -294,7 +294,7 @@ four servers as shown in the example below.
             },
             {
                 "name": "LNS3",
-                "address": "10.0.0.11",
+                "address": "10.0.0.13",
                 "secret": "test3",
                 "receive-window-size": 8,
                 "congestion-mode": "default",
@@ -303,7 +303,7 @@ four servers as shown in the example below.
             },
             {
                 "name": "LNS4",
-                "address": "10.0.0.12",
+                "address": "10.0.0.14",
                 "secret": "test4",
                 "receive-window-size": 8,
                 "congestion-mode": "default",
@@ -327,6 +327,8 @@ L2TP Commands
 
 The :ref:`command <api>` ``l2tp-tunnels`` provides
 detailed information about L2TP tunnels.
+LAC tunnels (see :ref:`L2TP LAC mode <l2tp-lac>`) are included
+with ``client-name`` instead of ``server-name``.
 
 ``$ sudo bngblaster-cli run.sock l2tp-tunnels``
 
@@ -357,7 +359,8 @@ detailed information about L2TP tunnels.
         ]
     }
 
-The ``l2tp-sessions`` :ref:`command <api>` returns all L2TP sessions.
+The ``l2tp-sessions`` :ref:`command <api>` returns all L2TP sessions
+of both LNS and LAC tunnels.
 
 ``$ sudo bngblaster-cli run.sock l2tp-sessions``
 
@@ -409,7 +412,7 @@ under test. This makes it possible to test LNS functionality directly.
 
 Each access interface section with ``"type": "pppol2tp"`` creates PPP sessions
 that are tunnelled through the L2TP clients specified in the ``"l2tp-client"``
-list. The L2TP sessions are spread accross multiple tunnels (the ones whose
+list. The L2TP sessions are spread across multiple tunnels (the ones whose
 ``"group-id"`` field match the ``"l2tp-client-group-id"`` field of the access
 interface).
 

@@ -108,7 +108,8 @@ It is possible to join and leave multicast groups manually using the :ref:`comma
 .. code-block:: json
 
     {
-        "status": "ok"
+        "status": "ok",
+        "code": 200
     }
 
 ``$ sudo bngblaster-cli run.sock igmp-info session-id 1``
@@ -117,10 +118,11 @@ It is possible to join and leave multicast groups manually using the :ref:`comma
 
     {
         "status": "ok",
+        "code": 200,
         "igmp-groups": [
             {
                 "group": "232.1.1.1",
-                "igmp-sources": [
+                "sources": [
                     "202.11.23.101",
                     "202.11.23.102",
                     "202.11.23.103"
@@ -138,7 +140,8 @@ It is possible to join and leave multicast groups manually using the :ref:`comma
 .. code-block:: json
 
     {
-        "status": "ok"
+        "status": "ok",
+        "code": 200
     }
 
 ``$ sudo bngblaster-cli run.sock igmp-info session-id 1``
@@ -147,10 +150,11 @@ It is possible to join and leave multicast groups manually using the :ref:`comma
 
     {
         "status": "ok",
+        "code": 200,
         "igmp-groups": [
             {
                 "group": "232.1.1.1",
-                "igmp-sources": [
+                "sources": [
                     "202.11.23.101",
                     "202.11.23.102",
                     "202.11.23.103"

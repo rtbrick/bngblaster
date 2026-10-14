@@ -5,7 +5,8 @@
 +----------------------------------+-------------------------------------------------------------------+
 | Attribute                        | Description                                                       |
 +==================================+===================================================================+
-| **instance-id**                  | | ISIS instance identifier.                                       |
+| **instance-id**                  | | Mandatory ISIS instance identifier.                             |
+| **instance-id**                  | | Range: 0 - 65535                                                |
 +----------------------------------+-------------------------------------------------------------------+
 | **level**                        | | Level.                                                          |
 |                                  | | Default: 3 Range: 1 - 3                                         |
@@ -19,22 +20,30 @@
 | **level1-auth-key**              | | Level 1 authentication key.                                     |
 +----------------------------------+-------------------------------------------------------------------+
 | **level1-auth-type**             | | Level 1 authentication type (simple or md5).                    |
+| **level1-auth-type**             | | Required to enable authentication with **level1-auth-key**.     |
 +----------------------------------+-------------------------------------------------------------------+
 | **level1-auth-hello**            | | Level 1 hello authentication.                                   |
+| **level1-auth-hello**            | | Default: true                                                   |
 +----------------------------------+-------------------------------------------------------------------+
 | **level1-auth-csnp**             | | Level 1 CSNP authentication.                                    |
+| **level1-auth-csnp**             | | Default: true                                                   |
 +----------------------------------+-------------------------------------------------------------------+
 | **level1-auth-psnp**             | | Level 1 PSNP authentication.                                    |
+| **level1-auth-psnp**             | | Default: true                                                   |
 +----------------------------------+-------------------------------------------------------------------+
 | **level2-auth-key**              | | Level 2 authentication key.                                     |
 +----------------------------------+-------------------------------------------------------------------+
 | **level2-auth-type**             | | Level 2 authentication type (simple or md5).                    |
+| **level2-auth-type**             | | Required to enable authentication with **level2-auth-key**.     |
 +----------------------------------+-------------------------------------------------------------------+
 | **level2-auth-hello**            | | Level 2 hello authentication.                                   |
+| **level2-auth-hello**            | | Default: true                                                   |
 +----------------------------------+-------------------------------------------------------------------+
 | **level2-auth-csnp**             | | Level 2 CSNP authentication.                                    |
+| **level2-auth-csnp**             | | Default: true                                                   |
 +----------------------------------+-------------------------------------------------------------------+
 | **level2-auth-psnp**             | | Level 2 PSNP authentication.                                    |
+| **level2-auth-psnp**             | | Default: true                                                   |
 +----------------------------------+-------------------------------------------------------------------+
 | **hello-interval**               | | Hello interval in seconds.                                      |
 |                                  | | Default: 10 Range: 1 - 65535                                    |

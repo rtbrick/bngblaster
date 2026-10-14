@@ -37,6 +37,7 @@ The default protocol is ISIS which can be changed using the argument ``-P ospf2`
       -w --write-config-file <filename>
       -C --connector <args>
       -S --control-socket <args>
+      -I --control-instance <args>
       -l --ipv4-link-prefix <ip-prefix>
       -L --ipv6-link-prefix <ip-prefix>
       -n --ipv4-node-prefix <ip-prefix>

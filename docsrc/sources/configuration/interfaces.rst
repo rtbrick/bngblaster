@@ -18,7 +18,7 @@
 |                                   | | reach the desired throughput. The actual meaning of IO slots       |
 |                                   | | depends on the selected IO mode. For Packet MMAP, it defines the   |
 |                                   | | maximum number of packets in the ring buffer.                      |
-|                                   | | Default: 4096                                                      |
+|                                   | | Default: 4096 Range: 32 - 65535                                    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **io-burst**                      | | IO burst (packets).                                                |
 |                                   | | Default: 256 Range: 1 to 65535                                     |
@@ -28,16 +28,22 @@
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tx-interval**                   | | TX polling interval in milliseconds.                               |
-|                                   | | Default: 0.1 Range: 0.0001 to 1000                                 |
+|                                   | | Default: 0.1                                                       |
 +-----------------------------------+----------------------------------------------------------------------+
 | **rx-interval**                   | | RX polling interval in milliseconds.                               |
-|                                   | | Default: 0.1 Range: 0.0001 to 1000                                 |
+|                                   | | Default: 0.1                                                       |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tx-threads**                    | | Number of TX threads per interface link.                           |
 |                                   | | Default: 0 (main thread)                                           |
 +-----------------------------------+----------------------------------------------------------------------+
 | **rx-threads**                    | | Number of RX threads per interface link.                           |
 |                                   | | Default: 0 (main thread)                                           |
++-----------------------------------+----------------------------------------------------------------------+
+| **tx-auto-cpuset**                | | Automatically pin TX threads to CPUs local to the interface.       |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **rx-auto-cpuset**                | | Automatically pin RX threads to CPUs local to the interface.       |
+|                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **capture-include-streams**       | | Include traffic streams in the capture.                            |
 |                                   | | Default: false                                                     |
@@ -48,6 +54,7 @@
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tun-name**                      | | TUN interface name prefix (`<tun-name><session-id>`).              |
+|                                   | | Maximum length is 10 characters.                                   |
 |                                   | | Default: bbl (bbl1, bbl2, ...)                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **a10nsp-dynamic**                | | Move streams to dynamically learned A10NSP interface.              |

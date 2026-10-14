@@ -17,7 +17,7 @@
 |                                   | | ``flow-id-max``                                                      |
 |                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``)                           |
 |                                   | | ``session-id``                                                       |
-|                                   | | ``session-group-id`` (ignored if session-id is present)              |
+|                                   | | ``session-group-id``                                                 |
 |                                   | | ``name`` stream name                                                 |
 |                                   | | ``interface`` TX interface name                                      |
 |                                   | | ``direction`` [both(default), upstream, downstream]                  |
@@ -25,16 +25,17 @@
 |                                   | | ``bidirectional-verified-only`` streams verified in both directions  |
 |                                   | | ``pending-only`` streams not verified                                |
 +-----------------------------------+------------------------------------------------------------------------+
-| **stream-reset**                  | | Reset all traffic streams.                                           |
+| **stream-reset**                  | | Reset all traffic streams except session-traffic.                    |
 +-----------------------------------+------------------------------------------------------------------------+
 | **stream-start**                  | | This command can be used to start or stop traffic stream flows.      |
 |                                   | | This command applies to all flows except session-traffic and         |
-| **stream-stop**                   | | multicast. If you provide a specific ``flow-id`` as an argument,     |
-|                                   | | other arguments are ignored. In this particular case, you can also   |
-| **stream-stop-verified**          | | start and stop session-traffic and multicast.                        |
+| **stream-stop**                   | | multicast. If you provide a specific ``flow-id`` or a list of        |
+|                                   | | ``flows`` as an argument, all other arguments are ignored.           |
+| **stream-stop-verified**          | | Use **session-traffic-start/stop** for session-traffic.              |
 |                                   | |                                                                      |
 |                                   | | The command **stream-stop-verified** works similarly to              |
 |                                   | | **stream-stop** but only verified streams will be stopped.           |
+|                                   | | This filter is not applied with ``flow-id`` or ``flows``.            |
 |                                   | |                                                                      |
 |                                   | | **Arguments:**                                                       |
 |                                   | | ``flow-id``                                                          |
@@ -42,7 +43,7 @@
 |                                   | | ``flow-id-max``                                                      |
 |                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``)                           |
 |                                   | | ``session-id``                                                       |
-|                                   | | ``session-group-id`` (ignored if session-id is present)              |
+|                                   | | ``session-group-id``                                                 |
 |                                   | | ``name`` stream name                                                 |
 |                                   | | ``interface`` TX interface name                                      |
 |                                   | | ``direction`` [both(default), upstream, downstream]                  |
@@ -60,7 +61,7 @@
 |                                   | | ``flow-id-max``                                                      |
 |                                   | | ``flows`` list of flows (e.g. ``[1,2,3]``)                           |
 |                                   | | ``session-id``                                                       |
-|                                   | | ``session-group-id`` (ignored if session-id is present)              |
+|                                   | | ``session-group-id``                                                 |
 |                                   | | ``name`` stream name                                                 |
 |                                   | | ``interface`` TX interface name                                      |
 |                                   | | ``direction`` [both(default), upstream, downstream]                  |

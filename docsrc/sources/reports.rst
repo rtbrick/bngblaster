@@ -75,7 +75,7 @@ Standard Output Reports
     Report:
     ==============================================================================
     Test Duration: 139s
-    Sessions PPPoE: 1000 IPoE: 0
+    Sessions PPPoE: 1000 PPPoL2TP: 0 IPoE: 0
     Sessions established: 1000/1000
     DHCPv6 sessions established: 1000
     Setup Time: 55661 ms
@@ -86,12 +86,10 @@ Standard Output Reports
     ------------------------------------------------------------------------------
       TX:                    111410 packets         12654727 bytes
       TX Polled:                  0
-      TX IO Error:                0
       RX:                    110161 packets         12300031 bytes
       RX Protocol Error:          0 packets
       RX Unknown:                 5 packets
       RX Polled:              93709
-      RX IO Error:                0
 
     Access Interface: eth1
       TX:                    111410 packets         12654727 bytes
@@ -139,12 +137,10 @@ Standard Output Reports
     ------------------------------------------------------------------------------
       TX:                    108580 packets         12360218 bytes
       TX Polled:                  0
-      TX IO Error:                0
       RX:                    106881 packets         11982029 bytes
       RX Protocol Error:          0 packets
       RX Unknown:                 5 packets
       RX Polled:              95265
-      RX IO Error:                0
 
     Access Interface: eth2
       TX:                    108580 packets         12360218 bytes
@@ -192,12 +188,10 @@ Standard Output Reports
     ------------------------------------------------------------------------------
       TX:                    197523 packets         21009053 bytes
       TX Polled:                  0
-      TX IO Error:                0
       RX:                    188259 packets         20425245 bytes
       RX Protocol Error:          0 packets
       RX Unknown:                 0 packets
       RX Polled:              74810
-      RX IO Error:                0
 
     Network Interface: eth3
       TX:                    197523 packets         21009053 bytes
@@ -252,8 +246,11 @@ argument ``-J <filename>``.
         
     {
       "report": {
+        "version": "0.9.39",
+        "test-duration": 139,
         "sessions": 1000,
         "sessions-pppoe": 1000,
+        "sessions-pppol2tp": 0,
         "sessions-ipoe": 0,
         "sessions-established": 1000,
         "sessions-flapped": 0,
@@ -272,12 +269,22 @@ argument ``-J <filename>``.
             "tx-bytes": 12654727,
             "tx-polled": 0,
             "tx-io-error": 0,
+            "tx-to-long": 0,
+            "tx-no-buffer": 0,
+            "tx-dropped": 0,
+            "tx-hw-errors": 0,
             "rx-packets": 110161,
             "rx-bytes": 12300031,
             "rx-protocol-error": 0,
             "rx-unknown": 5,
             "rx-polled": 93709,
-            "rx-io-error": 0
+            "rx-io-error": 0,
+            "rx-no-buffer": 0,
+            "rx-to-long": 0,
+            "rx-dropped": 0,
+            "rx-hw-missed": 0,
+            "rx-hw-no-mbuf": 0,
+            "rx-hw-errors": 0
           },
           {
             "name": "SN-5-L1",
@@ -286,12 +293,22 @@ argument ``-J <filename>``.
             "tx-bytes": 12360218,
             "tx-polled": 0,
             "tx-io-error": 0,
+            "tx-to-long": 0,
+            "tx-no-buffer": 0,
+            "tx-dropped": 0,
+            "tx-hw-errors": 0,
             "rx-packets": 106881,
             "rx-bytes": 11982029,
             "rx-protocol-error": 0,
             "rx-unknown": 5,
             "rx-polled": 95265,
-            "rx-io-error": 0
+            "rx-io-error": 0,
+            "rx-no-buffer": 0,
+            "rx-to-long": 0,
+            "rx-dropped": 0,
+            "rx-hw-missed": 0,
+            "rx-hw-no-mbuf": 0,
+            "rx-hw-errors": 0
           },
           {
             "name": "SN-2-S1",
@@ -300,12 +317,22 @@ argument ``-J <filename>``.
             "tx-bytes": 21009053,
             "tx-polled": 0,
             "tx-io-error": 0,
+            "tx-to-long": 0,
+            "tx-no-buffer": 0,
+            "tx-dropped": 0,
+            "tx-hw-errors": 0,
             "rx-packets": 188259,
             "rx-bytes": 20425245,
             "rx-protocol-error": 0,
             "rx-unknown": 0,
             "rx-polled": 74810,
-            "rx-io-error": 0
+            "rx-io-error": 0,
+            "rx-no-buffer": 0,
+            "rx-to-long": 0,
+            "rx-dropped": 0,
+            "rx-hw-missed": 0,
+            "rx-hw-no-mbuf": 0,
+            "rx-hw-errors": 0
           }
         ],
         "network-interfaces": [
@@ -545,7 +572,8 @@ argument ``-J <filename>``.
 
 The optional argument ``-j sessions`` allows to include per session statistics
 in the report file. Similar to ``-j streams`` which allows for including per stream
-statistics. Both options can be also combined.
+statistics. Both options can be also combined. With ``-j sessions``, the
+top-level ``sessions`` count is replaced by the array of per session statistics.
 
 Those extensive JSON reports could be easily verified with simple python scripts to 
 extract the desired results. 

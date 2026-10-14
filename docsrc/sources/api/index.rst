@@ -79,7 +79,7 @@ per session added. For example, if the username is configured as
 
 .. tip:: 
     The argument ``session-id`` can be alternatively replaced 
-    with interface and VLAN of the session. The last access 
+    with interface and VLAN of the session. The first access 
     interface is automatically used if the argument ``interface`` 
     is not present in the command.
 
@@ -106,12 +106,17 @@ for interactive communication with the BNG Blaster.
 .. code-block:: none
 
     $ sudo bngblaster-cli
-    BNG Blaster Control Socket Client
+    BNG Blaster CLI Tool
+
+    The CLI tool is a simple control socket client
+    for interactive communication with the BNG Blaster.
 
     bngblaster-cli <socket> <command> [arguments]
 
     Examples:
         bngblaster-cli run.sock session-info session-id 1
+        bngblaster-cli run.sock interface-topology
+        bngblaster-cli run.sock interface-topology interface eth0
         bngblaster-cli run.sock igmp-join session-id 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
         bngblaster-cli run.sock igmp-info session-id 1
         bngblaster-cli run.sock l2tp-csurq tunnel-id 1 sessions [1,2]

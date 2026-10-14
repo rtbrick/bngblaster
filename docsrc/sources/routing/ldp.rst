@@ -150,7 +150,7 @@ corresponding label database of the sending network interface function.
         ]
     }
 
-``$ sudo bngblaster-cli run.sock ldp-database instance 1``
+``$ sudo bngblaster-cli run.sock ldp-database ldp-instance-id 1``
 
 .. code-block:: json
 
@@ -159,19 +159,19 @@ corresponding label database of the sending network interface function.
         "code": 200,
         "ldp-database": [
             {
-                "direction": "ipv4",
+                "afi": "ipv4",
                 "prefix": "10.0.0.0/24",
                 "label": 3,
                 "source-identifier": "10.2.3.1:0"
             },
             {
-                "direction": "ipv4",
+                "afi": "ipv4",
                 "prefix": "13.37.0.0/32",
                 "label": 10000,
                 "source-identifier": "10.2.3.1:0"
             },
             {
-                "direction": "ipv4",
+                "afi": "ipv4",
                 "prefix": "13.37.0.1/32",
                 "label": 10001,
                 "source-identifier": "10.2.3.1:0"
@@ -239,6 +239,28 @@ All LDP RAW update files are loaded once and can then be used for
 multiple sessions. This means that if two or more sessions reference the
 same file identified by file name, this file is loaded once into
 memory and used by multiple sessions.
+
+Therefore for incremental updates, it may make sense to pre-load
+them via the ``ldp-raw-update-files`` configuration option.
+
+.. code-block:: json
+
+    {
+        "ldp": [
+            {
+                "instance-id": 1,
+                "lsr-id": "10.10.10.11",
+                "raw-update-file": "start.ldp"
+            }
+        ],
+        "ldp-raw-update-files": [
+            "update1.ldp",
+            "update2.ldp"
+        ]
+    }
+
+Incremental updates not listed here will be loaded dynamically as soon
+as referenced by the first ``ldp-raw-update`` command.
 
 LDP RAW Update Generator
 ~~~~~~~~~~~~~~~~~~~~~~~~

@@ -5,6 +5,7 @@
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |
+|                                   | | ``detail`` include detailed results                                |
 +-----------------------------------+----------------------------------------------------------------------+
 | **icmp-clients-start**            | | Start all ICMP client instances.                                   |
 |                                   | |                                                                    |

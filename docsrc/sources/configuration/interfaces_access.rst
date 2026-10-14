@@ -11,9 +11,10 @@
 |                                   | | Default: `first network interface from configuration`              |
 +-----------------------------------+----------------------------------------------------------------------+
 | **a10nsp-interface**              | | Select the corresponding A10NSP interface for those sessions.      |
+| **a10nsp-interface**              | | Mutually exclusive with **network-interface**.                     |
 |                                   | | Default: `first a10nsp interface from configuration`               |
 +-----------------------------------+----------------------------------------------------------------------+
-| **type**                          | | Set access type (`pppoe` or `ipoe`).                               |
+| **type**                          | | Set access type (`pppoe`, `ipoe` or `pppol2tp`).                   |
 |                                   | | Default: pppoe                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **vlan-mode**                     | | Set VLAN mode to `1:1` or `N:1`.                                   |
@@ -78,6 +79,7 @@
 |                                   | | Default: `1s`                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-md-name**                   | | Set EOAM CFM maintenance domain name (string).                     |
+| **cfm-md-name**                   | | Mandatory unless **cfm-md-name-format** is `NONE`.                 |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-md-name-format**            | | Set EOAM CFM MD name format.                                       |
 |                                   | | Default: ``NONE``                                                  |
@@ -91,6 +93,7 @@
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-name**                   | | Set EOAM CFM maintenance association short name (string).          |
+| **cfm-ma-name**                   | | Mandatory if **cfm-cc** is enabled.                                |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-name-format**            | | Set EOAM CFM MA name format.                                       |
 |                                   | | Default: ``STRING``                                                |
@@ -127,6 +130,7 @@
 | **dsl-type**                      | | Overwrite the dsl-type from the access-line section.               |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ppp-mru**                       | | Overwrite PPP MRU (PPPoE only).                                    |
+| **ppp-mru**                       | | Default: **ppp->mru** Range: 64 - 9000                             |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ipcp**                          | | Overwrite PPP IPCP enable option (PPPoE only).                     |
 +-----------------------------------+----------------------------------------------------------------------+

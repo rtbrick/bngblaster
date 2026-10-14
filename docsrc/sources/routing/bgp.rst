@@ -343,7 +343,8 @@ service require ``-M`` (label count), different route distinguishers and
 route targets per service ``--rd-increment`` and ``--rt-increment``.
 The option ``--stream-vpws-arp`` enables ``vpws-arp`` for the PE to CE
 streams, where ``--stream-destination-mac`` becomes optional. Withdraw
-updates (``--withdraw``) require only ``--rd``.
+updates (``--withdraw``) require only ``--rd`` besides the
+mandatory ``--next-hop-base``.
 
 RAW Update Files
 ~~~~~~~~~~~~~~~~

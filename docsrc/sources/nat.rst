@@ -187,7 +187,9 @@ static (RAW) TCP header.
 This option can be used stand-alone to verify firewall filters or together 
 with the new NAT option to verify NAT TCP streams. 
 
-For now, TCP flags (SYN, …) are statically set to SYN but this could be adapted if needed.
+TCP flags default to SYN and can be changed at runtime using the ``stream-update``
+command argument ``tcp-flags`` with one of the values ``ack``, ``fin``, ``fin-ack``,
+``syn``, ``syn-ack``, ``rst``, ``push`` or ``push-ack``.
 
 Stream Setup interval
 ~~~~~~~~~~~~~~~~~~~~~

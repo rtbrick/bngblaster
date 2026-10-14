@@ -12,6 +12,8 @@
 |                                   | | ``ldp-instance-id``                                                |
 |                                   | | ``local-ipv4-address``                                             |
 |                                   | | ``peer-ipv4-address``                                              |
+|                                   | | ``local-ipv6-address``                                             |
+|                                   | | ``peer-ipv6-address``                                              |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ldp-database**                  | | Display LDP database.                                              |
 |                                   | |                                                                    |
@@ -36,4 +38,6 @@
 |                                   | | ``ldp-instance-id``                                                |
 |                                   | | ``local-ipv4-address``                                             |
 |                                   | | ``peer-ipv4-address``                                              |
+|                                   | | ``local-ipv6-address``                                             |
+|                                   | | ``peer-ipv6-address``                                              |
 +-----------------------------------+----------------------------------------------------------------------+

@@ -3,11 +3,11 @@
 +===================================+======================================================================+
 | **l2tp-tunnels**                  | | Display all L2TP tunnels.                                          |
 +-----------------------------------+----------------------------------------------------------------------+
-| **l2tp-sessions**                 | | Display all matching L2TP sessions.                                |
+| **l2tp-sessions**                 | | Display all matching L2TP sessions (LNS and LAC).                  |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``tunnel-id``                                                      |
-|                                   | | ``session-id``                                                     |
+|                                   | | ``session-id`` L2TP session ID (only with ``tunnel-id``)           |
 +-----------------------------------+----------------------------------------------------------------------+
 | **l2tp-csurq**                    | | Send L2TP CSURQ.                                                   |
 |                                   | |                                                                    |
