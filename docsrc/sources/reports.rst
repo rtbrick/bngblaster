@@ -246,7 +246,7 @@ argument ``-J <filename>``.
         
     {
       "report": {
-        "version": "0.9.39",
+        "version": "1.0.0",
         "test-duration": 139,
         "sessions": 1000,
         "sessions-pppoe": 1000,
