@@ -269,6 +269,22 @@ class IsisSetup(IgpSetup):
                     result[lsp["lsp"]["id"]] = int(lsp["seqNumber"], 16)
         return result
 
+    def frr_lsp(self, level, lsp_id):
+        """Return an LSP of an FRR database level (detail output)."""
+        for area in self.frr.vtysh("show isis database detail").get("areas", []):
+            for db_level in area.get("levels", []):
+                if db_level.get("id") != level:
+                    continue
+                for lsp in db_level.get("lsps", []):
+                    if lsp["lsp"]["id"] == lsp_id:
+                        return lsp
+        return None
+
+    def frr_overload(self, level, lsp_id):
+        """FRR shows the ATT/P/OL bits of an LSP as e.g. 0/0/1."""
+        lsp = self.frr_lsp(level, lsp_id)
+        return bool(lsp) and lsp.get("attPOl", "").strip().endswith("/1")
+
     def bbl_database(self, level):
         """Return {lsp-id: sequence number} of a BNG Blaster database level."""
         entries = self.bbl.ctrl("isis-database", instance=1, level=level)["isis-database"]

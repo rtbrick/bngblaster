@@ -63,6 +63,7 @@ isis_init() {
             g_ctx->isis_instances = instance;
         }
         instance->config = config;
+        instance->overload = config->overload;
         for(int i=0; i<ISIS_LEVELS; i++) {
             level = i+1;
             if(config->level & level) {

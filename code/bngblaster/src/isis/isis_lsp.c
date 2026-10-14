@@ -597,7 +597,12 @@ isis_lsp_fragment(isis_instance_s *instance, uint8_t level, uint16_t fragment, b
     isis_pdu_add_u64(pdu, lsp_id);
     isis_pdu_add_u32(pdu, lsp->seq);
     isis_pdu_add_u16(pdu, 0);
-    isis_pdu_add_u8(pdu, 0x03); 
+    /* The overload bit is only relevant in LSP number zero. */
+    if(instance->overload && (fragment & 0xff) == 0) {
+        isis_pdu_add_u8(pdu, 0x03|ISIS_LSP_OVERLOAD_BIT);
+    } else {
+        isis_pdu_add_u8(pdu, 0x03);
+    }
 
     /* Add authentication TLV */
     isis_pdu_add_tlv_auth(pdu, auth_type, lsp->auth_key);

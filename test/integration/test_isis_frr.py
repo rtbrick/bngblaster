@@ -4,6 +4,8 @@ BNG Blaster ISIS against FRR (adjacency, database sync, authentication)
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import time
+
 import pytest
 
 from helpers import wait_until
@@ -114,4 +116,22 @@ def test_authentication_mismatch(isis, frr_key, bbl_key):
     bbl = {"level1-auth-key": bbl_key, "level1-auth-type": "md5"} if bbl_key else {}
     isis.start(frr={"auth": ("md5", frr_key) if frr_key else None}, bbl={"isis": bbl})
     isis.assert_not_established(1)
+    isis.teardown()
+
+
+@pytest.mark.parametrize("level", [1, 2], ids=LEVEL_IDS.get)
+def test_overload(isis, tmp_path, level):
+    """FRR does not use the overloaded BNG Blaster as transit, so the
+    emulated topology is synchronized but no routes are installed."""
+    topo = isis.lspgen(tmp_path / "isis", 10, level)
+    isis.start(frr={"level": level}, bbl={"level": level, "mrt": topo.mrt,
+                                          "isis": {"overload": True}})
+    isis.wait_established(level)
+    wait_until(lambda: set(isis.bbl_database(level)) <= set(isis.frr_database(level)), 30,
+               message="BNG Blaster database synchronized to FRR")
+    wait_until(lambda: isis.frr_overload(level, lsp_id(BBL_SYSTEM_ID)), 10,
+               message="overload bit of BNG Blaster LSP in FRR database")
+    # Give FRR time for SPF before checking the routes.
+    time.sleep(3)
+    assert not topo.prefixes & isis.frr_routes("ip")
     isis.teardown()

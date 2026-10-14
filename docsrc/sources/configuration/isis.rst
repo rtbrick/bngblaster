@@ -11,6 +11,10 @@
 | **level**                        | | Level.                                                          |
 |                                  | | Default: 3 Range: 1 - 3                                         |
 +----------------------------------+-------------------------------------------------------------------+
+| **overload**                     | | Set the overload bit in the self originated LSP to prevent      |
+|                                  | | transit traffic through the BNG Blaster.                        |
+|                                  | | Default: false                                                  |
++----------------------------------+-------------------------------------------------------------------+
 | **protocol-ipv4**                | | Enable/disable IPv4 routing.                                    |
 |                                  | | Default: true                                                   |
 +----------------------------------+-------------------------------------------------------------------+
