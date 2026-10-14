@@ -103,6 +103,8 @@ static int
 teardown_timer_root(void **state)
 {
     timer_root_s *root = *state;
+    /* Tests must flush active timers before returning, because
+     * deleting a timer clears its pointer on the test stack. */
     timer_flush_root(root);
     free(root);
     return 0;
@@ -167,6 +169,9 @@ test_timer_add_reuses_same_pointer(void **state)
     assert_ptr_equal(timer, first);
     assert_non_null(timer->timer_bucket);
     assert_false(timer->delete);
+
+    timer_flush_root(root);
+    assert_null(timer);
 }
 
 static void
@@ -187,6 +192,9 @@ test_timer_rearm_from_callback(void **state)
     timer_walk(root);
     assert_true(g_callback_counter >= 2);
     assert_non_null(timer);
+
+    timer_flush_root(root);
+    assert_null(timer);
 }
 
 static void
@@ -225,6 +233,9 @@ test_periodic_timer_fires_multiple_times(void **state)
 
     assert_true(g_callback_counter >= 2);
     assert_non_null(timer);
+
+    timer_flush_root(root);
+    assert_null(timer);
 }
 
 static void
