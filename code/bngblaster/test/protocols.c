@@ -45,6 +45,7 @@ test_protocols_decode_pppoe_ipcp_conf_request(void **unused) {
     assert_int_equal(ipcp->dns1, dns1);
     assert_int_equal(ipcp->dns2, dns2);
 
+    free(sp);
 }
 
 /* Ethernet over MPLS (e.g. EVPN VPWS) with and without PW control word. */
