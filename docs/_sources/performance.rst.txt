@@ -149,7 +149,7 @@ requires ``io-slots-rx`` of 16384.
 .. _ddp-pppoe:
 
 PPPoE RSS on Intel 700 Series
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+-----------------------------
 
 The Intel 700 Series (X710, XXV710, XL710) can't parse PPPoE with its default
 parser, so all PPPoE traffic of an interface is received on the same queue.
@@ -193,7 +193,7 @@ of the kernel driver.
 .. _rss-vlan-mac:
 
 RSS by VLAN and MAC on Intel 700 Series
-~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+---------------------------------------
 
 Without the DDP profile, the Intel 700 Series hashes all non-IP traffic,
 including PPPoE, only on the Ethernet type. All PPPoE packets have the same

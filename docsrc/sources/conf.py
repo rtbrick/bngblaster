@@ -15,7 +15,7 @@ extensions = [
 ]
 
 master_doc = 'index'
-html_logo = 'images/rtbrick_logo.png'
+html_logo = 'images/rtbrick_neu.png'
 
 templates_path = ['_templates']
 
