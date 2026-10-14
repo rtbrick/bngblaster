@@ -20,10 +20,13 @@ test results, performance metrics, and any encountered errors or issues. By acce
 through the REST API, users can analyze the outcomes of their tests, troubleshoot problems, and generate 
 comprehensive documentation for further analysis or reporting purposes.
 
-The REST API provided by the BNG Blaster controller simplifies the management of test instances and 
-enhances the overall usability and integration capabilities of the BNG Blaster. Whether it's starting 
-and stopping tests, retrieving logs and reports, or integrating with other systems, the REST API streamlines 
+The REST API provided by the BNG Blaster controller simplifies the management of test instances and
+enhances the overall usability and integration capabilities of the BNG Blaster. Whether it's starting
+and stopping tests, retrieving logs and reports, or integrating with other systems, the REST API streamlines
 the testing process and facilitates seamless interaction with the BNG Blaster's functionalities.
+
+On top of the REST API, the controller also includes an experimental :ref:`web UI <controller-web-ui>`
+to create, start, stop and observe test instances from a browser.
 
 https://github.com/rtbrick/bngblaster-controller
 
@@ -34,8 +37,8 @@ https://github.com/rtbrick/bngblaster-controller
 Installation
 ------------
 
-The BNG Blaster controller should run on any modern Linux distribution
-but is primarily tested on Debian Bookworm and Ubuntu 22.04 LTS.
+The BNG Blaster controller should run on any modern Linux distribution.
+The current version of the controller requires BNG Blaster 1.0.0 or newer.
 
 Download and install Debian package: https://github.com/rtbrick/bngblaster-controller/releases
 
@@ -60,26 +63,104 @@ The corresponding service will be started automatically.
                 └─682535 /usr/local/bin/bngblasterctrl
 
 
-The BNG Blaster controller listens on port ``8001`` per default, 
-which can be changed using the argument ``-addr`` in the systemd
-service unit ``/etc/systemd/system/bngblaster-controller.service``. 
+Configuration
+-------------
+
+The BNG Blaster controller listens on port ``8001`` per default, assumes
+the BNG Blaster to be installed at ``/usr/bin/bngblaster`` and uses
+``/var/bngblaster`` as directory for the test instances.
 
 .. code-block:: none
 
-    $ sudo bngblasterctrl --help
+    $ bngblasterctrl -h
     Usage of bngblasterctrl:
-    -addr string
+      -addr string
             HTTP network address (default ":8001")
-    -color
+      -allowed-hosts string
+            comma-separated host names clients may use to reach the controller, against DNS rebinding (IP addresses and localhost are always allowed; empty allows any host)
+      -color
             turn on color of color output
-    -console
+      -console
             turn on pretty console logging (default true)
-    -d string
+      -d string
             config folder (default "/var/bngblaster")
-    -debug
+      -debug
             turn on debug logging
-    -e string
+      -e string
             bngblaster executable (default "/usr/bin/bngblaster")
+      -interfaces-api
+            enable the interfaces endpoint (disable with -interfaces-api=false) (default true)
+      -schema string
+            path to the bngblaster configuration JSON schema served on /api/v1/schema (default "/usr/share/bngblaster/bngblaster-config.json")
+      -ui
+            enable the embedded web UI (experimental, disable with -ui=false) (default true)
+      -upload
+            enable file upload (disable with -upload=false) (default true)
+
+When installed via the Debian package, the options are configured
+with the variable ``BNGBLASTERCTRL_OPTS`` in the file
+``/etc/default/rtbrick-bngblasterctrl``, which is preserved across
+package upgrades.
+
+.. code-block:: none
+
+    # /etc/default/rtbrick-bngblasterctrl
+    BNGBLASTERCTRL_OPTS="-addr :8080 -d /var/bngblaster"
+
+The service must be restarted to apply the changes.
+
+.. code-block:: none
+
+    $ sudo systemctl restart rtbrick-bngblasterctrl
+
+Stopping or restarting the service (including through a package upgrade)
+also stops all running test instances.
+
+The REST API and web UI do not require authentication yet, so restrict
+who can reach the port, e.g. by binding ``-addr`` to a management address,
+a firewall or an SSH tunnel. The option ``-allowed-hosts`` restricts the
+host names clients may use to reach the controller, which prevents DNS
+rebinding attacks (e.g. ``-allowed-hosts lab01,lab01.example.com``).
+
+.. _controller-web-ui:
+
+Web UI
+------
+
+The controller includes an embedded, experimental web UI to create
+and observe test instances without calling the REST API directly.
+With the default options, it is available at ``http://<host>:8001/``.
+
+.. image:: images/webui.png
+    :alt: BNG Blaster Controller Web UI
+
+The dashboard lists all test instances and allows to create new ones,
+where the interfaces of the host are offered for selection. Each test
+instance can be started, stopped and killed, and provides the following
+views:
+
+* **Overview**: live session counters, setup rates and interface statistics,
+  polled every 2 seconds while the tab is visible
+* **Sessions**: session details
+* **Streams**: traffic stream details
+* **Commands**: execute :ref:`commands <api>` on the running test instance
+
+The log viewer at the bottom shows the log of the selected test instance.
+Files like logs, reports and captures can be downloaded, and additional
+files used by the configuration (e.g. MRT files) can be uploaded.
+
+The web UI depends on two additional endpoints, which are enabled by
+default as well: the interfaces endpoint (``-interfaces-api``) to list
+the host interfaces when creating a test instance, and the upload endpoint
+(``-upload``) to upload files into a test instance. Each of them can be
+disabled individually, e.g. to run a REST-only controller.
+
+.. code-block:: none
+
+    BNGBLASTERCTRL_OPTS="-ui=false -interfaces-api=false -upload=false"
+
+Disabling the interfaces or upload endpoint while keeping the web UI
+enabled leaves the corresponding parts of the web UI non-functional.
 
 
 API
@@ -136,7 +217,27 @@ Example:
     }'
 
 
-Start Test 
+Upload Files
+~~~~~~~~~~~~
+
+``POST /api/v1/instances/<instance-name>/_upload``
+
+This API endpoint uploads files into the test instance directory
+(up to 4 GB per file), for example MRT or BGP RAW update files
+referenced in the configuration. Relative file names in the configuration
+are resolved against the test instance directory. The files managed by
+the controller (e.g. ``run.log``) cannot be uploaded. This endpoint can be
+disabled with the option ``-upload=false``.
+
+Example:
+
+.. code-block:: none
+
+    curl --location --request POST 'http://10.10.10.10:8001/api/v1/instances/quickstart_pppoe/_upload' \
+    --form 'file=@isis.mrt'
+
+
+Start Test
 ~~~~~~~~~~~
 
 ``POST /api/v1/instances/<instance-name>/_start``
