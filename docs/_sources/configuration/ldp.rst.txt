@@ -5,7 +5,8 @@
 +----------------------------------+------------------------------------------------------------+
 | Attribute                        | Description                                                |
 +==================================+============================================================+
-| **instance-id**                  | | LDP instance identifier.                                 |
+| **instance-id**                  | | Mandatory LDP instance identifier.                       |
+| **instance-id**                  | | Range: 0 - 65535                                         |
 +----------------------------------+------------------------------------------------------------+
 | **keepalive-time**               | | LDP session keepalive time in seconds.                   |
 |                                  | | The **keepalive-time** defines the local LDP session     |
@@ -18,7 +19,7 @@
 |                                  | | keepalive timeout is reset each time a PDU arrives. The  |
 |                                  | | BNG Blaster will send keepalive messages at an interval  |
 |                                  | | calculated by using the effective keepalive time divided |
-|                                  | | by 3. Assuming an effective keepalive time of of 15      |
+|                                  | | by 3. Assuming an effective keepalive time of 15         |
 |                                  | | seconds results in a keepalive interval of 5 seconds.    |
 |                                  | | Default: 15 Range: 0 - 65535                             |
 +----------------------------------+------------------------------------------------------------+
@@ -51,5 +52,5 @@
 | **raw-update-file**              | | LDP RAW update file.                                     |
 +----------------------------------+------------------------------------------------------------+
 | **tos**                          | | TOS/TC for all LDP control traffic.                      |
-|                                  | | Default: 0                                               |
-+-----------------------------------+-----------------------------------------------------------+
+|                                  | | Default: 0 Range: 0 - 255                                |
++----------------------------------+------------------------------------------------------------+

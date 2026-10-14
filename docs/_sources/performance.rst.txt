@@ -4,7 +4,7 @@ Performance Guide
 =================
 
 The BNG Blaster handles all traffic sent and received (I/O) in the main thread per default.
-With this default behavior, you can achieve between 100.000 and 250.000 PPS bidirectional
+With this default behavior, you can achieve between 100000 and 250000 PPS bidirectional
 traffic in most environments. Depending on the actual setup, this can be even less or much
 more, which is primarily driven by the single-thread performance of the given CPU.
 
@@ -24,7 +24,7 @@ The number of I/O threads can be configured globally for all interfaces or per i
                 {
                     "interface": "eth1",
                     "rx-threads": 4,
-                    "tx-threads": 2,
+                    "tx-threads": 2
                 }
             ]
         }
@@ -37,6 +37,14 @@ multiple RX threads but only one TX thread.
 
 It is also possible to start dedicated threads for TX but remain RX in the main thread or
 vice versa by setting the number of threads to zero (default).
+
+The I/O threads are named by direction, thread index and interface, for example
+``rx0-eth1`` or ``tx1-eth2``. Long names are truncated to 15 characters.
+This allows to monitor the CPU usage and placement of each thread.
+
+.. code-block:: none
+
+    top -H -p $(pgrep -x bngblaster)
 
 With multithreading, you should be able to scale up to 8 million PPS bidirectional, depending on
 the actual configuration and setup. This allows starting 1 million flows with 1 PPS per flow over
@@ -51,13 +59,17 @@ for LAG (Link Aggregation) interfaces but RX threads are supported. It is also n
 traffic streams send or received on threaded interfaces. All other traffic is still captured on threaded
 interfaces.
 
+RX threads handle received traffic streams directly and redirect all other packets to the main
+thread. Packets longer than 4074 bytes can't be redirected and are counted as ``rx-to-long``.
+Packets dropped because the main thread does not process redirected packets fast enough are
+counted as ``rx-dropped``, except with I/O mode ``packet_mmap`` and ``packet_mmap_raw``, which
+wait for the main thread instead.
+
 .. note::
 
     The BNG Blaster is currently tested for 8 million PPS with 10 million flows, which is not a
     hard limitation but everything above should be considered with caution. It is also possible to
     scale far beyond using DPDK-enabled interfaces.
-
-A single stream will be always handled by a single thread to prevent re-ordering.
 
 It is also recommended to increase the hardware and software queue size of your
 network interface links to the maximum for higher throughput as explained
@@ -83,13 +95,22 @@ CPUs based on their source and destination addresses and ports. RSS requires
 hardware support from the network adapter and the driver.
 
 Some network interfaces are not able to distribute traffic for PPPoE/L2TP or even
-MPLS traffic. Even double-tagged VLANs with default the default type 0x8100 is
-often not supported.
+MPLS traffic. Even double-tagged VLANs with the default type 0x8100 are
+often not supported. If RSS does not work for the received traffic, all packets
+of an interface are received on the same queue and therefore handled by a single
+RX thread, regardless of the number of RX threads configured. This can be verified
+with the per-queue counters of the network interface while traffic is running.
+
+.. code-block:: none
+
+    ethtool -S <interface> | grep -E "rx-[0-9]+\.packets"
 
 Therefore best results can be reached with single tagged IPoE traffic. Depending
 on the actual network adapter, there are different options to address this
-limitation. For instance, Intel adapters support different
-Dynamic Device Personalization (DDP) to support RSS for PPPoE traffic.
+limitation. For instance, Intel 700 Series adapters support RSS for PPPoE traffic
+with a Dynamic Device Personalization (DDP) profile as explained in
+:ref:`PPPoE RSS on Intel 700 Series <ddp-pppoe>`, or by extending the hash
+fields as explained in :ref:`RSS by VLAN and MAC on Intel 700 Series <rss-vlan-mac>`.
 
 You can also boost the performance by adjusting some driver settings. For example,
 we found that the following setting improved the performance for
@@ -101,11 +122,151 @@ test environment.
 
     ethtool -C <interface> adaptive-rx off adaptive-tx off rx-usecs 125 tx-usecs 125
 
+The NIC RX descriptor ring is a separate, usually much smaller buffer than
+any of the software-side ring/slot settings above (``io-slots``, AF_XDP's
+fill ring, DPDK's descriptor count, ...) - it is the ring of receive buffers
+the NIC writes received packets to via DMA, which the driver refills via
+its NAPI poll. On some drivers/NICs it defaults
+far below what the hardware supports (e.g. 512 out of a possible 8160 on an
+Intel i40e we tested), so at high line rates any brief delay in the NAPI
+poll (e.g. from interrupt moderation, see above) can drain it before the
+driver gets to refill it - visible as the ``rx_missed_errors`` counter in
+``ethtool -S <interface>`` increasing even though every software-side ring
+is comfortably sized. Check and, if needed, raise it towards its maximum:
+
+.. code-block:: none
+
+    ethtool -g <interface>
+    ethtool -G <interface> rx 8160 tx 8160
+
+With :ref:`AF_XDP <af-xdp-usage>`, the NIC RX ring is filled with frames of the
+AF_XDP socket, defined per RX thread by ``io-slots-rx`` (rounded up to the next
+power of two). The NIC RX ring should not exceed half of those frames, otherwise
+the frames still waiting to be processed are missing to refill the ring, which
+results in even more ``rx_missed_errors``. For example, a NIC RX ring of 8160
+requires ``io-slots-rx`` of 16384.
+
+.. _ddp-pppoe:
+
+PPPoE RSS on Intel 700 Series
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The Intel 700 Series (X710, XXV710, XL710) can't parse PPPoE with its default
+parser, so all PPPoE traffic of an interface is received on the same queue.
+The Intel DDP profile *PPPoE and PPPoL2TPv2* adds PPPoE parsing, so that RSS
+hashes the IP header inside PPPoE. Please contact Intel if you need this profile.
+
+With the Linux kernel driver (e.g. I/O modes ``af_xdp`` or ``packet_mmap``),
+version 1.1.6.1 of this profile (file ``ppp-oe-ol2tpv2.pkg``) is required.
+The older version 1.0.0.0 (file ``ppp-oe-ol2tpv2.pkgo``) could be loaded with
+the kernel driver in our tests, but PPPoE traffic was still received on a
+single queue.
+
+The profile is loaded with ``ethtool`` from the firmware directory
+``/lib/firmware/intel/i40e/ddp/``, with the file name only. It applies to all
+ports of the adapter, so it is sufficient to load it via one port.
+
+.. code-block:: none
+
+    cp ppp-oe-ol2tpv2.pkg /lib/firmware/intel/i40e/ddp/
+    ethtool -f <interface> ppp-oe-ol2tpv2.pkg 100
+
+The profile is not persistent and must be loaded again after every reboot
+or reload of the i40e driver. It can be removed with:
+
+.. code-block:: none
+
+    ethtool -f <interface> - 100
+
+In our tests, the profile changed only the distribution of PPPoE traffic.
+IPoE and MPLS (single label) traffic was distributed over all queues with
+and without the profile, with identical results.
+
+The profile did not distribute double-tagged PPPoE in our tests. Double-tagged
+PPPoE, with outer type 0x8100 or 0x88a8 (``qinq``), was still received on a
+single queue with the profile loaded, while single-tagged PPPoE was distributed. For double-tagged PPPoE, see
+:ref:`RSS by VLAN and MAC on Intel 700 Series <rss-vlan-mac>`.
+
+For :ref:`DPDK <dpdk-usage>`, the profile must be loaded via DPDK instead
+of the kernel driver.
+
+.. _rss-vlan-mac:
+
+RSS by VLAN and MAC on Intel 700 Series
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+Without the DDP profile, the Intel 700 Series hashes all non-IP traffic,
+including PPPoE, only on the Ethernet type. All PPPoE packets have the same
+Ethernet type, so they are received on the same queue. The fields used for
+this hash can be extended by VLAN and MAC addresses. If each session has its
+own VLAN or MAC address, as usual with the BNG Blaster, the traffic is then
+distributed over all queues. This works for single-tagged, double-tagged and
+QinQ (outer type 0x88a8) PPPoE, without the DDP profile.
+
+.. warning::
+
+    This method writes a NIC register directly via the debugfs interface of
+    the i40e driver. It is a lab tweak and not an official interface of the
+    driver. The register is global for all ports of the adapter and applies
+    to all non-IP traffic. It is not persistent and must be set again after
+    a reboot or reset of the adapter.
+
+The register ``GLQF_HASH_INSET`` defines the hash fields for the packet type
+*L2 payload* (63) in two 32-bit words. The following values were used in our
+tests:
+
++----------------------------------+------------------+------------------+
+| Hash fields                      | Low (0x2677F8)   | High (0x2677FC)  |
++==================================+==================+==================+
+| Ethernet type (default)          | 0x00004000       | 0x00000000       |
++----------------------------------+------------------+------------------+
+| Ethernet type, VLANs             | 0x04004000       | 0x00800000       |
++----------------------------------+------------------+------------------+
+| Ethernet type, VLANs, MACs       | 0x04004000       | 0xFC800000       |
++----------------------------------+------------------+------------------+
+
+VLANs means outer and inner VLAN, MACs means source and destination MAC address.
+The register is written via the debugfs command file of one port of the
+adapter (PCI address), with debugfs mounted. As the register is global, this
+applies to all ports of the adapter.
+
+.. code-block:: none
+
+    F=/sys/kernel/debug/i40e/<pci-address>/command
+
+    # hash on Ethernet type, VLANs and MAC addresses
+    echo "write 0x2677F8 0x04004000" > $F
+    echo "write 0x2677FC 0xFC800000" > $F
+
+    # verify (result is shown in the kernel log)
+    echo "read 0x2677F8" > $F
+    echo "read 0x2677FC" > $F
+    dmesg | tail -2
+
+    # restore default (Ethernet type only)
+    echo "write 0x2677F8 0x00004000" > $F
+    echo "write 0x2677FC 0x00000000" > $F
+
+For QinQ, the MAC addresses are required. The NIC does not recognize the outer
+type 0x88a8 as VLAN by default, so the VLANs are not available for the hash.
+The MAC addresses are always at the same position, and each BNG Blaster session
+uses its own client MAC address (destination MAC address in downstream and
+source MAC address in upstream direction).
+
+In our tests with 650 PPPoE sessions (6.3 Mpps per interface and direction,
+128-byte packets, 4 RX threads per interface, :ref:`AF_XDP <af-xdp-usage>`),
+the traffic was distributed evenly over all 4 queues without loss for
+single-tagged, double-tagged and QinQ PPPoE. With the default hash, all
+traffic was received on one queue with up to 0.5% loss.
+
+Unlike the DDP profile, which hashes the IP header inside PPPoE, this method
+requires a different VLAN or MAC address per session. The DDP profile and this
+method were not tested together.
+
 .. note::
 
     We are continuously working to increase performance. Contributions, proposals,
     or recommendations on how to further increase performance are welcome!
-
 
 NUMA
 ----
@@ -325,3 +486,277 @@ remains available if you need exact CPU control.
 DPDK assigns one hardware queue to each RX thread, so you need to increase
 the number of threads to utilize more queues and enhance performance.
 
+
+.. _loopback-usage:
+
+Loopback
+--------
+
+The I/O mode ``loopback`` connects two links of the same BNG Blaster instance
+back to back via in-memory rings, without any kernel interface, driver or NIC
+in between. This allows to measure the I/O performance of the BNG Blaster
+itself (packet generation, stream processing, decoding, ...) independent of
+the underlying I/O stack, which makes it the upper bound of what the BNG Blaster
+can achieve with any other I/O mode. The links do not need to exist in the
+host OS and no special privileges are required.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "io-mode": "loopback",
+            "rx-threads": 2,
+            "tx-threads": 2,
+            "links": [
+                { "interface": "lo-a10nsp", "loopback-peer": "lo-access" },
+                { "interface": "lo-access" }
+            ],
+            "a10nsp": [ { "interface": "lo-a10nsp" } ],
+            "access": [
+                {
+                    "interface": "lo-access",
+                    "type": "ipoe",
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "inner-vlan": 7
+                }
+            ]
+        }
+    }
+
+Every TX thread (or the main thread if TX threads are disabled) owns one
+lock-free single-producer/single-consumer ring to the peer link, which is
+read by exactly one RX thread of the peer. If the peer link has fewer RX than
+TX threads, the rings are distributed round-robin over the available RX threads.
+The ring size is defined by ``io-slots`` of the sending link. Similar to a NIC, a
+full ring is reported as ``no-buffer`` and the affected packets are sent later.
+
+The MAC address is generated automatically, if not explicitly configured
+per link. The maximum stream packet length is 3952 bytes or 12144 bytes with
+``jumbo-frames`` enabled.
+
+.. note::
+
+    Each loopback link runs its own RX and TX threads, so the number of
+    threads required for both links of a loopback pair should not exceed
+    the number of available CPU cores.
+
+.. _af-xdp-usage:
+
+AF_XDP
+------
+
+Using the experimental `AF_XDP <https://www.kernel.org/doc/html/latest/networking/af_xdp.html>`_
+support requires building the BNG Blaster from sources with AF_XDP enabled as
+explained in the corresponding :ref:`installation <install-af-xdp>` section.
+
+.. note::
+
+    The official BNG Blaster Debian release packages do not support AF_XDP!
+
+Unlike :ref:`DPDK <dpdk-usage>`, AF_XDP interfaces stay attached to the Linux
+network stack and keep using the normal kernel driver, which makes it a good
+middle ground between the regular ``packet_mmap``/``raw`` modes and DPDK: no
+dedicated driver binding or hugepages are required, while still bypassing
+most of the kernel networking stack for a lot better performance than
+``packet_mmap``.
+
+RX and TX each get their own dedicated, disjoint NIC queues - they are never
+combined onto the same queue, so heavy TX load can't delay that same
+queue's own RX servicing (they would otherwise share one NAPI/IRQ context).
+``rx-threads`` and ``tx-threads`` are fully independent, e.g. more RX than
+TX threads to spread out RX-side protocol processing without paying for
+extra TX threads.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "io-slots": 4096,
+            "links": [
+                {
+                    "interface": "eth1",
+                    "io-mode": "af_xdp",
+                    "rx-threads": 6,
+                    "rx-auto-cpuset": true,
+                    "tx-threads": 2,
+                    "tx-auto-cpuset": true
+                }
+            ]
+        }
+    }
+
+.. note::
+
+    AF_XDP frames are limited to 4096 bytes, so ``jumbo-frames`` are not
+    supported by this I/O mode and the maximum stream packet length is
+    reduced accordingly.
+
+Like DPDK, AF_XDP requires the NIC to actually provide as many hardware
+queues as bngblaster needs, i.e. ``rx-threads`` + ``tx-threads`` (each
+defaulting to 1 if left unset), since RX and TX never share a queue.
+BNG Blaster reconfigures the interface to the required number of combined
+queues automatically via ``ethtool``-equivalent ioctls (the same effect as
+running ``ethtool -L <interface> combined <n>`` beforehand) - if that fails
+(e.g. insufficient privileges, or a driver that splits RX/TX channels
+instead of combined ones), it is logged with a hint to configure it
+manually. Native (driver) mode additionally requires a driver with native
+XDP support; BNG Blaster automatically falls back to generic (SKB) mode -
+which works on any interface, including ``veth`` - if native mode is not
+available.
+
+.. note::
+
+    If the NIC has more queues configured than bngblaster binds AF_XDP
+    sockets to, RSS may hash some flows to a queue nothing is bound to -
+    those packets are passed to the normal kernel stack instead of being
+    redirected to bngblaster, which looks like silent RX loss for the
+    affected flows. This is exactly what the automatic queue
+    reconfiguration above avoids.
+
+
+AF_XDP Tuning
+~~~~~~~~~~~~~
+
+The following recommendations are based on tests with PPPoE traffic between
+two directly connected 10G ports of an Intel X710 adapter (i40e driver),
+using native zero-copy mode.
+
+**RX threads:** The RX performance per thread depends on the CPU and packet
+size. In our tests, a single RX thread received up to 2.4 Mpps per queue
+without loss and processed more than 6 Mpps with 0.1% to 0.5% loss. The loss is
+caused by short delays of the RX thread, not by its CPU capacity, so
+distributing the traffic over more queues reduces loss even if a single thread
+could process the full rate. RSS does not distribute traffic perfectly evenly,
+so plan enough RX threads to keep the busiest queue well below this limit.
+Typically, more RX than TX threads are required.
+
+**TX threads:** TX threads permanently poll and therefore use a full CPU core
+each, even if not sending at their limit. In our tests, a single TX thread
+sent at least 5.8 Mpps (the actual limit was not reached), so one TX thread
+per 10G interface was sufficient. Using fewer TX threads leaves more CPU
+cores for RX threads.
+
+**CPU cores:** Each RX and TX thread should have its own CPU. The total number
+of RX and TX threads of all links plus the main thread must not exceed the
+number of available CPUs, otherwise threads are delayed for short periods,
+which shows up as bursts of ``rx_missed_errors`` even if the average CPU load
+looks fine. Ideally, busy threads run on different physical cores, as SMT
+siblings share the resources of one physical core.
+
+**Buffers:** Short delays of RX threads can be absorbed with larger buffers.
+In our tests, a NIC RX ring of 8160 with ``io-slots-rx`` of 16384 removed the
+remaining loss caused by such delays (see the NIC RX ring requirements above).
+
+.. _single-queue:
+
+**Single queue:** If RSS can't distribute the received traffic, e.g. PPPoE
+without the :ref:`DDP profile <ddp-pppoe>` or
+:ref:`RSS by VLAN and MAC <rss-vlan-mac>`, all packets
+of an interface are handled by one queue and one RX thread. In our tests, this
+worked without loss up to about 2.4 Mpps per interface and with up to 0.5% loss
+at 6.35 Mpps. In this case, the CPU handling the interrupt of this queue is
+important. The kernel processes the received packets of a queue (NAPI) on the
+CPU of its interrupt, which took about a third of a CPU core in our tests. If
+this is the CPU of the RX thread of the same queue, both share one core, which
+increased the loss from below 0.5% to up to 21% in our tests. Pin the interrupt
+of the active queue to a CPU without a busy BNG Blaster thread and stop
+``irqbalance``, which moves interrupts automatically.
+
+.. code-block:: none
+
+    systemctl stop irqbalance
+    grep <interface> /proc/interrupts
+    echo <cpu> > /proc/irq/<irq>/smp_affinity_list
+
+**Virtual machines:** The virtual CPUs of a VM may share physical cores with
+each other or with the host. In our tests, a VM with 14 virtual CPUs on a host
+with 8 physical cores provided only the performance of about 8 cores if all
+virtual CPUs were busy. Short interruptions by the host cause bursts of
+``rx_missed_errors``. If possible, pin the virtual CPUs to dedicated physical
+cores of the host and use the large buffers explained above.
+
+**PCIe:** Small packets require many PCIe transactions per byte. With an
+Intel X710 4-port adapter in a PCIe 3.0 x4 slot, two ports with bidirectional
+traffic of 128-byte packets reached only about 92% of line rate (6.5 Mpps per
+port and direction), independent of the number of threads. Unidirectional
+traffic of 128-byte packets reached line rate, and bidirectional traffic of
+1400-byte packets reached line rate without loss. Check
+the negotiated PCIe link width and speed of the adapter, and use a slot with
+the full width supported by the adapter for small packets at line rate.
+
+.. code-block:: none
+
+    lspci -vv -s <pci-address> | grep -E "LnkCap:|LnkSta:"
+
+**Monitoring:** The following counters of ``ethtool -S <interface>`` help to
+identify the bottleneck. ``rx_missed_errors`` counts packets dropped because no
+free RX descriptor was available, which is caused by delayed or overloaded RX
+threads. The per-queue counters ``rx-<n>.packets`` show how RSS distributes
+the traffic over the RX threads.
+
+The following configuration was tested with 650 PPPoE sessions with one
+bidirectional stream of 10 Mbps and 128 bytes per session (6.35 Mpps per port
+and direction) without loss, with NIC RX rings set to 8160 and the
+:ref:`DDP profile <ddp-pppoe>` loaded.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "io-mode": "af_xdp",
+            "rx-threads": 4,
+            "tx-threads": 2,
+            "io-slots": 4096,
+            "links": [
+                {
+                    "interface": "eth1",
+                    "io-slots-tx": 1024,
+                    "io-slots-rx": 16384,
+                    "rx-cpuset": [1, 2, 3, 4],
+                    "tx-cpuset": [5, 6]
+                },
+                {
+                    "interface": "eth2",
+                    "io-slots-tx": 1024,
+                    "io-slots-rx": 16384,
+                    "rx-cpuset": [7, 8, 9, 10],
+                    "tx-cpuset": [11, 12]
+                }
+            ],
+            "a10nsp": [
+                {
+                    "__comment__": "PPPoE Server",
+                    "interface": "eth1"
+                }
+            ],
+            "access": [
+                {
+                    "__comment__": "PPPoE Client",
+                    "interface": "eth2",
+                    "type": "pppoe",
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "ipv6": false,
+                    "stream-group-id": 1
+                }
+            ]
+        },
+        "sessions": {
+            "count": 650
+        },
+        "dhcpv6": {
+            "enable": false
+        },
+        "streams": [
+            {
+                "stream-group-id": 1,
+                "name": "S1",
+                "type": "ipv4",
+                "direction": "both",
+                "Mbps": 10,
+                "length": 128,
+                "a10nsp-interface": "eth1"
+            }
+        ]
+    }

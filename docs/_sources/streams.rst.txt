@@ -183,7 +183,9 @@ static (RAW) TCP header.
 This option can be used stand-alone to verify firewall filters or together 
 with the new NAT option to verify NAT TCP streams. 
 
-For now, TCP flags (SYN, …) are statically set to SYN but this could be adopted if needed.
+TCP flags default to SYN and can be changed at runtime using the ``stream-update``
+command argument ``tcp-flags`` with one of the values ``ack``, ``fin``, ``fin-ack``,
+``syn``, ``syn-ack``, ``rst``, ``push`` or ``push-ack``.
 
 Stream Iterators
 ~~~~~~~~~~~~~~~~
@@ -211,16 +213,19 @@ by the port-step configuraton option.
 the port iterator resets to the initial port value and resumes incrementing.
 
 **Configuration Parameters:**
+
 * ``source/destination-port`` (default: 65056): The starting port number.
 * ``source/destination-port-step`` (default: 0):	The value by which to increment the port for each new stream instance.
 * ``source/destination-port-max`` (default: 65535): The upper limit for the port range. When the current port exceeds this value, it wraps back to source-port.
 
 **Examples:**
-Consider a scenario with 10 sessions, where each session generates 10 instances of a specific stream (total stream count = 100). 
+
+Consider a scenario with 10 sessions, where each session generates 10 instances of a specific stream (total stream count = 100).
 The starting source-port is 1000 and source-port-step is 1.
 
 *Scenario A - Global Unique Ports (Continuous Range):*
-If you want every stream across all sessions to have a unique source port, 
+
+If you want every stream across all sessions to have a unique source port,
 ensure the source-port-max is high enough to cover the total count.
 
 Config: source-port-max: 65535
@@ -231,8 +236,9 @@ Result: Ports are assigned sequentially from 1000 to 1099.
 * ...
 * Session 10: Ports 1090–1099
 
-*Scenario B - Per-Session Port Reuse (Repeating Range):* 
-If you want each session to use the same set of source ports, you must configure source-port-max to 
+*Scenario B - Per-Session Port Reuse (Repeating Range):*
+
+If you want each session to use the same set of source ports, you must configure source-port-max to
 force a reset after the stream count for a single session is reached.
 
 Config: source-port-max: 1009 (Start port 1000 + 9 increments)
@@ -291,14 +297,18 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "rx-loss": 0,
                     "rx-delay-us-min": 37,
                     "rx-delay-us-max": 98595,
-                    "rx-pps": 1000,
-                    "tx-pps": 1000,
+                    "rx-pps": 1000.0,
+                    "tx-pps": 1000.0,
+                    "rx-pps-max": 1000.0,
+                    "tx-pps-max": 1000.0,
                     "tx-bps-l2": 8240000,
                     "rx-bps-l2": 8112000,
                     "rx-bps-l3": 8000000,
                     "tx-mbps-l2": 8.24,
                     "rx-mbps-l2": 8.112,
-                    "rx-mbps-l3": 8.0
+                    "rx-mbps-l3": 8.0,
+                    "rx-first-epoch": 1700000001,
+                    "rx-last-epoch": 1700000055
                 },
                 {
                     "name": "BestEffort",
@@ -316,14 +326,18 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "rx-loss": 0,
                     "rx-delay-us-min": 43,
                     "rx-delay-us-max": 98903,
-                    "rx-pps": 1000,
-                    "tx-pps": 1000,
+                    "rx-pps": 1000.0,
+                    "tx-pps": 1000.0,
+                    "rx-pps-max": 1000.0,
+                    "tx-pps-max": 1000.0,
                     "tx-bps-l2": 8112000,
                     "rx-bps-l2": 8208000,
                     "rx-bps-l3": 8000000,
                     "tx-mbps-l2": 8.112,
                     "rx-mbps-l2": 8.208,
-                    "rx-mbps-l3": 8.0
+                    "rx-mbps-l3": 8.0,
+                    "rx-first-epoch": 1700000001,
+                    "rx-last-epoch": 1700000055
                 },
                 {
                     "name": "Voice",
@@ -341,14 +355,18 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "rx-loss": 0,
                     "rx-delay-us-min": 41,
                     "rx-delay-us-max": 96548,
-                    "rx-pps": 100,
-                    "tx-pps": 100,
+                    "rx-pps": 100.0,
+                    "tx-pps": 100.0,
+                    "rx-pps-max": 100.0,
+                    "tx-pps-max": 100.0,
                     "tx-bps-l2": 811200,
                     "rx-bps-l2": 820800,
                     "rx-bps-l3": 800000,
                     "tx-mbps-l2": 0.8112,
                     "rx-mbps-l2": 0.8208,
-                    "rx-mbps-l3": 0.8
+                    "rx-mbps-l3": 0.8,
+                    "rx-first-epoch": 1700000001,
+                    "rx-last-epoch": 1700000055
                 }
             ]
         }
@@ -397,15 +415,32 @@ Each flow can be queried separately using jsonpath expression with name and dire
         "rx-loss": 0,
         "rx-delay-us-min": 50,
         "rx-delay-us-max": 10561,
-        "rx-pps": 99,
-        "tx-pps": 99,
-        "tx-bps-l2": 90288,
-        "rx-bps-l2": 99792,
-        "rx-bps-l3": 79200,
-        "tx-mbps-l2": 0.090288,
-        "rx-mbps-l2": 0.099792,
-        "rx-mbps-l3": 0.0792
+        "rx-pps": 99.2,
+        "tx-pps": 99.2,
+        "rx-pps-max": 100.0,
+        "tx-pps-max": 100.0,
+        "tx-bps-l2": 90470,
+        "rx-bps-l2": 99993,
+        "rx-bps-l3": 79360,
+        "tx-mbps-l2": 0.09047,
+        "rx-mbps-l2": 0.099993,
+        "rx-mbps-l3": 0.07936,
+        "rx-first-epoch": 1700000001,
+        "rx-last-epoch": 1700000273
     }
+
+The stream rates ``rx-pps`` and ``tx-pps`` and the rates in bits per second
+derived from them are moving averages over the last 5 seconds with a
+resolution of 1/100 packets per second. Because the moving average counts
+whole packets, it can differ from the configured rate by up to one packet
+per window (0.2 PPS). The ``rx-pps-max`` and ``tx-pps-max`` values are the
+highest moving averages seen. Rates are only calculated for streams with at
+least 1 PPS and with the traffic option ``stream-rate-calculation`` enabled.
+
+The JSON report is generated after all streams are stopped, so the rates
+in the report may already be lower than during the test. The average rate
+over the whole test can be calculated from the stream output as
+``rx-packets / (rx-last-epoch - rx-first-epoch)``.
 
 Start/Stop Traffic
 ~~~~~~~~~~~~~~~~~~
@@ -426,7 +461,7 @@ flow is ready to send. These checks include:
 
 The global traffic state can be changed by multiple methods like the configuration 
 parameter ``{ "traffic": { "autostart": true/false } }``, the commands ``traffic-start/stop``, 
-and the keyboard shortcuts `F7/F8`. All these methods have the same effect of setting 
+and the keyboard shortcuts ``F7/F8``. All these methods have the same effect of setting
 the global traffic state. 
 
 The flow state can be changed by different configurations and commands, depending on the traffic type. 
@@ -441,14 +476,14 @@ and ``multicast-traffic-start/stop`` can modify the state of these streams at an
 
 ``$ sudo bngblaster-cli run.sock stream-start session-group-id 1 direction upstream``
 
-The configuration ``{"session-traffic": []}`` defines another kind of stream called :ref:`session-traffic <session-traffic>`. 
+The configuration ``{"session-traffic": {}}`` defines another kind of stream called :ref:`session-traffic <session-traffic>`. 
 The configuration ``{"session-traffic": {"autostart": true/false}}`` controls the initial state 
 of :ref:`session-traffic <session-traffic>`. The commands ``session-traffic-start/stop`` 
 can modify the state of these streams at any time.
 
 ``$ sudo bngblaster-cli run.sock session-traffic-start session-id 1``
 
-Details about all commands and their arguments can found int the :ref:`API/CLI <api>` section. 
+Details about all commands and their arguments can be found in the :ref:`API/CLI <api>` section.
 
 Fragmentation
 ~~~~~~~~~~~~~
@@ -530,7 +565,8 @@ session which has sent or should receive the packet.
     | Session Outer VLAN            | Session Inner VLAN            |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Flow Identifier                                               |
-    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    | Reserved                                                      |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Flow Sequence Number                                          |
     |                                                               |
@@ -561,7 +597,8 @@ Multicast Traffic
     | Group                                                         |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Flow Identifier                                               |
-    |                                                               |
+    +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
+    | Reserved                                                      |
     +-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+-+
     | Flow Sequence Number                                          |
     |                                                               |
@@ -590,8 +627,10 @@ of blaster traffic.
 Flow Identifier
 ^^^^^^^^^^^^^^^
 
-The 64-bit flow identifier is a globally unique number that identifies
-the flow.
+The 32-bit flow identifier is a globally unique number that identifies
+the flow. It is followed by 32 reserved bits set to zero, which keeps the
+header compatible with former versions using a 64-bit little-endian
+flow identifier.
 
 Flow Sequence Number
 ^^^^^^^^^^^^^^^^^^^^

@@ -18,7 +18,7 @@
 |                               | | Default: 3                                                     |
 +-------------------------------+------------------------------------------------------------------+
 | **start-delay**               | | PPP LCP initial request delay in milliseconds.                 |
-|                               | | Default: 0                                                     |
+|                               | | Default: 0 Range: 0 - 999                                      |
 +-------------------------------+------------------------------------------------------------------+
 | **ignore-vendor-specific**    | | Ignore LCP vendor-specific requests.                           |
 |                               | | Default: false                                                 |

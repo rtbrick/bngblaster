@@ -1,7 +1,7 @@
 .. _li:
 
-Legal Interception (LI)
------------------------
+Lawful Interception (LI)
+------------------------
 
 The BNG Blaster can be used to emulate a mediation device providing detailed statistics
 about the received flows. Today only the BCM QMX LI header format is supported but further
@@ -53,6 +53,7 @@ The received flows can be displayed with the command `li-flows`.
                 "liid": 4194301,
                 "bytes-rx": 94,
                 "packets-rx": 1,
+                "packets-rx-bbl": 0,
                 "packets-rx-ipv4": 0,
                 "packets-rx-ipv4-tcp": 0,
                 "packets-rx-ipv4-udp": 0,
@@ -74,6 +75,7 @@ The received flows can be displayed with the command `li-flows`.
                 "liid": 4194301,
                 "bytes-rx": 160720,
                 "packets-rx": 820,
+                "packets-rx-bbl": 0,
                 "packets-rx-ipv4": 820,
                 "packets-rx-ipv4-tcp": 0,
                 "packets-rx-ipv4-udp": 0,

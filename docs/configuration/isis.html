@@ -1,25 +1,19 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>&lt;no title&gt; &mdash; BNG Blaster 0.9 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
-      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=411f5019" />
-
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=049aceee"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -30,19 +24,15 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="../index.html" class="icon icon-home">
-            BNG Blaster
-              <img src="../_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+            <a href="../index.html" class="icon icon-home"> BNG Blaster
+            <img src="../_static/rtbrick_logo.png" class="logo" alt="Logo"/>
           </a>
               <div class="version">
                 0.9.X
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -80,8 +70,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">&lt;no title&gt;</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/configuration/isis.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -91,19 +81,25 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
+  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 34%" />
+<col style="width: 66%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><strong>instance-id</strong></p></td>
+<tr class="row-even"><td><p><strong>instance-id</strong>
+<strong>instance-id</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS instance identifier.</div>
+<div class="line">Mandatory ISIS instance identifier.</div>
+<div class="line">Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
@@ -114,210 +110,264 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>protocol-ipv4</strong></p></td>
+<tr class="row-even"><td><p><strong>overload</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set the overload bit in the self originated LSP to prevent</div>
+<div class="line">transit traffic through the BNG Blaster.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>protocol-ipv4</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable/disable IPv4 routing.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>protocol-ipv6</strong></p></td>
+<tr class="row-even"><td><p><strong>protocol-ipv6</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable/disable IPv6 routing.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>level1-auth-key</strong></p></td>
+<tr class="row-odd"><td><p><strong>level1-auth-key</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 1 authentication key.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>level1-auth-type</strong></p></td>
+<tr class="row-even"><td><p><strong>level1-auth-type</strong>
+<strong>level1-auth-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 1 authentication type (simple or md5).</div>
+<div class="line">Required to enable authentication with <strong>level1-auth-key</strong>.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>level1-auth-hello</strong></p></td>
+<tr class="row-odd"><td><p><strong>level1-auth-hello</strong>
+<strong>level1-auth-hello</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 1 hello authentication.</div>
+<div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>level1-auth-csnp</strong></p></td>
+<tr class="row-even"><td><p><strong>level1-auth-csnp</strong>
+<strong>level1-auth-csnp</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 1 CSNP authentication.</div>
+<div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>level1-auth-psnp</strong></p></td>
+<tr class="row-odd"><td><p><strong>level1-auth-psnp</strong>
+<strong>level1-auth-psnp</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 1 PSNP authentication.</div>
+<div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>level2-auth-key</strong></p></td>
+<tr class="row-even"><td><p><strong>level2-auth-key</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 2 authentication key.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>level2-auth-type</strong></p></td>
+<tr class="row-odd"><td><p><strong>level2-auth-type</strong>
+<strong>level2-auth-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 2 authentication type (simple or md5).</div>
+<div class="line">Required to enable authentication with <strong>level2-auth-key</strong>.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>level2-auth-hello</strong></p></td>
+<tr class="row-even"><td><p><strong>level2-auth-hello</strong>
+<strong>level2-auth-hello</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 2 hello authentication.</div>
+<div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>level2-auth-csnp</strong></p></td>
+<tr class="row-odd"><td><p><strong>level2-auth-csnp</strong>
+<strong>level2-auth-csnp</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 2 CSNP authentication.</div>
+<div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>level2-auth-psnp</strong></p></td>
+<tr class="row-even"><td><p><strong>level2-auth-psnp</strong>
+<strong>level2-auth-psnp</strong></p></td>
 <td><div class="line-block">
 <div class="line">Level 2 PSNP authentication.</div>
+<div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>hello-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>hello-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">Hello interval in seconds.</div>
 <div class="line">Default: 10 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>hello-padding</strong></p></td>
+<tr class="row-even"><td><p><strong>hello-padding</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable/disable hello padding.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>hold-time</strong></p></td>
+<tr class="row-odd"><td><p><strong>hold-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS hold time in seconds.</div>
 <div class="line">Default: 30 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-buffer-size</strong></p></td>
+<tr class="row-even"><td><p><strong>lsp-buffer-size</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSPBufferSize in bytes.</div>
 <div class="line">Default: 1492 Range: 128 - 9192</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lsp-lifetime</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-lifetime</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP lifetime in seconds.</div>
 <div class="line">Default: 65535 Range: 330 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-refresh-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>lsp-refresh-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP refresh interval in seconds.</div>
 <div class="line">Default: 300 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lsp-retry-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-retry-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP retry interval in seconds.</div>
 <div class="line">Default: 5 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-tx-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>lsp-tx-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP TX interval in ms (time between LSP send windows).</div>
 <div class="line">Default: 10 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lsp-tx-window-size</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-tx-window-size</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP TX window size (LSP send per window).</div>
 <div class="line">Default: 1 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>csnp-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>csnp-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS CSNP interval in seconds.</div>
 <div class="line">Default: 30 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>hostname</strong></p></td>
+<tr class="row-odd"><td><p><strong>hostname</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS hostname.</div>
 <div class="line">Default: bngblaster</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>router-id</strong></p></td>
+<tr class="row-even"><td><p><strong>router-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS router identifier.</div>
 <div class="line">Default: 10.10.10.10</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>system-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>system-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS system identifier.</div>
 <div class="line">Default: 0100.1001.0010</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>area</strong></p></td>
+<tr class="row-even"><td><p><strong>area</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS area(s).</div>
 <div class="line">Default: 49.0001/24</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>sr-algo</strong></p></td>
+<tr class="row-odd"><td><p><strong>sr-algo</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR algorithm(s), multiple possible.</div>
 <div class="line">Default: disabled Range: 0 - 255</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>sr-base</strong></p></td>
+<tr class="row-even"><td><p><strong>sr-base</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR base.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>sr-range</strong></p></td>
+<tr class="row-odd"><td><p><strong>sr-range</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR range.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>sr-node-sid</strong></p></td>
+<tr class="row-even"><td><p><strong>sr-node-sid</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR node SID.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
+<tr class="row-odd"><td><p><strong>sr-node-sids</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS SR node SIDs, one per SR algorithm, as list</div>
+<div class="line">of <code class="docutils literal notranslate"><span class="pre">index</span></code> (0 - 1048575) and <code class="docutils literal notranslate"><span class="pre">algo</span></code> (default 0), e.g.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">[{&quot;algo&quot;:</span> <span class="pre">0,</span> <span class="pre">&quot;index&quot;:</span> <span class="pre">1},</span> <span class="pre">{&quot;algo&quot;:</span> <span class="pre">128,</span> <span class="pre">&quot;index&quot;:</span> <span class="pre">101}]</span></code>.</div>
+<div class="line">Mutually exclusive with <strong>sr-node-sid</strong>.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>node-msd</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS node maximum SID depth (BMI-MSD, RFC 8491).</div>
+<div class="line">Advertised together with <strong>sr-base</strong> and <strong>sr-range</strong>.</div>
+<div class="line">Default: 0 (disabled) Range: 0 - 255</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>flex-algo</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS Flex-Algo definitions (RFC 9350), up to 4</div>
+<div class="line">advertised in dedicated router capability TLVs, as list of</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">algo</span></code> (mandatory, 128 - 255), <code class="docutils literal notranslate"><span class="pre">metric-type</span></code></div>
+<div class="line">(<code class="docutils literal notranslate"><span class="pre">igp</span></code> (default), <code class="docutils literal notranslate"><span class="pre">min-delay</span></code> or <code class="docutils literal notranslate"><span class="pre">te</span></code>), <code class="docutils literal notranslate"><span class="pre">priority</span></code></div>
+<div class="line">(default 128), <code class="docutils literal notranslate"><span class="pre">m-flag</span></code> (default false) and the</div>
+<div class="line">admin group masks <code class="docutils literal notranslate"><span class="pre">exclude-any</span></code>, <code class="docutils literal notranslate"><span class="pre">include-any</span></code> and</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">include-all</span></code>. The algorithms must be added to</div>
+<div class="line"><strong>sr-algo</strong> as well.</div>
+</div>
+</td>
+</tr>
 <tr class="row-even"><td><p><strong>adjacency-sid-base</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable Adjacency SID generation.</div>
-<div class="line">Default: disabled Range 256 - 4096</div>
+<div class="line">Default: disabled Range: 256 - 4096</div>
 </div>
 </td>
 </tr>

@@ -22,6 +22,9 @@
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **destination-ipv4-address**      | | Destination IPv4 address.                                          |
+|                                   | | One of destination-ipv4-address or destination-ipv6-address        |
+|                                   | | is mandatory. IPv4 takes precedence if both are set.               |
 +-----------------------------------+----------------------------------------------------------------------+
 | **destination-ipv6-address**      | | Destination IPv6 address.                                          |
+|                                   | | See **destination-ipv4-address**.                                  |
 +-----------------------------------+----------------------------------------------------------------------+

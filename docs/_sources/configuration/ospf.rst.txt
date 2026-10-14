@@ -5,19 +5,27 @@
 +----------------------------------+-------------------------------------------------------------------+
 | Attribute                        | Description                                                       |
 +==================================+===================================================================+
-| **instance-id**                  | | OSPF instance identifier.                                       |
+| **instance-id**                  | | Mandatory OSPF instance identifier.                             |
+| **instance-id**                  | | Range: 0 - 65535                                                |
 +----------------------------------+-------------------------------------------------------------------+
 | **version**                      | | OSPF version.                                                   |
-|                                  | | Default: 2                                                      |
+|                                  | | Default: 2 Range: 2 - 3                                         |
++----------------------------------+-------------------------------------------------------------------+
+| **overload**                     | | Advertise all non-stub links in the self originated router      |
+|                                  | | LSA with maximum metric 65535 (RFC 6987) to prevent transit     |
+|                                  | | traffic through the BNG Blaster.                                |
+|                                  | | Default: false                                                  |
 +----------------------------------+-------------------------------------------------------------------+
 | **auth-key**                     | | OSPF authentication key.                                        |
 +----------------------------------+-------------------------------------------------------------------+
 | **auth-type**                    | | OSPF authentication type (simple or md5).                       |
+| **auth-type**                    | | Required to enable authentication with **auth-key**.            |
 +----------------------------------+-------------------------------------------------------------------+
 | **hello-interval**               | | OSPF hello interval in seconds.                                 |
 |                                  | | Default: 10 Range: 1 - 65535                                    |
 +----------------------------------+-------------------------------------------------------------------+
 | **dead-interval**                | | OSPF dead interval in seconds.                                  |
+| **dead-interval**                | | Must be greater than **hello-interval**.                        |
 |                                  | | Default: 40 Range: 1 - 65535                                    |
 +----------------------------------+-------------------------------------------------------------------+
 | **lsa-retry-interval**           | | OSPF LSA retry interval in seconds.                             |

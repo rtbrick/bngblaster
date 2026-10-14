@@ -1,4 +1,4 @@
-The link configuration is optional and allows to define per interface link configurations. An explicit
+The link configuration is optional and allows defining per interface link configurations. An explicit
 link configuration with the global default settings is automatically generated if no link is defined
 for interface links referenced by interface functions. 
 
@@ -19,19 +19,27 @@ for interface links referenced by interface functions.
 | **lag-interface**                 | | Add interface/link to LAG group.                                   |
 +-----------------------------------+----------------------------------------------------------------------+
 | **lacp-priority**                 | | LACP interface priority.                                           |
-|                                   | | Default: 32768                                                     |
+|                                   | | Only applies together with **lag-interface**.                      |
+|                                   | | Default: 32768 Range: 0 - 65535                                    |
++-----------------------------------+----------------------------------------------------------------------+
+| **loopback-peer**                 | | Peer link for I/O mode ``loopback``. It is sufficient to define    |
+|                                   | | the peer on one of both links.                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tx-cpuset**                     | | Optionally pin TX threads to CPU cores (cpuset). Manual pinning    |
-|                                   | | overrides automatic CPU placement.                                 |
+|                                   | | overrides automatic CPU placement. A single number or a list       |
+|                                   | | of numbers (e.g. ``[1, 2]``) is accepted.                          |
 +-----------------------------------+----------------------------------------------------------------------+
 | **rx-cpuset**                     | | Optionally pin RX threads to CPU cores (cpuset). Manual pinning    |
-|                                   | | overrides automatic CPU placement.                                 |
+|                                   | | overrides automatic CPU placement. A single number or a list       |
+|                                   | | of numbers (e.g. ``[1, 2]``) is accepted.                          |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tx-auto-cpuset**                | | Automatically pin TX threads to CPUs local to the interface.       |
 |                                   | | BNG Blaster prefers local physical cores before SMT siblings.      |
+|                                   | | Default: **interfaces->tx-auto-cpuset** (false)                    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **rx-auto-cpuset**                | | Automatically pin RX threads to CPUs local to the interface.       |
 |                                   | | BNG Blaster prefers local physical cores before SMT siblings.      |
+|                                   | | Default: **interfaces->rx-auto-cpuset** (false)                    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **io-mode**                       | | Overwrite the IO mode.                                             |
 +-----------------------------------+----------------------------------------------------------------------+

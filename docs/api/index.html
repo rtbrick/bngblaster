@@ -1,25 +1,19 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>API/CLI &mdash; BNG Blaster 0.9 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
-      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=411f5019" />
-
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
-  <!--[if lt IE 9]>
-    <script src="../_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="../_static/jquery.js?v=5d32c60e"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=049aceee"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -32,19 +26,15 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="../index.html" class="icon icon-home">
-            BNG Blaster
-              <img src="../_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+            <a href="../index.html" class="icon icon-home"> BNG Blaster
+            <img src="../_static/rtbrick_logo.png" class="logo" alt="Logo"/>
           </a>
               <div class="version">
                 0.9.X
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -104,8 +94,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">API/CLI</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>API/CLI</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/api/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -116,108 +106,119 @@
            <div itemprop="articleBody">
              
   <link rel="stylesheet" type="text/css" href="_static/custom.css"><section id="api-cli">
-<h1>API/CLI<a class="headerlink" href="#api-cli" title="Link to this heading"></a></h1>
+<h1>API/CLI<a class="headerlink" href="#api-cli" title="Permalink to this headline"></a></h1>
 <p>The control socket is an unix domain stream socket that
 allows interacting with the BNG Blaster using JSON RPC.</p>
 <p>We developed this interface for the BNG Blaster Controller
-but it can be also used by other tools. One example is the
+it can also be used by other tools. One example is the
 included CLI tool <code class="docutils literal notranslate"><span class="pre">bngblaster-cli</span></code>. You can use this for
 interactive communication with the BNG Blaster.</p>
 <p>You need to enable the control socket by providing the path to
 the control socket file with the argument <code class="docutils literal notranslate"><span class="pre">-S</span></code> (<code class="docutils literal notranslate"><span class="pre">bngblaster</span> <span class="pre">-S</span> <span class="pre">run.sock</span></code>).</p>
 <p>Each request must contain at least the <code class="docutils literal notranslate"><span class="pre">command</span></code> element which carries
 the actual command with optional arguments.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="nt">&quot;&lt;command&gt;&quot;</span>
-<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;&lt;argument-key&gt;&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;argument-value&gt;&quot;</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;command&gt;&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;&lt;argument-key&gt;&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;&lt;argument-value&gt;&quot;</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
-<p>Following an example RPC request with corresponding response.</p>
+<p>The following is an example RPC request with its corresponding response.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">cat</span> <span class="pre">command.json</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session-counters&quot;</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session-counters&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">cat</span> <span class="pre">command.json</span> <span class="pre">|</span> <span class="pre">sudo</span> <span class="pre">nc</span> <span class="pre">-U</span> <span class="pre">run.sock</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;session-counters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;sessions-flapped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;dhcpv6-sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;session-counters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions-flapped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;dhcpv6-sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>The response contains at least the status element with the
-value <code class="docutils literal notranslate"><span class="pre">ok</span></code> and status code <code class="docutils literal notranslate"><span class="pre">2xx</span></code> if request was successfully.
-The status can be also set to <code class="docutils literal notranslate"><span class="pre">warning</span></code> or <code class="docutils literal notranslate"><span class="pre">error</span></code> with
+value <code class="docutils literal notranslate"><span class="pre">ok</span></code> and status code <code class="docutils literal notranslate"><span class="pre">2xx</span></code> if the request was successful.
+The status can also be set to <code class="docutils literal notranslate"><span class="pre">warning</span></code> or <code class="docutils literal notranslate"><span class="pre">error</span></code> with
 corresponding error code and an optional error message.</p>
-<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">cat</span> <span class="pre">command.json</span> <span class="pre">|</span> <span class="pre">sudo</span> <span class="pre">nc</span> <span class="pre">-U</span> <span class="pre">test.socket</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;warning&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session not found&quot;</span>
-<span class="p">}</span>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">cat</span> <span class="pre">command.json</span> <span class="pre">|</span> <span class="pre">sudo</span> <span class="pre">nc</span> <span class="pre">-U</span> <span class="pre">run.sock</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;warning&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">404</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session not found&quot;</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">session-id</span></code> is the same as used for <code class="docutils literal notranslate"><span class="pre">{session-global}</span></code> in the
 configuration. This number starts with 1 and is increased
-per session added. In example if username is configured as
+per session added. For example, if the username is configured as
 <code class="docutils literal notranslate"><span class="pre">user{session-global}&#64;rtbrick.com</span></code> and logged in user is
 <code class="docutils literal notranslate"><span class="pre">user10&#64;rtbrick.com</span></code> the <code class="docutils literal notranslate"><span class="pre">session-id</span></code> of this user is <code class="docutils literal notranslate"><span class="pre">10</span></code>.</p>
 <div class="admonition tip">
 <p class="admonition-title">Tip</p>
 <p>The argument <code class="docutils literal notranslate"><span class="pre">session-id</span></code> can be alternatively replaced
-with interface and VLAN of the session. The last access
+with interface and VLAN of the session. The first access
 interface is automatically used if the argument <code class="docutils literal notranslate"><span class="pre">interface</span></code>
 is not present in the command.</p>
 <p>This is not supported for N:1 sessions because multiple
 sessions can be assigned to a single VLAN.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session-info&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;session-info&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;outer-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 </div>
 <section id="bng-blaster-cli">
-<h2>BNG Blaster CLI<a class="headerlink" href="#bng-blaster-cli" title="Link to this heading"></a></h2>
+<h2>BNG Blaster CLI<a class="headerlink" href="#bng-blaster-cli" title="Permalink to this headline"></a></h2>
 <p>The python script <code class="docutils literal notranslate"><span class="pre">bngblaster-cli</span></code> provides a simple CLI tool
 for interactive communication with the BNG Blaster.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli
-BNG Blaster Control Socket Client
+BNG Blaster CLI Tool
+
+The CLI tool is a simple control socket client
+for interactive communication with the BNG Blaster.
 
 bngblaster-cli &lt;socket&gt; &lt;command&gt; [arguments]
 
 Examples:
     bngblaster-cli run.sock session-info session-id 1
+    bngblaster-cli run.sock interface-topology
+    bngblaster-cli run.sock interface-topology interface eth0
     bngblaster-cli run.sock igmp-join session-id 1 group 239.0.0.1 source1 1.1.1.1 source2 2.2.2.2 source3 3.3.3.3
     bngblaster-cli run.sock igmp-info session-id 1
     bngblaster-cli run.sock l2tp-csurq tunnel-id 1 sessions [1,2]
 </pre></div>
 </div>
+<p>Bash completion for <code class="docutils literal notranslate"><span class="pre">bngblaster-cli</span></code> is installed to
+<code class="docutils literal notranslate"><span class="pre">/usr/share/bash-completion/completions/bngblaster-cli</span></code> and picked up
+automatically by the <code class="docutils literal notranslate"><span class="pre">bash-completion</span></code> package (or can be sourced manually).
+It completes the socket path, the command name and its arguments by querying
+the <code class="docutils literal notranslate"><span class="pre">commands</span></code> endpoint of the running instance referenced by the socket
+path already typed, so suggestions always match that instance.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">session-counters</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">.</span></code></p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;session-counters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;sessions-flapped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;dhcpv6-sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;session-counters&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions-flapped&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;dhcpv6-sessions-established&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>Here’s a more complex example that chains CLI commands. The first command
@@ -227,8 +228,12 @@ using each session-id as an argument for the session-restart command.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">sessions-pending</span> <span class="pre">|</span> <span class="pre">jq</span> <span class="pre">'.[&quot;sessions-pending&quot;][][&quot;session-id&quot;]'</span> <span class="pre">|</span> <span class="pre">while</span> <span class="pre">read</span> <span class="pre">line;</span> <span class="pre">do</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">session-restart</span> <span class="pre">session-id</span> <span class="pre">$line;</span> <span class="pre">done</span></code></p>
 </section>
 <section id="test">
-<h2>Test<a class="headerlink" href="#test" title="Link to this heading"></a></h2>
+<h2>Test<a class="headerlink" href="#test" title="Permalink to this headline"></a></h2>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -243,13 +248,20 @@ using each session-id as an argument for the session-restart command.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>test-stop</strong></p></td>
 <td><div class="line-block">
-<div class="line">Stop/teardown the test.</div>
+<div class="line">Stop/teardown the test (graceful, global).</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>terminate</strong></p></td>
 <td><div class="line-block">
-<div class="line">Stop/teardown the test.</div>
+<div class="line">Deprecated. Terminate the given <code class="docutils literal notranslate"><span class="pre">session-id</span></code>, or</div>
+<div class="line">stop/teardown the whole test if no <code class="docutils literal notranslate"><span class="pre">session-id</span></code> is</div>
+<div class="line">given. Use <code class="docutils literal notranslate"><span class="pre">session-start</span></code>/<code class="docutils literal notranslate"><span class="pre">session-stop</span></code> instead</div>
+<div class="line">for terminating single sessions.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">reconnect-delay</span></code></div>
 </div>
 </td>
 </tr>
@@ -269,10 +281,14 @@ using each session-id as an argument for the session-restart command.</p>
 </table>
 </section>
 <section id="interfaces">
-<h2>Interfaces<a class="headerlink" href="#interfaces" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../interfaces.html#interfaces"><span class="std std-ref">interfaces</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -306,6 +322,9 @@ using each session-id as an argument for the session-restart command.</p>
 <tr class="row-even"><td><p><strong>lag-info</strong></p></td>
 <td><div class="line-block">
 <div class="line">List all link aggregation (LAG) interfaces.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">interface</span></code></div>
 </div>
 </td>
 </tr>
@@ -327,12 +346,42 @@ using each session-id as an argument for the session-restart command.</p>
 </div>
 </td>
 </tr>
+<tr class="row-odd"><td><p><strong>interface-topology</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display NUMA node, local CPU set and I/O thread pinning</div>
+<div class="line">(CPU, queue and state) per interface.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">interface</span></code></div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
+<p>The interface topology command helps to verify NUMA locality and CPU
+pinning of the RX and TX threads configured with <code class="docutils literal notranslate"><span class="pre">rx-cpuset</span></code>,
+<code class="docutils literal notranslate"><span class="pre">tx-cpuset</span></code>, <code class="docutils literal notranslate"><span class="pre">rx-auto-cpuset</span></code> or <code class="docutils literal notranslate"><span class="pre">tx-auto-cpuset</span></code>. The queue
+is shown for DPDK and AF_XDP interfaces only.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">interface-topology</span> <span class="pre">interface</span> <span class="pre">eth1</span></code></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>interface: eth1
+  io-mode: af_xdp
+  numa-node: 0
+  local-cpuset: [0, 1, 2, 3, 4, 5, 6, 7]
+  rx-auto-cpuset: True
+  rx-thread id=0 cpu=2 source=auto queue=0 active=True stopped=False
+  rx-thread id=1 cpu=3 source=auto queue=1 active=True stopped=False
+  tx-auto-cpuset: False
+  tx-thread id=0 cpu=4 source=manual queue=0 active=True stopped=False
+</pre></div>
+</div>
 </section>
 <section id="sessions">
-<h2>Sessions<a class="headerlink" href="#sessions" title="Link to this heading"></a></h2>
+<h2>Sessions<a class="headerlink" href="#sessions" title="Permalink to this headline"></a></h2>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -344,7 +393,8 @@ using each session-id as an argument for the session-restart command.</p>
 <div class="line">Display session information.</div>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code> Mandatory</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">debug</span></code></div>
 </div>
 </td>
 </tr>
@@ -434,19 +484,23 @@ using each session-id as an argument for the session-restart command.</p>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">password</span></code> update password</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">agent-remote-id</span></code> update agent-remote-id</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">agent-circuit-id</span></code> update agent-circuit-id</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">ipv6-link-local</span></code> update IPv6 link-local address</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">ipv6-link-local</span></code> update ipv6-link-local</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>session-summary</strong></p></td>
 <td><div class="line-block">
 <div class="line">Display session summary information.</div>
+<div class="line">If <code class="docutils literal notranslate"><span class="pre">session-id</span></code> is present, only this session is returned.</div>
+<div class="line">Otherwise the list <code class="docutils literal notranslate"><span class="pre">sessions</span></code> is used if present or the session</div>
+<div class="line">range filtered by <code class="docutils literal notranslate"><span class="pre">session-group-id</span></code>.</div>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">session-group-id</span></code> (ignored if session-id is present)</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">sessions</span></code> list of session-ids, e.g. [1,2,3]</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">session-id-min</span></code> session range</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">session-id-max</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-group-id</span></code></div>
 </div>
 </td>
 </tr>
@@ -454,10 +508,14 @@ using each session-id as an argument for the session-restart command.</p>
 </table>
 </section>
 <section id="ppp">
-<h2>PPP<a class="headerlink" href="#ppp" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>PPP<a class="headerlink" href="#ppp" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../access/pppoe.html#pppoe"><span class="std std-ref">PPPoE</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -529,10 +587,14 @@ using each session-id as an argument for the session-restart command.</p>
 </table>
 </section>
 <section id="l2tp">
-<h2>L2TP<a class="headerlink" href="#l2tp" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>L2TP<a class="headerlink" href="#l2tp" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../access/l2tp.html#l2tp"><span class="std std-ref">L2TP</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -547,11 +609,11 @@ using each session-id as an argument for the session-restart command.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>l2tp-sessions</strong></p></td>
 <td><div class="line-block">
-<div class="line">L2TP all matching sessions.</div>
+<div class="line">Display all matching L2TP sessions (LNS and LAC).</div>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">tunnel-id</span></code></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code> L2TP session ID (only with <code class="docutils literal notranslate"><span class="pre">tunnel-id</span></code>)</div>
 </div>
 </td>
 </tr>
@@ -561,7 +623,7 @@ using each session-id as an argument for the session-restart command.</p>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">tunnel-id</span></code> Mandatory</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">sessions</span> <span class="pre">(list</span> <span class="pre">of</span> <span class="pre">remote</span> <span class="pre">session-id)</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">sessions</span></code> list of remote session-id.</div>
 </div>
 </td>
 </tr>
@@ -593,32 +655,51 @@ using each session-id as an argument for the session-restart command.</p>
 </div>
 </td>
 </tr>
+<tr class="row-odd"><td><p><strong>l2tp-lcp-restart</strong></p></td>
+<td><div class="line-block">
+<div class="line">Restart LCP of an L2TP session terminated on the BNG Blaster LNS.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code> Mandatory</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 <p>The L2TP CSURQ command expects the local tunnel-id and a list of remote
 session-id for which a connect speed update is requested.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;l2tp-csurq&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">        </span><span class="nt">&quot;tunnel-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">            </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">            </span><span class="mi">3</span><span class="p">,</span>
-<span class="w">            </span><span class="mi">4</span>
-<span class="w">        </span><span class="p">]</span>
-<span class="w">    </span><span class="p">}</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;command&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;l2tp-csurq&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;arguments&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;tunnel-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">            </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="mi">4</span><span class="w"></span>
+<span class="w">        </span><span class="p">]</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>This command can be executed as shown below using the CLI tool.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">l2tp-csurq</span> <span class="pre">tunnel-id</span> <span class="pre">1</span> <span class="pre">sessions</span> <span class="pre">[1,2,3,4]</span></code></p>
-<p>The L2TP session terminate command allows to test result (RFC2661) and disconnect (RFC3145) codes.</p>
+<p>The L2TP session terminate command allows testing of result (RFC2661) and disconnect (RFC3145) codes.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">l2tp-session-terminate</span> <span class="pre">session-id</span> <span class="pre">1</span> <span class="pre">result-code</span> <span class="pre">2</span> <span class="pre">error-message</span> <span class="pre">&quot;LCP</span> <span class="pre">request&quot;</span> <span class="pre">disconnect-code</span> <span class="pre">3</span> <span class="pre">disconnect-message</span> <span class="pre">&quot;LCP</span> <span class="pre">terminate</span> <span class="pre">request&quot;</span></code></p>
+<p>The L2TP LCP restart command lets the BNG Blaster LNS send a new LCP
+Configure-Request to the client of an established L2TP session,
+which forces LCP renegotiation, for example to test how the BNG behaves
+after proxy LCP. The <code class="docutils literal notranslate"><span class="pre">session-id</span></code> is the BNG Blaster session
+tunnelled to the BNG Blaster LNS.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">l2tp-lcp-restart</span> <span class="pre">session-id</span> <span class="pre">1</span></code></p>
 </section>
 <section id="igmp">
-<h2>IGMP<a class="headerlink" href="#igmp" title="Link to this heading"></a></h2>
+<h2>IGMP<a class="headerlink" href="#igmp" title="Permalink to this headline"></a></h2>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -632,9 +713,9 @@ session-id for which a connect speed update is requested.</p>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code> Mandatory</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">group</span></code> Mandatory</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">source1</span></code></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">source2</span></code></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">source3</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">source1</span></code> first IGMPv3/SSM source address for the group.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">source2</span></code> second IGMPv3/SSM source address for the group.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">source3</span></code> third IGMPv3/SSM source address for the group.</div>
 </div>
 </td>
 </tr>
@@ -644,11 +725,13 @@ session-id for which a connect speed update is requested.</p>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">group</span></code> Mandatory</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">group-iter</span></code></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">group-count</span></code></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">source1</span></code></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">source2</span></code></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">source3</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">group-iter</span></code> IPv4 address step used to iterate over multiple</div>
+<div class="line">groups (e.g. <code class="docutils literal notranslate"><span class="pre">0.0.0.1</span></code>). Default: <code class="docutils literal notranslate"><span class="pre">0.0.0.1</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">group-count</span></code> number of groups to iterate over. The groups</div>
+<div class="line">are assigned round-robin to all sessions.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">source1</span></code> first IGMPv3/SSM source address for the group.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">source2</span></code> second IGMPv3/SSM source address for the group.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">source3</span></code> third IGMPv3/SSM source address for the group.</div>
 </div>
 </td>
 </tr>
@@ -691,7 +774,7 @@ session-id for which a connect speed update is requested.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>zapping-stats</strong></p></td>
 <td><div class="line-block">
-<div class="line">Return IGMP zapping stats.</div>
+<div class="line">Display IGMP zapping stats.</div>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">reset</span></code></div>
@@ -702,8 +785,12 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="dhcp">
-<h2>DHCP<a class="headerlink" href="#dhcp" title="Link to this heading"></a></h2>
+<h2>DHCP<a class="headerlink" href="#dhcp" title="Permalink to this headline"></a></h2>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -745,8 +832,12 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="traffic">
-<h2>Traffic<a class="headerlink" href="#traffic" title="Link to this heading"></a></h2>
+<h2>Traffic<a class="headerlink" href="#traffic" title="Permalink to this headline"></a></h2>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -779,10 +870,14 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="streams">
-<h2>Streams<a class="headerlink" href="#streams" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>Streams<a class="headerlink" href="#streams" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../streams.html#streams"><span class="std std-ref">streams</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -827,7 +922,7 @@ session-id for which a connect speed update is requested.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>stream-reset</strong></p></td>
 <td><div class="line-block">
-<div class="line">Reset all traffic streams.</div>
+<div class="line">Reset all traffic streams except session-traffic.</div>
 </div>
 </td>
 </tr>
@@ -838,12 +933,13 @@ session-id for which a connect speed update is requested.</p>
 <td><div class="line-block">
 <div class="line">This command can be used to start or stop traffic stream flows.</div>
 <div class="line">This command applies to all flows except session-traffic and</div>
-<div class="line">multicast. If you provide a specific <code class="docutils literal notranslate"><span class="pre">flow-id</span></code> as an argument,</div>
-<div class="line">other arguments are ignored. In this particular case, you can also</div>
-<div class="line">start and stop session-traffic and multicast.</div>
+<div class="line">multicast. If you provide a specific <code class="docutils literal notranslate"><span class="pre">flow-id</span></code> or a list of</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">flows</span></code> as an argument, all other arguments are ignored.</div>
+<div class="line">Use <strong>session-traffic-start/stop</strong> for session-traffic.</div>
 <div class="line"><br /></div>
-<div class="line">The command <strong>stream-stop-verified</strong> works similar to</div>
+<div class="line">The command <strong>stream-stop-verified</strong> works similarly to</div>
 <div class="line"><strong>stream-stop</strong> but only verified streams will be stopped.</div>
+<div class="line">This filter is not applied with <code class="docutils literal notranslate"><span class="pre">flow-id</span></code> or <code class="docutils literal notranslate"><span class="pre">flows</span></code>.</div>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">flow-id</span></code></div>
@@ -885,7 +981,7 @@ session-id for which a connect speed update is requested.</p>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">bidirectional-verified-only</span></code> streams verified in both directions</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">pending-only</span></code> streams not verified</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">tcp-flags</span></code> [ack, fin, fin-ack, syn, syn-ack, rst, push, push-ack]</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">pps</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">pps</span></code> Update the stream rate in packets per second.</div>
 </div>
 </td>
 </tr>
@@ -893,10 +989,14 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="isis">
-<h2>ISIS<a class="headerlink" href="#isis" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>ISIS<a class="headerlink" href="#isis" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../routing/isis.html#isis"><span class="std std-ref">ISIS</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -983,10 +1083,14 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="ospf">
-<h2>OSPF<a class="headerlink" href="#ospf" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>OSPF<a class="headerlink" href="#ospf" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../routing/ospf.html#ospf"><span class="std std-ref">OSPF</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1036,8 +1140,7 @@ session-id for which a connect speed update is requested.</p>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">instance</span></code> Mandatory</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">pdu</span></code> Mandatory</div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">lsa</span></code> Mandatory LSA identifier</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">lsa</span></code> Mandatory list of hex-encoded LSAs</div>
 </div>
 </td>
 </tr>
@@ -1061,10 +1164,14 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="bgp">
-<h2>BGP<a class="headerlink" href="#bgp" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>BGP<a class="headerlink" href="#bgp" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../routing/bgp.html#bgp"><span class="std std-ref">BGP</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1078,6 +1185,8 @@ session-id for which a connect speed update is requested.</p>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv4-address</span></code></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv6-address</span></code></div>
 </div>
 </td>
 </tr>
@@ -1088,6 +1197,8 @@ session-id for which a connect speed update is requested.</p>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv4-address</span></code></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv6-address</span></code></div>
 </div>
 </td>
 </tr>
@@ -1111,6 +1222,53 @@ session-id for which a connect speed update is requested.</p>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">file</span></code> Mandatory path to BGP RAW update file.</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv4-address</span></code></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv6-address</span></code></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bgp-routes</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display learned IPv4/IPv6 routes of all matching BGP sessions</div>
+<div class="line">with learn-routes enabled.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">family</span></code> Filter by family (ipv4-unicast, ipv6-unicast,</div>
+<div class="line">ipv4-labeled-unicast, ipv6-labeled-unicast).</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">prefix</span></code> Filter by IPv4 or IPv6 prefix.</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">match</span></code> Prefix match (exact or longer).</div>
+<div class="line">Default: exact</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>bgp-routes-stats</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display learned route counters of all matching BGP sessions.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv6-address</span></code></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bgp-evpn-routes</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display learned BGP EVPN routes of all matching BGP sessions</div>
+<div class="line">with learn-routes enabled.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">route-type</span></code> Filter by route type (1-5).</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">rd</span></code> Filter by route distinguisher.</div>
 </div>
 </td>
 </tr>
@@ -1118,10 +1276,14 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="ldp">
-<h2>LDP<a class="headerlink" href="#ldp" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>LDP<a class="headerlink" href="#ldp" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../routing/ldp.html#ldp"><span class="std std-ref">LDP</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1145,6 +1307,8 @@ session-id for which a connect speed update is requested.</p>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">ldp-instance-id</span></code></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv4-address</span></code></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv6-address</span></code></div>
 </div>
 </td>
 </tr>
@@ -1182,13 +1346,15 @@ session-id for which a connect speed update is requested.</p>
 </tr>
 <tr class="row-even"><td><p><strong>ldp-raw-update</strong></p></td>
 <td><div class="line-block">
-<div class="line">Update all matching LDP session.</div>
+<div class="line">Update all matching LDP sessions.</div>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
-<div class="line"><code class="docutils literal notranslate"><span class="pre">file</span></code> Mandatory</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">file</span></code> Mandatory path to LDP RAW update file.</div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">ldp-instance-id</span></code></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv4-address</span></code></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv4-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">local-ipv6-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-ipv6-address</span></code></div>
 </div>
 </td>
 </tr>
@@ -1196,8 +1362,12 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="cfm">
-<h2>CFM<a class="headerlink" href="#cfm" title="Link to this heading"></a></h2>
+<h2>CFM<a class="headerlink" href="#cfm" title="Permalink to this headline"></a></h2>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1248,10 +1418,14 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="legal-interception-li">
-<h2>Legal Interception (LI)<a class="headerlink" href="#legal-interception-li" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>Legal Interception (LI)<a class="headerlink" href="#legal-interception-li" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../access/li.html#li"><span class="std std-ref">Legal Interception (LI)</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1268,10 +1442,14 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="http">
-<h2>HTTP<a class="headerlink" href="#http" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>HTTP<a class="headerlink" href="#http" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../http.html#http"><span class="std std-ref">HTTP</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1309,10 +1487,14 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="icmp">
-<h2>ICMP<a class="headerlink" href="#icmp" title="Link to this heading"></a></h2>
-<p>This is explained detailed in the
+<h2>ICMP<a class="headerlink" href="#icmp" title="Permalink to this headline"></a></h2>
+<p>This is explained in detail in the
 <a class="reference internal" href="../icmp.html#icmp"><span class="std std-ref">ICMP</span></a> section.</p>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1325,6 +1507,7 @@ session-id for which a connect speed update is requested.</p>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
 <div class="line"><code class="docutils literal notranslate"><span class="pre">session-id</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">detail</span></code> include detailed results</div>
 </div>
 </td>
 </tr>
@@ -1350,8 +1533,12 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="arp">
-<h2>ARP<a class="headerlink" href="#arp" title="Link to this heading"></a></h2>
+<h2>ARP<a class="headerlink" href="#arp" title="Permalink to this headline"></a></h2>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1380,8 +1567,12 @@ session-id for which a connect speed update is requested.</p>
 </table>
 </section>
 <section id="pcap">
-<h2>PCAP<a class="headerlink" href="#pcap" title="Link to this heading"></a></h2>
+<h2>PCAP<a class="headerlink" href="#pcap" title="Permalink to this headline"></a></h2>
 <table class="docutils align-default">
+<colgroup>
+<col style="width: 33%" />
+<col style="width: 67%" />
+</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -1390,7 +1581,7 @@ session-id for which a connect speed update is requested.</p>
 <tbody>
 <tr class="row-even"><td><p><strong>pcap-start</strong></p></td>
 <td><div class="line-block">
-<div class="line">Starts capturing using the specified PCAP file. If no file name</div>
+<div class="line">Start capturing using the specified PCAP file. If no file name</div>
 <div class="line">is provided, the current PCAP file name remains in use.</div>
 <div class="line"><br /></div>
 <div class="line"><strong>Arguments:</strong></div>
@@ -1400,7 +1591,7 @@ session-id for which a connect speed update is requested.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>pcap-stop</strong></p></td>
 <td><div class="line-block">
-<div class="line">Stops the capture and closes the PCAP file.</div>
+<div class="line">Stop the capture and close the PCAP file.</div>
 <div class="line"><br /></div>
 </div>
 </td>

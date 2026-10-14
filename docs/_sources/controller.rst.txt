@@ -20,10 +20,13 @@ test results, performance metrics, and any encountered errors or issues. By acce
 through the REST API, users can analyze the outcomes of their tests, troubleshoot problems, and generate 
 comprehensive documentation for further analysis or reporting purposes.
 
-The REST API provided by the BNG Blaster controller simplifies the management of test instances and 
-enhances the overall usability and integration capabilities of the BNG Blaster. Whether it's starting 
-and stopping tests, retrieving logs and reports, or integrating with other systems, the REST API streamlines 
+The REST API provided by the BNG Blaster controller simplifies the management of test instances and
+enhances the overall usability and integration capabilities of the BNG Blaster. Whether it's starting
+and stopping tests, retrieving logs and reports, or integrating with other systems, the REST API streamlines
 the testing process and facilitates seamless interaction with the BNG Blaster's functionalities.
+
+On top of the REST API, the controller also includes an experimental :ref:`web UI <controller-web-ui>`
+to create, start, stop and observe test instances from a browser.
 
 https://github.com/rtbrick/bngblaster-controller
 
@@ -34,8 +37,8 @@ https://github.com/rtbrick/bngblaster-controller
 Installation
 ------------
 
-The BNG Blaster controller should run on any modern Linux distribution
-but is primarily tested on Debian Bookworm and Ubuntu 22.04 LTS.
+The BNG Blaster controller should run on any modern Linux distribution.
+The current version of the controller requires BNG Blaster 1.0.0 or newer.
 
 Download and install Debian package: https://github.com/rtbrick/bngblaster-controller/releases
 
@@ -60,26 +63,104 @@ The corresponding service will be started automatically.
                 └─682535 /usr/local/bin/bngblasterctrl
 
 
-The BNG Blaster controller listens on port `8001` per default, 
-which can be changed using the argument `-addr` in the systemd
-service unit `/etc/systemd/system/bngblaster-controller.service`. 
+Configuration
+-------------
+
+The BNG Blaster controller listens on port ``8001`` per default, assumes
+the BNG Blaster to be installed at ``/usr/bin/bngblaster`` and uses
+``/var/bngblaster`` as directory for the test instances.
 
 .. code-block:: none
 
-    $ sudo bngblasterctrl --help
+    $ bngblasterctrl -h
     Usage of bngblasterctrl:
-    -addr string
+      -addr string
             HTTP network address (default ":8001")
-    -color
+      -allowed-hosts string
+            comma-separated host names clients may use to reach the controller, against DNS rebinding (IP addresses and localhost are always allowed; empty allows any host)
+      -color
             turn on color of color output
-    -console
+      -console
             turn on pretty console logging (default true)
-    -d string
+      -d string
             config folder (default "/var/bngblaster")
-    -debug
+      -debug
             turn on debug logging
-    -e string
-            bngblaster executable (default "/usr/sbin/bngblaster")
+      -e string
+            bngblaster executable (default "/usr/bin/bngblaster")
+      -interfaces-api
+            enable the interfaces endpoint (disable with -interfaces-api=false) (default true)
+      -schema string
+            path to the bngblaster configuration JSON schema served on /api/v1/schema (default "/usr/share/bngblaster/bngblaster-config.json")
+      -ui
+            enable the embedded web UI (experimental, disable with -ui=false) (default true)
+      -upload
+            enable file upload (disable with -upload=false) (default true)
+
+When installed via the Debian package, the options are configured
+with the variable ``BNGBLASTERCTRL_OPTS`` in the file
+``/etc/default/rtbrick-bngblasterctrl``, which is preserved across
+package upgrades.
+
+.. code-block:: none
+
+    # /etc/default/rtbrick-bngblasterctrl
+    BNGBLASTERCTRL_OPTS="-addr :8080 -d /var/bngblaster"
+
+The service must be restarted to apply the changes.
+
+.. code-block:: none
+
+    $ sudo systemctl restart rtbrick-bngblasterctrl
+
+Stopping or restarting the service (including through a package upgrade)
+also stops all running test instances.
+
+The REST API and web UI do not require authentication yet, so restrict
+who can reach the port, e.g. by binding ``-addr`` to a management address,
+a firewall or an SSH tunnel. The option ``-allowed-hosts`` restricts the
+host names clients may use to reach the controller, which prevents DNS
+rebinding attacks (e.g. ``-allowed-hosts lab01,lab01.example.com``).
+
+.. _controller-web-ui:
+
+Web UI
+------
+
+The controller includes an embedded, experimental web UI to create
+and observe test instances without calling the REST API directly.
+With the default options, it is available at ``http://<host>:8001/``.
+
+.. image:: images/webui.png
+    :alt: BNG Blaster Controller Web UI
+
+The dashboard lists all test instances and allows to create new ones,
+where the interfaces of the host are offered for selection. Each test
+instance can be started, stopped and killed, and provides the following
+views:
+
+* **Overview**: live session counters, setup rates and interface statistics,
+  polled every 2 seconds while the tab is visible
+* **Sessions**: session details
+* **Streams**: traffic stream details
+* **Commands**: execute :ref:`commands <api>` on the running test instance
+
+The log viewer at the bottom shows the log of the selected test instance.
+Files like logs, reports and captures can be downloaded, and additional
+files used by the configuration (e.g. MRT files) can be uploaded.
+
+The web UI depends on two additional endpoints, which are enabled by
+default as well: the interfaces endpoint (``-interfaces-api``) to list
+the host interfaces when creating a test instance, and the upload endpoint
+(``-upload``) to upload files into a test instance. Each of them can be
+disabled individually, e.g. to run a REST-only controller.
+
+.. code-block:: none
+
+    BNGBLASTERCTRL_OPTS="-ui=false -interfaces-api=false -upload=false"
+
+Disabling the interfaces or upload endpoint while keeping the web UI
+enabled leaves the corresponding parts of the web UI non-functional.
 
 
 API
@@ -90,23 +171,23 @@ OpenAPI: https://rtbrick.github.io/bngblaster-controller/
 Create Test Instance
 ~~~~~~~~~~~~~~~~~~~~
 
-`PUT /api/v1/instances/<instance-name>` 
+``PUT /api/v1/instances/<instance-name>`` 
 
 This API endpoint creates a test instance if not already created. The body of this request 
-is stored as bngblaster configuration (`config.json`).
+is stored as bngblaster configuration (``config.json``).
 
-Each test instance creates a directory in `/var/bngblaster/<instance-name>`. 
+Each test instance creates a directory in ``/var/bngblaster/<instance-name>``. 
 This directory contains the following files:
 
-* `config.json`: bngblaster configuration
-* `run.pid`: bngblaster process ID (if running)
-* `run.json`: bngblaster arguments
-* `run.log`: bngblaster log file (if enabled)
-* `run_report.json`: bngblaster report (if enabled)
-* `run.pcap`: bngblaster traffic capture (if enabled)
-* `run.sock`: bngblaster control socket
-* `run.stderr`: bngblaster standard error
-* `run.stdout`: bngblaster standard output 
+* ``config.json``: bngblaster configuration
+* ``run.pid``: bngblaster process ID (if running)
+* ``run.json``: bngblaster arguments
+* ``run.log``: bngblaster log file (if enabled)
+* ``run_report.json``: bngblaster report (if enabled)
+* ``run.pcap``: bngblaster traffic capture (if enabled)
+* ``run.sock``: bngblaster control socket
+* ``run.stderr``: bngblaster standard error
+* ``run.stdout``: bngblaster standard output 
 
 Example:
 
@@ -136,10 +217,30 @@ Example:
     }'
 
 
-Start Test 
+Upload Files
+~~~~~~~~~~~~
+
+``POST /api/v1/instances/<instance-name>/_upload``
+
+This API endpoint uploads files into the test instance directory
+(up to 4 GB per file), for example MRT or BGP RAW update files
+referenced in the configuration. Relative file names in the configuration
+are resolved against the test instance directory. The files managed by
+the controller (e.g. ``run.log``) cannot be uploaded. This endpoint can be
+disabled with the option ``-upload=false``.
+
+Example:
+
+.. code-block:: none
+
+    curl --location --request POST 'http://10.10.10.10:8001/api/v1/instances/quickstart_pppoe/_upload' \
+    --form 'file=@isis.mrt'
+
+
+Start Test
 ~~~~~~~~~~~
 
-`POST /api/v1/instances/<instance-name>/_start`
+``POST /api/v1/instances/<instance-name>/_start``
 
 The start API endpoint will start the bngblaster with the argument options
 defined in the body.
@@ -179,18 +280,18 @@ Example:
 Status
 ~~~~~~
 
-`GET /api/v1/instances/<instance-name>`
+``GET /api/v1/instances/<instance-name>``
 
 The status API endpoint returns the status of the test which can be either 
-`started` or `stopped`.
+``started`` or ``stopped``.
 
 Command 
 ~~~~~~~
 
-`POST /api/v1/instances/<instance-name>/_command`
+``POST /api/v1/instances/<instance-name>/_command``
 
 The JSON body of this API call will be passed to the bngblaster instance 
-control socket (`/var/bngbnlaster/<instance-name>/run.sock`). The result will 
+control socket (``/var/bngblaster/<instance-name>/run.sock``). The result will 
 be passed back to the client.
 
 Example:
@@ -235,31 +336,31 @@ The result code is passed as HTTP response status code.
 Stop Test 
 ~~~~~~~~~
 
-`POST /api/v1/instances/<instance-name>/_stop`
+``POST /api/v1/instances/<instance-name>/_stop``
 
 The stop API endpoint will send the SIGINT signal to the corresponding 
-BNG blaster instance (`kill -INT <pid>`).
+BNG blaster instance (``kill -INT <pid>``).
 
 Delete Test Instance
 ~~~~~~~~~~~~~~~~~~~~
 
-`DELETE /api/v1/instances/<instance-name>`
+``DELETE /api/v1/instances/<instance-name>``
 
 This API endpoint deletes the test instance directory. The corresponding
-test run is forcefully terminated (`kill -9 <pid>`) if running. 
+test run is forcefully terminated (``kill -9 <pid>``) if running. 
 
 Reports 
 ~~~~~~~
 
 The BNG Blaster can generate detailed :ref:`reports <reports>`
 at the end of the test execution. Those reports must be enabled
-during the start with the argument option `report`. This detailed
-report can be further enhanced using `report_flags` to include 
+during the start with the argument option ``report``. This detailed
+report can be further enhanced using ``report_flags`` to include 
 detailed per-session and stream results. Consider that the resulting 
-report may be large if `streams` flag is enabled in combination with 
+report may be large if ``streams`` flag is enabled in combination with 
 a huge amount of streams (around 500MB report file for one million streams). 
 
-`POST /api/v1/instances/<instance-name>/_start`
+``POST /api/v1/instances/<instance-name>/_start``
 
  .. code-block:: json
 
@@ -274,7 +375,7 @@ a huge amount of streams (around 500MB report file for one million streams).
 The final report can be retrieved with the following request 
 after the test has finally stopped.
 
-`GET /api/v1/instances/<instance-name>/run_report.json` 
+``GET /api/v1/instances/<instance-name>/run_report.json`` 
 
 After requesting the test to stop, it can take some time until the test 
 has gracefully stopped. This can be verified using the status command.
@@ -283,12 +384,12 @@ As soon as the status becomes stopped, the report file should be available.
 Logs
 ~~~~
 
-The BNG Blaster supports extensive :ref:`logging <logging>` 
+The BNG Blaster supports extensive :ref:`logging <logging>`
 during the test execution. This log file must be enabled
-during the start with the argument option `logging`. The optional
-argument `logging_flags` allows for enabling log categories.
+during the start with the argument option ``logging``. The optional
+argument ``logging_flags`` allows for enabling log categories.
 
-`POST /api/v1/instances/<instance-name>/_start`
+``POST /api/v1/instances/<instance-name>/_start``
 
  .. code-block:: json
 
@@ -307,22 +408,22 @@ of all logging flags.
 The final log file can be retrieved with the following request 
 after the test has finally stopped.
 
-`GET /api/v1/instances/<instance-name>/run.log`
+``GET /api/v1/instances/<instance-name>/run.log``
 
 It is also possible to retrieve the standard output and error
 for troubleshooting purposes. 
 
-`GET /api/v1/instances/<instance-name>/run.stderr` 
-`GET /api/v1/instances/<instance-name>/run.stdout` 
+``GET /api/v1/instances/<instance-name>/run.stderr`` 
+``GET /api/v1/instances/<instance-name>/run.stdout`` 
 
 PCAP
 ~~~~
 
 The BNG Blaster supports to :ref:`capture <capture>` all traffic 
 sent and received by the BNG Blaster which must be enabled during 
-the start with the argument option `pcap_capture`.
+the start with the argument option ``pcap_capture``.
 
-`POST /api/v1/instances/<instance-name>/_start`
+``POST /api/v1/instances/<instance-name>/_start``
 
  .. code-block:: json
 
@@ -333,12 +434,12 @@ the start with the argument option `pcap_capture`.
 The final capture file can be retrieved with the following request 
 after the test has finally stopped.
 
-`GET /api/v1/instances/<instance-name>/run.pcap`
+``GET /api/v1/instances/<instance-name>/run.pcap``
 
 Metrics
 ~~~~~~~
 
-`GET /metrics`
+``GET /metrics``
 
 This endpoint returns metrics for all instances in Prometheus text format. 
 
@@ -351,14 +452,14 @@ This endpoint returns metrics for all instances in Prometheus text format.
     # TYPE instances_total gauge
     instances_total{hostname="blaster"} 4
 
-The metric `instances_total` counts the number of test instance directories 
-present and `instances_running` shows how many of them are running. 
+The metric ``instances_total`` counts the number of test instance directories 
+present and ``instances_running`` shows how many of them are running. 
 
 Every metric is labeled with the hostname where the controller is running.
 
 Per default, there are no metrics per instance. This has to be explicitly 
-enabled during instance start (`/api/v1/instances/<instance-name>/_start`) 
-using the new  `metric_flags` option.
+enabled during instance start (``/api/v1/instances/<instance-name>/_start``) 
+using the new  ``metric_flags`` option.
 
 .. code-block:: json
 
@@ -376,16 +477,16 @@ using the new  `metric_flags` option.
 
 Currently, the following metrics are supported:
 
-* `session_counters` session statistics
-* `interfaces` interface/link counters
-* `access_interfaces` access interface function counters
-* `network_interfaces` network interface function counters
-* `a10nsp_interfaces` a10nsp interface function counters
-* `streams` stream counters
+* ``session_counters`` session statistics
+* ``interfaces`` interface/link counters
+* ``access_interfaces`` access interface function counters
+* ``network_interfaces`` network interface function counters
+* ``a10nsp_interfaces`` a10nsp interface function counters
+* ``streams`` stream counters
 
-The `streams` metric generates statistics for every stream and direction.
-Therefore the `streams` metric should not be used with massive streams 
-(e.g. > 10.000 streams) but there is no limit enforced. 
+The ``streams`` metric generates statistics for every stream and direction.
+Therefore the ``streams`` metric should not be used with massive streams 
+(e.g. > 10000 streams) but there is no limit enforced.
 
 .. code-block:: none
 

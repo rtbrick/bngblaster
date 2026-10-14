@@ -26,8 +26,7 @@
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``instance`` Mandatory                                             |
-|                                   | | ``pdu`` Mandatory                                                  |
-|                                   | | ``lsa`` Mandatory LSA identifier                                   |
+|                                   | | ``lsa`` Mandatory list of hex-encoded LSAs                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ospf-pdu-update**               | | Update OSPF LSA from PDU.                                          |
 |                                   | |                                                                    |

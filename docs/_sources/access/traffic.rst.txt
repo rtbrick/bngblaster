@@ -16,7 +16,7 @@ is correctly set up and working.
 
 .. note::
 
-    All traffic sent from a network or a10nsp interfaces function 
+    All traffic sent from a network or A10NSP interface function
     is called downstream. All traffic sent from an access interface
     function is called upstream. 
 
@@ -86,7 +86,7 @@ for session traffic.
         Upstream IPv6PD           1 ( 1.00s)         9 ( 9.00s)       64 (64.00s)
 
 
-The ``First Sequence Number Received`` is used to measure the forwarding 
+The ``First Sequence Received`` is used to measure the forwarding
 convergence. The session traffic starts automatically as soon as the session
 is established using the rate configured. All traffic flows in the BNG Blaster
 start with the 64bit sequence number 1. Assuming the first sequence number 

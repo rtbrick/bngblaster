@@ -1,25 +1,19 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Installation &mdash; BNG Blaster 0.9 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=19f00094" />
-      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=411f5019" />
-
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-  <!--[if lt IE 9]>
-    <script src="_static/js/html5shiv.min.js"></script>
-  <![endif]-->
-  
-        <script src="_static/jquery.js?v=5d32c60e"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=049aceee"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -32,19 +26,15 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="index.html" class="icon icon-home">
-            BNG Blaster
-              <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
+            <a href="index.html" class="icon icon-home"> BNG Blaster
+            <img src="_static/rtbrick_logo.png" class="logo" alt="Logo"/>
           </a>
               <div class="version">
                 0.9.X
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -57,8 +47,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#build">Build</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#id1">Install</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-options">Build Options</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#build-and-run-unit-tests">Build and Run Unit Tests</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#build-with-dpdk-support">Build with DPDK Support</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#build-with-af-xdp-support">Build with AF_XDP Support</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#running-bng-blaster">Running BNG Blaster</a></li>
@@ -94,8 +86,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Installation</li>
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Installation</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/install.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -106,62 +98,52 @@
            <div itemprop="articleBody">
              
   <section id="installation">
-<span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
+<span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h1>
 <p>The BNG Blaster should run on any modern Linux distribution
-but is primarily tested on Debian Bookworm and Ubuntu 22.04 LTS.</p>
+but is built and tested on Ubuntu 22.04, 24.04 and 26.04 LTS
+and Debian Bookworm and Trixie.</p>
 <section id="install-ubuntu">
-<h2>Install Ubuntu<a class="headerlink" href="#install-ubuntu" title="Link to this heading"></a></h2>
+<h2>Install Ubuntu<a class="headerlink" href="#install-ubuntu" title="Permalink to this headline"></a></h2>
 <p>Install dependencies:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># Ubuntu 18.04 and 20.04
-sudo apt install -y libssl1.1 libncurses5 libjansson4
-# Debian Bookworm, Ubuntu 22.04 and newer
-sudo apt install -y libssl3 libncurses6 libjansson4
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install -y libssl3 libncurses6 libjansson4
 </pre></div>
 </div>
 <p>Download and install the Debian package: <a class="reference external" href="https://github.com/rtbrick/bngblaster/releases">https://github.com/rtbrick/bngblaster/releases</a></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo dpkg -i &lt;package&gt;
 </pre></div>
 </div>
-<p>This command installs the BNG Blaster to <cite>/usr/sbin/bngblaster</cite>.</p>
+<p>This command installs the BNG Blaster to <code class="docutils literal notranslate"><span class="pre">/usr/bin/bngblaster</span></code>.
+The Debian package also creates compatibility symlinks in <code class="docutils literal notranslate"><span class="pre">/usr/sbin</span></code>
+for <code class="docutils literal notranslate"><span class="pre">bngblaster</span></code>, <code class="docutils literal notranslate"><span class="pre">bngblaster-cli</span></code> and <code class="docutils literal notranslate"><span class="pre">lspgen</span></code>.</p>
 </section>
 <section id="build-from-sources">
-<h2>Build from Sources<a class="headerlink" href="#build-from-sources" title="Link to this heading"></a></h2>
+<h2>Build from Sources<a class="headerlink" href="#build-from-sources" title="Permalink to this headline"></a></h2>
 <section id="dependencies">
-<h3>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading"></a></h3>
+<h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline"></a></h3>
 <p>The BNG Blaster has dependencies on the RtBrick
 <a class="reference external" href="https://github.com/rtbrick/libdict">libdict fork</a>
 and the following standard dependencies:</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install -y unzip
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install -y wget unzip
 
-# install libdict for Ubuntu 18.04 LTS
-wget https://github.com/rtbrick/libdict/releases/download/v1.0.1/libdict-debian.zip
-unzip libdict-debian.zip
-
-# install libdict for Ubuntu 22.04 LTS
-wget https://github.com/rtbrick/libdict/releases/download/1.0.6/libdict-ubuntu-22.04.zip
-unzip libdict-ubuntu-22.04.zip
-
-# install libdict for Debian Bookworm
-wget https://github.com/rtbrick/libdict/releases/download/1.0.6/libdict-bookworm.zip
-unzip libdict-bookworm.zip
-
-sudo dpkg -i libdict_1.0.6_amd64.deb
-sudo dpkg -i libdict-dev_1.0.6_amd64.deb
+# install libdict 1.0.7, where &lt;os&gt; is one of
+# ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, bookworm or trixie
+wget https://github.com/rtbrick/libdict/releases/download/1.0.7/libdict-&lt;os&gt;.zip
+unzip libdict-&lt;os&gt;.zip
+sudo dpkg -i libdict_1.0.7_amd64.deb
+sudo dpkg -i libdict-dev_1.0.7_amd64.deb
 
 # install other dependencies
-sudo apt install -y cmake \
+sudo apt install -y build-essential cmake \
     libpcap-dev \
-    libcunit1-dev \
-    libncurses5-dev \
+    libncurses-dev \
     libssl-dev \
-    libjansson-dev \
-    libnuma-dev
+    libjansson-dev
 </pre></div>
 </div>
 </section>
 <section id="build">
-<h3>Build<a class="headerlink" href="#build" title="Link to this heading"></a></h3>
-<p>Per default cmake (<cite>cmake .</cite>) will build the BNG Blaster as a release
+<h3>Build<a class="headerlink" href="#build" title="Permalink to this headline"></a></h3>
+<p>Per default cmake (<code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">.</span></code>) will build the BNG Blaster as a release
 version with optimization and debug symbols (RelWithDebInfo).</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/rtbrick/bngblaster.git
 cd bngblaster
@@ -180,36 +162,52 @@ make all
 </pre></div>
 </div>
 <p>There are also CPack files generated which allow to easily generate a Debian
-package by just executing <cite>cpack</cite> from the build directory.</p>
-<p>It is also recommended to provide the GIT commit details to be included in the
-manually build the version as shown below:</p>
+package by just executing <code class="docutils literal notranslate"><span class="pre">cpack</span></code> from the build directory.</p>
+<p>It is also recommended to provide the GIT commit details to be included when
+manually building the version, as shown below:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cmake -DGIT_REF=`git rev-parse --abbrev-ref HEAD` -DGIT_SHA=`git rev-parse HEAD` .
 </pre></div>
 </div>
 <p><em>Example:</em></p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ bngblaster -v
 GIT:
-REF: dev
-SHA: df453a5ee9dbf6440aefbfb9630fa0f06e326d44
-IO Modes: packet_mmap_raw (default), packet_mmap, raw
+  REF: dev
+  SHA: df453a5ee9dbf6440aefbfb9630fa0f06e326d44
+IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback
 </pre></div>
 </div>
 </section>
 <section id="id1">
-<h3>Install<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<h3>Install<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
 <p>Then BNG Blaster can be installed using the make install target.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo make install
 </pre></div>
 </div>
-<p>This command installs the BNG Blaster to <cite>/usr/sbin/bngblaster</cite>.</p>
+<p>This command installs <code class="docutils literal notranslate"><span class="pre">bngblaster</span></code>, <code class="docutils literal notranslate"><span class="pre">bngblaster-cli</span></code>, <code class="docutils literal notranslate"><span class="pre">lspgen</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code> and <code class="docutils literal notranslate"><span class="pre">ldpupdate</span></code> to <code class="docutils literal notranslate"><span class="pre">/usr/bin</span></code>.</p>
+</section>
+<section id="build-options">
+<h3>Build Options<a class="headerlink" href="#build-options" title="Permalink to this headline"></a></h3>
+<p>The following cmake options are disabled by default:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">BNGBLASTER_TESTS</span></code>: build unit tests (requires CMocka)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BNGBLASTER_INTEGRATION_TESTS</span></code>: add integration tests
+(requires root, pytest, GoBGP, FRR and BIRD)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BNGBLASTER_CPU_NATIVE</span></code>: optimize for the native CPU of the build host
+(<code class="docutils literal notranslate"><span class="pre">-march=native</span></code>), the binary might not run on other CPUs</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BNGBLASTER_TIMER_LOGGING</span></code>: enable the <code class="docutils literal notranslate"><span class="pre">timer</span></code> and <code class="docutils literal notranslate"><span class="pre">timer-detail</span></code>
+logging flags</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BNGBLASTER_DPDK</span></code>: build with <a class="reference internal" href="#install-dpdk"><span class="std std-ref">DPDK</span></a> support</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">BNGBLASTER_AF_XDP</span></code>: build with <a class="reference internal" href="#install-af-xdp"><span class="std std-ref">AF_XDP</span></a> support</p></li>
+</ul>
 </section>
 <section id="build-and-run-unit-tests">
-<h3>Build and Run Unit Tests<a class="headerlink" href="#build-and-run-unit-tests" title="Link to this heading"></a></h3>
+<h3>Build and Run Unit Tests<a class="headerlink" href="#build-and-run-unit-tests" title="Permalink to this headline"></a></h3>
 <p>Building and running unit tests requires CMocka to be installed:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install libcmocka-dev
 </pre></div>
 </div>
-<p>The option <cite>BNGBLASTER_TESTS</cite> enables to build unit tests.</p>
+<p>The option <code class="docutils literal notranslate"><span class="pre">BNGBLASTER_TESTS</span></code> enables to build unit tests.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cmake -DCMAKE_BUILD_TYPE=Debug -DBNGBLASTER_TESTS=ON .
 make all
 make test
@@ -219,27 +217,33 @@ make test
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ make test
 Running tests...
 Test project
-    Start 1: TestProtocols
-1/1 Test #1: TestProtocols ....................   Passed    0.00 sec
+    Start 1: TestUtils
+1/4 Test #1: TestUtils ........................   Passed    0.00 sec
+    Start 2: TestChecksum
+2/4 Test #2: TestChecksum .....................   Passed    0.00 sec
+    Start 3: TestTimer
+3/4 Test #3: TestTimer ........................   Passed    0.00 sec
+    Start 4: TestProtocols
+4/4 Test #4: TestProtocols ....................   Passed    0.00 sec
 
-100% tests passed, 0 tests failed out of 1
+100% tests passed, 0 tests failed out of 4
 
 Total Test time (real) =   0.00 sec
 </pre></div>
 </div>
 </section>
 <section id="build-with-dpdk-support">
-<span id="install-dpdk"></span><h3>Build with DPDK Support<a class="headerlink" href="#build-with-dpdk-support" title="Link to this heading"></a></h3>
+<span id="install-dpdk"></span><h3>Build with DPDK Support<a class="headerlink" href="#build-with-dpdk-support" title="Permalink to this headline"></a></h3>
 <p>The following steps are required to build the BNG Blaster with experimental
 <a class="reference internal" href="performance.html#dpdk-usage"><span class="std std-ref">DPDK</span></a> support.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>Tested with DPDK version 25.11.0 and Ubuntu 22.04 (LTS)!</p>
+<p>Tested with DPDK version 25.11.3 and Ubuntu 22.04 (LTS)!</p>
 </div>
 <p>Download and install DPDK:
 <a class="reference external" href="https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html">https://doc.dpdk.org/guides/linux_gsg/build_dpdk.html</a></p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># install meson
-sudo apt install meson ninja-build
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># install meson and libnuma
+sudo apt install meson ninja-build libnuma-dev
 
 # download DPDK
 wget https://fast.dpdk.org/rel/dpdk-25.11.tar.xz
@@ -269,20 +273,60 @@ the additional cmake argument <code class="docutils literal notranslate"><span c
 -- Found DPDK via pkg-config
 </pre></div>
 </div>
-<p>The installed version should now show <cite>dpdk</cite> as new IO mode.</p>
+<p>The installed version should now show <code class="docutils literal notranslate"><span class="pre">dpdk</span></code> as new IO mode.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo bngblaster -v
 Version: DEV
 Compiler: GNU (11.2.0)
-IO Modes: packet_mmap_raw (default), packet_mmap, raw, dpdk
+IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback, dpdk
+</pre></div>
+</div>
+</section>
+<section id="build-with-af-xdp-support">
+<span id="install-af-xdp"></span><h3>Build with AF_XDP Support<a class="headerlink" href="#build-with-af-xdp-support" title="Permalink to this headline"></a></h3>
+<p>The following steps are required to build the BNG Blaster with experimental
+<a class="reference internal" href="performance.html#af-xdp-usage"><span class="std std-ref">AF_XDP</span></a> support.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Tested with libbpf version 0.5.0 and Ubuntu 22.04 (LTS)!</p>
+</div>
+<p>Install libbpf development files (which include the AF_XDP helper library):</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install libbpf-dev
+</pre></div>
+</div>
+<p>The AF_XDP helper library (<code class="docutils literal notranslate"><span class="pre">xsk.h</span></code>) was removed from libbpf with version 1.0
+and moved to libxdp. With libbpf 1.0 or newer (e.g. Ubuntu 24.04 or Debian 12),
+install the libxdp development files instead, which are preferred if found:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install libbpf-dev libxdp-dev
+</pre></div>
+</div>
+<p>Building BNG Blaster with AF_XDP support works as explained before but with
+the additional cmake argument <code class="docutils literal notranslate"><span class="pre">-DBNGBLASTER_AF_XDP=on</span></code></p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cmake -DBNGBLASTER_AF_XDP=on ..
+</pre></div>
+</div>
+<p>If libbpf is installed correctly, cmake should show the following output:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>-- Build bngblaster with AF_XDP support
+-- Found PkgConfig: /usr/bin/pkg-config (found version &quot;1.8.0&quot;)
+-- Checking for module &#39;libbpf&#39;
+--   Found libbpf, version 0.5.0
+-- Found libbpf 0.5.0 via pkg-config
+</pre></div>
+</div>
+<p>With libxdp, cmake shows <code class="docutils literal notranslate"><span class="pre">Found</span> <span class="pre">libxdp</span> <span class="pre">&lt;version&gt;</span> <span class="pre">via</span> <span class="pre">pkg-config</span></code> instead.</p>
+<p>The installed version should now show <code class="docutils literal notranslate"><span class="pre">af_xdp</span></code> as new IO mode.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo bngblaster -v
+Version: DEV
+Compiler: GNU (11.4.0)
+IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback, af_xdp
 </pre></div>
 </div>
 </section>
 </section>
 <section id="running-bng-blaster">
-<h2>Running BNG Blaster<a class="headerlink" href="#running-bng-blaster" title="Link to this heading"></a></h2>
+<h2>Running BNG Blaster<a class="headerlink" href="#running-bng-blaster" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster needs permission to send raw packets and change network interface
 settings. The easiest way to run the BNG Blaster is either as the root user or
-with <cite>sudo</cite>:</p>
+with <code class="docutils literal notranslate"><span class="pre">sudo</span></code>:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span># As root
 bngblaster -C config.json -I
 
@@ -290,7 +334,7 @@ bngblaster -C config.json -I
 sudo bngblaster -C config.json -I
 </pre></div>
 </div>
-<p>A third option is to set capabilities on the binary with for example <cite>setcap</cite>
+<p>A third option is to set capabilities on the binary with for example <code class="docutils literal notranslate"><span class="pre">setcap</span></code>
 as shown below:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo setcap cap_net_raw,cap_net_admin,cap_dac_read_search+eip `which bngblaster`
 

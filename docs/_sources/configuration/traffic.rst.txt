@@ -47,7 +47,7 @@
 |                                 | | target rate and preventing large bursts.             |
 |                                 | | Default: 100 Range: 1 - 1000                         |
 +---------------------------------+--------------------------------------------------------+
-| **multicast-traffic-autostart** | | Automatically start multicast traffic.               |
+| **multicast-autostart**         | | Automatically start multicast traffic.               |
 |                                 | | Default: true                                        |
 +---------------------------------+--------------------------------------------------------+
 | **udp-checksum**                | | Enable UDP checksums.                                |

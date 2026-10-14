@@ -96,7 +96,7 @@ Let's advance the test by enabling some features explained below.
     
     $ sudo bngblaster -C pppoe.json -c 1 -L test.log -l ip -J report.json -j sessions -j streams -P test.pcap -S run.sock -I
 
-* ``-C test.json`` loads the configuration file
+* ``-C pppoe.json`` loads the configuration file
 * ``-c 1`` defines how many sessions to be emulated, you can increase the number to see what happens...
 * ``-L test.log`` creates an optional logging file 
 * ``-l ip`` enables the IP address logging
@@ -105,7 +105,7 @@ Let's advance the test by enabling some features explained below.
 * ``-j streams`` include detailed results for every stream in the JSON report
 * ``-P test.pcap`` generates a PCAP file
 * ``-S run.sock`` opens the JSON RPC API socket
-* ``-I`` start interactive courses user interface
+* ``-I`` start interactive ncurses user interface
 
 .. image:: images/quickstart_interactive.png
     :alt: BNG Blaster Interactive
@@ -242,7 +242,7 @@ ISIS
 ----
 
 In the following example, we create two :ref:`ISIS <isis>` nodes (R1 and R2) with an emulated
-ISIS topology attached to R1 (`isis.mrt``). 
+ISIS topology attached to R1 (``isis.mrt``).
 
 .. image:: images/quickstart_isis.png
     :alt: ISIS Quickstart
@@ -362,12 +362,12 @@ Finally, you can start the BNG Blaster.
     Mar 30 14:56:11.981335 Init IS-IS instance 2
     Mar 30 14:56:12.031917 Add network interface veth1.1 to IS-IS instance 1
     Mar 30 14:56:12.087877 Add network interface veth1.2 to IS-IS instance 2
-    Mar 30 14:56:12.087971 opened pcap-file test.pcap
+    Mar 30 14:56:12.087971 pcap file test.pcap opened
     Mar 30 14:56:12.088013 Opened control socket run.sock
     Mar 30 14:56:13.088035 Resolve network interfaces
     Mar 30 14:56:13.088050 All network interfaces resolved
-    Mar 30 14:56:22.093906 ISIS L1 adjacency UP on interface veth1.2 
-    Mar 30 14:56:22.093964 ISIS L1 adjacency UP on interface veth1.1 
+    Mar 30 14:56:22.093906 ISIS L1 adjacency UP to 1921.6800.1001 on interface veth1.2
+    Mar 30 14:56:22.093964 ISIS L1 adjacency UP to 1921.6800.1002 on interface veth1.1
 
 If the test is still running, you can open a second terminal, go to the same directory
 from where you started the BNG Blaster and enter the following command. 
@@ -417,7 +417,7 @@ and `gobgp <https://github.com/osrg/gobgp>`_.
 
     sudo apt install gobgpd
 
-Therefore, we use again the veth interface pair. But this time
+Therefore, we again use the veth interface pair. But this time
 the side used by `gobgp <https://github.com/osrg/gobgp>`_ 
 needs an IP address and TCP checksum offloading must be disabled!
 
@@ -432,8 +432,8 @@ needs an IP address and TCP checksum offloading must be disabled!
     # add IPv4 address for gobgpd
     sudo ip address add 192.168.92.1/24 dev veth1.1
 
-Following the `gobgp <https://github.com/osrg/gobgp>`_ and 
-BNG Blaster configuration files needed. 
+Following are the `gobgp <https://github.com/osrg/gobgp>`_ and
+BNG Blaster configuration files needed.
 
 **gobgpd.conf:**
 
@@ -484,8 +484,8 @@ BNG Blaster configuration files needed.
         ]
     }
 
-Use the included tool ``bgpupdate`` to generate a BGP update file 
-with 10.000 IPv4 and 10.000 IPv6 prefixes. 
+Use the included tool ``bgpupdate`` to generate a BGP update file
+with 10000 IPv4 and 10000 IPv6 prefixes.
 
 .. code-block:: none
 
@@ -543,7 +543,7 @@ from where you started the BNG Blaster and enter the following command.
                 "local-as": 65001,
                 "local-hold-time": 90,
                 "peer-address": "192.168.92.1",
-                "peer-id": "1.92.168.192",
+                "peer-id": "192.168.92.1",
                 "peer-as": 65001,
                 "peer-hold-time": 90,
                 "state": "established",
@@ -569,7 +569,7 @@ The following command shows the session in `gobgp <https://github.com/osrg/gobgp
 
     $ gobgp neighbor 192.168.92.2 
     BGP neighbor is 192.168.92.2, remote AS 65001
-    BGP version 4, remote router ID 4.3.2.1
+    BGP version 4, remote router ID 1.2.3.4
     BGP state = established, up for 00:01:36
     BGP OutQ = 0, Flops = 0
     Hold time is 90, keepalive interval is 30 seconds

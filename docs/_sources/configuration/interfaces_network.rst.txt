@@ -25,9 +25,11 @@
 |                                   | | Default: 0 (untagged)                                              |
 +-----------------------------------+----------------------------------------------------------------------+
 | **inner-vlan**                    | | Network interface inner VLAN.                                      |
+| **inner-vlan**                    | | Requires **vlan**.                                                 |
 |                                   | | Default: 0 (single/untagged)                                       |
 +-----------------------------------+----------------------------------------------------------------------+
 | **qinq**                          | | Set outer VLAN ethertype to QinQ (0x88a8).                         |
+| **qinq**                          | | Requires **inner-vlan**.                                           |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **gateway-mac**                   | | Optional set default gateway MAC address manually. Per default     |
@@ -56,21 +58,30 @@
 | **isis-l2-priority**              | | ISIS level 2 interface priority.                                   |
 |                                   | | Default: 10                                                        |
 +-----------------------------------+----------------------------------------------------------------------+
+| **isis-te-metric**                | | ISIS Flex-Algo TE metric.                                          |
+|                                   | | Default: 0 (disabled) Range: 0 - 16777215                          |
++-----------------------------------+----------------------------------------------------------------------+
+| **isis-delay**                    | | ISIS Flex-Algo min/max link delay in microseconds.                 |
+|                                   | | Default: 0 (disabled) Range: 0 - 16777215                          |
++-----------------------------------+----------------------------------------------------------------------+
+| **isis-admin-group**              | | ISIS Flex-Algo admin group (32 bit mask).                          |
+|                                   | | Default: 0 (disabled)                                              |
++-----------------------------------+----------------------------------------------------------------------+
 | **ospfv2-instance-id**            | | Assign the interface to an OSPFv2 instance.                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ospfv2-type**                   | | OSPFv2 interface type (p2p or broadcast).                          |
 |                                   | | Default: broadcast                                                 |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ospfv2-metric**                 | | OSPFv2 interface metric.                                           |
-|                                   | | Default: 10                                                        |
+|                                   | | Default: 1                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ospfv3-instance-id**            | | Assign the interface to an OSPFv3 instance.                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ospfv3-type**                   | | OSPFv3 interface type (p2p or broadcast).                          |
 |                                   | | Default: broadcast                                                 |
 +-----------------------------------+----------------------------------------------------------------------+
-| **ospfv3-metric**                 | |  OSPFv3 interface metric.                                          |
-|                                   | | Default: 10                                                        |
+| **ospfv3-metric**                 | | OSPFv3 interface metric.                                           |
+|                                   | | Default: 1                                                         |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ldp-instance-id**               | | Assign the interface to a LDP instance.                            |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -85,6 +96,7 @@
 |                                   | | Default: `1s`                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-md-name**                   | | Set EOAM CFM maintenance domain name (string).                     |
+| **cfm-md-name**                   | | Mandatory unless **cfm-md-name-format** is `NONE`.                 |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-md-name-format**            | | Set EOAM CFM MD name format.                                       |
 |                                   | | Default: ``NONE``                                                  |
@@ -98,6 +110,7 @@
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-name**                   | | Set EOAM CFM maintenance association short name (string).          |
+| **cfm-ma-name**                   | | Mandatory if **cfm-cc** is enabled.                                |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-name-format**            | | Set EOAM CFM MA name format.                                       |
 |                                   | | Default: ``STRING``                                                |
@@ -117,6 +130,6 @@
 | **a10nsp**                        | | Enable A10NSP switch emulation (experimental).                     |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-| **a10nsp-tx-label**               | | Transport label used for A10NSP services in dowstream direction.   |
+| **a10nsp-tx-label**               | | Transport label used for A10NSP services in downstream direction.  |
 |                                   | | Default: 0                                                         |
 +-----------------------------------+----------------------------------------------------------------------+

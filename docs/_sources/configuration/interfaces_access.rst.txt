@@ -11,9 +11,10 @@
 |                                   | | Default: `first network interface from configuration`              |
 +-----------------------------------+----------------------------------------------------------------------+
 | **a10nsp-interface**              | | Select the corresponding A10NSP interface for those sessions.      |
+| **a10nsp-interface**              | | Mutually exclusive with **network-interface**.                     |
 |                                   | | Default: `first a10nsp interface from configuration`               |
 +-----------------------------------+----------------------------------------------------------------------+
-| **type**                          | | Set access type (`pppoe` or `ipoe`).                               |
+| **type**                          | | Set access type (`pppoe`, `ipoe` or `pppol2tp`).                   |
 |                                   | | Default: pppoe                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **vlan-mode**                     | | Set VLAN mode to `1:1` or `N:1`.                                   |
@@ -78,6 +79,7 @@
 |                                   | | Default: `1s`                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-md-name**                   | | Set EOAM CFM maintenance domain name (string).                     |
+| **cfm-md-name**                   | | Mandatory unless **cfm-md-name-format** is `NONE`.                 |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-md-name-format**            | | Set EOAM CFM MD name format.                                       |
 |                                   | | Default: ``NONE``                                                  |
@@ -91,6 +93,7 @@
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-name**                   | | Set EOAM CFM maintenance association short name (string).          |
+| **cfm-ma-name**                   | | Mandatory if **cfm-cc** is enabled.                                |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-ma-name-format**            | | Set EOAM CFM MA name format.                                       |
 |                                   | | Default: ``STRING``                                                |
@@ -111,7 +114,7 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **password**                      | | Overwrite the password from the authentication section.            |
 +-----------------------------------+----------------------------------------------------------------------+
-| **authentication-protocol**       | | Overwrite the username from the authentication section.            |
+| **authentication-protocol**       | | Overwrite the protocol from the authentication section.            |
 +-----------------------------------+----------------------------------------------------------------------+
 | **agent-circuit-id**              | | Overwrite the agent-circuit-id from the access-line section.       |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -127,6 +130,7 @@
 | **dsl-type**                      | | Overwrite the dsl-type from the access-line section.               |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ppp-mru**                       | | Overwrite PPP MRU (PPPoE only).                                    |
+| **ppp-mru**                       | | Default: **ppp->mru** Range: 64 - 9000                             |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ipcp**                          | | Overwrite PPP IPCP enable option (PPPoE only).                     |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -139,6 +143,9 @@
 | **dhcpv6**                        | | Overwrite DHCPv6 enable option.                                    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **dhcpv6-ldra**                   | | Overwrite DHCPv6 LDRA option.                                      |
++-----------------------------------+----------------------------------------------------------------------+
+| **dhcpv6-ia-na**                  | | Overwrite DHCPv6 IA_NA option.                                     |
+|                                   | | Default: DHCPv6 ia-na for IPoE and false for PPPoE and PPPoL2TP    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **igmp-autostart**                | | Overwrite IGMP autostart option.                                   |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -176,7 +183,13 @@
 | **arp-client-group-id**           | | Set ARP group identifier.                                          |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
-| **icmp-client-group-id",**        | | Set ICMP group identifier.                                         |
+| **icmp-client-group-id**          | | Set ICMP group identifier.                                         |
+|                                   | | Default: 0 Range: 0 - 65535                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **l2tp-client-group-id**          | | Set L2TP client group identifier (LAC mode, requires               |
+|                                   | | ``"type": "pppol2tp"``).  Sessions on this access interface are    |
+|                                   | | spread evenly across all ``l2tp-client`` entries with the same     |
+|                                   | | ``group-id``.                                                      |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **http-client-group-id**          | | Set HTTP group identifier.                                         |

@@ -7,11 +7,11 @@ Logging
 -------
 
 The BNG Blaster can log events to the standard output
-or the logging window of the interactive courses interface. 
+or the logging window of the interactive ncurses interface.
 Those events could be also logged into files using the argument 
 ``-L <file>``.
 
-Per default, only events classified as `info` or `error` are logged. 
+Per default, only events classified as ``info`` or ``error`` are logged.
 The following list shows all supported logging options. 
 
 * ``debug``: debug events
@@ -26,13 +26,21 @@ The following list shows all supported logging options.
 * ``l2tp``: log L2TP (LNS) events
 * ``dhcp``: log DHCP events
 * ``isis``: log ISIS events
-* ``bgp``: log BGP events 
+* ``ospf``: log OSPF events
+* ``ldp``: log LDP events
+* ``bgp``: log BGP events
 * ``tcp``: log TCP events
 * ``lag``: log link aggregation (LAG) events
 * ``dpdk``: log DPDK events
+* ``af_xdp``: log AF_XDP events
 * ``packet``: log packet events
 * ``http``: log HTTP events
 * ``icmp``: log ICMP events
+* ``timer``: log timer events
+* ``timer-detail``: log detailed timer events
+
+The ``timer`` and ``timer-detail`` options are only available if
+built with ``-DBNGBLASTER_TIMER_LOGGING=ON``.
 
 .. code-block:: none
     
