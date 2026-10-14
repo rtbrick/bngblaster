@@ -49,6 +49,10 @@ The default protocol is ISIS which can be changed using the argument ``-P ospf2`
       -z --no-ipv4
       -Z --no-ipv6
       -y --no-sr
+      -A --sr-algo <algo,...>
+      -F --flex-algo <algo:igp|min-delay|te[:priority],...>
+      -D --link-delay <min>[:<max>]
+      -E --te-metric <min>[:<max>]
       -e --external-count <args>
       -g --graphviz-file <filename>
       -h --help
@@ -166,6 +170,122 @@ Those topologies could be even exported as configuration file
 with the argument ``-w`` and later imported with the argument ``-r``.
 This allows the generation of a large random topology that can be modified
 manually. 
+
+Segment Routing
+^^^^^^^^^^^^^^^
+
+Randomly generated topologies advertise an IPv4 and IPv6 node SID
+(Prefix-SID) per node for the SR algorithm 0 (SPF), which can be
+disabled with the argument ``-y``.
+
+The argument ``-A`` generates node SIDs for multiple SR algorithms
+in ISIS topologies. Supported are the algorithms 0 (SPF), 1 (strict SPF)
+and 128 to 255 (Flex-Algo) with up to 4 algorithms per topology. The
+algorithms are also advertised in the SR-Algorithm sub-TLV of the router
+capability. The SRGB range is automatically increased to hold the node SIDs
+of all algorithms, starting with the IPv4 node SIDs of the first algorithm,
+followed by those of the next algorithm. The IPv6 node SIDs follow the same
+layout starting at half of the SRGB range.
+
+.. code-block:: none
+
+    lspgen -m isis.mrt -c 100 -A 0,1,128
+
+The argument ``-F`` adds Flex-Algo definitions (FAD, RFC 9350) in the
+format ``<algo>:<metric-type>[:<priority>]`` with the metric types
+``igp`` (default), ``min-delay`` and ``te`` and the default priority 128.
+The definitions are advertised by the first two nodes of the topology,
+each in a dedicated router capability TLV. All Flex-Algos are added to the
+SR algorithms together with algorithm 0, so node SIDs are generated
+for each of them.
+
+.. code-block:: none
+
+    lspgen -m isis.mrt -c 100 -F 128:igp,129:min-delay:200
+
+The metric types ``min-delay`` and ``te`` use the application-specific
+link attributes (ASLA, RFC 8919) of the links with the Flex-Algo application
+bit (X). Those are added to all links of ISIS topologies if Flex-Algo
+definitions, link delays (``-D``) or TE metrics (``-E``) are configured.
+The link delay in microseconds and the TE metric are randomly selected
+per link from the range ``<min>:<max>``, with the same value for both
+directions of a link. The values are derived from the seed (``-s``),
+so the topology is reproducible. Without those arguments, the link
+delay and TE metric are equal to the IGP metric.
+
+.. code-block:: none
+
+    lspgen -m isis.mrt -c 100 -F 128:igp,129:min-delay,130:te -D 10:1000 -E 100:200
+
+In configuration files, multiple Prefix-SIDs are defined per prefix
+with ``segment_ids``. The ``index`` is mandatory, the ``algo`` defaults
+to 0 and the optional ``flags`` are ``no-php``, ``explicit-null``,
+``value`` and ``local``. With the flag ``value``, the index is
+encoded as 20-bit label. The attribute ``segment_id`` is a short form
+for a single Prefix-SID with algorithm 0. Up to 4 Prefix-SIDs are
+supported per prefix, and only the first one is used for OSPF.
+
+.. code-block:: json
+
+    {
+        "ipv4_prefix": "10.0.0.1/32",
+        "metric": 0,
+        "node_flag": true,
+        "segment_ids": [
+            {"index": 1, "algo": 0},
+            {"index": 1001, "algo": 1},
+            {"index": 2001, "algo": 128, "flags": ["no-php"]}
+        ]
+    }
+
+The SR algorithms of the router capability are defined with
+``sr_algo_list`` (e.g. ``"sr_algo_list": [0, 1, 128]``).
+
+Flex-Algo prefix metrics (FAPM) are added per prefix with
+``flex_algo_metrics``, for example for prefixes advertised between levels.
+
+.. code-block:: json
+
+    {
+        "ipv4_prefix": "10.1.0.0/24",
+        "metric": 10,
+        "flex_algo_metrics": [
+            {"algo": 128, "metric": 20}
+        ]
+    }
+
+The application-specific link attributes are defined per neighbor
+with ``te_metric``, ``min_delay`` and ``max_delay`` in microseconds
+and the 32 bit ``admin_group``.
+
+.. code-block:: json
+
+    {
+        "remote_node_id": "1337.0000.0002.00",
+        "metric": 10,
+        "te_metric": 100,
+        "min_delay": 1000,
+        "max_delay": 1200,
+        "admin_group": 1
+    }
+
+Flex-Algo definitions are defined per node with ``flex_algo_list``.
+The ``algo`` (128 - 255) is mandatory. The ``metric_type`` is ``igp``
+(default), ``min-delay`` or ``te``, the ``priority`` defaults to 128,
+``m_flag`` requires the Flex-Algo prefix metric for inter-area prefixes
+and the 32 bit admin group masks ``exclude_any``, ``include_any`` and
+``include_all`` are only advertised if not zero. The ``router_id`` of
+the router capability TLV should be set to the router ID of the node.
+
+.. code-block:: json
+
+    {
+        "flex_algo_list": [
+            {"router_id": "10.0.0.1", "algo": 128, "metric_type": "igp"},
+            {"router_id": "10.0.0.1", "algo": 129, "metric_type": "min-delay",
+             "priority": 200, "m_flag": true, "exclude_any": 1}
+        ]
+    }
 
 Topology from Configuration File
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^

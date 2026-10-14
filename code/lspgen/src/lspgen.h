@@ -54,6 +54,8 @@ void lspgen_dump_stream(lsdb_ctx_t *);
 
 /* lspgen_config.c */
 void lspgen_read_config(lsdb_ctx_t *);
+void lspgen_add_fad_attr(lsdb_node_t *, lsdb_attr_fad_t *);
+bool lspgen_scan_fad_metric_type(const char *, uint8_t *);
 void lspgen_write_config(lsdb_ctx_t *);
 extern struct keyval_ isis_level_names[];
 

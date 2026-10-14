@@ -9,6 +9,7 @@ Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
 import json
+import re
 
 import helpers
 from helpers import BngBlaster, Frr, lspgen, wait_until
@@ -48,11 +49,23 @@ class LspgenTopology:
         config = path.with_suffix(".json")
         lspgen(args + ["-m", self.mrt, "-w", str(config)], cwd=str(path.parent))
         self.nodes, self.prefixes, self.prefixes6 = set(), set(), set()
+        self.prefix_sids = {}  # {prefix: {(index, algo), ...}}
+        self.asla = {}  # {(node-id, remote-node-id): (te-metric, min-delay, max-delay)}
         for nodes in json.loads(config.read_text()).values():
             if not isinstance(nodes, list):
                 continue
             for node in nodes:
                 self.nodes.add(node["node_id"])
+                for link in node.get("neighbor_list", []):
+                    if "te_metric" in link:
+                        self.asla[(node["node_id"], link["remote_node_id"])] = (
+                            link["te_metric"], link["min_delay"], link["max_delay"])
+                for p in node.get("ipv4_prefix_list", []) + node.get("ipv6_prefix_list", []):
+                    sids = {(s["index"], s["algo"]) for s in p.get("segment_ids", [])}
+                    if "segment_id" in p:
+                        sids.add((p["segment_id"], 0))
+                    if sids:
+                        self.prefix_sids[p.get("ipv4_prefix") or p["ipv6_prefix"]] = sids
                 self.prefixes.update(p["ipv4_prefix"] for p in node.get("ipv4_prefix_list", [])
                                      if p["ipv4_prefix"].endswith("/32"))
                 self.prefixes6.update(p["ipv6_prefix"] for p in node.get("ipv6_prefix_list", [])
@@ -140,16 +153,27 @@ class IsisSetup(IgpSetup):
     logging = ("info", "isis")
 
     @staticmethod
-    def lspgen(path, nodes, level=1, auth=None):
+    def lspgen(path, nodes, level=1, auth=None, sr_algo=None, flex_algo=None,
+               link_delay=None, te_metric=None):
         args = ["-a", "%s/24" % ISIS_AREA, "-c", str(nodes), "-V", str(level),
                 "-C", BBL_SYSTEM_ID]
         if auth:
             args += ["-K", auth[1], "-T", auth[0]]
+        if sr_algo:
+            args += ["-A", ",".join(str(a) for a in sr_algo)]
+        if flex_algo:
+            args += ["-F", flex_algo]
+        if link_delay:
+            args += ["-D", link_delay]
+        if te_metric:
+            args += ["-E", te_metric]
         return LspgenTopology(path, args)
 
-    def frr_config(self, level=1, p2p=True, auth=None, redistribute=False):
+    def frr_config(self, level=1, p2p=True, auth=None, redistribute=False, flex_algo=None):
         """Return FRR config. The auth tuple (type, key) is used for hellos,
-        LSPs and SNPs of all levels."""
+        LSPs and SNPs of all levels. FRR participates in the flex_algo list
+        of algorithms without advertising a definition. All links must have
+        subTLVs, otherwise FRR crashes (FRRouting/frr#23693)."""
         lines = [
             "router isis bbl",
             " net %s.%s.00" % (ISIS_AREA, FRR_SYSTEM_ID),
@@ -169,6 +193,11 @@ class IsisSetup(IgpSetup):
             for l in levels(level):
                 lines.append(" redistribute ipv4 connected level-%d" % l)
                 lines.append(" redistribute ipv6 connected level-%d" % l)
+        if flex_algo:
+            lines += [" segment-routing on",
+                      " segment-routing global-block 16000 23999"]
+            for algo in flex_algo:
+                lines += [" flex-algo %d" % algo, "  dataplane sr-mpls", " exit"]
         lines += [
             "exit",
             "interface %s" % self.topology.if_b,
@@ -274,6 +303,77 @@ class IsisSetup(IgpSetup):
                 for lsp in db_level.get("lsps", []):
                     result[lsp["lsp"]["id"]] = int(lsp["seqNumber"], 16)
         return result
+
+    def frr_prefix_sids(self):
+        """Return {prefix: {(index, algo), ...}} and {lsp-id: [algo, ...]}
+        of all LSPs parsed from the FRR detail text output."""
+        sids, algos = {}, {}
+        lsp = prefix = None
+        in_algo = False
+        for line in self.frr.vtysh("show isis database detail", json_output=False).splitlines():
+            fields = line.split()
+            if re.match(r"^[0-9a-f.]+-\d\d\s", line):
+                lsp, in_algo = fields[0], False
+            elif "Reachability:" in line and "/" in line:
+                prefix = fields[-3]
+            elif "SR Algorithm:" in line:
+                in_algo = True
+                algos[lsp] = []
+            elif in_algo and re.match(r"^\s+\d+:", line):
+                algos[lsp].append(int(fields[0].rstrip(":")))
+            elif "SR Prefix-SID Index:" in line:
+                m = re.search(r"Index: (\d+), Algorithm: (\d+)", line)
+                sids.setdefault(prefix, set()).add((int(m.group(1)), int(m.group(2))))
+            else:
+                in_algo = in_algo and line.startswith("      ")
+        return sids, algos
+
+    def frr_flex_algo_definitions(self):
+        """Return {lsp-id: {algo: {field: value}}} of all Flex-Algo
+        definitions parsed from the FRR detail text output."""
+        result = {}
+        lsp = fad = None
+        for line in self.frr.vtysh("show isis database detail", json_output=False).splitlines():
+            if re.match(r"^[0-9a-f.]+-\d\d\s", line):
+                lsp, fad = line.split()[0], None
+            elif "Flex-Algo Definition:" in line:
+                fad = result.setdefault(lsp, {}).setdefault(int(line.split()[-1]), {})
+            elif fad is not None and re.match(r"^\s{6}[A-Za-z-]+: ", line):
+                key, value = line.strip().split(": ", 1)
+                fad[key] = value.strip()
+            else:
+                fad = None
+        return result
+
+    def frr_asla(self):
+        """Return {(lsp-id, neighbor): (te-metric, min-delay, max-delay)} of all
+        Flex-Algo application-specific link attributes parsed from the FRR detail
+        text output."""
+        result = {}
+        lsp = reach = None
+        for line in self.frr.vtysh("show isis database detail", json_output=False).splitlines():
+            if re.match(r"^[0-9a-f.]+-\d\d\s", line):
+                lsp, reach = line.split()[0], None
+            elif "Extended Reachability:" in line:
+                reach = [line.split()[2], None, None]
+            elif reach and "Traffic Engineering Metric:" in line:
+                reach[1] = int(line.split()[-1])
+            elif reach and "Min/Max Link Delay:" in line:
+                m = re.search(r"(\d+) / (\d+)", line)
+                result[(lsp, reach[0])] = (reach[1], int(m.group(1)), int(m.group(2)))
+        return result
+
+    def frr_flex_algo_source(self, algo):
+        """Return the source system-id of the elected Flex-Algo definition."""
+        text = self.frr.vtysh("show isis flex-algo %d" % algo, json_output=False)
+        m = re.search(r"Source: (\S+)", text)
+        return m.group(1) if m else None
+
+    def frr_algo_routes(self, algo):
+        """Return the IP prefixes of the FRR SPF result of an algorithm."""
+        text = self.frr.vtysh("show isis route algorithm %d" % algo, json_output=False)
+        return {line.split()[0] for line in text.splitlines()
+                if re.match(r"^ \S+/\d+\s+IP", line)}
 
     def frr_lsp(self, level, lsp_id):
         """Return an LSP of an FRR database level (detail output)."""

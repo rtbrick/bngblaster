@@ -59,6 +59,10 @@ static struct option long_options[] = {
     {"no-ipv4", no_argument, NULL, 'z'},
     {"no-ipv6", no_argument, NULL, 'Z'},
     {"no-sr", no_argument, NULL, 'y'},
+    {"sr-algo", required_argument, NULL, 'A'},
+    {"flex-algo", required_argument, NULL, 'F'},
+    {"link-delay", required_argument, NULL, 'D'},
+    {"te-metric", required_argument, NULL, 'E'},
     {"external-count", required_argument, NULL, 'e'},
     {"graphviz-file", required_argument, NULL, 'g'},
     {"help", no_argument, NULL, 'h'},
@@ -164,6 +168,22 @@ lspgen_print_usage_arg(struct option *option)
         if (strcmp(option->name, "authentication-type") == 0) {
 	    return lspgen_print_arg_options(auth_type_names);
         }
+
+	/* SR algorithms */
+	if (strcmp(option->name, "sr-algo") == 0) {
+	    return " <algo,...>";
+	}
+
+	/* Flex-Algo definitions */
+	if (strcmp(option->name, "flex-algo") == 0) {
+	    return " <algo:igp|min-delay|te[:priority],...>";
+	}
+
+	/* Random link attribute ranges */
+	if (strcmp(option->name, "link-delay") == 0 ||
+	    strcmp(option->name, "te-metric") == 0) {
+	    return " <min>[:<max>]";
+	}
 
 	/* filenames */
 	if (strstr(option->name, "file")) {
@@ -360,6 +380,317 @@ lspgen_get_prefix_inc(uint32_t afi, uint32_t prefix_len)
 }
 
 /*
+ * Return the number of SR algorithms used for node SIDs.
+ */
+static uint32_t
+lspgen_sr_algo_slots(struct lsdb_ctx_ *ctx)
+{
+    return ctx->sr_algo_count ? ctx->sr_algo_count : 1;
+}
+
+/*
+ * Return the SRGB range required for ipv4 and ipv6 node SIDs of all SR algorithms.
+ * The IS-IS ipv6 node SIDs start at half of the SRGB range, even without ipv4.
+ * OSPF uses one node SID per node.
+ */
+static uint32_t
+lspgen_required_srgb_range(struct lsdb_ctx_ *ctx)
+{
+    uint32_t range = ctx->num_nodes * lspgen_sr_algo_slots(ctx);
+
+    if (ctx->protocol_id == PROTO_ISIS && !ctx->no_ipv6) {
+        range *= 2;
+    }
+    return range;
+}
+
+/*
+ * Compute the SRGB range to be large enough to hold indexes for ipv4 and ipv6 SIDs.
+ */
+void
+lspgen_compute_srgb_range(struct lsdb_ctx_ *ctx)
+{
+    ctx->srgb_range = lspgen_required_srgb_range(ctx);
+}
+
+/*
+ * Grow the SRGB range if required, e.g. for additional SR algorithms.
+ */
+static void
+lspgen_check_srgb_range(struct lsdb_ctx_ *ctx)
+{
+    uint32_t range;
+
+    if (ctx->no_sr) {
+        return;
+    }
+    range = lspgen_required_srgb_range(ctx);
+    if (ctx->srgb_range < range) {
+        ctx->srgb_range = range;
+    }
+}
+
+/*
+ * Node SID index layout:
+ * ipv4: [algo slot 0 nodes][algo slot 1 nodes]...
+ * ipv6: same layout starting at half of the SRGB range.
+ */
+static uint32_t
+lspgen_node_sid_index(struct lsdb_ctx_ *ctx, lsdb_node_t *node, uint32_t slot, bool ipv6)
+{
+    uint32_t base = 0;
+
+    if (ipv6) {
+        base = ctx->srgb_range/2;
+    }
+    return base + slot * ctx->num_nodes + node->node_index;
+}
+
+/*
+ * Add one node SID per SR algorithm to a prefix attribute.
+ */
+static void
+lspgen_add_node_sids(struct lsdb_ctx_ *ctx, lsdb_node_t *node, lsdb_attr_t *attr, bool ipv6)
+{
+    uint32_t slot;
+
+    for (slot = 0; slot < lspgen_sr_algo_slots(ctx); slot++) {
+        attr->key.prefix.algos[slot].sid = lspgen_node_sid_index(ctx, node, slot, ipv6);
+        attr->key.prefix.algos[slot].algo = ctx->sr_algo_count ? ctx->sr_algo[slot] : 0;
+        attr->key.prefix.algos[slot].flags = LSDB_PREFIX_ALGO_SID;
+    }
+    attr->key.prefix.algo_count = slot;
+}
+
+/*
+ * Parse a comma separated list of SR algorithms,
+ * which are 0 (SPF), 1 (strict SPF) or 128-255 (Flex-Algo).
+ */
+static bool
+lspgen_parse_sr_algo(struct lsdb_ctx_ *ctx, char *arg)
+{
+    char *list, *tok, *end, *save = NULL;
+    long algo;
+    int idx;
+
+    ctx->sr_algo_count = 0;
+    list = strdup(arg);
+    for (tok = strtok_r(list, ",", &save); tok; tok = strtok_r(NULL, ",", &save)) {
+        algo = strtol(tok, &end, 10);
+        if (*end || end == tok || algo < 0 || algo > 255 || (algo > 1 && algo < 128)) {
+            LOG(ERROR, "Invalid SR algorithm %s\n", tok);
+            free(list);
+            return false;
+        }
+        for (idx = 0; idx < ctx->sr_algo_count; idx++) {
+            if (ctx->sr_algo[idx] == algo) {
+                LOG(ERROR, "Duplicate SR algorithm %ld\n", algo);
+                free(list);
+                return false;
+            }
+        }
+        if (ctx->sr_algo_count >= LSDB_MAX_PREFIX_ALGO) {
+            LOG(ERROR, "Maximum %u SR algorithms supported\n", LSDB_MAX_PREFIX_ALGO);
+            free(list);
+            return false;
+        }
+        ctx->sr_algo[ctx->sr_algo_count++] = algo;
+    }
+    free(list);
+    if (!ctx->sr_algo_count) {
+        LOG_NOARG(ERROR, "Missing SR algorithm\n");
+        return false;
+    }
+    return true;
+}
+
+/*
+ * Parse a comma separated list of Flex-Algo definitions
+ * in the format <algo>:<metric-type>[:<priority>].
+ */
+static bool
+lspgen_parse_flex_algo(struct lsdb_ctx_ *ctx, char *arg)
+{
+    char *list, *tok, *field, *end, *save = NULL, *save_field = NULL;
+    lsdb_attr_fad_t *fad;
+    long value;
+    int idx;
+
+    if (!ctx->fad) {
+        ctx->fad = calloc(LSDB_MAX_FLEX_ALGO, sizeof(lsdb_attr_fad_t));
+    }
+    ctx->fad_count = 0;
+    list = strdup(arg);
+    for (tok = strtok_r(list, ",", &save); tok; tok = strtok_r(NULL, ",", &save)) {
+        if (ctx->fad_count >= LSDB_MAX_FLEX_ALGO) {
+            LOG(ERROR, "Maximum %u Flex-Algo definitions supported\n", LSDB_MAX_FLEX_ALGO);
+            goto ERROR;
+        }
+        fad = &ctx->fad[ctx->fad_count];
+        memset(fad, 0, sizeof(*fad));
+        fad->priority = LSDB_FAD_DEFAULT_PRIORITY;
+
+        /* algo */
+        field = strtok_r(tok, ":", &save_field);
+        value = field ? strtol(field, &end, 10) : 0;
+        if (!field || *end || value < 128 || value > 255) {
+            LOG(ERROR, "Invalid Flex-Algo %s (128 - 255)\n", field ? field : "");
+            goto ERROR;
+        }
+        fad->algo = value;
+        for (idx = 0; idx < ctx->fad_count; idx++) {
+            if (ctx->fad[idx].algo == fad->algo) {
+                LOG(ERROR, "Duplicate Flex-Algo %u\n", fad->algo);
+                goto ERROR;
+            }
+        }
+
+        /* metric type */
+        field = strtok_r(NULL, ":", &save_field);
+        if (field && !lspgen_scan_fad_metric_type(field, &fad->metric_type)) {
+            LOG(ERROR, "Invalid Flex-Algo metric type %s (igp|min-delay|te)\n", field);
+            goto ERROR;
+        }
+
+        /* priority */
+        field = strtok_r(NULL, ":", &save_field);
+        if (field) {
+            value = strtol(field, &end, 10);
+            if (*end || value < 0 || value > 255) {
+                LOG(ERROR, "Invalid Flex-Algo priority %s\n", field);
+                goto ERROR;
+            }
+            fad->priority = value;
+        }
+        ctx->fad_count++;
+    }
+    free(list);
+    return true;
+
+ERROR:
+    free(list);
+    return false;
+}
+
+/*
+ * Each Flex-Algo requires node SIDs and must be advertised
+ * in the SR-Algorithm subTLV, which always includes algorithm 0.
+ */
+static bool
+lspgen_add_flex_algo_to_sr_algo(struct lsdb_ctx_ *ctx)
+{
+    int idx, sr_idx;
+
+    if (!ctx->fad_count) {
+        return true;
+    }
+    if (!ctx->sr_algo_count) {
+        ctx->sr_algo[ctx->sr_algo_count++] = 0;
+    }
+    for (idx = 0; idx < ctx->fad_count; idx++) {
+        for (sr_idx = 0; sr_idx < ctx->sr_algo_count; sr_idx++) {
+            if (ctx->sr_algo[sr_idx] == ctx->fad[idx].algo) {
+                break;
+            }
+        }
+        if (sr_idx < ctx->sr_algo_count) {
+            continue;
+        }
+        if (ctx->sr_algo_count >= LSDB_MAX_PREFIX_ALGO) {
+            LOG(ERROR, "Maximum %u SR algorithms supported\n", LSDB_MAX_PREFIX_ALGO);
+            return false;
+        }
+        ctx->sr_algo[ctx->sr_algo_count++] = ctx->fad[idx].algo;
+    }
+    return true;
+}
+
+/*
+ * Parse a value range in the format <min>[:<max>] with values from 1 to 2^24-1.
+ */
+static bool
+lspgen_parse_range(char *arg, uint32_t *min, uint32_t *max)
+{
+    char *end;
+    long value;
+
+    value = strtol(arg, &end, 10);
+    if (end == arg || value < 1 || value > ISIS_MAX_TE_VALUE) {
+        return false;
+    }
+    *min = value;
+    *max = value;
+    if (*end == ':') {
+        arg = end + 1;
+        value = strtol(arg, &end, 10);
+        if (end == arg || value < *min || value > ISIS_MAX_TE_VALUE) {
+            return false;
+        }
+        *max = value;
+    }
+    return *end == '\0';
+}
+
+/*
+ * Return a pseudo random value from the range <min> to <max> for a link.
+ * The value is derived from both node IDs and the seed, so both
+ * directions of a link get the same value and topologies are reproducible.
+ */
+static uint32_t
+lspgen_link_random(struct lsdb_ctx_ *ctx, lsdb_link_t *link, uint32_t salt, uint32_t min, uint32_t max)
+{
+    uint8_t *a = link->key.local_node_id;
+    uint8_t *b = link->key.remote_node_id;
+    uint32_t hash = 2166136261u ^ ctx->seed ^ salt; /* FNV-1a */
+    int idx;
+
+    if (memcmp(a, b, LSDB_MAX_NODE_ID_SIZE) > 0) {
+        a = link->key.remote_node_id;
+        b = link->key.local_node_id;
+    }
+    for (idx = 0; idx < LSDB_MAX_NODE_ID_SIZE; idx++) {
+        hash = (hash ^ a[idx]) * 16777619u;
+    }
+    for (idx = 0; idx < LSDB_MAX_NODE_ID_SIZE; idx++) {
+        hash = (hash ^ b[idx]) * 16777619u;
+    }
+    return min + hash % (max - min + 1);
+}
+
+/*
+ * Add application-specific link attributes for Flex-Algo, required with
+ * Flex-Algo definitions or link delay and TE metric ranges.
+ * Unset values default to the IGP metric.
+ */
+static void
+lspgen_add_link_asla(struct lsdb_ctx_ *ctx, lsdb_link_t *link, lsdb_attr_t *attr)
+{
+    uint32_t default_value;
+
+    if (!ctx->fad_count && !ctx->link_delay_max && !ctx->te_metric_max) {
+        return;
+    }
+    default_value = link->link_metric;
+    if (default_value < 1) {
+        default_value = 1;
+    } else if (default_value > ISIS_MAX_TE_VALUE) {
+        default_value = ISIS_MAX_TE_VALUE;
+    }
+    attr->key.link.asla = true;
+    if (ctx->te_metric_max) {
+        attr->key.link.te_metric = lspgen_link_random(ctx, link, 1, ctx->te_metric_min, ctx->te_metric_max);
+    } else {
+        attr->key.link.te_metric = default_value;
+    }
+    if (ctx->link_delay_max) {
+        attr->key.link.min_delay = lspgen_link_random(ctx, link, 2, ctx->link_delay_min, ctx->link_delay_max);
+    } else {
+        attr->key.link.min_delay = default_value;
+    }
+    attr->key.link.max_delay = attr->key.link.min_delay;
+}
+
+/*
  * Walk the graph of the LSDB and add the required node/link attributes for IS-IS LSP generation.
  */
 void
@@ -455,8 +786,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
         lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
         attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
         if (!ctx->no_sr) {
-            attr_template.key.prefix.sid = node->node_index;
-            attr_template.key.prefix.adv_sid = true;
+            lspgen_add_node_sids(ctx, node, &attr_template, false);
         }
         attr_template.key.prefix.node_flag = true;
         attr_template.key.ordinal = 1;
@@ -477,8 +807,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
         lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
         attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
         if (!ctx->no_sr) {
-            attr_template.key.prefix.sid = ctx->srgb_range/2 + node->node_index;
-            attr_template.key.prefix.adv_sid = true;
+            lspgen_add_node_sids(ctx, node, &attr_template, true);
         }
         attr_template.key.prefix.node_flag = true;
         attr_template.key.ordinal = 1;
@@ -522,9 +851,19 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             if (!ctx->no_ipv6) {
                 attr_template.key.cap.mpls_ipv6_flag = true; /* mpls ipv6 */
             }
+            memcpy(attr_template.key.cap.sr_algo, ctx->sr_algo, ctx->sr_algo_count);
+            attr_template.key.cap.sr_algo_len = ctx->sr_algo_count;
             attr_template.key.attr_type = ISIS_TLV_CAP;
             attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
+
+            /* Flex-Algo definitions are advertised by two nodes for redundancy */
+            if (node->node_index < 2) {
+                for (idx = 0; idx < ctx->fad_count; idx++) {
+                    memcpy(ctx->fad[idx].router_id, attr_template.key.cap.router_id, 4);
+                    lspgen_add_fad_attr(node, &ctx->fad[idx]);
+                }
+            }
         }
 
         /*
@@ -537,6 +876,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.attr_type = ISIS_TLV_EXTD_IS_REACH;
             memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 7);
             attr_template.key.link.metric = link->link_metric;
+            lspgen_add_link_asla(ctx, link, &attr_template);
             lsdb_add_node_attr(node, &attr_template);
 
             /* Generate an IPv4 prefix for each link */
@@ -641,8 +981,9 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 	    lsdb_reset_attr_template(&attr_template);
 	    lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
 	    attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
-	    attr_template.key.prefix.sid = node->node_index;
-	    attr_template.key.prefix.adv_sid = true;
+	    attr_template.key.prefix.algos[0].sid = node->node_index;
+	    attr_template.key.prefix.algos[0].flags = LSDB_PREFIX_ALGO_SID;
+	    attr_template.key.prefix.algo_count = 1;
 
             attr_template.key.ordinal = 1;
 	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
@@ -826,8 +1167,9 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 	    lsdb_reset_attr_template(&attr_template);
 	    lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
 	    attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
-	    attr_template.key.prefix.sid = node->node_index;
-	    attr_template.key.prefix.adv_sid = true;
+	    attr_template.key.prefix.algos[0].sid = node->node_index;
+	    attr_template.key.prefix.algos[0].flags = LSDB_PREFIX_ALGO_SID;
+	    attr_template.key.prefix.algo_count = 1;
 
 	    /* For SR use the Extended-Intra-Area-Router-LSA */
 	    attr_template.key.ordinal = 1;
@@ -1123,31 +1465,6 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 }
 
 /*
- * Compute the SRGB range to be large enough to hold indexes for ipv4 and ipv6 SIDs.
- */
-void
-lspgen_compute_srgb_range(struct lsdb_ctx_ *ctx)
-{
-    unsigned int range;
-
-    if (ctx->no_ipv4 && ctx->no_ipv6) {
-        ctx->srgb_range = 0;
-        return;
-    }
-
-    range = ctx->num_nodes * 2;
-    if (ctx->no_ipv4) {
-        range = ctx->num_nodes;
-    }
-
-    if (ctx->no_ipv6) {
-        range = ctx->num_nodes;
-    }
-
-    ctx->srgb_range = range;
-}
-
-/*
  * Add  a connector string in the form of an
  * iso remote_id xxxx.xxxx.xxxx.xx or
  * ipv4 remote_id:local_ip xxx.xxx.xxx.xxx:yyy.yyy.yyy.yyy
@@ -1287,7 +1604,7 @@ main(int argc, char *argv[])
      * Parse options.
      */
     idx = 0;
-    while ((opt = getopt_long(argc, argv, "vha:c:C:I:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:u:V:w:x:X:yzZ",
+    while ((opt = getopt_long(argc, argv, "vhA:D:E:F:a:c:C:I:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:u:V:w:x:X:yzZ",
                               long_options, &idx)) != -1) {
         switch (opt) {
             case 'v':
@@ -1346,6 +1663,32 @@ main(int argc, char *argv[])
             case 'y':
                 /* no-sr */
                 ctx->no_sr = true;
+                break;
+            case 'A':
+                /* sr-algo */
+                if (!lspgen_parse_sr_algo(ctx, optarg)) {
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            case 'F':
+                /* flex-algo */
+                if (!lspgen_parse_flex_algo(ctx, optarg)) {
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            case 'D':
+                /* link-delay */
+                if (!lspgen_parse_range(optarg, &ctx->link_delay_min, &ctx->link_delay_max)) {
+                    LOG(ERROR, "Invalid link delay %s\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
+                break;
+            case 'E':
+                /* te-metric */
+                if (!lspgen_parse_range(optarg, &ctx->te_metric_min, &ctx->te_metric_max)) {
+                    LOG(ERROR, "Invalid TE metric %s\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
                 break;
             case 'z':
                 /* no-ipv4 */
@@ -1476,6 +1819,19 @@ main(int argc, char *argv[])
                 exit(EXIT_FAILURE);
         }
     }
+
+    if ((ctx->sr_algo_count || ctx->fad_count) && ctx->protocol_id != PROTO_ISIS) {
+        LOG(ERROR, "SR algorithms are not supported for protocol %s\n", lsdb_format_proto(ctx));
+        exit(EXIT_FAILURE);
+    }
+    if ((ctx->link_delay_max || ctx->te_metric_max) && ctx->protocol_id != PROTO_ISIS) {
+        LOG(ERROR, "Link delay and TE metric are not supported for protocol %s\n", lsdb_format_proto(ctx));
+        exit(EXIT_FAILURE);
+    }
+    if (!lspgen_add_flex_algo_to_sr_algo(ctx)) {
+        exit(EXIT_FAILURE);
+    }
+    lspgen_check_srgb_range(ctx);
 
     /*
      * Read the link-state database from a config file.

@@ -52,13 +52,23 @@ lspgen_write_link_config(lsdb_ctx_t *ctx, json_t *arr, lsdb_attr_t *attr)
     }
 
     json_object_set_new(obj, "metric", json_integer(attr->key.link.metric));
+    if (attr->key.link.asla) {
+        /* Application-specific link attributes for Flex-Algo */
+        json_object_set_new(obj, "te_metric", json_integer(attr->key.link.te_metric));
+        json_object_set_new(obj, "min_delay", json_integer(attr->key.link.min_delay));
+        json_object_set_new(obj, "max_delay", json_integer(attr->key.link.max_delay));
+        if (attr->key.link.admin_group) {
+            json_object_set_new(obj, "admin_group", json_integer(attr->key.link.admin_group));
+        }
+    }
     json_array_append_new(arr, obj);
 }
 
 void
 lspgen_write_cap_config(json_t *arr, lsdb_attr_t *attr)
 {
-    json_t *obj, *str;
+    json_t *obj, *str, *algo_arr;
+    int idx;
 
     obj = json_object();
     str = json_string(format_ipv4_address((uint32_t*)attr->key.cap.router_id));
@@ -77,6 +87,69 @@ lspgen_write_cap_config(json_t *arr, lsdb_attr_t *attr)
     }
     json_object_set_new(obj, "srgb_base", json_integer(attr->key.cap.srgb_base));
     json_object_set_new(obj, "srgb_range", json_integer(attr->key.cap.srgb_range));
+    if (attr->key.cap.sr_algo_len) {
+        algo_arr = json_array();
+        for (idx = 0; idx < attr->key.cap.sr_algo_len; idx++) {
+            json_array_append_new(algo_arr, json_integer(attr->key.cap.sr_algo[idx]));
+        }
+        json_object_set_new(obj, "sr_algo_list", algo_arr);
+    }
+    json_array_append_new(arr, obj);
+}
+
+/*
+ * Flex-Algo definition metric type / name translation table.
+ */
+struct keyval_ fad_metric_names[] = {
+    { LSDB_FAD_METRIC_IGP,       "igp" },
+    { LSDB_FAD_METRIC_MIN_DELAY, "min-delay" },
+    { LSDB_FAD_METRIC_TE,        "te" },
+    { 0, NULL}
+};
+
+/*
+ * Scan a Flex-Algo definition metric type name.
+ */
+bool
+lspgen_scan_fad_metric_type(const char *name, uint8_t *metric_type)
+{
+    struct keyval_ *ptr;
+
+    for (ptr = fad_metric_names; ptr->key; ptr++) {
+        if (strcmp(ptr->key, name) == 0) {
+            *metric_type = ptr->val;
+            return true;
+        }
+    }
+    return false;
+}
+
+void
+lspgen_write_fad_config(json_t *arr, lsdb_attr_t *attr)
+{
+    lsdb_attr_fad_t *fad = &attr->key.fad;
+    json_t *obj;
+
+    obj = json_object();
+    json_object_set_new(obj, "router_id", json_string(format_ipv4_address((uint32_t*)fad->router_id)));
+    json_object_set_new(obj, "algo", json_integer(fad->algo));
+    json_object_set_new(obj, "metric_type", json_string(val2key(fad_metric_names, fad->metric_type)));
+    if (fad->calc_type) {
+        json_object_set_new(obj, "calc_type", json_integer(fad->calc_type));
+    }
+    json_object_set_new(obj, "priority", json_integer(fad->priority));
+    if (fad->m_flag) {
+        json_object_set_new(obj, "m_flag", json_boolean(1));
+    }
+    if (fad->exclude_any) {
+        json_object_set_new(obj, "exclude_any", json_integer(fad->exclude_any));
+    }
+    if (fad->include_any) {
+        json_object_set_new(obj, "include_any", json_integer(fad->include_any));
+    }
+    if (fad->include_all) {
+        json_object_set_new(obj, "include_all", json_integer(fad->include_all));
+    }
     json_array_append_new(arr, obj);
 }
 
@@ -87,15 +160,61 @@ lspgen_write_cap_config(json_t *arr, lsdb_attr_t *attr)
 void
 lspgen_write_common_prefix_config(json_t *obj, lsdb_attr_t *attr)
 {
+    lsdb_prefix_algo_t *entry;
+    json_t *sid_arr = NULL, *fapm_arr = NULL, *sid_obj, *fapm_obj, *flag_arr;
+    int idx;
+
     json_object_set_new(obj, "metric", json_integer(attr->key.prefix.metric));
-    if (attr->key.prefix.adv_sid) {
-        json_object_set_new(obj, "segment_id", json_integer(attr->key.prefix.sid));
+    entry = &attr->key.prefix.algos[0];
+    if (attr->key.prefix.algo_count == 1 && entry->algo == 0 &&
+        entry->flags == LSDB_PREFIX_ALGO_SID) {
+        json_object_set_new(obj, "segment_id", json_integer(entry->sid));
+        entry = NULL; /* short form */
+    }
+    for (idx = 0; entry && idx < attr->key.prefix.algo_count; idx++) {
+        entry = &attr->key.prefix.algos[idx];
+        if (LSDB_PREFIX_HAS_SID(entry)) {
+            if (!sid_arr) {
+                sid_arr = json_array();
+                json_object_set_new(obj, "segment_ids", sid_arr);
+            }
+            sid_obj = json_object();
+            json_object_set_new(sid_obj, "index", json_integer(entry->sid));
+            json_object_set_new(sid_obj, "algo", json_integer(entry->algo));
+            if (entry->flags & LSDB_PREFIX_SID_FLAG_MASK) {
+                flag_arr = json_array();
+                if (entry->flags & LSDB_PREFIX_SID_FLAG_NO_PHP) {
+                    json_array_append_new(flag_arr, json_string("no-php"));
+                }
+                if (entry->flags & LSDB_PREFIX_SID_FLAG_EXP_NULL) {
+                    json_array_append_new(flag_arr, json_string("explicit-null"));
+                }
+                if (entry->flags & LSDB_PREFIX_SID_FLAG_VALUE) {
+                    json_array_append_new(flag_arr, json_string("value"));
+                }
+                if (entry->flags & LSDB_PREFIX_SID_FLAG_LOCAL) {
+                    json_array_append_new(flag_arr, json_string("local"));
+                }
+                json_object_set_new(sid_obj, "flags", flag_arr);
+            }
+            json_array_append_new(sid_arr, sid_obj);
+        }
+        if (entry->flags & LSDB_PREFIX_ALGO_FAPM) {
+            if (!fapm_arr) {
+                fapm_arr = json_array();
+                json_object_set_new(obj, "flex_algo_metrics", fapm_arr);
+            }
+            fapm_obj = json_object();
+            json_object_set_new(fapm_obj, "algo", json_integer(entry->algo));
+            json_object_set_new(fapm_obj, "metric", json_integer(entry->metric));
+            json_array_append_new(fapm_arr, fapm_obj);
+        }
     }
     if (attr->key.prefix.adv_tag) {
         json_object_set_new(obj, "tag", json_integer(attr->key.prefix.tag));
     }
     if (attr->key.prefix.adv_range) {
-        json_object_set_new(obj, "range", json_integer(attr->key.prefix.tag));
+        json_object_set_new(obj, "range", json_integer(attr->key.prefix.range));
     }
     if (attr->key.prefix.node_flag) {
         json_object_set_new(obj, "node_flag", json_boolean(1));
@@ -507,6 +626,7 @@ lspgen_write_node_isis_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_
     json_t *nbr_arr = NULL;
     json_t *protocol_arr = NULL;
     json_t *cap_arr = NULL;
+    json_t *fad_arr = NULL;
     json_t *binding_arr = NULL;
 
     node_obj = json_object();
@@ -548,6 +668,14 @@ lspgen_write_node_isis_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_
 	case ISIS_TLV_LSP_BUFFER_SIZE: /* already generated above */
 	    break;
         case ISIS_TLV_CAP:
+            if (attr->key.attr_cp[0] == ISIS_SUBTLV_CAP_FAD) {
+                if (!fad_arr) {
+                    fad_arr = json_array();
+                    json_object_set_new(node_obj, "flex_algo_list", fad_arr);
+                }
+                lspgen_write_fad_config(fad_arr, attr);
+                break;
+            }
             if (!cap_arr) {
                 cap_arr = json_array();
                 json_object_set_new(node_obj, "capability_list", cap_arr);
@@ -783,9 +911,128 @@ lspgen_read_ipv6_addr_config(lsdb_node_t *node, json_t *obj)
  * Common function shared between ipv4_prefix,
  * ipv6_prefix and label_binding readers.
  */
+/*
+ * Translation table for Prefix-SID flags.
+ */
+struct keyval_ prefix_sid_flag_names[] = {
+    { LSDB_PREFIX_SID_FLAG_NO_PHP,   "no-php" },
+    { LSDB_PREFIX_SID_FLAG_EXP_NULL, "explicit-null" },
+    { LSDB_PREFIX_SID_FLAG_VALUE,    "value" },
+    { LSDB_PREFIX_SID_FLAG_LOCAL,    "local" },
+    { 0, NULL}
+};
+
+/*
+ * Return the prefix entry of an algorithm, a new entry is added if required.
+ */
+static lsdb_prefix_algo_t *
+lspgen_get_prefix_algo(lsdb_attr_t *attr, uint8_t algo)
+{
+    lsdb_prefix_algo_t *entry;
+    int idx;
+
+    for (idx = 0; idx < attr->key.prefix.algo_count; idx++) {
+        entry = &attr->key.prefix.algos[idx];
+        if (entry->algo == algo) {
+            return entry;
+        }
+    }
+    if (attr->key.prefix.algo_count >= LSDB_MAX_PREFIX_ALGO) {
+        LOG(ERROR, "Ignore algorithm %u exceeding the maximum of %u algorithms per prefix\n",
+            algo, LSDB_MAX_PREFIX_ALGO);
+        return NULL;
+    }
+    entry = &attr->key.prefix.algos[attr->key.prefix.algo_count++];
+    entry->algo = algo;
+    return entry;
+}
+
+/*
+ * Read the list of Prefix-SIDs, e.g.
+ * "segment_ids": [ {"index": 1, "algo": 0}, {"index": 101, "algo": 128, "flags": ["no-php"]} ]
+ */
+static void
+lspgen_read_prefix_sid_config(lsdb_attr_t *attr, json_t *arr)
+{
+    lsdb_prefix_algo_t *entry;
+    json_t *sid_obj, *value, *flag;
+    size_t idx, flag_idx;
+    const char *s;
+    uint32_t sid;
+    uint8_t algo;
+    int flag_value;
+
+    if (!arr || !json_is_array(arr)) {
+        return;
+    }
+    json_array_foreach(arr, idx, sid_obj) {
+        value = json_object_get(sid_obj, "index");
+        if (!value || !json_is_integer(value)) {
+            LOG_NOARG(ERROR, "Ignore Prefix-SID without index\n");
+            continue;
+        }
+        sid = json_integer_value(value);
+        algo = 0;
+        value = json_object_get(sid_obj, "algo");
+        if (value && json_is_integer(value)) {
+            algo = json_integer_value(value);
+        }
+        entry = lspgen_get_prefix_algo(attr, algo);
+        if (!entry) {
+            continue;
+        }
+        entry->sid = sid;
+        entry->flags |= LSDB_PREFIX_ALGO_SID;
+        value = json_object_get(sid_obj, "flags");
+        if (value && json_is_array(value)) {
+            json_array_foreach(value, flag_idx, flag) {
+                s = json_string_value(flag);
+                flag_value = s ? key2val(prefix_sid_flag_names, s) : 0;
+                if (!flag_value) {
+                    LOG(ERROR, "Ignore unknown Prefix-SID flag %s\n", s ? s : "");
+                    continue;
+                }
+                entry->flags |= flag_value;
+            }
+        }
+    }
+}
+
+/*
+ * Read the list of Flex-Algo prefix metrics, e.g.
+ * "flex_algo_metrics": [ {"algo": 128, "metric": 20} ]
+ */
+static void
+lspgen_read_prefix_fapm_config(lsdb_attr_t *attr, json_t *arr)
+{
+    lsdb_prefix_algo_t *entry;
+    json_t *fapm_obj, *algo, *metric;
+    size_t idx;
+
+    if (!arr || !json_is_array(arr)) {
+        return;
+    }
+    json_array_foreach(arr, idx, fapm_obj) {
+        algo = json_object_get(fapm_obj, "algo");
+        metric = json_object_get(fapm_obj, "metric");
+        if (!json_is_integer(algo) || !json_is_integer(metric) ||
+            json_integer_value(algo) < 128 || json_integer_value(algo) > 255) {
+            LOG_NOARG(ERROR, "Ignore invalid Flex-Algo prefix metric\n");
+            continue;
+        }
+        entry = lspgen_get_prefix_algo(attr, json_integer_value(algo));
+        if (!entry) {
+            continue;
+        }
+        entry->metric = json_integer_value(metric);
+        entry->flags |= LSDB_PREFIX_ALGO_FAPM;
+    }
+}
+
 void
 lspgen_read_common_prefix_config(lsdb_attr_t *attr, json_t *obj)
 {
+    lsdb_prefix_algo_t *entry;
     json_t *value;
 
     value = json_object_get(obj, "metric");
@@ -794,9 +1041,12 @@ lspgen_read_common_prefix_config(lsdb_attr_t *attr, json_t *obj)
     }
     value = json_object_get(obj, "segment_id");
     if (value && json_is_integer(value)) {
-        attr->key.prefix.sid = json_integer_value(value);
-        attr->key.prefix.adv_sid = true;
+        entry = lspgen_get_prefix_algo(attr, 0);
+        entry->sid = json_integer_value(value);
+        entry->flags |= LSDB_PREFIX_ALGO_SID;
     }
+    lspgen_read_prefix_sid_config(attr, json_object_get(obj, "segment_ids"));
+    lspgen_read_prefix_fapm_config(attr, json_object_get(obj, "flex_algo_metrics"));
     value = json_object_get(obj, "tag");
     if (value && json_is_integer(value)) {
         attr->key.prefix.tag = json_integer_value(value);
@@ -862,7 +1112,7 @@ lspgen_read_ipv4_prefix_config(lsdb_node_t *node, json_t *obj)
 	} else if (ctx->protocol_id == PROTO_OSPF2) {
 
 	    if (attr_template.key.prefix.node_flag &&
-		attr_template.key.prefix.adv_sid) {
+		LSDB_PREFIX_HAS_SID(&attr_template.key.prefix.algos[0])) {
 
 		/* OSPF loopback with prefix sid*/
 		attr_template.key.ordinal = 1;
@@ -909,7 +1159,7 @@ lspgen_read_ipv6_prefix_config(lsdb_node_t *node, json_t *obj)
 	} else if (ctx->protocol_id == PROTO_OSPF3) {
 
 	    if (attr_template.key.prefix.node_flag &&
-		attr_template.key.prefix.adv_sid) {
+		LSDB_PREFIX_HAS_SID(&attr_template.key.prefix.algos[0])) {
 
 		/* OSPF loopback with prefix sid*/
 		attr_template.key.ordinal = 1;
@@ -958,6 +1208,78 @@ lspgen_read_label_binding_config(lsdb_node_t *node, json_t *obj)
     attr_template.key.attr_type = ISIS_TLV_BINDING;
     attr_template.key.start_tlv = true;
     lsdb_add_node_attr(node, &attr_template);
+}
+
+/*
+ * Add a Flex-Algo definition, advertised in a dedicated router capability TLV.
+ */
+void
+lspgen_add_fad_attr(lsdb_node_t *node, lsdb_attr_fad_t *fad)
+{
+    struct lsdb_attr_ attr_template;
+
+    lsdb_reset_attr_template(&attr_template);
+    attr_template.key.fad = *fad;
+    attr_template.key.attr_type = ISIS_TLV_CAP;
+    attr_template.key.attr_cp[0] = ISIS_SUBTLV_CAP_FAD;
+    attr_template.key.start_tlv = true;
+    attr_template.key.ordinal = 1;
+    lsdb_add_node_attr(node, &attr_template);
+}
+
+/*
+ * Read a Flex-Algo definition, e.g.
+ * {"algo": 128, "metric_type": "min-delay", "priority": 200, "m_flag": true, "exclude_any": 1}
+ */
+void
+lspgen_read_fad_config(lsdb_node_t *node, json_t *obj)
+{
+    lsdb_attr_fad_t fad;
+    json_t *value;
+    const char *s;
+
+    memset(&fad, 0, sizeof(fad));
+    fad.priority = LSDB_FAD_DEFAULT_PRIORITY;
+
+    value = json_object_get(obj, "algo");
+    if (!json_is_integer(value) || json_integer_value(value) < 128 || json_integer_value(value) > 255) {
+        LOG_NOARG(ERROR, "Ignore Flex-Algo definition with invalid algo (128 - 255)\n");
+        return;
+    }
+    fad.algo = json_integer_value(value);
+    if (json_unpack(obj, "{s:s}", "router_id", &s) == 0) {
+        scan_ipv4_address(s, (uint32_t*)fad.router_id);
+    }
+    if (json_unpack(obj, "{s:s}", "metric_type", &s) == 0 &&
+        !lspgen_scan_fad_metric_type(s, &fad.metric_type)) {
+        LOG(ERROR, "Ignore Flex-Algo definition with invalid metric_type %s\n", s);
+        return;
+    }
+    value = json_object_get(obj, "calc_type");
+    if (json_is_integer(value)) {
+        fad.calc_type = json_integer_value(value);
+    }
+    value = json_object_get(obj, "priority");
+    if (json_is_integer(value)) {
+        fad.priority = json_integer_value(value);
+    }
+    value = json_object_get(obj, "m_flag");
+    if (json_is_boolean(value)) {
+        fad.m_flag = json_boolean_value(value);
+    }
+    value = json_object_get(obj, "exclude_any");
+    if (json_is_integer(value)) {
+        fad.exclude_any = json_integer_value(value);
+    }
+    value = json_object_get(obj, "include_any");
+    if (json_is_integer(value)) {
+        fad.include_any = json_integer_value(value);
+    }
+    value = json_object_get(obj, "include_all");
+    if (json_is_integer(value)) {
+        fad.include_all = json_integer_value(value);
+    }
+    lspgen_add_fad_attr(node, &fad);
 }
 
 void
@@ -1021,6 +1343,43 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
 
     attr_template.key.ordinal = 1;
     lsdb_add_node_attr(node, &attr_template);
+    }
+}
+
+/*
+ * Read the application-specific link attributes of an IS-IS link, e.g.
+ * {"te_metric": 100, "min_delay": 1000, "max_delay": 1200, "admin_group": 1}
+ */
+static void
+lspgen_read_link_asla_config(lsdb_attr_t *attr, json_t *link_obj)
+{
+    lsdb_attr_link_t *link = &attr->key.link;
+    json_t *value;
+
+    value = json_object_get(link_obj, "te_metric");
+    if (json_is_integer(value)) {
+        link->te_metric = json_integer_value(value) & ISIS_MAX_TE_VALUE;
+        link->asla = true;
+    }
+    value = json_object_get(link_obj, "min_delay");
+    if (json_is_integer(value)) {
+        link->min_delay = json_integer_value(value) & ISIS_MAX_TE_VALUE;
+        link->max_delay = link->min_delay;
+        link->asla = true;
+    }
+    value = json_object_get(link_obj, "max_delay");
+    if (json_is_integer(value)) {
+        link->max_delay = json_integer_value(value) & ISIS_MAX_TE_VALUE;
+        link->asla = true;
+    }
+    value = json_object_get(link_obj, "admin_group");
+    if (json_is_integer(value)) {
+        link->admin_group = json_integer_value(value);
+        link->asla = true;
+    }
+    if (link->max_delay < link->min_delay) {
+        LOG_NOARG(ERROR, "Set max_delay to min_delay\n");
+        link->max_delay = link->min_delay;
     }
 }
 
@@ -1095,6 +1454,7 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, ui
 		    attr_template.key.link.adjacency_sid = (uint16_t) *adj_sid;
                     (*adj_sid)++;
 		}
+		lspgen_read_link_asla_config(&attr_template, link_obj);
 	    }
 
 	    memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 7);
@@ -1275,6 +1635,16 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
                 lspgen_read_capability_config(node, json_array_get(arr, idx));
             }
         }
+
+	if (ctx->protocol_id == PROTO_ISIS) {
+	    arr = json_object_get(node_obj, "flex_algo_list");
+	    if (arr && json_is_array(arr)) {
+		num_arr = json_array_size(arr);
+		for (idx = 0; idx < num_arr; idx++) {
+		    lspgen_read_fad_config(node, json_array_get(arr, idx));
+		}
+	    }
+	}
 
         arr = json_object_get(node_obj, "ipv4_prefix_list");
         if (arr && json_is_array(arr)) {

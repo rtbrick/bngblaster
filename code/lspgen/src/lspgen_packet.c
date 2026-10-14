@@ -302,15 +302,11 @@ lsdb_attr_subtlvs_present(struct lsdb_attr_ *attr)
 {
     switch (attr->key.attr_type) {
         case ISIS_TLV_EXTD_IPV4_REACH:
-            if (attr->key.prefix.adv_sid || attr->key.prefix.adv_tag) {
+        case ISIS_TLV_EXTD_IPV6_REACH:
+            if (attr->key.prefix.algo_count || attr->key.prefix.adv_tag) {
                 return true;
             }
             if ((attr->key.prefix.ext_flag || attr->key.prefix.r_flag || attr->key.prefix.node_flag)) {
-                return true;
-            }
-            break;
-        case ISIS_TLV_EXTD_IPV6_REACH:
-            if (attr->key.prefix.adv_sid || attr->key.prefix.adv_tag) {
                 return true;
             }
             break;
@@ -328,43 +324,54 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
                                bool calculate_total_length)
 {
     uint32_t total_subtlv_length_idx, subtlv_start_idx;
+    lsdb_prefix_algo_t *entry;
     uint8_t flags;
+    int idx;
 
     if (calculate_total_length) {
         total_subtlv_length_idx = buf->idx;
         push_be_uint(buf, 1, 0); /* Total subTLV length */
     }
 
-    subtlv_start_idx = buf->idx;
-    if (attr->key.prefix.adv_sid) {
+    /* One Prefix-SID subTLV per SID, e.g. one per SR algorithm */
+    for (idx = 0; idx < attr->key.prefix.algo_count; idx++) {
+        entry = &attr->key.prefix.algos[idx];
+        if (!LSDB_PREFIX_HAS_SID(entry)) {
+            continue;
+        }
+        subtlv_start_idx = buf->idx;
         push_be_uint(buf, 1, ISIS_SUBTLV_PREFIX_SID); /* subTLV type */
         push_be_uint(buf, 1, 0); /* subTLV length */
 
-        flags = 0;
+        flags = entry->flags & LSDB_PREFIX_SID_FLAG_MASK;
         if (attr->key.prefix.r_flag) {
             flags |= 0x80;
         }
         if (attr->key.prefix.node_flag) {
             flags |= 0x40;
         }
-        if (attr->key.prefix.no_php_flag) {
-            flags |= 0x20;
-        }
-        if (attr->key.prefix.exp_null_flag) {
-            flags |= 0x10;
-        }
-        if (attr->key.prefix.value_flag) {
-            flags |= 0x08;
-        }
-        if (attr->key.prefix.local_flag) {
-            flags |= 0x04;
-        }
         push_be_uint(buf, 1, flags); /* flags */
 
-        push_be_uint(buf, 1, attr->key.prefix.sid_algo); /* algo */
-        push_be_uint(buf, 4, attr->key.prefix.sid); /* SID Index */
+        push_be_uint(buf, 1, entry->algo); /* algo */
+        if (entry->flags & LSDB_PREFIX_SID_FLAG_VALUE) {
+            push_be_uint(buf, 3, entry->sid); /* 20-bit label */
+        } else {
+            push_be_uint(buf, 4, entry->sid); /* SID Index */
+        }
 
         buf->data[subtlv_start_idx+1] = buf->idx - subtlv_start_idx - 2; /* Update subtlv length */
+    }
+
+    /* Flex-Algo prefix metric (RFC 9350) */
+    for (idx = 0; idx < attr->key.prefix.algo_count; idx++) {
+        entry = &attr->key.prefix.algos[idx];
+        if (!(entry->flags & LSDB_PREFIX_ALGO_FAPM)) {
+            continue;
+        }
+        push_be_uint(buf, 1, ISIS_SUBTLV_PREFIX_FAPM); /* subTLV type */
+        push_be_uint(buf, 1, 5); /* subTLV length */
+        push_be_uint(buf, 1, entry->algo);
+        push_be_uint(buf, 4, entry->metric);
     }
 
     subtlv_start_idx = buf->idx;
@@ -377,9 +384,10 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
     }
 
     /*
-     * The IPv4 Prefix TLV has limited space for flags. Generate them as subTLV if required.
+     * The IP Prefix TLVs have limited space for flags. Generate them as subTLV if required.
      */
-    if (attr->key.attr_type == ISIS_TLV_EXTD_IPV4_REACH &&
+    if ((attr->key.attr_type == ISIS_TLV_EXTD_IPV4_REACH ||
+         attr->key.attr_type == ISIS_TLV_EXTD_IPV6_REACH) &&
         (attr->key.prefix.ext_flag ||
          attr->key.prefix.r_flag ||
          attr->key.prefix.node_flag)) {
@@ -412,12 +420,91 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
 }
 
 /*
+ * Write the application-specific link attributes (RFC 8919)
+ * for Flex-Algo with standard application bit X (RFC 9350).
+ */
+static void
+lspgen_serialize_asla(lsdb_attr_t *attr, io_buffer_t *buf)
+{
+    lsdb_attr_link_t *link = &attr->key.link;
+    uint32_t subtlv_start_idx;
+
+    subtlv_start_idx = buf->idx;
+    push_be_uint(buf, 1, ISIS_SUBTLV_IS_EXT_ASLA); /* subTLV type */
+    push_be_uint(buf, 1, 0); /* subTLV length */
+    push_be_uint(buf, 1, 1); /* L-flag not set, SABM length */
+    push_be_uint(buf, 1, 0); /* UDABM length */
+    push_be_uint(buf, 1, ISIS_ASLA_SABM_X); /* SABM */
+    if (link->admin_group) {
+        push_be_uint(buf, 1, ISIS_SUBSUBTLV_ASLA_ADMIN_GROUP);
+        push_be_uint(buf, 1, 4);
+        push_be_uint(buf, 4, link->admin_group);
+    }
+    if (link->te_metric) {
+        push_be_uint(buf, 1, ISIS_SUBSUBTLV_ASLA_TE_METRIC);
+        push_be_uint(buf, 1, 3);
+        push_be_uint(buf, 3, link->te_metric);
+    }
+    if (link->min_delay) {
+        push_be_uint(buf, 1, ISIS_SUBSUBTLV_ASLA_MIN_MAX_DELAY);
+        push_be_uint(buf, 1, 8);
+        push_be_uint(buf, 4, link->min_delay); /* A-flag not set, reserved, min delay */
+        push_be_uint(buf, 4, link->max_delay); /* reserved, max delay */
+    }
+    buf->data[subtlv_start_idx+1] = buf->idx - subtlv_start_idx - 2; /* Update subtlv length */
+}
+
+/*
+ * Write an admin group sub-sub-TLV of a Flex-Algo definition.
+ */
+static void
+lspgen_serialize_fad_admin_group(io_buffer_t *buf, uint8_t type, uint32_t admin_group)
+{
+    if (!admin_group) {
+        return;
+    }
+    push_be_uint(buf, 1, type);
+    push_be_uint(buf, 1, 4);
+    push_be_uint(buf, 4, admin_group);
+}
+
+/*
+ * Write a router capability TLV body with a single Flex-Algo definition subTLV.
+ */
+static void
+lspgen_serialize_fad(lsdb_attr_t *attr, io_buffer_t *buf)
+{
+    lsdb_attr_fad_t *fad = &attr->key.fad;
+    uint32_t subtlv_start_idx;
+
+    push_data(buf, fad->router_id, 4);
+    push_be_uint(buf, 1, 0); /* Flags, area scope */
+
+    subtlv_start_idx = buf->idx;
+    push_be_uint(buf, 1, ISIS_SUBTLV_CAP_FAD); /* subTLV type */
+    push_be_uint(buf, 1, 0); /* subTLV length */
+    push_be_uint(buf, 1, fad->algo);
+    push_be_uint(buf, 1, fad->metric_type);
+    push_be_uint(buf, 1, fad->calc_type);
+    push_be_uint(buf, 1, fad->priority);
+    lspgen_serialize_fad_admin_group(buf, ISIS_SUBSUBTLV_FAD_EXCLUDE_ANY, fad->exclude_any);
+    lspgen_serialize_fad_admin_group(buf, ISIS_SUBSUBTLV_FAD_INCLUDE_ANY, fad->include_any);
+    lspgen_serialize_fad_admin_group(buf, ISIS_SUBSUBTLV_FAD_INCLUDE_ALL, fad->include_all);
+    if (fad->m_flag) {
+        push_be_uint(buf, 1, ISIS_SUBSUBTLV_FAD_FLAGS);
+        push_be_uint(buf, 1, 1);
+        push_be_uint(buf, 1, ISIS_FAD_FLAG_M);
+    }
+    buf->data[subtlv_start_idx+1] = buf->idx - subtlv_start_idx - 2; /* Update subtlv length */
+}
+
+/*
  * Serialize an IS-IS attribute into a packet buffer.
  */
 void
 lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 {
-    uint32_t metric, mask;
+    uint32_t metric, mask, subtlv_len_idx;
     uint8_t attr_len, flags;
     bool subtlv_present;
     io_buffer_t *buf;
@@ -450,8 +537,9 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
         case ISIS_TLV_EXTD_IS_REACH:
             push_data(buf, attr->key.link.remote_node_id, 7);
             push_be_uint(buf, 3, attr->key.link.metric); /* Metric */
+            subtlv_len_idx = buf->idx;
+            push_be_uint(buf, 1, 0); /* subTLVs length */
 	    if(attr->key.link.adjacency_sid > 0) {
-                push_be_uint(buf, 1, 7); /* subTLVs length */
 		push_be_uint(buf, 1, ISIS_SUBTLV_IS_EXT_ADJ_SID);
 		push_be_uint(buf, 1, 5);
 		push_be_uint(buf, 1, 0x30); /* set V and L flag always */
@@ -459,9 +547,10 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 		push_be_uint(buf, 1, 0);
 	        push_be_uint(buf, 2, attr->key.link.adjacency_sid);
 	    }
-	    else {
-		push_be_uint(buf, 1, 0); /* subTLV length */
+            if (attr->key.link.asla) {
+                lspgen_serialize_asla(attr, buf);
             }
+            buf->data[subtlv_len_idx] = buf->idx - subtlv_len_idx - 1;
             break;
         case ISIS_TLV_IPV4_ADDR:
             push_data(buf, attr->key.ipv4_addr, 4);
@@ -536,6 +625,10 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
             }
             break;
         case ISIS_TLV_CAP:
+            if (attr->key.attr_cp[0] == ISIS_SUBTLV_CAP_FAD) {
+                lspgen_serialize_fad(attr, buf);
+                break;
+            }
             push_data(buf, attr->key.cap.router_id, 4);
             flags = 0;
             if (attr->key.cap.d_flag) {
@@ -1031,8 +1124,8 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf3, 2, 2); /* Type */
 	    push_be_uint(buf3, 2, 0); /* Length - will be overwritten later */
 	    push_be_uint(buf3, 3, 0); /* Flags, Reserved, MT-ID */
-	    push_be_uint(buf3, 1, attr->key.prefix.sid_algo); /* Algorithm */
-	    push_be_uint(buf3, 4, attr->key.prefix.sid); /* SID Index */
+	    push_be_uint(buf3, 1, attr->key.prefix.algos[0].algo); /* Algorithm */
+	    push_be_uint(buf3, 4, attr->key.prefix.algos[0].sid); /* SID Index */
 	    break;
 
 	default:
@@ -1376,9 +1469,9 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 	    push_be_uint(buf3, 2, 4); /* Type */
 	    push_be_uint(buf3, 2, 0); /* Length - will be overwritten later */
 	    push_be_uint(buf3, 1, 0); /* Flags */
-	    push_be_uint(buf3, 1, attr->key.prefix.sid_algo); /* Algorithm */
+	    push_be_uint(buf3, 1, attr->key.prefix.algos[0].algo); /* Algorithm */
 	    push_be_uint(buf3, 2, 0); /* Reserved */
-	    push_be_uint(buf3, 4, attr->key.prefix.sid); /* SID Index */
+	    push_be_uint(buf3, 4, attr->key.prefix.algos[0].sid); /* SID Index */
 	    break;
 
 	default:

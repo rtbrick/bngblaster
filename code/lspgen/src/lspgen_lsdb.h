@@ -37,6 +37,30 @@ typedef struct lsdb_node_id_ {
 } lsdb_node_id_t;
 
 /*
+ * Per algorithm prefix entries with Prefix-SID and/or Flex-Algo
+ * prefix metric (FAPM). Kept small as part of the attribute key.
+ */
+#define LSDB_MAX_PREFIX_ALGO 4
+
+/* Prefix-SID flags, R and N follow the prefix flags */
+#define LSDB_PREFIX_SID_FLAG_NO_PHP   0x20
+#define LSDB_PREFIX_SID_FLAG_EXP_NULL 0x10
+#define LSDB_PREFIX_SID_FLAG_VALUE    0x08
+#define LSDB_PREFIX_SID_FLAG_LOCAL    0x04
+#define LSDB_PREFIX_SID_FLAG_MASK     0x3c
+
+/* Internal flags (reserved bits of the Prefix-SID flags) */
+#define LSDB_PREFIX_ALGO_SID          0x02 /* Advertise Prefix-SID */
+#define LSDB_PREFIX_ALGO_FAPM         0x01 /* Advertise Flex-Algo prefix metric */
+
+/* Flex-Algo definition (RFC 9350) */
+#define LSDB_MAX_FLEX_ALGO            LSDB_MAX_PREFIX_ALGO
+#define LSDB_FAD_METRIC_IGP           0
+#define LSDB_FAD_METRIC_MIN_DELAY     1
+#define LSDB_FAD_METRIC_TE            2
+#define LSDB_FAD_DEFAULT_PRIORITY     128
+
+/*
  * An Linkstate database context.
  */
 typedef struct lsdb_ctx_
@@ -76,6 +100,14 @@ typedef struct lsdb_ctx_
     uint32_t sequence;
     uint32_t srgb_base;
     uint32_t srgb_range;
+    uint8_t sr_algo[LSDB_MAX_PREFIX_ALGO]; /* SR algorithms for generated node SIDs */
+    uint8_t sr_algo_count; /* 0 means algorithm 0 only, without SR-Algorithm subTLV */
+    struct lsdb_attr_fad_ *fad; /* Flex-Algo definitions for generated topologies */
+    uint8_t fad_count;
+    uint32_t link_delay_min; /* Random link delay range in microseconds */
+    uint32_t link_delay_max;
+    uint32_t te_metric_min; /* Random TE metric range */
+    uint32_t te_metric_max;
     char *authentication_key;
     uint8_t authentication_type;
     uint32_t seed;
@@ -218,6 +250,13 @@ typedef struct lsdb_link_ {
     struct lsdb_node_ *node;    /* where this link is attached to */
 } lsdb_link_t;
 
+typedef struct lsdb_prefix_algo_ {
+    uint32_t sid;
+    uint32_t metric; /* Flex-Algo prefix metric */
+    uint8_t algo;
+    uint8_t flags; /* Prefix-SID and internal flags */
+} lsdb_prefix_algo_t;
+
 /*
  * Shared for ipv4 and ipv6 prefix generation
  */
@@ -230,20 +269,15 @@ typedef struct lsdb_attr_prefix_ {
     r_flag:1, /* Re-advertisement */
     node_flag:1, /* Node */
     updown_flag:1, /* Up/Down bit*/
-    no_php_flag:1, /* no PHP */
-    exp_null_flag:1, /* Explicit NULL */
-    value_flag:1, /* SID is a value */
-    local_flag:1, /* SID has local significance */
     family_flag:1, /* false for ipv4, true for ipv6 */
     s_flag:1, /* domain wide flooding */
     adv_range:1, /* Advertise range (binding TLV) */
-    adv_sid:1, /* Advertise SID */
     adv_tag:1, /* Advertise Tag */
     small_metrics:1; /* old-style 6-bit metrics */
 
-    uint8_t sid_algo;
+    uint8_t algo_count; /* Number of per algorithm entries */
+    lsdb_prefix_algo_t algos[LSDB_MAX_PREFIX_ALGO];
     uint32_t metric;
-    uint32_t sid;
     uint32_t tag;   /* only used in ISIS_TLV_EXTD_IPVX_REACH */
     uint16_t range; /* only used in ISIS_TLV_BINDING */
 } lsdb_attr_prefix_t;
@@ -256,7 +290,29 @@ typedef struct lsdb_attr_link_ {
     uint16_t adjacency_sid;
     bool small_metrics; /* old-style 6-bit metrics */
 
+    /* Application-specific link attributes (ASLA) for Flex-Algo, 0 = not advertised */
+    bool asla;
+    uint32_t te_metric;
+    uint32_t min_delay; /* microseconds */
+    uint32_t max_delay; /* microseconds */
+    uint32_t admin_group;
 } lsdb_attr_link_t;
+
+/*
+ * Flex-Algo definition (FAD), advertised as subTLV
+ * of a dedicated IS-IS router capability TLV.
+ */
+typedef struct lsdb_attr_fad_ {
+    uint8_t router_id[4];
+    uint8_t algo;
+    uint8_t metric_type;
+    uint8_t calc_type;
+    uint8_t priority;
+    bool m_flag; /* Flex-Algo prefix metric required for inter-area */
+    uint32_t exclude_any; /* Admin groups, 0 = not advertised */
+    uint32_t include_any;
+    uint32_t include_all;
+} lsdb_attr_fad_t;
 
 typedef struct lsdb_attr_cap_ {
     uint8_t router_id[4];
@@ -283,6 +339,11 @@ typedef struct lsdb_attr_cap_ {
 #define CLOSE_LEVEL3 0x800
 
 /*
+ * Return true if the prefix entry advertises a Prefix-SID.
+ */
+#define LSDB_PREFIX_HAS_SID(prefix_algo_) ((prefix_algo_)->flags & LSDB_PREFIX_ALGO_SID)
+
+/*
  * An Attribute hanging off a node or link
  */
 typedef struct lsdb_attr_ {
@@ -299,6 +360,7 @@ typedef struct lsdb_attr_ {
 	    struct lsdb_attr_prefix_ prefix;
 	    iso_prefix area;
 	    struct lsdb_attr_cap_ cap;
+	    struct lsdb_attr_fad_ fad;
 	    struct lsdb_attr_link_ link;
 	    uint8_t ipv4_addr[IPV4_ADDR_LEN];
 	    uint8_t ipv6_addr[IPV6_ADDR_LEN];
