@@ -1,0 +1,23 @@
+name: Nix
+
+# Manually triggered build of the Nix flake (Actions -> Nix -> Run workflow
+# or gh workflow run nix.yml --ref <branch>), including the unit tests.
+on:
+  workflow_dispatch:
+
+jobs:
+  nix:
+    name: Nix Build
+    runs-on: ubuntu-24.04
+
+    steps:
+    - uses: actions/checkout@v6
+
+    - name: Install Nix
+      uses: cachix/install-nix-action@v31
+
+    - name: Build
+      run: nix build -L
+
+    - name: Check
+      run: nix flake check -L
