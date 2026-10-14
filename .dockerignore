@@ -1,0 +1,12 @@
+# Only the files required to build the container image (docker/Dockerfile).
+*
+!CMakeLists.txt
+!LICENSE
+!code
+!schemas
+!packaging
+**/CMakeFiles
+**/CMakeCache.txt
+**/cmake_install.cmake
+**/*.o
+**/*.a
