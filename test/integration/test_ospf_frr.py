@@ -16,6 +16,7 @@ FRR_PREFIXES = 8
 OSPF_LSA_TYPE_ROUTER = 1
 OSPF_LSA_TYPE_EXTERNAL = 5
 OSPF_MAX_AGE = 3600
+OSPF_MAX_LINK_METRIC = 0xffff
 
 pytestmark = pytest.mark.usefixtures("frr_bin")
 
@@ -150,4 +151,16 @@ def test_opaque_incapable_neighbor(ospf, tmp_path):
     ospf.wait_established()
     wait_until(lambda: topo.prefixes <= ospf.frr_routes("ip"), 15,
                message="FRR routes to all nodes")
+    ospf.teardown()
+
+
+def test_overload(ospf, tmp_path):
+    """The overloaded BNG Blaster advertises its transit links with
+    MaxLinkMetric (RFC 6987), which FRR adds to the route cost."""
+    topo = ospf.lspgen(tmp_path / "ospf", 10)
+    ospf.start(bbl={"mrt": topo.mrt, "ospf": {"overload": True}})
+    ospf.wait_established()
+    wait_until(lambda: topo.prefixes <= ospf.frr_routes("ip"), 30,
+               message="FRR routes to all nodes")
+    assert all(ospf.frr_metric(prefix) >= OSPF_MAX_LINK_METRIC for prefix in topo.prefixes)
     ospf.teardown()

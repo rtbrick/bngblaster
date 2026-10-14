@@ -11,6 +11,11 @@
 | **version**                      | | OSPF version.                                                   |
 |                                  | | Default: 2 Range: 2 - 3                                         |
 +----------------------------------+-------------------------------------------------------------------+
+| **overload**                     | | Advertise all non-stub links in the self originated router      |
+|                                  | | LSA with maximum metric 65535 (RFC 6987) to prevent transit     |
+|                                  | | traffic through the BNG Blaster.                                |
+|                                  | | Default: false                                                  |
++----------------------------------+-------------------------------------------------------------------+
 | **auth-key**                     | | OSPF authentication key.                                        |
 +----------------------------------+-------------------------------------------------------------------+
 | **auth-type**                    | | OSPF authentication type (simple or md5).                       |

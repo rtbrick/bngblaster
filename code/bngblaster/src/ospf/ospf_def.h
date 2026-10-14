@@ -55,6 +55,8 @@
 #define OSPF_OPTION_E_BIT                   0x02
 #define OSPF_OPTION_R_BIT                   0x10
 
+#define OSPF_MAX_LINK_METRIC                0xffff
+
 #define OSPF_OPTION_LLS_BIT                 0x10
 
 #define OSPF_DEFAULT_TEARDOWN_TIME          5

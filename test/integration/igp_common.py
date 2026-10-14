@@ -124,6 +124,12 @@ class IgpSetup:
         return [n.get("ip") for e in routes.get(prefix, []) if e.get("selected")
                 for n in e.get("nexthops", [])]
 
+    def frr_metric(self, prefix):
+        """Return the metric of the selected FRR route."""
+        afi = "ipv6" if ":" in prefix else "ip"
+        routes = self.frr.vtysh("show %s route %s" % (afi, prefix))
+        return next(e["metric"] for e in routes[prefix] if e.get("selected"))
+
     def teardown(self):
         assert self.bbl.terminate(30) == 0
 

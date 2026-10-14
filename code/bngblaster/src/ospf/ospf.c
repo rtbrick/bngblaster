@@ -31,6 +31,7 @@ ospf_init() {
             g_ctx->ospf_instances = instance;
         }
         instance->config = config;
+        instance->overload = config->overload;
 
         for(uint8_t type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
             instance->lsdb[type] = hb_tree_new((dict_compare_func)ospf_lsa_key_compare);

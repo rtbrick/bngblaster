@@ -494,6 +494,20 @@ ospf_lsa_purge_all_external(ospf_instance_s *ospf_instance)
     }
 }
 
+/**
+ * Metric of P2P and transit links in the self originated
+ * router LSA, which is set to MaxLinkMetric if the instance
+ * is overloaded (RFC 6987) to prevent transit traffic.
+ */
+static uint16_t
+ospf_lsa_transit_metric(ospf_instance_s *ospf_instance, uint16_t metric)
+{
+    if(ospf_instance->overload) {
+        return htobe16(OSPF_MAX_LINK_METRIC);
+    }
+    return htobe16(metric);
+}
+
 static uint16_t 
 ospf_lsa_add_interface_v2(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
 {
@@ -514,7 +528,7 @@ ospf_lsa_add_interface_v2(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
                 link->link_data = ospf_interface->interface->ip.address;
                 link->type = OSPF_LSA_LINK_P2P;
                 link->tos = 0;
-                link->metric = htobe16(ospf_interface->metric);
+                link->metric = ospf_lsa_transit_metric(ospf_interface->instance, ospf_interface->metric);
                 lsa->lsa_len += sizeof(ospfv2_lsa_link_s);
                 links++;
             }
@@ -544,7 +558,7 @@ ospf_lsa_add_interface_v2(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
                 link->link_data = ospf_interface->interface->ip.address;
                 link->type = OSPF_LSA_LINK_TRANSIT;
                 link->tos = 0;
-                link->metric = htobe16(ospf_interface->metric);
+                link->metric = ospf_lsa_transit_metric(ospf_interface->instance, ospf_interface->metric);
                 lsa->lsa_len += sizeof(ospfv2_lsa_link_s);
                 links++;
             } else {
@@ -570,6 +584,8 @@ ospf_lsa_add_interface_v2(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
                     link->link_id = ospf_neighbor->ipv4;
                     link->link_data = ospf_interface->interface->ip.address;
                     link->type = OSPF_LSA_LINK_TRANSIT;
+                    link->tos = 0;
+                    link->metric = ospf_lsa_transit_metric(ospf_interface->instance, ospf_interface->metric);
                     lsa->lsa_len += sizeof(ospfv2_lsa_link_s);
                     links++;
                     break;
@@ -609,7 +625,7 @@ ospf_lsa_add_interface_v3(ospf_lsa_s *lsa, ospf_interface_s *ospf_interface)
                 interface = (ospfv3_lsa_interface_s*)(lsa->lsa+lsa->lsa_len);
                 interface->type = OSPF_LSA_LINK_P2P;
                 interface->reserved = 0;
-                interface->metric = htobe16(ospf_interface->metric);
+                interface->metric = ospf_lsa_transit_metric(ospf_interface->instance, ospf_interface->metric);
                 interface->interface_id = htobe32(ospf_interface->id);
                 interface->neighbor_interface_id = ospf_neighbor->id;
                 interface->neighbor_router_id = ospf_neighbor->router_id;
@@ -833,7 +849,7 @@ ospf_lsa_interfaces_v3(ospf_lsa_s *lsa)
         link = (ospfv3_lsa_interface_s*)(lsa->lsa+lsa->lsa_len);
         link->type = OSPF_LSA_LINK_P2P;
         link->reserved = 0;
-        link->metric = htobe16(external_connection->metric);
+        link->metric = ospf_lsa_transit_metric(ospf_instance, external_connection->metric);
         link->interface_id = htobe32(external_connection->interface_id);
         link->neighbor_interface_id = htobe32(external_connection->neighbor_interface_id);
         link->neighbor_router_id = external_connection->router_id;
@@ -999,7 +1015,7 @@ ospf_lsa_links_v2(ospf_lsa_s *lsa)
         link->link_data = external_connection->ipv4.address;
         link->type = OSPF_LSA_LINK_P2P;
         link->tos = 0;
-        link->metric = htobe16(external_connection->metric);
+        link->metric = ospf_lsa_transit_metric(ospf_instance, external_connection->metric);
         lsa->lsa_len += sizeof(ospfv2_lsa_link_s);
         links++;
         external_connection = external_connection->next;
