@@ -2273,7 +2273,8 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     }
 
     JSON_OBJ_GET_NUMBER(isis, value, "isis", "sr-node-sid", 0, 1048575);
-    if(value) {
+    if(value && json_number_value(value)) {
+        /* 0 means no node SID */
         isis_config->sr_node_sid[0].index = json_number_value(value);
         isis_config->sr_node_sid_count = 1;
     }
