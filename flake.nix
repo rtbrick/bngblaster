@@ -1,78 +1,94 @@
 {
-  inputs.nixpgks.url = "github:NixOS/nixpkgs/nixos-unstable";
-  inputs.flake-utils = {
-    url = "github:numtide/flake-utils";
-    inputs.nixpkgs.follows = "nixpkgs";
+  description = "BNG Blaster - network tester for access and routing protocols";
+
+  inputs = {
+    nixpkgs.url = "github:NixOS/nixpkgs/nixos-unstable";
+    flake-utils.url = "github:numtide/flake-utils";
   };
 
   outputs = {
     self,
     nixpkgs,
     flake-utils,
-    ...
-  } @ inputs:
-    flake-utils.lib.eachDefaultSystem (system: let
+  }: let
+    # BNG Blaster supports Linux only.
+    linuxSystems = ["x86_64-linux" "aarch64-linux"];
+  in
+    flake-utils.lib.eachSystem linuxSystems (system: let
       inherit (nixpkgs) lib;
       pkgs = nixpkgs.legacyPackages.${system};
-      buildTools = [pkgs.cmake pkgs.ninja pkgs.gcc];
+      buildTools = [pkgs.cmake pkgs.ninja];
       dependencies = [pkgs.ncurses pkgs.openssl pkgs.jansson];
-      runTests = false;
+      testDependencies = [pkgs.cmocka pkgs.libpcap];
+      # Interpreter for bngblaster-cli, bgpupdate and ldpupdate.
+      python = pkgs.python3.withPackages (ps: [ps.scapy]);
+      gitRef = self.shortRev or self.dirtyShortRev or "dirty";
+      gitSha = self.rev or self.dirtyRev or "dirty";
     in rec {
       formatter = pkgs.alejandra;
+
       packages = {
         libdict = pkgs.stdenv.mkDerivation {
           pname = "libdict";
-          version = "1.0.1";
+          version = "1.0.6";
 
           src = pkgs.fetchFromGitHub {
             owner = "rtbrick";
             repo = "libdict";
-            rev = "fea9fb240cfa08dc3bbfe425fb78466dbbf1aa56";
-            sha256 = "rnAvurPnmILMAB3Ingjw0lRJB6lcjdmUtPO6R3ek6e4=";
+            rev = "1.0.6";
+            hash = "sha256-JO8gIZwSZ1vOigiM2IoGRYW2m2zoAa1af/eMBP3ZRjY=";
           };
 
           cmakeFlags = [
             "-DCMAKE_BUILD_TYPE=Release"
             "-DLIBDICT_STATIC=YES"
+            "-DLIBDICT_SHARED=YES"
             "-DLIBDICT_TOOLS=NO"
             "-DLIBDICT_TESTS=NO"
-            "-DLIBDICT_SHARED=YES"
           ];
 
-          doCheck = false;
-
-          checkInputs = [pkgs.cunit];
           nativeBuildInputs = buildTools;
         };
-        bngblaster = let
-          version = self.rev or "dirty";
-        in
-          pkgs.stdenv.mkDerivation rec {
-            inherit version;
-            pname = "bngblaster";
-            src = lib.cleanSource ./.;
 
-            doCheck = true;
-            cmakeFlags =
-              ["-DCMAKE_BUILD_TYPE=Release" "-DGIT_REF=${self.shortRef or "dirty"}" "-DGIT_SHA=${version}"]
-              ++ (
-                if doCheck
-                then ["-DBNGBLASTER_TESTS=ON"]
-                else []
-              );
+        # Unit tests can be disabled with
+        # bngblaster.overrideAttrs { doCheck = false; }
+        bngblaster = pkgs.stdenv.mkDerivation (finalAttrs: {
+          pname = "bngblaster";
+          version = gitRef;
+          src = lib.cleanSource ./.;
 
-            checkInputs = [pkgs.cmocka pkgs.libpcap];
-            nativeBuildInputs = buildTools;
-            buildInputs = dependencies ++ [packages.libdict];
-          };
+          doCheck = true;
+          cmakeFlags =
+            [
+              "-DCMAKE_BUILD_TYPE=Release"
+              "-DGIT_REF=${gitRef}"
+              "-DGIT_SHA=${gitSha}"
+            ]
+            ++ lib.optional finalAttrs.doCheck "-DBNGBLASTER_TESTS=ON";
+
+          nativeBuildInputs = buildTools;
+          buildInputs = dependencies ++ [packages.libdict python];
+          checkInputs = testDependencies;
+        });
+
+        default = packages.bngblaster;
       };
-      devShell = pkgs.mkShell {
-        buildInputs =
-          dependencies
-          ++ [packages.libdict pkgs.bashInteractive];
+
+      devShells.default = pkgs.mkShell {
+        packages = buildTools ++ dependencies ++ testDependencies ++ [packages.libdict python];
       };
-      defaultPackage = packages.bngblaster;
-      apps.bngblaster = flake-utils.lib.mkApp {drv = packages.bngblaster;};
-      defaultApp = apps.bngblaster;
+
+      apps = {
+        bngblaster =
+          flake-utils.lib.mkApp {drv = packages.bngblaster;}
+          // {meta.description = "BNG Blaster network tester";};
+        lspgen =
+          flake-utils.lib.mkApp {
+            drv = packages.bngblaster;
+            name = "lspgen";
+          }
+          // {meta.description = "Link state packet generator for ISIS and OSPF";};
+        default = apps.bngblaster;
+      };
     });
 }
