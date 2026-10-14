@@ -28,7 +28,7 @@ lsdb_scan_node_id(uint8_t *node_id, char *node_id_str)
      * Check first if this is dotted decimal notation.
      */
     if (inet_pton(AF_INET, node_id_str, node_id)) {
-	return;
+        return;
     }
 
     /*
@@ -74,8 +74,8 @@ lsdb_format_node_id(unsigned char *node_id)
     idx = (idx + 1) & 3;
 
     snprintf(ret, 32, "%02x%02x.%02x%02x.%02x%02x.%02x",
-	     *node_id, *(node_id + 1), *(node_id + 2), *(node_id + 3),
-	     *(node_id + 4), *(node_id + 5), *(node_id + 6));
+             *node_id, *(node_id + 1), *(node_id + 2), *(node_id + 3),
+             *(node_id + 4), *(node_id + 5), *(node_id + 6));
 
     return ret;
 }
@@ -230,15 +230,15 @@ lsdb_format_node_no_name(lsdb_node_t *node)
     ctx = node->ctx;
 
     if (ctx->protocol_id == PROTO_ISIS) {
-	snprintf(buffer, sizeof(buffer), "%s", lsdb_format_node_id(node->key.node_id));
+        snprintf(buffer, sizeof(buffer), "%s", lsdb_format_node_id(node->key.node_id));
     } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-	snprintf(buffer, sizeof(buffer), "%u.%u.%u.%u",
-		 node->key.node_id[0], node->key.node_id[1],
-		 node->key.node_id[2], node->key.node_id[3]);
+        snprintf(buffer, sizeof(buffer), "%u.%u.%u.%u",
+                 node->key.node_id[0], node->key.node_id[1],
+                 node->key.node_id[2], node->key.node_id[3]);
     } else {
         snprintf(buffer, sizeof(buffer), "0x%08x%08x",
-		 ntohl(node->key.node_id[0]),
-		 ntohl(node->key.node_id[4]));
+                 ntohl(node->key.node_id[0]),
+                 ntohl(node->key.node_id[4]));
     }
 
     return buffer;
@@ -403,7 +403,7 @@ lsdb_alloc_ctx(char *instance)
 
     ctx = calloc(1, sizeof(struct lsdb_ctx_));
     if (!ctx) {
-       return NULL;
+        return NULL;
     }
 
     /*
@@ -417,13 +417,13 @@ lsdb_alloc_ctx(char *instance)
      * Initialize node DB.
      */
     ctx->node_dict = hashtable2_dict_new((dict_compare_func)lsdb_compare_node,
-					 lsdb_hash_node, LSDB_NODE_HSIZE);
+                                         lsdb_hash_node, LSDB_NODE_HSIZE);
 
     /*
      * Initialize link DB.
      */
     ctx->link_dict = hashtable2_dict_new((dict_compare_func)lsdb_compare_link,
-					 lsdb_hash_link, LSDB_LINK_HSIZE);
+                                         lsdb_hash_link, LSDB_LINK_HSIZE);
 
     LOG(NORMAL, "Add context for instance %s\n", ctx->instance_name);
 
@@ -552,20 +552,20 @@ lsdb_add_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
         ctx->nodecount++;
         node->ctx = ctx;
 
-	/*
-	 * Get values from template if set, else read default values from context.
-	 */
-	if (node_template->sequence) {
-	    node->sequence = node_template->sequence;
-	} else {
-	    node->sequence = ctx->sequence;
-	}
+        /*
+         * Get values from template if set, else read default values from context.
+         */
+        if (node_template->sequence) {
+            node->sequence = node_template->sequence;
+        } else {
+            node->sequence = ctx->sequence;
+        }
 
-	if (node_template->lsp_lifetime) {
-	    node->lsp_lifetime = node_template->lsp_lifetime;
-	} else {
-	    node->lsp_lifetime = ctx->lsp_lifetime;
-	}
+        if (node_template->lsp_lifetime) {
+            node->lsp_lifetime = node_template->lsp_lifetime;
+        } else {
+            node->lsp_lifetime = ctx->lsp_lifetime;
+        }
 
         LOG(LSDB, "  Add node %s (%s), seq 0x%08x, lifetime %us\n", lsdb_format_node(node),
             lsdb_format_node_id(node->key.node_id), node->sequence, node->lsp_lifetime);
@@ -679,16 +679,16 @@ lsdb_add_link(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node, struct lsdb_link_ 
             link->inverse_link = inverse_link;
             inverse_link->inverse_link = link;
 
-	    /*
-	     * Inherit the link index from the inverse link,
-	     * such that the same prefix is assigned to both links.
-	     */
-	    if (inverse_link->link_index) {
-		link->link_index = inverse_link->link_index;
-	    }
+            /*
+             * Inherit the link index from the inverse link,
+             * such that the same prefix is assigned to both links.
+             */
+            if (inverse_link->link_index) {
+                link->link_index = inverse_link->link_index;
+            }
 
-	    return link;
-	}
+            return link;
+        }
 
         /*
          * Assign a monotonically index for mapping links IPs.
@@ -747,17 +747,17 @@ lsdb_format_isis_attr(struct lsdb_attr_ *attr)
             len += snprintf(buf+len, sizeof(buf)-len, " 0x%x", attr->key.protocol);
             break;
         case ISIS_TLV_EXTD_IS_REACH:
-	    if (attr->key.link.adjacency_sid > 0) {
+            if (attr->key.link.adjacency_sid > 0) {
                 len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u, adj_sid %u",
                     lsdb_format_node_id(attr->key.link.remote_node_id),
                     attr->key.link.metric,
-		    attr->key.link.adjacency_sid);
-	    }
+                    attr->key.link.adjacency_sid);
+            }
             else {
                 len += snprintf(buf+len, sizeof(buf)-len, " %s, metric %u",
                     lsdb_format_node_id(attr->key.link.remote_node_id),
                     attr->key.link.metric);
-	    }
+            }
             break;
         case ISIS_TLV_IPV4_ADDR:
             len += snprintf(buf+len, sizeof(buf)-len, " %s",
@@ -889,7 +889,7 @@ bool
 lsdb_is_ipv4_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr)
 {
     if (ctx->protocol_id == PROTO_ISIS) {
-	switch (attr->key.attr_type) {
+        switch (attr->key.attr_type) {
         case ISIS_TLV_IPV4_ADDR:
         case ISIS_TLV_EXTD_IPV4_REACH:
             return true;
@@ -900,10 +900,10 @@ lsdb_is_ipv4_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr)
             break;
         default:
             break;
-	}
+        }
     } else if (ctx->protocol_id == PROTO_OSPF2) {
-	/* OSPFv2 only has IPV4 related attributes added */
-	return true;
+        /* OSPFv2 only has IPV4 related attributes added */
+        return true;
     }
 
     return false;
@@ -913,7 +913,7 @@ bool
 lsdb_is_ipv6_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr)
 {
     if (ctx->protocol_id == PROTO_ISIS) {
-	switch (attr->key.attr_type) {
+        switch (attr->key.attr_type) {
         case ISIS_TLV_IPV6_ADDR:
         case ISIS_TLV_EXTD_IPV6_REACH:
             return true;
@@ -924,10 +924,10 @@ lsdb_is_ipv6_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr)
             break;
         default:
             break;
-	}
+        }
     } else if (ctx->protocol_id == PROTO_OSPF3) {
-	/* OSPFv3 only has IPV6 related attributes added */
-	return true;
+        /* OSPFv3 only has IPV6 related attributes added */
+        return true;
     }
     return false;
 }
@@ -1001,25 +1001,25 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
         /*
          * Calculate the size, by serializing the data into a dummy packet buffer.
          */
-	lspgen_reset_packet_buffer(&packet);
+        lspgen_reset_packet_buffer(&packet);
         lspgen_serialize_attr(ctx, attr, &packet);
-	attr->size = packet.buf[0].idx;
+        attr->size = packet.buf[0].idx;
 
-	/*
-	 * Find lowest level size.
-	 */
-	for (idx = MAX_MSG_LEVEL-1; idx; idx--) {
-	    if (packet.buf[idx].idx) {
-		attr->size += packet.buf[idx].idx;
-		break;
-	    }
-	}
+        /*
+         * Find lowest level size.
+         */
+        for (idx = MAX_MSG_LEVEL-1; idx; idx--) {
+            if (packet.buf[idx].idx) {
+                attr->size += packet.buf[idx].idx;
+                break;
+            }
+        }
 
         /*
          * Book keeping.
          */
         node->attr_count++;
-	attr->parent = node;
+        attr->parent = node;
 
         LOG(LSDB, "  Add attr %s, size %u\n",
             lsdb_format_attr(ctx, attr),
@@ -1076,9 +1076,9 @@ lsdb_delete_ctx(struct lsdb_ctx_ *ctx)
     }
 
     if (ctx->ctrl_socket_sockfd > 0) {
-	 close(ctx->ctrl_socket_sockfd);
-	 ctx->ctrl_socket_sockfd = 0;
-     }
+        close(ctx->ctrl_socket_sockfd);
+        ctx->ctrl_socket_sockfd = 0;
+    }
 
     free(ctx);
 }

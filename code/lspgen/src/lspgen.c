@@ -141,7 +141,7 @@ lspgen_print_arg_options(struct keyval_ *ptr)
     buf[0] = 0;
 
     if (!ptr) {
-	    return buf;
+        return buf;
     }
 
     while (ptr->key && len < sizeof(buf)) {
@@ -156,46 +156,46 @@ lspgen_print_usage_arg(struct option *option)
 {
     if (option->has_arg == 1) {
 
-	/* protocol */
-	if (strcmp(option->name, "protocol") == 0) {
-	    return lspgen_print_arg_options(proto_names);
+        /* protocol */
+        if (strcmp(option->name, "protocol") == 0) {
+            return lspgen_print_arg_options(proto_names);
         }
 
-	/* logging */
-	if (strcmp(option->name, "log") == 0) {
-	    return lspgen_print_arg_options(log_names);
+        /* logging */
+        if (strcmp(option->name, "log") == 0) {
+            return lspgen_print_arg_options(log_names);
         }
 
-	/* authentication-type */
+        /* authentication-type */
         if (strcmp(option->name, "authentication-type") == 0) {
-	    return lspgen_print_arg_options(auth_type_names);
+            return lspgen_print_arg_options(auth_type_names);
         }
 
-	/* SR algorithms */
-	if (strcmp(option->name, "sr-algo") == 0) {
-	    return " <algo,...>";
-	}
+        /* SR algorithms */
+        if (strcmp(option->name, "sr-algo") == 0) {
+            return " <algo,...>";
+        }
 
-	/* Flex-Algo definitions */
-	if (strcmp(option->name, "flex-algo") == 0) {
-	    return " <algo:igp|min-delay|te[:priority],...>";
-	}
+        /* Flex-Algo definitions */
+        if (strcmp(option->name, "flex-algo") == 0) {
+            return " <algo:igp|min-delay|te[:priority],...>";
+        }
 
-	/* Random link attribute ranges */
-	if (strcmp(option->name, "link-delay") == 0 ||
-	    strcmp(option->name, "te-metric") == 0) {
-	    return " <min>[:<max>]";
-	}
+        /* Random link attribute ranges */
+        if (strcmp(option->name, "link-delay") == 0 ||
+            strcmp(option->name, "te-metric") == 0) {
+            return " <min>[:<max>]";
+        }
 
-	/* filenames */
-	if (strstr(option->name, "file")) {
-	    return " <filename>";
-	}
+        /* filenames */
+        if (strstr(option->name, "file")) {
+            return " <filename>";
+        }
 
-	/* IP prefixes */
-	if (strstr(option->name, "prefix")) {
-	    return " <ip-prefix>";
-	}
+        /* IP prefixes */
+        if (strstr(option->name, "prefix")) {
+            return " <ip-prefix>";
+        }
 
 
         return " <args>";
@@ -736,7 +736,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
     do {
         node = *dict_itor_datum(itor);
 
-	LOG(LSDB, "Generating node %s (%s) attributes\n",
+        LOG(LSDB, "Generating node %s (%s) attributes\n",
             lsdb_format_node(node),
             lsdb_format_node_id(node->key.node_id));
 
@@ -767,12 +767,12 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             lsdb_add_node_attr(node, &attr_template);
         }
 
-	/* LSP Buffer size */
+        /* LSP Buffer size */
         lsdb_reset_attr_template(&attr_template);
-	attr_template.key.ordinal = 1;
-	attr_template.key.attr_type = ISIS_TLV_LSP_BUFFER_SIZE;
+        attr_template.key.ordinal = 1;
+        attr_template.key.attr_type = ISIS_TLV_LSP_BUFFER_SIZE;
         attr_template.key.lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
-	lsdb_add_node_attr(node, &attr_template);
+        lsdb_add_node_attr(node, &attr_template);
 
         /* IPv4 loopback address */
         lsdb_reset_attr_template(&attr_template);
@@ -819,8 +819,8 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
         lsdb_add_node_attr(node, &attr_template);
 
         /* external prefixes */
-	ext_per_node = ext_left / nodes_left;
-	ext_left -= ext_per_node;
+        ext_per_node = ext_left / nodes_left;
+        ext_left -= ext_per_node;
         while (ext_per_node--) {
             /* ipv4 external prefix */
             lsdb_reset_attr_template(&attr_template);
@@ -910,7 +910,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             lsdb_add_node_attr(node, &attr_template);
         }
 
-	nodes_left--;
+        nodes_left--;
     } while (dict_itor_next(itor));
 
     dict_itor_free(itor);
@@ -966,8 +966,8 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
         if (node->node_name) {
             lsdb_reset_attr_template(&attr_template);
             attr_template.key.ordinal = 1;
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
             attr_template.key.attr_cp[2] = OSPF_TLV_HOSTNAME;
             strncpy(attr_template.key.hostname, node->node_name, sizeof(attr_template.key.hostname)-1);
             lsdb_add_node_attr(node, &attr_template);
@@ -979,31 +979,31 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
         addr += node->node_index;
         lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
         attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
-	attr_template.key.prefix.node_flag = true;
-	attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
-	attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
+        attr_template.key.prefix.node_flag = true;
+        attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+        attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+        attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
         lsdb_add_node_attr(node, &attr_template);
 
         if (!ctx->no_sr) {
-	    lsdb_reset_attr_template(&attr_template);
-	    lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
-	    attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
-	    attr_template.key.prefix.algos[0].sid = node->node_index;
-	    attr_template.key.prefix.algos[0].flags = LSDB_PREFIX_ALGO_SID;
-	    attr_template.key.prefix.algo_count = 1;
+            lsdb_reset_attr_template(&attr_template);
+            lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
+            attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
+            attr_template.key.prefix.algos[0].sid = node->node_index;
+            attr_template.key.prefix.algos[0].flags = LSDB_PREFIX_ALGO_SID;
+            attr_template.key.prefix.algo_count = 1;
 
             attr_template.key.ordinal = 1;
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_EP;
-	    attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX;
-	    attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
-	    lsdb_add_node_attr(node, &attr_template);
-	}
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_EP;
+            attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX;
+            attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
+            lsdb_add_node_attr(node, &attr_template);
+        }
 
         /* external prefixes */
-	ext_per_node = ext_left / nodes_left;
-	ext_left -= ext_per_node;
+        ext_per_node = ext_left / nodes_left;
+        ext_left -= ext_per_node;
         while (ext_per_node--) {
             /* ipv4 external prefix */
             lsdb_reset_attr_template(&attr_template);
@@ -1012,9 +1012,9 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.prefix.metric = 100;
             attr_template.key.prefix.ext_flag = true;
 
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL;
-	    attr_template.key.start_tlv = true;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL;
+            attr_template.key.start_tlv = true;
             lsdb_add_node_attr(node, &attr_template);
             ext_addr4 += ext_incr4;
         }
@@ -1027,10 +1027,10 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             lspgen_store_addr(addr, attr_template.key.cap.router_id, sizeof(ipv4addr_t));
             attr_template.key.cap.srgb_base = ctx->srgb_base;
             attr_template.key.cap.srgb_range = ctx->srgb_range;
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
-	    attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
-	    attr_template.key.ordinal = 1;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+            attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
+            attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
         }
 
@@ -1039,48 +1039,48 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
          */
         CIRCLEQ_FOREACH(link, &node->link_qhead, link_qnode) {
 
-	    /*
-	     * Is this a connector link ?
-	     */
-	    if (link->key.remote_node_id[7] == CONNECTOR_MARKER) {
-		lsdb_reset_attr_template(&attr_template);
+            /*
+             * Is this a connector link ?
+             */
+            if (link->key.remote_node_id[7] == CONNECTOR_MARKER) {
+                lsdb_reset_attr_template(&attr_template);
 
-		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-		attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
-		attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
+                attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+                attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+                attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
 
-		memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
-		memcpy(attr_template.key.link.remote_link_id, link->key.remote_link_id, 4);
-		memcpy(attr_template.key.link.local_link_id, link->key.local_link_id, 4);
-		attr_template.key.link.metric = link->link_metric;
-		lsdb_add_node_attr(node, &attr_template);
-		continue;
-	    }
+                memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
+                memcpy(attr_template.key.link.remote_link_id, link->key.remote_link_id, 4);
+                memcpy(attr_template.key.link.local_link_id, link->key.local_link_id, 4);
+                attr_template.key.link.metric = link->link_metric;
+                lsdb_add_node_attr(node, &attr_template);
+                continue;
+            }
 
             /*
-	     * Generate a ptp neighbor for each link
-	     * TODO Type-2 LSA handling.
-	     */
+             * Generate a ptp neighbor for each link
+             * TODO Type-2 LSA handling.
+             */
             lsdb_reset_attr_template(&attr_template);
 
             addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_link_prefix.address, sizeof(ipv4addr_t));
             inc = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_link_prefix.len);
             addr += link->link_index * inc;
-	    addr_offset = 0;
-	    if (lspgen_load_addr(link->key.remote_node_id, 4) < lspgen_load_addr(link->key.local_node_id, 4)) {
-		addr_offset = 1;
-	    }
+            addr_offset = 0;
+            if (lspgen_load_addr(link->key.remote_node_id, 4) < lspgen_load_addr(link->key.local_node_id, 4)) {
+                addr_offset = 1;
+            }
 
-	    lspgen_store_addr(addr + addr_offset, attr_template.key.link.local_link_id, 4);
+            lspgen_store_addr(addr + addr_offset, attr_template.key.link.local_link_id, 4);
 
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
-	    attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+            attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
             memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
-	    metric = link->link_metric;
-	    if (metric > 65535) {
-		metric = 65535;
-	    }
+            metric = link->link_metric;
+            if (metric > 65535) {
+                metric = 65535;
+            }
             attr_template.key.link.metric = metric;
             lsdb_add_node_attr(node, &attr_template);
 
@@ -1090,13 +1090,13 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_link_prefix.len;
             attr_template.key.prefix.metric = metric;
 
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
-	    attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+            attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
             lsdb_add_node_attr(node, &attr_template);
         }
 
-	nodes_left--;
+        nodes_left--;
     } while (dict_itor_next(itor));
 
     dict_itor_free(itor);
@@ -1144,19 +1144,19 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
     do {
         node = *dict_itor_datum(itor);
 
-	LOG(LSDB, "Generating node %s (%s) attributes\n",
+        LOG(LSDB, "Generating node %s (%s) attributes\n",
             lsdb_format_node(node),
             lsdb_format_node_id(node->key.node_id));
 
-	/* Host name */
+        /* Host name */
         if (node->node_name) {
-	    lsdb_reset_attr_template(&attr_template);
-	    attr_template.key.ordinal = 1;
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
-	    attr_template.key.attr_cp[2] = OSPF_TLV_HOSTNAME;
-	    strncpy(attr_template.key.hostname, node->node_name, sizeof(attr_template.key.hostname)-1);
-	    lsdb_add_node_attr(node, &attr_template);
+            lsdb_reset_attr_template(&attr_template);
+            attr_template.key.ordinal = 1;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+            attr_template.key.attr_cp[2] = OSPF_TLV_HOSTNAME;
+            strncpy(attr_template.key.hostname, node->node_name, sizeof(attr_template.key.hostname)-1);
+            lsdb_add_node_attr(node, &attr_template);
         }
 
         /* IPv6 loopback prefix */
@@ -1164,33 +1164,33 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
         addr = lspgen_load_addr((uint8_t*)&ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
         addr += node->node_index;
         lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
-	attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
-	attr_template.key.prefix.node_flag = true;
-	attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	attr_template.key.attr_cp[1] = OSPF_LSA_INTRA_AREA_PREFIX;
-	attr_template.key.attr_cp[2] = OSPF_IA_PREFIX_LSA_PREFIX;
-	lsdb_add_node_attr(node, &attr_template);
+        attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
+        attr_template.key.prefix.node_flag = true;
+        attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+        attr_template.key.attr_cp[1] = OSPF_LSA_INTRA_AREA_PREFIX;
+        attr_template.key.attr_cp[2] = OSPF_IA_PREFIX_LSA_PREFIX;
+        lsdb_add_node_attr(node, &attr_template);
 
         if (!ctx->no_sr) {
-	    lsdb_reset_attr_template(&attr_template);
-	    lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
-	    attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
-	    attr_template.key.prefix.algos[0].sid = node->node_index;
-	    attr_template.key.prefix.algos[0].flags = LSDB_PREFIX_ALGO_SID;
-	    attr_template.key.prefix.algo_count = 1;
+            lsdb_reset_attr_template(&attr_template);
+            lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
+            attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
+            attr_template.key.prefix.algos[0].sid = node->node_index;
+            attr_template.key.prefix.algos[0].flags = LSDB_PREFIX_ALGO_SID;
+            attr_template.key.prefix.algo_count = 1;
 
-	    /* For SR use the Extended-Intra-Area-Router-LSA */
-	    attr_template.key.ordinal = 1;
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_E_INTRA_AREA_PREFIX;
-	    attr_template.key.attr_cp[2] = OSPF_TLV_INTRA_AREA_PREFIX;
-	    attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
-	    lsdb_add_node_attr(node, &attr_template);
-	}
+            /* For SR use the Extended-Intra-Area-Router-LSA */
+            attr_template.key.ordinal = 1;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_E_INTRA_AREA_PREFIX;
+            attr_template.key.attr_cp[2] = OSPF_TLV_INTRA_AREA_PREFIX;
+            attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
+            lsdb_add_node_attr(node, &attr_template);
+        }
 
         /* external prefixes */
-	ext_per_node = ext_left / nodes_left;
-	ext_left -= ext_per_node;
+        ext_per_node = ext_left / nodes_left;
+        ext_left -= ext_per_node;
         while (ext_per_node--) {
             /* ipv6 external prefix */
             lsdb_reset_attr_template(&attr_template);
@@ -1199,9 +1199,9 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.prefix.metric = 100;
             attr_template.key.prefix.tag = ext_per_node;
             attr_template.key.prefix.ext_flag = true;
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL6;
-	    attr_template.key.start_tlv = true;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL6;
+            attr_template.key.start_tlv = true;
             lsdb_add_node_attr(node, &attr_template);
             ext_addr6 += ext_incr6;
         }
@@ -1214,10 +1214,10 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
             lspgen_store_addr(addr, attr_template.key.cap.router_id, sizeof(ipv4addr_t));
             attr_template.key.cap.srgb_base = ctx->srgb_base;
             attr_template.key.cap.srgb_range = ctx->srgb_range;
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
-	    attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
-	    attr_template.key.ordinal = 1;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+            attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
+            attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
         }
 
@@ -1226,51 +1226,51 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
          */
         CIRCLEQ_FOREACH(link, &node->link_qhead, link_qnode) {
 
-	    /*
-	     * Is this a connector link ?
-	     */
-	    if (link->key.remote_node_id[7] == CONNECTOR_MARKER) {
-		lsdb_reset_attr_template(&attr_template);
+            /*
+             * Is this a connector link ?
+             */
+            if (link->key.remote_node_id[7] == CONNECTOR_MARKER) {
+                lsdb_reset_attr_template(&attr_template);
 
-		attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-		attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
-		attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
+                attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+                attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+                attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
 
-		memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
-		memcpy(attr_template.key.link.remote_link_id, link->key.remote_link_id, 4);
-		memcpy(attr_template.key.link.local_link_id, link->key.local_link_id, 4);
-		attr_template.key.link.metric = link->link_metric;
-		lsdb_add_node_attr(node, &attr_template);
-		continue;
-	    }
+                memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
+                memcpy(attr_template.key.link.remote_link_id, link->key.remote_link_id, 4);
+                memcpy(attr_template.key.link.local_link_id, link->key.local_link_id, 4);
+                attr_template.key.link.metric = link->link_metric;
+                lsdb_add_node_attr(node, &attr_template);
+                continue;
+            }
 
-	    /*
-	     * Generate a ptp neighbor for each link
-	     * TODO Type-2 LSA handling.
-	     */
+            /*
+             * Generate a ptp neighbor for each link
+             * TODO Type-2 LSA handling.
+             */
             lsdb_reset_attr_template(&attr_template);
 
             addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_link_prefix.address, sizeof(ipv4addr_t));
             inc = lspgen_get_prefix_inc(AF_INET, ctx->ipv4_link_prefix.len);
             addr += link->link_index * inc;
-	    if (lspgen_load_addr(link->key.remote_node_id, 4) < lspgen_load_addr(link->key.local_node_id, 4)) {
-		lspgen_store_addr(addr, attr_template.key.link.remote_link_id, 4);
-		lspgen_store_addr(addr+1, attr_template.key.link.local_link_id, 4);
-	    } else {
-		lspgen_store_addr(addr+1, attr_template.key.link.remote_link_id, 4);
-		lspgen_store_addr(addr, attr_template.key.link.local_link_id, 4);
-	    }
+            if (lspgen_load_addr(link->key.remote_node_id, 4) < lspgen_load_addr(link->key.local_node_id, 4)) {
+                lspgen_store_addr(addr, attr_template.key.link.remote_link_id, 4);
+                lspgen_store_addr(addr+1, attr_template.key.link.local_link_id, 4);
+            } else {
+                lspgen_store_addr(addr+1, attr_template.key.link.remote_link_id, 4);
+                lspgen_store_addr(addr, attr_template.key.link.local_link_id, 4);
+            }
 
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
-	    attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
+            attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_PTP;
             memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 4);
-	    metric = link->link_metric;
-	    if (metric > 65535) {
-		metric = 65535;
-	    }
-	    attr_template.key.link.metric = metric;
-	    lsdb_add_node_attr(node, &attr_template);
+            metric = link->link_metric;
+            if (metric > 65535) {
+                metric = 65535;
+            }
+            attr_template.key.link.metric = metric;
+            lsdb_add_node_attr(node, &attr_template);
 
             /* Generate an IPv6 prefix for each link */
             lsdb_reset_attr_template(&attr_template);
@@ -1280,19 +1280,19 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
             addr += link->link_index * inc;
             lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
             attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_link_prefix.len;
-	    metric = link->link_metric;
-	    if (metric > 65535) {
-		metric = 65535;
-	    }
+            metric = link->link_metric;
+            if (metric > 65535) {
+                metric = 65535;
+            }
             attr_template.key.prefix.metric = metric;
 
-	    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-	    attr_template.key.attr_cp[1] = OSPF_LSA_INTRA_AREA_PREFIX;
-	    attr_template.key.attr_cp[2] = OSPF_IA_PREFIX_LSA_PREFIX;
+            attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+            attr_template.key.attr_cp[1] = OSPF_LSA_INTRA_AREA_PREFIX;
+            attr_template.key.attr_cp[2] = OSPF_IA_PREFIX_LSA_PREFIX;
             lsdb_add_node_attr(node, &attr_template);
-	}
+        }
 
-	nodes_left--;
+        nodes_left--;
     } while (dict_itor_next(itor));
 
     dict_itor_free(itor);
@@ -1386,7 +1386,7 @@ lspgen_compute_end_prefix6(struct ipv6_prefix_ *start_prefix, unsigned int num_p
     end_prefix = *start_prefix;
 
     if (!num_prefixes) {
-    return &end_prefix;
+        return &end_prefix;
     }
 
     prefix_inc = lspgen_get_prefix_inc(AF_INET6, start_prefix->len);
@@ -1415,18 +1415,18 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
     }
 
     if (ctx->protocol_id == PROTO_ISIS) {
-	for (idx = 0; idx < ctx->num_area; idx++) {
-	    LOG(NORMAL, " Area %s\n", format_iso_prefix(&ctx->area[idx]));
-	}
-	LOG(NORMAL, " Level %u\n", ctx->topology_id.level);
-	LOG(NORMAL, " LSP Buffer size %u\n", ctx->lsp_buffer_size);
+        for (idx = 0; idx < ctx->num_area; idx++) {
+            LOG(NORMAL, " Area %s\n", format_iso_prefix(&ctx->area[idx]));
+        }
+        LOG(NORMAL, " Level %u\n", ctx->topology_id.level);
+        LOG(NORMAL, " LSP Buffer size %u\n", ctx->lsp_buffer_size);
 
     } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-	    LOG(NORMAL, " Area %s\n", format_ipv4_address(&ctx->topology_id.area));
+        LOG(NORMAL, " Area %s\n", format_ipv4_address(&ctx->topology_id.area));
     }
     LOG(NORMAL, " Sequence 0x%x, lsp-lifetime %u%s\n",
-	ctx->sequence, ctx->lsp_lifetime,
-	ctx->purge ? ", Purge" : "");
+        ctx->sequence, ctx->lsp_lifetime,
+        ctx->purge ? ", Purge" : "");
 
     if (ctx->authentication_key) {
         LOG(NORMAL, " Authentication-key %s, Authentication-type %s\n",
@@ -1496,76 +1496,76 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
 
     if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
 
-	char *tok;
+        char *tok;
 
-	/*
-	 * First check if this is an remote-id:local_ip format.
-	 */
-	colon_found = false;
-	for (src = 0; src < src_len; src++) {
-	    if (conn_src[src] == ':') {
-		colon_found = true;
-		break;
-	    }
-	}
-
-	if (!colon_found) {
-	    LOG(ERROR, "Connector '%s' not in remote_id:local_ip format\n", conn_src);
-	    return;
-	}
-
-	remote_id = 0;
-	local_ip = 0;
-	tok = strtok(conn_src, ":");
-        if (tok && scan_ipv4_address(conn_src, &remote_id)) {
-	    tok = strtok(NULL, ":");
-	    if (tok && scan_ipv4_address(tok, &local_ip)) {
-		write_le_uint(ctx->connector[ctx->num_connector].remote_node_id, 4, remote_id);
-		write_le_uint(ctx->connector[ctx->num_connector].local_link_id, 4, local_ip);
+        /*
+         * First check if this is an remote-id:local_ip format.
+         */
+        colon_found = false;
+        for (src = 0; src < src_len; src++) {
+            if (conn_src[src] == ':') {
+                colon_found = true;
+                break;
             }
         }
 
-	LOG(NORMAL, "Add connector to %s:%s\n",
-	    format_ipv4_address(&remote_id),
-	    format_ipv4_address(&local_ip));
-	ctx->num_connector++;
+        if (!colon_found) {
+            LOG(ERROR, "Connector '%s' not in remote_id:local_ip format\n", conn_src);
+            return;
+        }
+
+        remote_id = 0;
+        local_ip = 0;
+        tok = strtok(conn_src, ":");
+        if (tok && scan_ipv4_address(conn_src, &remote_id)) {
+            tok = strtok(NULL, ":");
+            if (tok && scan_ipv4_address(tok, &local_ip)) {
+                write_le_uint(ctx->connector[ctx->num_connector].remote_node_id, 4, remote_id);
+                write_le_uint(ctx->connector[ctx->num_connector].local_link_id, 4, local_ip);
+            }
+        }
+
+        LOG(NORMAL, "Add connector to %s:%s\n",
+            format_ipv4_address(&remote_id),
+            format_ipv4_address(&local_ip));
+        ctx->num_connector++;
 
     } else if (ctx->protocol_id == PROTO_ISIS) {
 
-	/* ISO node-ID format */
-	memset(conn_dst, 0, sizeof(conn_dst));
-	conn_dst[0] = '0';
-	conn_dst[1] = 'x';
-	dst = 2;
-	for (src = 0; src < src_len; src++) {
+        /* ISO node-ID format */
+        memset(conn_dst, 0, sizeof(conn_dst));
+        conn_dst[0] = '0';
+        conn_dst[1] = 'x';
+        dst = 2;
+        for (src = 0; src < src_len; src++) {
 
-	    if (dst >= sizeof(conn_dst)-2) {
-		break;
-	    }
+            if (dst >= sizeof(conn_dst)-2) {
+                break;
+            }
 
-	    if (conn_src[src] >= 'a' && conn_src[src] <= 'f') {
-		conn_dst[dst++] = conn_src[src];
-		continue;
-	    }
-	    if (conn_src[src] >= '0' && conn_src[src] <= '9') {
-		conn_dst[dst++] = conn_src[src];
-		continue;
-	    }
-	}
-	iso_node_id = strtoll(conn_dst, NULL, 16);
+            if (conn_src[src] >= 'a' && conn_src[src] <= 'f') {
+                conn_dst[dst++] = conn_src[src];
+                continue;
+            }
+            if (conn_src[src] >= '0' && conn_src[src] <= '9') {
+                conn_dst[dst++] = conn_src[src];
+                continue;
+            }
+        }
+        iso_node_id = strtoll(conn_dst, NULL, 16);
 
-	dst_len = strlen(&conn_dst[2]);
-	if (dst_len > 16) {
-	    LOG(ERROR, "illegal connector length %s\n", conn_src);
-	    return;
-	}
+        dst_len = strlen(&conn_dst[2]);
+        if (dst_len > 16) {
+            LOG(ERROR, "illegal connector length %s\n", conn_src);
+            return;
+        }
 
-	shift = (16 - dst_len) * 4;
-	write_be_uint(ctx->connector[ctx->num_connector].remote_node_id, 8, iso_node_id << shift);
+        shift = (16 - dst_len) * 4;
+        write_be_uint(ctx->connector[ctx->num_connector].remote_node_id, 8, iso_node_id << shift);
 
-	LOG(NORMAL, "Add connector to %s\n",
-	    lsdb_format_node_id(ctx->connector[ctx->num_connector].remote_node_id));
-	ctx->num_connector++;
+        LOG(NORMAL, "Add connector to %s\n",
+            lsdb_format_node_id(ctx->connector[ctx->num_connector].remote_node_id));
+        ctx->num_connector++;
     }
 }
 
@@ -1656,7 +1656,7 @@ main(int argc, char *argv[])
             case 'a':
                 if (ctx->protocol_id == PROTO_ISIS) {
                     if (ctx->num_area < 3) {
-                    scan_iso_prefix(optarg, &ctx->area[ctx->num_area++]);
+                        scan_iso_prefix(optarg, &ctx->area[ctx->num_area++]);
                     }
                 } else {
                     /* ospf2 and ospf3 */
@@ -1735,8 +1735,8 @@ main(int argc, char *argv[])
                     ctx->link_multiplier = 150;
                     LOG(ERROR, "Set link-multiplier to maximum %u\n", ctx->link_multiplier);
                 }
-		        break;
-	        case 'c':
+                break;
+            case 'c':
                 ctx->num_nodes = strtol(optarg, NULL, 10);
                 if (ctx->num_nodes < 5) {
                     ctx->num_nodes = 5;
@@ -1865,12 +1865,12 @@ main(int argc, char *argv[])
         lspgen_read_config(ctx);
     } else {
 
-	/*
-	 * Display default options.
-	 */
-	lspgen_log_ctx(ctx);
+        /*
+         * Display default options.
+         */
+        lspgen_log_ctx(ctx);
 
-	/*
+        /*
          * Generate a random graph.
          */
         lsdb_init_graph(ctx);
@@ -1878,13 +1878,13 @@ main(int argc, char *argv[])
         /*
          * Generate the node and link attributes.
          */
-	if (ctx->protocol_id == PROTO_ISIS) {
-	    lspgen_gen_isis_attr(ctx);
-	} else if (ctx->protocol_id == PROTO_OSPF2) {
-	    lspgen_gen_ospf2_attr(ctx);
-	} else if (ctx->protocol_id == PROTO_OSPF3) {
-	    lspgen_gen_ospf3_attr(ctx);
-	}
+        if (ctx->protocol_id == PROTO_ISIS) {
+            lspgen_gen_isis_attr(ctx);
+        } else if (ctx->protocol_id == PROTO_OSPF2) {
+            lspgen_gen_ospf2_attr(ctx);
+        } else if (ctx->protocol_id == PROTO_OSPF3) {
+            lspgen_gen_ospf3_attr(ctx);
+        }
     }
 
     /*

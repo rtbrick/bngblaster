@@ -153,51 +153,51 @@ lspgen_dump_pcap_node (struct lsdb_ctx_ *ctx, struct lsdb_node_ *node)
         push_le_uint(&buf, 4, ts_usec>>32); /* timestamp usec msb */
         push_le_uint(&buf, 4, ts_usec & 0xffffffff); /* timestamp usec lsb */
 
-	eth_header_length = 0;
+        eth_header_length = 0;
 
-	if (ctx->protocol_id == PROTO_ISIS) {
+        if (ctx->protocol_id == PROTO_ISIS) {
 
-	    /* IS-IS */
+            /* IS-IS */
 
-	    /* Account for the the faked ethernet & LLC header */
-	    eth_header_length = 17;
-	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* captured packet length */
-	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
+            /* Account for the the faked ethernet & LLC header */
+            eth_header_length = 17;
+            push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* captured packet length */
+            push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
 
-	    /* Fake an Ethernet & LLC header */
-	    push_be_uint(&buf, 6, 0x0180c2000014); /* Destination MAC */
-	    push_be_uint(&buf, 6, 0xf41e5e000000); /* Source MAC MAC */
-	    push_be_uint(&buf, 2, packet->buf[0].idx+3); /* Length + DSAP, SSAP, Mode */
-	    push_be_uint(&buf, 3, 0xfefe03); /* OSI DSAP, SSAP, Mode */
+            /* Fake an Ethernet & LLC header */
+            push_be_uint(&buf, 6, 0x0180c2000014); /* Destination MAC */
+            push_be_uint(&buf, 6, 0xf41e5e000000); /* Source MAC MAC */
+            push_be_uint(&buf, 2, packet->buf[0].idx+3); /* Length + DSAP, SSAP, Mode */
+            push_be_uint(&buf, 3, 0xfefe03); /* OSI DSAP, SSAP, Mode */
 
-	} else if (ctx->protocol_id == PROTO_OSPF2) {
+        } else if (ctx->protocol_id == PROTO_OSPF2) {
 
-	    /* OSPFv2 */
+            /* OSPFv2 */
 
-	    /* Account for the faked Ethernet header */
-	    eth_header_length = 14;
-	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* captured packet length */
-	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
+            /* Account for the faked Ethernet header */
+            eth_header_length = 14;
+            push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* captured packet length */
+            push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
 
-	    /* Fake an Ethernet header */
-	    push_be_uint(&buf, 6, 0x01005e000005); /* Destination MAC */
-	    push_be_uint(&buf, 6, 0xf41e5e000000); /* Source MAC MAC */
-	    push_be_uint(&buf, 2, 0x0800); /* Ethertype */
+            /* Fake an Ethernet header */
+            push_be_uint(&buf, 6, 0x01005e000005); /* Destination MAC */
+            push_be_uint(&buf, 6, 0xf41e5e000000); /* Source MAC MAC */
+            push_be_uint(&buf, 2, 0x0800); /* Ethertype */
 
-	} else if (ctx->protocol_id == PROTO_OSPF3) {
+        } else if (ctx->protocol_id == PROTO_OSPF3) {
 
-	    /* OSPFv3 */
+            /* OSPFv3 */
 
-	    /* Account for the faked Ethernet header */
-	    eth_header_length = 14;
-	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* captured packet length */
-	    push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
+            /* Account for the faked Ethernet header */
+            eth_header_length = 14;
+            push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* captured packet length */
+            push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
 
-	    /* Fake an Ethernet header */
-	    push_be_uint(&buf, 6, 0x333300000005); /* Destination MAC */
-	    push_be_uint(&buf, 6, 0xf41e5e000000); /* Source MAC MAC */
-	    push_be_uint(&buf, 2, 0x86dd); /* Ethertype */
-	}
+            /* Fake an Ethernet header */
+            push_be_uint(&buf, 6, 0x333300000005); /* Destination MAC */
+            push_be_uint(&buf, 6, 0xf41e5e000000); /* Source MAC MAC */
+            push_be_uint(&buf, 2, 0x86dd); /* Ethertype */
+        }
 
         /*
          * Copy packet
@@ -252,7 +252,7 @@ lspgen_dump_pcap (struct lsdb_ctx_ *ctx)
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);
         LOG_NOARG(ERROR, "Empty LSDB.\n");
-    return;
+        return;
     }
 
     /*

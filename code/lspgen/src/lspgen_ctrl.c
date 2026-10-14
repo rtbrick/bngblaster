@@ -289,7 +289,7 @@ lspgen_ctrl_write_cb(timer_s *timer)
     /*
      * Drain the change queue as long as there is buffer left.
      */
-     while (!CIRCLEQ_EMPTY(&ctx->packet_change_qhead)) {
+    while (!CIRCLEQ_EMPTY(&ctx->packet_change_qhead)) {
         packet = CIRCLEQ_FIRST(&ctx->packet_change_qhead);
 
         buffer_left = ctx->ctrl_io_buf.size - ctx->ctrl_io_buf.idx;

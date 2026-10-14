@@ -91,7 +91,7 @@ typedef struct lsdb_ctx_
     lsdb_proto_id_t protocol_id; /* e.g. "isis, ospf2, ospf3" */
     union {
         uint8_t level;      /* IS-IS */
-	uint32_t area;      /* OSPF */
+        uint32_t area;      /* OSPF */
     } topology_id;
 
     /*
@@ -156,9 +156,9 @@ typedef struct lsdb_ctx_
     bool ctrl_packet_first;
     bool quit_loop; /* Terminate loop after draining the LSDB */
     struct {
-    uint32_t octets_sent;
-    uint32_t packets_sent;
-    uint32_t packets_queued;    /* # packets on the change_list */
+        uint32_t octets_sent;
+        uint32_t packets_sent;
+        uint32_t packets_queued;    /* # packets on the change_list */
     } ctrl_stats;
 
     char *graphviz_filename;    /* File name for dumping LSDB in graphviz format. */
@@ -210,7 +210,7 @@ typedef struct lsdb_node_ {
      * Key in the dict
      */
     struct {
-    uint8_t node_id[LSDB_MAX_NODE_ID_SIZE];
+        uint8_t node_id[LSDB_MAX_NODE_ID_SIZE];
     } key;
 
     char *node_name;    /* Name of node if protocol supports it. */
@@ -227,18 +227,18 @@ typedef struct lsdb_link_ {
      * Key in the dict
      */
     struct {
-    uint8_t local_node_id[LSDB_MAX_NODE_ID_SIZE];
-    uint8_t remote_node_id[LSDB_MAX_NODE_ID_SIZE];
+        uint8_t local_node_id[LSDB_MAX_NODE_ID_SIZE];
+        uint8_t remote_node_id[LSDB_MAX_NODE_ID_SIZE];
 
-    /*
-     * optional, put interface index or ipv4/ipv6 address here
-     */
-    uint8_t local_link_id[LSDB_MAX_LINK_ID_SIZE];
+        /*
+         * optional, put interface index or ipv4/ipv6 address here
+         */
+        uint8_t local_link_id[LSDB_MAX_LINK_ID_SIZE];
 
-    /*
-     * optional, put interface index or ipv4/ipv6 address here
-     */
-    uint8_t remote_link_id[LSDB_MAX_LINK_ID_SIZE];
+        /*
+         * optional, put interface index or ipv4/ipv6 address here
+         */
+        uint8_t remote_link_id[LSDB_MAX_LINK_ID_SIZE];
     } key;
 
     uint32_t link_index;
@@ -366,23 +366,23 @@ typedef struct lsdb_attr_ {
      * Key in the dict
      */
     struct {
-	uint8_t ordinal; /* Used for ordering message generation */
-	uint8_t attr_cp[MAX_MSG_LEVEL]; /* code points for multiple levels */
-	uint8_t attr_type; /* Type */
-	bool start_tlv; /* Always start a fresh TLV */
-	union {
-	    struct lsdb_attr_prefix_ prefix;
-	    iso_prefix area;
-	    struct lsdb_attr_cap_ cap;
-	    struct lsdb_attr_fad_ fad;
-	    struct lsdb_attr_link_ link;
-	    uint8_t ipv4_addr[IPV4_ADDR_LEN];
-	    uint8_t ipv6_addr[IPV6_ADDR_LEN];
-	    uint32_t srlg;
-	    char hostname[36];
-	    uint16_t lsp_buffer_size;
-	    uint8_t protocol;
-	};
+        uint8_t ordinal; /* Used for ordering message generation */
+        uint8_t attr_cp[MAX_MSG_LEVEL]; /* code points for multiple levels */
+        uint8_t attr_type; /* Type */
+        bool start_tlv; /* Always start a fresh TLV */
+        union {
+            struct lsdb_attr_prefix_ prefix;
+            iso_prefix area;
+            struct lsdb_attr_cap_ cap;
+            struct lsdb_attr_fad_ fad;
+            struct lsdb_attr_link_ link;
+            uint8_t ipv4_addr[IPV4_ADDR_LEN];
+            uint8_t ipv6_addr[IPV6_ADDR_LEN];
+            uint32_t srlg;
+            char hostname[36];
+            uint16_t lsp_buffer_size;
+            uint8_t protocol;
+        };
     } key;
 
     uint32_t size; /* on-the wire space required in bytes */
@@ -406,7 +406,7 @@ typedef struct lsdb_packet_ {
      * Key in the dict
      */
     struct {
-	uint32_t id; /* Fragment # for IS-IS, LS-Update Packet # for OSPF */
+        uint32_t id; /* Fragment # for IS-IS, LS-Update Packet # for OSPF */
     } key;
 
     struct io_buffer_ buf[MAX_MSG_LEVEL];

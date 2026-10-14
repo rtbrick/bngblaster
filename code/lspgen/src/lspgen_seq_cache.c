@@ -222,6 +222,6 @@ lspgen_read_seq_cache(lsdb_ctx_t *ctx)
         lspgen_read_level_seq_cache(ctx, value);
     }
 
- cleanup:
+cleanup:
     json_decref(root_obj);
 }

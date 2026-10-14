@@ -93,7 +93,7 @@ lspgen_gen_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *pack
         case PROTO_OSPF3:
             break;
         default:
-	        LOG_NOARG(ERROR, "Unknown protocol\n");
+            LOG_NOARG(ERROR, "Unknown protocol\n");
     }
 }
 
@@ -141,7 +141,7 @@ calculate_ospf3_cksum(uint8_t *buf, uint16_t len)
     uint8_t protocol[4] = {0, 0, 0, 89} ; /* Protocol pseudoheader */
 
     if (len < 40) {
-	return 0;
+        return 0;
     }
 
     cksum = 0;
@@ -162,29 +162,29 @@ calculate_ospf3_cksum(uint8_t *buf, uint16_t len)
 uint32_t
 lspgen_calculate_auth_len(lsdb_ctx_t *ctx)
 {
-   uint8_t auth_len;
+    uint8_t auth_len;
 
-   auth_len = 0;
-   switch (ctx->protocol_id) {
-   case PROTO_ISIS:
-       if (ctx->authentication_key && ctx->authentication_type) {
-	   if (ctx->authentication_type == ISIS_AUTH_SIMPLE) {
-	       auth_len = strlen(ctx->authentication_key) + 1 + TLV_OVERHEAD;
-	   } if (ctx->authentication_type == ISIS_AUTH_MD5) {
-	       auth_len = 16 + 1 + TLV_OVERHEAD;
-	   }
-       }
-       break;
+    auth_len = 0;
+    switch (ctx->protocol_id) {
+        case PROTO_ISIS:
+            if (ctx->authentication_key && ctx->authentication_type) {
+                if (ctx->authentication_type == ISIS_AUTH_SIMPLE) {
+                    auth_len = strlen(ctx->authentication_key) + 1 + TLV_OVERHEAD;
+                } if (ctx->authentication_type == ISIS_AUTH_MD5) {
+                    auth_len = 16 + 1 + TLV_OVERHEAD;
+                }
+            }
+            break;
 
-       /*
-	* BNG Blaster computes the authentication trailer for OSPF2 and OSPF3
-	*/
-   case PROTO_OSPF2: /* fall through */
-   case PROTO_OSPF3: /* fall through */
-   default:
-       break;
-   }
-   return auth_len;
+        /*
+         * BNG Blaster computes the authentication trailer for OSPF2 and OSPF3
+         */
+        case PROTO_OSPF2: /* fall through */
+        case PROTO_OSPF3: /* fall through */
+        default:
+            break;
+    }
+    return auth_len;
 }
 
 void
@@ -229,12 +229,12 @@ lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *p
      * Set remaining lifetime
      */
     if (node->lsp_lifetime) {
-	lsp_lifetime = node->lsp_lifetime;
+        lsp_lifetime = node->lsp_lifetime;
     } else {
-	lsp_lifetime = ctx->lsp_lifetime;
+        lsp_lifetime = ctx->lsp_lifetime;
     }
     if (ctx->purge) {
-	lsp_lifetime = 0;
+        lsp_lifetime = 0;
     }
     write_be_uint(packet->data+10, 2, lsp_lifetime);
 
@@ -250,7 +250,7 @@ lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *p
     checksum = calculate_fletcher_checksum(buf->data+12, 12, buf->idx-12);
     write_be_uint(buf->data+24, 2, checksum);
     if (log_id[DEBUG].enable && validate_fletcher_checksum(buf->data+12, buf->idx-12)) {
-	    LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
+        LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
     }
 }
 
@@ -264,16 +264,16 @@ lspgen_close_all_message_levels (lsdb_packet_t *packet)
 
     state = 0;
     if (packet->prev_attr_cp[0]) {
-	state |= CLOSE_LEVEL0;
+        state |= CLOSE_LEVEL0;
     }
     if (packet->prev_attr_cp[1]) {
-	state |= CLOSE_LEVEL1;
+        state |= CLOSE_LEVEL1;
     }
     if (packet->prev_attr_cp[2]) {
-	state |= CLOSE_LEVEL2;
+        state |= CLOSE_LEVEL2;
     }
     if (packet->prev_attr_cp[3]) {
-	state |= CLOSE_LEVEL3;
+        state |= CLOSE_LEVEL3;
     }
 
     return state;
@@ -284,16 +284,16 @@ lspgen_finalize_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet
 {
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
-	lspgen_finalize_isis_packet(ctx, node, packet);
-	break;
+        lspgen_finalize_isis_packet(ctx, node, packet);
+        break;
     case PROTO_OSPF2:
-	lspgen_serialize_ospf2_state(NULL, packet, lspgen_close_all_message_levels(packet));
-	break;
+        lspgen_serialize_ospf2_state(NULL, packet, lspgen_close_all_message_levels(packet));
+        break;
     case PROTO_OSPF3:
-	lspgen_serialize_ospf3_state(NULL, packet, lspgen_close_all_message_levels(packet));
-	break;
+        lspgen_serialize_ospf3_state(NULL, packet, lspgen_close_all_message_levels(packet));
+        break;
     default:
-	LOG_NOARG(ERROR, "Unknown protocol\n");
+        LOG_NOARG(ERROR, "Unknown protocol\n");
     }
 }
 
@@ -566,14 +566,14 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
             push_be_uint(buf, 3, attr->key.link.metric); /* Metric */
             subtlv_len_idx = buf->idx;
             push_be_uint(buf, 1, 0); /* subTLVs length */
-	    if(attr->key.link.adjacency_sid > 0) {
-		push_be_uint(buf, 1, ISIS_SUBTLV_IS_EXT_ADJ_SID);
-		push_be_uint(buf, 1, 5);
-		push_be_uint(buf, 1, 0x30); /* set V and L flag always */
-		push_be_uint(buf, 1, 0);
-		push_be_uint(buf, 1, 0);
-	        push_be_uint(buf, 2, attr->key.link.adjacency_sid);
-	    }
+            if(attr->key.link.adjacency_sid > 0) {
+                push_be_uint(buf, 1, ISIS_SUBTLV_IS_EXT_ADJ_SID);
+                push_be_uint(buf, 1, 5);
+                push_be_uint(buf, 1, 0x30); /* set V and L flag always */
+                push_be_uint(buf, 1, 0);
+                push_be_uint(buf, 1, 0);
+                push_be_uint(buf, 2, attr->key.link.adjacency_sid);
+            }
             lspgen_serialize_msd(buf, ISIS_SUBTLV_IS_EXT_LINK_MSD, attr->key.link.msd);
             if (attr->key.link.asla) {
                 lspgen_serialize_asla(attr, buf);
@@ -590,7 +590,7 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
             attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
             push_data(buf, (uint8_t *)attr->key.hostname, attr_len);
             break;
-	case ISIS_TLV_LSP_BUFFER_SIZE:
+        case ISIS_TLV_LSP_BUFFER_SIZE:
             push_be_uint(buf, 2, attr->key.lsp_buffer_size);
             break;
         case ISIS_TLV_INT_IPV4_REACH: /* fall through */
@@ -682,11 +682,11 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
                 push_be_uint(buf, 1, 3); /* SID Type Length */
                 push_be_uint(buf, 3, attr->key.cap.srgb_base);
             }
-	    if (attr->key.cap.sr_algo_len > 0) {
-		push_be_uint(buf, 1, ISIS_SUBTLV_CAP_SR_ALGO); /* subTLV Type */
+            if (attr->key.cap.sr_algo_len > 0) {
+                push_be_uint(buf, 1, ISIS_SUBTLV_CAP_SR_ALGO); /* subTLV Type */
                 push_be_uint(buf, 1, attr->key.cap.sr_algo_len); /* Area Length in bytes */
                 push_data(buf, attr->key.cap.sr_algo, attr->key.cap.sr_algo_len);
-	    }
+            }
             lspgen_serialize_msd(buf, ISIS_SUBTLV_CAP_NODE_MSD, attr->key.cap.msd);
             break;
         case ISIS_TLV_BINDING:
@@ -731,7 +731,7 @@ lspgen_propagate_buffer_down (lsdb_packet_t *packet, uint level)
 
     /* boundary protection */
     if (level >= MAX_MSG_LEVEL - 1) {
-	return;
+        return;
     }
 
     cur = &packet->buf[level];
@@ -753,7 +753,7 @@ lspgen_propagate_buffer_up (lsdb_packet_t *packet, uint level)
 
     /* boundary protection */
     if (level == 0 || level >= MAX_MSG_LEVEL) {
-	return;
+        return;
     }
 
     cur = &packet->buf[level];
@@ -779,46 +779,46 @@ lspgen_format_serializer_state (uint16_t state)
     /* some close bits set ? */
     first = true;
     if (state & (CLOSE_LEVEL0|CLOSE_LEVEL1|CLOSE_LEVEL2|CLOSE_LEVEL3)) {
-	close = true;
-	len += snprintf(buf+len, sizeof(buf)-len, "close: ");
-	if (state & CLOSE_LEVEL0) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL0", first ? "" : ", ");
-	    first =false;
-	}
-	if (state & CLOSE_LEVEL1) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL1", first ? "" : ", ");
-	    first =false;
-	}
-	if (state & CLOSE_LEVEL2) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL2", first ? "" : ", ");
-	    first =false;
-	}
-	if (state & CLOSE_LEVEL3) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL3", first ? "" : ", ");
-	    first =false;
-	}
+        close = true;
+        len += snprintf(buf+len, sizeof(buf)-len, "close: ");
+        if (state & CLOSE_LEVEL0) {
+            len += snprintf(buf+len, sizeof(buf)-len, "%sL0", first ? "" : ", ");
+            first =false;
+        }
+        if (state & CLOSE_LEVEL1) {
+            len += snprintf(buf+len, sizeof(buf)-len, "%sL1", first ? "" : ", ");
+            first =false;
+        }
+        if (state & CLOSE_LEVEL2) {
+            len += snprintf(buf+len, sizeof(buf)-len, "%sL2", first ? "" : ", ");
+            first =false;
+        }
+        if (state & CLOSE_LEVEL3) {
+            len += snprintf(buf+len, sizeof(buf)-len, "%sL3", first ? "" : ", ");
+            first =false;
+        }
     }
 
     /* some open bits set ? */
     first = true;
     if (state & (OPEN_LEVEL0|OPEN_LEVEL1|OPEN_LEVEL2|OPEN_LEVEL3)) {
-	len += snprintf(buf+len, sizeof(buf)-len, "%sopen: ", close ? ", " : "");
-	if (state & OPEN_LEVEL0) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL0", first ? "" : ", ");
-	    first =false;
-	}
-	if (state & OPEN_LEVEL1) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL1", first ? "" : ", ");
-	    first =false;
-	}
-	if (state & OPEN_LEVEL2) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL2", first ? "" : ", ");
-	    first =false;
-	}
-	if (state & OPEN_LEVEL3) {
-	    len += snprintf(buf+len, sizeof(buf)-len, "%sL3", first ? "" : ", ");
-	    first =false;
-	}
+        len += snprintf(buf+len, sizeof(buf)-len, "%sopen: ", close ? ", " : "");
+        if (state & OPEN_LEVEL0) {
+            len += snprintf(buf+len, sizeof(buf)-len, "%sL0", first ? "" : ", ");
+            first =false;
+        }
+        if (state & OPEN_LEVEL1) {
+            len += snprintf(buf+len, sizeof(buf)-len, "%sL1", first ? "" : ", ");
+            first =false;
+        }
+        if (state & OPEN_LEVEL2) {
+            len += snprintf(buf+len, sizeof(buf)-len, "%sL2", first ? "" : ", ");
+            first =false;
+        }
+        if (state & OPEN_LEVEL3) {
+            len += snprintf(buf+len, sizeof(buf)-len, "%sL3", first ? "" : ", ");
+            first =false;
+        }
     }
 
     return buf;
@@ -832,7 +832,7 @@ lspgen_get_ospf_age(lsdb_node_t *node)
     ctx = node->ctx;
 
     if (ctx->purge) {
-	return 3600;
+        return 3600;
     }
 
     return 1;
@@ -871,299 +871,299 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
     /* close Level 3 */
     if (state & CLOSE_LEVEL3) {
-	switch (packet->prev_attr_cp[3]) {
-	case OSPF_SUBTLV_PREFIX_SID:
-	    write_be_uint(buf3->data+2, 2, buf3->idx-4); /* Update length */
-	    push_pad4(buf3);
-	    break;
-	default:
-	    break;
-	}
+        switch (packet->prev_attr_cp[3]) {
+        case OSPF_SUBTLV_PREFIX_SID:
+            write_be_uint(buf3->data+2, 2, buf3->idx-4); /* Update length */
+            push_pad4(buf3);
+            break;
+        default:
+            break;
+        }
 
-	lspgen_propagate_buffer_up(packet, 3);
+        lspgen_propagate_buffer_up(packet, 3);
     }
 
     /* close Level 2 */
     if (state & CLOSE_LEVEL2) {
-	switch (packet->prev_attr_cp[2]) {
-	case OSPF_TLV_EXTENDED_PREFIX_RANGE: /* fall through */
-	case OSPF_TLV_EXTENDED_PREFIX:
-	case OSPF_TLV_SID_LABEL_RANGE:
-	    write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
-	    push_pad4(buf2);
-	default:
-	    break;
-	}
+        switch (packet->prev_attr_cp[2]) {
+        case OSPF_TLV_EXTENDED_PREFIX_RANGE: /* fall through */
+        case OSPF_TLV_EXTENDED_PREFIX:
+        case OSPF_TLV_SID_LABEL_RANGE:
+            write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
+            push_pad4(buf2);
+        default:
+            break;
+        }
 
-	lspgen_propagate_buffer_up(packet, 2);
+        lspgen_propagate_buffer_up(packet, 2);
     }
 
     /* close Level 1 */
     if (state & CLOSE_LEVEL1) {
-	switch (packet->prev_attr_cp[1]) {
-	case OSPF_LSA_ROUTER:
-	case OSPF_LSA_EXTERNAL:
-	case OSPF_LSA_OPAQUE_AREA_RI:
-	case OSPF_LSA_OPAQUE_AREA_EP:
-	    inc_be_uint(buf0->data+20+24, 4); /* Update #LSAs */
+        switch (packet->prev_attr_cp[1]) {
+        case OSPF_LSA_ROUTER:
+        case OSPF_LSA_EXTERNAL:
+        case OSPF_LSA_OPAQUE_AREA_RI:
+        case OSPF_LSA_OPAQUE_AREA_EP:
+            inc_be_uint(buf0->data+20+24, 4); /* Update #LSAs */
 
-	    write_be_uint(buf1->data+18, 2, buf1->idx); /* Update length */
+            write_be_uint(buf1->data+18, 2, buf1->idx); /* Update length */
 
-	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
-	    checksum = calculate_fletcher_checksum(buf1->data+2, 14, buf1->idx-2);
-	    write_be_uint(buf1->data+16, 2, checksum); /* LSA Checksum */
-	    if (log_id[DEBUG].enable && validate_fletcher_checksum(buf1->data+2, buf1->idx-2)) {
-		    LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
-	    }
-	    break;
-	default:
-	    break;
-	}
+            write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
+            checksum = calculate_fletcher_checksum(buf1->data+2, 14, buf1->idx-2);
+            write_be_uint(buf1->data+16, 2, checksum); /* LSA Checksum */
+            if (log_id[DEBUG].enable && validate_fletcher_checksum(buf1->data+2, buf1->idx-2)) {
+                LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
+            }
+            break;
+        default:
+            break;
+        }
 
-	lspgen_propagate_buffer_up(packet, 1);
+        lspgen_propagate_buffer_up(packet, 1);
     }
 
     /* close Level 0 */
     if (state & CLOSE_LEVEL0) {
-	switch (packet->prev_attr_cp[0]) {
-	    case OSPF_MSG_LSUPDATE:
-		write_be_uint(buf0->data+20+2, 2, buf0->idx - 20); /* Packet length */
-		write_be_uint(buf0->data+20+12, 2, calculate_cksum(buf0->data+20, buf0->idx-20)); /* Checksum */
+        switch (packet->prev_attr_cp[0]) {
+            case OSPF_MSG_LSUPDATE:
+                write_be_uint(buf0->data+20+2, 2, buf0->idx - 20); /* Packet length */
+                write_be_uint(buf0->data+20+12, 2, calculate_cksum(buf0->data+20, buf0->idx-20)); /* Checksum */
 
-		write_be_uint(buf0->data+2, 2, buf0->idx); /* IP Total length */
-		write_le_uint(buf0->data+10, 2, calculate_cksum(buf0->data, 20)); /* IP header checksum */
-		break;
-	default:
-	    break;
-	}
+                write_be_uint(buf0->data+2, 2, buf0->idx); /* IP Total length */
+                write_le_uint(buf0->data+10, 2, calculate_cksum(buf0->data, 20)); /* IP header checksum */
+                break;
+        default:
+            break;
+        }
     }
 
     /* open Level 0 */
     if (state & OPEN_LEVEL0) {
 
-	switch(attr->key.attr_cp[0]) {
-	case OSPF_MSG_LSUPDATE:
+        switch(attr->key.attr_cp[0]) {
+        case OSPF_MSG_LSUPDATE:
 
-	    /* IPv4 header */
-	    push_be_uint(buf0, 1, 0x45); /* Version, Header Length */
-	    push_be_uint(buf0, 1, 0xc0); /* TOS */
-	    push_be_uint(buf0, 2, 0); /* Total length - will be overwritten later */
-	    push_be_uint(buf0, 2, 0); /* Identification */
-	    push_be_uint(buf0, 2, 0); /* Flags & Fragment offset */
-	    push_be_uint(buf0, 1, 255); /* TTL */
-	    push_be_uint(buf0, 1, 89); /* Protocol */
-	    push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
-	    push_data(buf0, ctx->root_node_id, 4); /* Source Address */
-	    push_be_uint(buf0, 4, 0xe0000005); /* Destination Address */
+            /* IPv4 header */
+            push_be_uint(buf0, 1, 0x45); /* Version, Header Length */
+            push_be_uint(buf0, 1, 0xc0); /* TOS */
+            push_be_uint(buf0, 2, 0); /* Total length - will be overwritten later */
+            push_be_uint(buf0, 2, 0); /* Identification */
+            push_be_uint(buf0, 2, 0); /* Flags & Fragment offset */
+            push_be_uint(buf0, 1, 255); /* TTL */
+            push_be_uint(buf0, 1, 89); /* Protocol */
+            push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
+            push_data(buf0, ctx->root_node_id, 4); /* Source Address */
+            push_be_uint(buf0, 4, 0xe0000005); /* Destination Address */
 
-	    /* OSPFv2 header */
-	    push_be_uint(buf0, 1, 2); /* Version */
-	    push_be_uint(buf0, 1, 4); /* Msg: LS-Update  */
-	    push_be_uint(buf0, 2, 0); /* Packet length - will be overwritten later */
+            /* OSPFv2 header */
+            push_be_uint(buf0, 1, 2); /* Version */
+            push_be_uint(buf0, 1, 4); /* Msg: LS-Update  */
+            push_be_uint(buf0, 2, 0); /* Packet length - will be overwritten later */
 
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf0, 4, router_id); /* Router ID */
-	    push_be_uint(buf0, 4, ctx->topology_id.area); /* Area ID */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf0, 4, router_id); /* Router ID */
+            push_be_uint(buf0, 4, ctx->topology_id.area); /* Area ID */
 
-	    push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
 
-	    push_be_uint(buf0, 2, 0); /* Authentication Type */
-	    push_be_uint(buf0, 8, 0); /* Authentication */
+            push_be_uint(buf0, 2, 0); /* Authentication Type */
+            push_be_uint(buf0, 8, 0); /* Authentication */
 
-	    push_be_uint(buf0, 4, 0); /* # LSAs - will be overwritten later */
-	    break;
-	default:
+            push_be_uint(buf0, 4, 0); /* # LSAs - will be overwritten later */
+            break;
+        default:
             LOG(ERROR, "No Level 0 open packet serializer for attr %s\n",
-		val2key(ospf_attr_names, attr->key.attr_cp[0]));
-	    return;
-	}
+                val2key(ospf_attr_names, attr->key.attr_cp[0]));
+            return;
+        }
 
-	lspgen_propagate_buffer_down(packet, 0);
+        lspgen_propagate_buffer_down(packet, 0);
     }
 
     /* open Level 1 */
     if (state & OPEN_LEVEL1) {
 
-	switch(attr->key.attr_cp[1]) {
-	case OSPF_LSA_ROUTER:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 1, 0); /* Options */
-	    push_be_uint(buf1, 1, 1); /* LS-Type: Router-LSA  */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Link State ID */
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+        switch(attr->key.attr_cp[1]) {
+        case OSPF_LSA_ROUTER:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 1, 0); /* Options */
+            push_be_uint(buf1, 1, 1); /* LS-Type: Router-LSA  */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, router_id); /* Link State ID */
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
-	    push_be_uint(buf1, 1, 0x02); /* Flags, E */
-	    push_be_uint(buf1, 1, 0);
-	    push_be_uint(buf1, 2, 0); /* # links - will be overwritten later */
-	    break;
+            push_be_uint(buf1, 1, 0x02); /* Flags, E */
+            push_be_uint(buf1, 1, 0);
+            push_be_uint(buf1, 2, 0); /* # links - will be overwritten later */
+            break;
 
-	case OSPF_LSA_EXTERNAL:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 1, 0); /* Options */
-	    push_be_uint(buf1, 1, 5); /* LS-Type  */
-	    push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+        case OSPF_LSA_EXTERNAL:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 1, 0); /* Options */
+            push_be_uint(buf1, 1, 5); /* LS-Type  */
+            push_data(buf1, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link State ID */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
             mask = 0xffffffff;
             /* convert prefix length to mask */
             mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
             push_be_uint(buf1, 4, mask); /* Network Mask */
 
-	    push_be_uint(buf1, 1, 0x80); /* E2 */
+            push_be_uint(buf1, 1, 0x80); /* E2 */
             push_be_uint(buf1, 3, attr->key.prefix.metric); /* Metric */
-	    push_be_uint(buf1, 4, 0); /* Forwarding Address */
-	    push_be_uint(buf1, 4, 0); /* External Route Tag */
-	    break;
+            push_be_uint(buf1, 4, 0); /* Forwarding Address */
+            push_be_uint(buf1, 4, 0); /* External Route Tag */
+            break;
 
-	case OSPF_LSA_OPAQUE_AREA_RI:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 1, 0); /* Options */
-	    push_be_uint(buf1, 1, 10); /* LS-Type  */
-	    push_be_uint(buf1, 1, 4); /* Opaque Type: Router-Information */
-	    push_be_uint(buf1, 3, 0); /* Opaque subtype  */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
-	    break;
+        case OSPF_LSA_OPAQUE_AREA_RI:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 1, 0); /* Options */
+            push_be_uint(buf1, 1, 10); /* LS-Type  */
+            push_be_uint(buf1, 1, 4); /* Opaque Type: Router-Information */
+            push_be_uint(buf1, 3, 0); /* Opaque subtype  */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+            break;
 
-	case OSPF_LSA_OPAQUE_AREA_EP:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 1, 0); /* Options */
-	    push_be_uint(buf1, 1, 10); /* LS-Type  */
-	    push_be_uint(buf1, 1, 7); /* Opaque Type: Extended Prefix */
-	    push_be_uint(buf1, 3, 0); /* Opaque subtype  */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
-	    break;
+        case OSPF_LSA_OPAQUE_AREA_EP:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 1, 0); /* Options */
+            push_be_uint(buf1, 1, 10); /* LS-Type  */
+            push_be_uint(buf1, 1, 7); /* Opaque Type: Extended Prefix */
+            push_be_uint(buf1, 3, 0); /* Opaque subtype  */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+            break;
 
-	default:
+        default:
             LOG(ERROR, "No Level 1 open packet serializer for attr %s\n",
-		val2key(ospf_attr_names, attr->key.attr_cp[1]));
-	    return;
-	}
+                val2key(ospf_attr_names, attr->key.attr_cp[1]));
+            return;
+        }
 
-	lspgen_propagate_buffer_down(packet, 1);
+        lspgen_propagate_buffer_down(packet, 1);
     }
 
     /*
      * If users wants to generate purges encoding stops at level 1.
      */
     if (ctx->purge) {
-	return;
+        return;
     }
 
     /* open Level 2 */
     if (state & OPEN_LEVEL2) {
-	switch(attr->key.attr_cp[2]) {
-	case OSPF_ROUTER_LSA_LINK_PTP:
-	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Link ID */
-	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_link_id, 4)); /* Link Data */
-	    push_be_uint(buf2, 1, 1); /* Type ptp */
-	    push_be_uint(buf2, 1, 0); /* #TOS */
-	    push_be_uint(buf2, 2, attr->key.link.metric); /* metric */
+        switch(attr->key.attr_cp[2]) {
+        case OSPF_ROUTER_LSA_LINK_PTP:
+            push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Link ID */
+            push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_link_id, 4)); /* Link Data */
+            push_be_uint(buf2, 1, 1); /* Type ptp */
+            push_be_uint(buf2, 1, 0); /* #TOS */
+            push_be_uint(buf2, 2, attr->key.link.metric); /* metric */
 
-	    inc_be_uint(buf1->data+22, 2); /* Update #links */
-	    break;
+            inc_be_uint(buf1->data+22, 2); /* Update #links */
+            break;
 
-	case OSPF_ROUTER_LSA_LINK_STUB:
+        case OSPF_ROUTER_LSA_LINK_STUB:
             push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link ID */
             mask = 0xffffffff;
             /* convert prefix length to mask */
             mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
             push_be_uint(buf2, 4, mask); /* Link Data */
-	    push_be_uint(buf2, 1, 3); /* Type stub */
-	    push_be_uint(buf2, 1, 0); /* #TOS */
-	    push_be_uint(buf2, 2, attr->key.prefix.metric); /* metric */
+            push_be_uint(buf2, 1, 3); /* Type stub */
+            push_be_uint(buf2, 1, 0); /* #TOS */
+            push_be_uint(buf2, 2, attr->key.prefix.metric); /* metric */
 
-	    inc_be_uint(buf1->data+22, 2); /* Update #links */
-	    break;
+            inc_be_uint(buf1->data+22, 2); /* Update #links */
+            break;
 
-	case OSPF_TLV_HOSTNAME:
-	    attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
-	    if (attr_len) {
-		push_be_uint(buf2, 2, 7); /* Type */
-		push_be_uint(buf2, 2, attr_len); /* Length */
-		push_data(buf2, (uint8_t *)attr->key.hostname, attr_len);
-		push_pad4(buf2);
-	    }
-	    break;
+        case OSPF_TLV_HOSTNAME:
+            attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
+            if (attr_len) {
+                push_be_uint(buf2, 2, 7); /* Type */
+                push_be_uint(buf2, 2, attr_len); /* Length */
+                push_data(buf2, (uint8_t *)attr->key.hostname, attr_len);
+                push_pad4(buf2);
+            }
+            break;
 
-	case OSPF_TLV_SID_LABEL_RANGE:
-	    if (attr->key.cap.srgb_base && attr->key.cap.srgb_range) {
-		push_be_uint(buf2, 2, 9); /* Type */
-		push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
-		push_be_uint(buf2, 3, attr->key.cap.srgb_range); /* Range size */
-		push_be_uint(buf2, 1, 0); /* Reserved */
+        case OSPF_TLV_SID_LABEL_RANGE:
+            if (attr->key.cap.srgb_base && attr->key.cap.srgb_range) {
+                push_be_uint(buf2, 2, 9); /* Type */
+                push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
+                push_be_uint(buf2, 3, attr->key.cap.srgb_range); /* Range size */
+                push_be_uint(buf2, 1, 0); /* Reserved */
 
-		/* XXX Move this to level 3 */
-		push_be_uint(buf2, 2, 1); /* SID Type Label */
-		push_be_uint(buf2, 2, 3); /* SID Type Length */
-		push_be_uint(buf2, 3, attr->key.cap.srgb_base);
-		push_pad4(buf2);
-	    }
-	    break;
+                /* XXX Move this to level 3 */
+                push_be_uint(buf2, 2, 1); /* SID Type Label */
+                push_be_uint(buf2, 2, 3); /* SID Type Length */
+                push_be_uint(buf2, 3, attr->key.cap.srgb_base);
+                push_pad4(buf2);
+            }
+            break;
 
-	case OSPF_TLV_EXTENDED_PREFIX_RANGE:
-	    push_be_uint(buf2, 2, 2); /* Type */
-	    push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
-	    push_be_uint(buf2, 1, attr->key.prefix.ipv4_prefix.len);
-	    push_be_uint(buf2, 1, 0); /* AF ipv4 */
-	    push_be_uint(buf2, 2, 1); /* Range size */
-	    push_be_uint(buf2, 1, 0); /* Flags */
-	    push_be_uint(buf2, 3, 0); /* Reserved */
-	    push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Prefix */
-	    break;
+        case OSPF_TLV_EXTENDED_PREFIX_RANGE:
+            push_be_uint(buf2, 2, 2); /* Type */
+            push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
+            push_be_uint(buf2, 1, attr->key.prefix.ipv4_prefix.len);
+            push_be_uint(buf2, 1, 0); /* AF ipv4 */
+            push_be_uint(buf2, 2, 1); /* Range size */
+            push_be_uint(buf2, 1, 0); /* Flags */
+            push_be_uint(buf2, 3, 0); /* Reserved */
+            push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Prefix */
+            break;
 
-	case OSPF_TLV_EXTENDED_PREFIX:
-	    push_be_uint(buf2, 2, 1); /* Type */
-	    push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
-	    push_be_uint(buf2, 1, 1); /* Route Type: Intra Area */
-	    push_be_uint(buf2, 1, attr->key.prefix.ipv4_prefix.len);
-	    push_be_uint(buf2, 1, 0); /* AF ipv4 */
-	    push_be_uint(buf2, 1, 0); /* Flags */
-	    push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Prefix */
-	    break;
+        case OSPF_TLV_EXTENDED_PREFIX:
+            push_be_uint(buf2, 2, 1); /* Type */
+            push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
+            push_be_uint(buf2, 1, 1); /* Route Type: Intra Area */
+            push_be_uint(buf2, 1, attr->key.prefix.ipv4_prefix.len);
+            push_be_uint(buf2, 1, 0); /* AF ipv4 */
+            push_be_uint(buf2, 1, 0); /* Flags */
+            push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Prefix */
+            break;
 
-	default:
+        default:
             LOG(ERROR, "No Level 2 open packet serializer for attr %s\n",
-		val2key(ospf_attr_names, attr->key.attr_cp[2]));
-	    return;
-	}
+                val2key(ospf_attr_names, attr->key.attr_cp[2]));
+            return;
+        }
 
-	lspgen_propagate_buffer_down(packet, 2);
+        lspgen_propagate_buffer_down(packet, 2);
     }
 
     /* open Level 3 */
     if (state & OPEN_LEVEL3) {
-	switch(attr->key.attr_cp[3]) {
-	case OSPF_SUBTLV_PREFIX_SID:
-	    push_be_uint(buf3, 2, 2); /* Type */
-	    push_be_uint(buf3, 2, 0); /* Length - will be overwritten later */
-	    push_be_uint(buf3, 3, 0); /* Flags, Reserved, MT-ID */
-	    push_be_uint(buf3, 1, attr->key.prefix.algos[0].algo); /* Algorithm */
-	    push_be_uint(buf3, 4, attr->key.prefix.algos[0].sid); /* SID Index */
-	    break;
+        switch(attr->key.attr_cp[3]) {
+        case OSPF_SUBTLV_PREFIX_SID:
+            push_be_uint(buf3, 2, 2); /* Type */
+            push_be_uint(buf3, 2, 0); /* Length - will be overwritten later */
+            push_be_uint(buf3, 3, 0); /* Flags, Reserved, MT-ID */
+            push_be_uint(buf3, 1, attr->key.prefix.algos[0].algo); /* Algorithm */
+            push_be_uint(buf3, 4, attr->key.prefix.algos[0].sid); /* SID Index */
+            break;
 
-	default:
+        default:
             LOG(ERROR, "No Level 3 open packet serializer for attr %s\n",
-		val2key(ospf_attr_names, attr->key.attr_cp[3]));
-	    return;
-	}
+                val2key(ospf_attr_names, attr->key.attr_cp[3]));
+            return;
+        }
 
-	lspgen_propagate_buffer_down(packet, 3);
+        lspgen_propagate_buffer_down(packet, 3);
     }
 
 }
@@ -1189,327 +1189,327 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
     /* close Level 3 */
     if (state & CLOSE_LEVEL3) {
-	switch (packet->prev_attr_cp[3]) {
-	case OSPF_SUBTLV_PREFIX_SID:
-	    write_be_uint(buf3->data+2, 2, buf3->idx-4); /* Update length */
-	    push_pad4(buf3);
-	    break;
-	default:
-	    break;
-	}
+        switch (packet->prev_attr_cp[3]) {
+        case OSPF_SUBTLV_PREFIX_SID:
+            write_be_uint(buf3->data+2, 2, buf3->idx-4); /* Update length */
+            push_pad4(buf3);
+            break;
+        default:
+            break;
+        }
 
-	lspgen_propagate_buffer_up(packet, 3);
+        lspgen_propagate_buffer_up(packet, 3);
     }
 
     /* close Level 2 */
     if (state & CLOSE_LEVEL2) {
-	switch (packet->prev_attr_cp[2]) {
-	case OSPF_TLV_INTRA_AREA_PREFIX:
-	    write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
-	    push_pad4(buf2);
-	default:
-	    break;
-	}
+        switch (packet->prev_attr_cp[2]) {
+        case OSPF_TLV_INTRA_AREA_PREFIX:
+            write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
+            push_pad4(buf2);
+        default:
+            break;
+        }
 
-	lspgen_propagate_buffer_up(packet, 2);
+        lspgen_propagate_buffer_up(packet, 2);
     }
 
 
     /* close Level 1 */
     if (state & CLOSE_LEVEL1) {
-	switch (packet->prev_attr_cp[1]) {
-	case OSPF_LSA_ROUTER:
-	case OSPF_LSA_EXTERNAL:
-	case OSPF_LSA_EXTERNAL6:
-	case OSPF_LSA_OPAQUE_AREA_RI:
-	case OSPF_LSA_OPAQUE_AREA_EP:
-	case OSPF_LSA_INTRA_AREA_PREFIX:
-	case OSPF_LSA_E_INTRA_AREA_PREFIX: /* fall through */
-	default:
-	    inc_be_uint(buf0->data+40+16, 4); /* Update #LSAs */
-	    write_be_uint(buf1->data+18, 2, buf1->idx); /* Update Packet length */
-	    write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
-	    checksum = calculate_fletcher_checksum(buf1->data+2, 14, buf1->idx-2);
-	    write_be_uint(buf1->data+16, 2, checksum); /* Update LSA Checksum */
-	    if (log_id[DEBUG].enable && validate_fletcher_checksum(buf1->data+2, buf1->idx-2)) {
-		    LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
-	    }
-	    break;
-	}
+        switch (packet->prev_attr_cp[1]) {
+        case OSPF_LSA_ROUTER:
+        case OSPF_LSA_EXTERNAL:
+        case OSPF_LSA_EXTERNAL6:
+        case OSPF_LSA_OPAQUE_AREA_RI:
+        case OSPF_LSA_OPAQUE_AREA_EP:
+        case OSPF_LSA_INTRA_AREA_PREFIX:
+        case OSPF_LSA_E_INTRA_AREA_PREFIX: /* fall through */
+        default:
+            inc_be_uint(buf0->data+40+16, 4); /* Update #LSAs */
+            write_be_uint(buf1->data+18, 2, buf1->idx); /* Update Packet length */
+            write_be_uint(buf1->data+16, 2, 0); /* reset checksum field */
+            checksum = calculate_fletcher_checksum(buf1->data+2, 14, buf1->idx-2);
+            write_be_uint(buf1->data+16, 2, checksum); /* Update LSA Checksum */
+            if (log_id[DEBUG].enable && validate_fletcher_checksum(buf1->data+2, buf1->idx-2)) {
+                LOG(DEBUG, "Checksum error 0x%04x\n", checksum);
+            }
+            break;
+        }
 
-	lspgen_propagate_buffer_up(packet, 1);
+        lspgen_propagate_buffer_up(packet, 1);
     }
 
     /* close Level 0 */
     if (state & CLOSE_LEVEL0) {
-	switch (packet->prev_attr_cp[0]) {
-	    case OSPF_MSG_LSUPDATE:
-		write_be_uint(buf0->data+40+2, 2, buf0->idx - 40); /* Packet length */
-		write_be_uint(buf0->data+4, 2, buf0->idx - 40); /* Payload length */
-		write_le_uint(buf0->data+40+12, 2, calculate_ospf3_cksum(buf0->data, buf0->idx)); /* Checksum */
-		break;
-	default:
-	    break;
-	}
+        switch (packet->prev_attr_cp[0]) {
+            case OSPF_MSG_LSUPDATE:
+                write_be_uint(buf0->data+40+2, 2, buf0->idx - 40); /* Packet length */
+                write_be_uint(buf0->data+4, 2, buf0->idx - 40); /* Payload length */
+                write_le_uint(buf0->data+40+12, 2, calculate_ospf3_cksum(buf0->data, buf0->idx)); /* Checksum */
+                break;
+        default:
+            break;
+        }
     }
 
     /* open Level 0 */
     if (state & OPEN_LEVEL0) {
 
-	switch(attr->key.attr_cp[0]) {
-	case OSPF_MSG_LSUPDATE:
+        switch(attr->key.attr_cp[0]) {
+        case OSPF_MSG_LSUPDATE:
 
-	    /* IPv6 header */
-	    push_be_uint(buf0, 1, 0x6c); /* Version, Traffic Class MSB */
-	    push_be_uint(buf0, 3, 0); /* Flow label  */
-	    push_be_uint(buf0, 2, 0); /* Payload length - will be overwritten later */
-	    push_be_uint(buf0, 1, 89); /* Next Header */
-	    push_be_uint(buf0, 1, 255); /* Hop limit */
+            /* IPv6 header */
+            push_be_uint(buf0, 1, 0x6c); /* Version, Traffic Class MSB */
+            push_be_uint(buf0, 3, 0); /* Flow label  */
+            push_be_uint(buf0, 2, 0); /* Payload length - will be overwritten later */
+            push_be_uint(buf0, 1, 89); /* Next Header */
+            push_be_uint(buf0, 1, 255); /* Hop limit */
             push_data(buf0, (uint8_t *)&ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN); /* Source Address */
-	    push_be_uint(buf0, 8, 0xff02000000000000); /* Destination Address */
-	    push_be_uint(buf0, 8, 5); /* Destination Address */
+            push_be_uint(buf0, 8, 0xff02000000000000); /* Destination Address */
+            push_be_uint(buf0, 8, 5); /* Destination Address */
 
-	    /* OSPFv3 header */
-	    push_be_uint(buf0, 1, 3); /* Version */
-	    push_be_uint(buf0, 1, 4); /* Msg: LS-Update */
-	    push_be_uint(buf0, 2, 0); /* Packet length - will be overwritten later */
+            /* OSPFv3 header */
+            push_be_uint(buf0, 1, 3); /* Version */
+            push_be_uint(buf0, 1, 4); /* Msg: LS-Update */
+            push_be_uint(buf0, 2, 0); /* Packet length - will be overwritten later */
 
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf0, 4, router_id); /* Router ID */
-	    push_be_uint(buf0, 4, ctx->topology_id.area); /* Area ID */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf0, 4, router_id); /* Router ID */
+            push_be_uint(buf0, 4, ctx->topology_id.area); /* Area ID */
 
-	    push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
 
-	    push_be_uint(buf0, 1, 0); /* Instance ID */
-	    push_be_uint(buf0, 1, 0); /* Reserved */
+            push_be_uint(buf0, 1, 0); /* Instance ID */
+            push_be_uint(buf0, 1, 0); /* Reserved */
 
-	    push_be_uint(buf0, 4, 0); /* # LSAs - will be overwritten later */
-	    break;
-	default:
+            push_be_uint(buf0, 4, 0); /* # LSAs - will be overwritten later */
+            break;
+        default:
             LOG(ERROR, "No Level 0 open packet serializer for attr %s\n",
-		val2key(ospf_attr_names, attr->key.attr_cp[0]));
-	    return;
-	}
+                val2key(ospf_attr_names, attr->key.attr_cp[0]));
+            return;
+        }
 
-	lspgen_propagate_buffer_down(packet, 0);
+        lspgen_propagate_buffer_down(packet, 0);
     }
 
     /* open Level 1 */
     if (state & OPEN_LEVEL1) {
 
-	switch(attr->key.attr_cp[1]) {
-	case OSPF_LSA_ROUTER:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 2, 0x2001); /* LS-Type  */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0xffff); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+        switch(attr->key.attr_cp[1]) {
+        case OSPF_LSA_ROUTER:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 2, 0x2001); /* LS-Type  */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0xffff); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
-	    push_be_uint(buf1, 1, 0x02); /* Flags, E */
-	    push_be_uint(buf1, 3, 0x13); /* Options */
-	    break;
+            push_be_uint(buf1, 1, 0x02); /* Flags, E */
+            push_be_uint(buf1, 3, 0x13); /* Options */
+            break;
 
-	case OSPF_LSA_EXTERNAL6:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 2, 0x4005); /* LS-Type  */
-	    push_be_uint(buf1, 4, attr->key.prefix.tag); /* Link State ID */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+        case OSPF_LSA_EXTERNAL6:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 2, 0x4005); /* LS-Type  */
+            push_be_uint(buf1, 4, attr->key.prefix.tag); /* Link State ID */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
-	    push_be_uint(buf1, 1, 0x04); /* E2 */
+            push_be_uint(buf1, 1, 0x04); /* E2 */
             push_be_uint(buf1, 3, attr->key.prefix.metric); /* Metric */
-	    push_be_uint(buf1, 1, attr->key.prefix.ipv6_prefix.len); /* Prefix Length */
-	    push_be_uint(buf1, 1, 0x00); /* Prefix Options */
-	    push_be_uint(buf1, 2, 0); /* Referenced LS Type */
-	    attr_len = (attr->key.prefix.ipv6_prefix.len+7)/8;
-	    push_data(buf1, attr->key.prefix.ipv6_prefix.address, attr_len); /* Prefix */
-	    push_pad4(buf1);
-	    break;
+            push_be_uint(buf1, 1, attr->key.prefix.ipv6_prefix.len); /* Prefix Length */
+            push_be_uint(buf1, 1, 0x00); /* Prefix Options */
+            push_be_uint(buf1, 2, 0); /* Referenced LS Type */
+            attr_len = (attr->key.prefix.ipv6_prefix.len+7)/8;
+            push_data(buf1, attr->key.prefix.ipv6_prefix.address, attr_len); /* Prefix */
+            push_pad4(buf1);
+            break;
 
-	case OSPF_LSA_INTRA_AREA_PREFIX:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 2, 0x2009); /* LS-Type  */
-	    push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+        case OSPF_LSA_INTRA_AREA_PREFIX:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 2, 0x2009); /* LS-Type  */
+            push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
-	    push_be_uint(buf1, 2, 0); /* # Prefixes - will be overwritten later */
-	    push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
+            push_be_uint(buf1, 2, 0); /* # Prefixes - will be overwritten later */
+            push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
 
-	    push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
-	    push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
-	    break;
+            push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
+            push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
+            break;
 
-	case OSPF_LSA_E_INTRA_AREA_PREFIX:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 2, 0xa029); /* LS-Type  */
-	    push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+        case OSPF_LSA_E_INTRA_AREA_PREFIX:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 2, 0xa029); /* LS-Type  */
+            push_be_uint(buf1, 4, packet->key.id); /* Link State ID */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
-	    push_be_uint(buf1, 2, 0); /* */
-	    push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
+            push_be_uint(buf1, 2, 0); /* */
+            push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
 
-	    push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
-	    push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
-	    break;
+            push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
+            push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
+            break;
 
 
-	case OSPF_LSA_OPAQUE_AREA_RI:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 2, 0xa00c); /* LS-Type, flood scope area  */
-	    push_be_uint(buf1, 4, 0); /* Link State ID - rfc 4970 section 2.2 says this must be zero */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
-	    break;
+        case OSPF_LSA_OPAQUE_AREA_RI:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 2, 0xa00c); /* LS-Type, flood scope area  */
+            push_be_uint(buf1, 4, 0); /* Link State ID - rfc 4970 section 2.2 says this must be zero */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+            break;
 
-	case OSPF_LSA_OPAQUE_AREA_EP:
-	    push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
-	    push_be_uint(buf1, 1, 0); /* Options */
-	    push_be_uint(buf1, 1, 10); /* LS-Type  */
-	    push_be_uint(buf1, 1, 7); /* Opaque Type: Extended Prefix */
-	    push_be_uint(buf1, 3, 0); /* Opaque subtype  */
-	    router_id = read_be_uint(node->key.node_id, 4);
-	    push_be_uint(buf1, 4, router_id); /* Advertising Router */
-	    push_be_uint(buf1, 4, node->sequence); /* Sequence */
-	    push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
-	    push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
-	    break;
+        case OSPF_LSA_OPAQUE_AREA_EP:
+            push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
+            push_be_uint(buf1, 1, 0); /* Options */
+            push_be_uint(buf1, 1, 10); /* LS-Type  */
+            push_be_uint(buf1, 1, 7); /* Opaque Type: Extended Prefix */
+            push_be_uint(buf1, 3, 0); /* Opaque subtype  */
+            router_id = read_be_uint(node->key.node_id, 4);
+            push_be_uint(buf1, 4, router_id); /* Advertising Router */
+            push_be_uint(buf1, 4, node->sequence); /* Sequence */
+            push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
+            push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
+            break;
 
-	default:
+        default:
             LOG(ERROR, "No Level 1 open packet serializer for attr %s\n",
-		val2key(ospf_attr_names, attr->key.attr_cp[1]));
-	    return;
-	}
+                val2key(ospf_attr_names, attr->key.attr_cp[1]));
+            return;
+        }
 
-	lspgen_propagate_buffer_down(packet, 1);
+        lspgen_propagate_buffer_down(packet, 1);
     }
 
     /*
      * If users wants to generate purges encoding stops at level 1.
      */
     if (ctx->purge) {
-	return;
+        return;
     }
 
     /* open Level 2 */
     if (state & OPEN_LEVEL2) {
-	switch(attr->key.attr_cp[2]) {
-	case OSPF_ROUTER_LSA_LINK_PTP:
-	    push_be_uint(buf2, 1, 1); /* Type ptp */
-	    push_be_uint(buf2, 1, 0); /* #TOS */
-	    push_be_uint(buf2, 2, attr->key.link.metric); /* metric */
-	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_link_id, 4)); /* Interface ID */
-	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_link_id, 4)); /* Neighbor Interface ID */
-	    push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Neighbor Router  ID */
-	    break;
+        switch(attr->key.attr_cp[2]) {
+        case OSPF_ROUTER_LSA_LINK_PTP:
+            push_be_uint(buf2, 1, 1); /* Type ptp */
+            push_be_uint(buf2, 1, 0); /* #TOS */
+            push_be_uint(buf2, 2, attr->key.link.metric); /* metric */
+            push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_link_id, 4)); /* Interface ID */
+            push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_link_id, 4)); /* Neighbor Interface ID */
+            push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Neighbor Router  ID */
+            break;
 
-	case OSPF_IA_PREFIX_LSA_PREFIX:
-	    push_be_uint(buf2, 1, attr->key.prefix.ipv6_prefix.len); /* Prefix Length */
-	    push_be_uint(buf2, 1, 0x00); /* Prefix Options */
+        case OSPF_IA_PREFIX_LSA_PREFIX:
+            push_be_uint(buf2, 1, attr->key.prefix.ipv6_prefix.len); /* Prefix Length */
+            push_be_uint(buf2, 1, 0x00); /* Prefix Options */
             push_be_uint(buf2, 2, attr->key.prefix.metric); /* Metric */
-	    attr_len = (attr->key.prefix.ipv6_prefix.len+7)/8;
-	    push_data(buf2, attr->key.prefix.ipv6_prefix.address, attr_len); /* Prefix */
-	    push_pad4(buf2);
+            attr_len = (attr->key.prefix.ipv6_prefix.len+7)/8;
+            push_data(buf2, attr->key.prefix.ipv6_prefix.address, attr_len); /* Prefix */
+            push_pad4(buf2);
 
-	    inc_be_uint(buf1->data+20, 2); /* Update #prefixes */
-	    break;
+            inc_be_uint(buf1->data+20, 2); /* Update #prefixes */
+            break;
 
-	case OSPF_TLV_INTRA_AREA_PREFIX:
-	    push_be_uint(buf2, 2, 6); /* Type */
-	    push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
-	    push_be_uint(buf2, 1, 0);
-	    push_be_uint(buf2, 3, attr->key.prefix.metric); /* Metric */
-	    push_be_uint(buf2, 1, attr->key.prefix.ipv6_prefix.len); /* Prefix Length */
-	    push_be_uint(buf2, 1, 0x00); /* Prefix Options */
-	    push_be_uint(buf2, 2, 0);
-	    attr_len = (attr->key.prefix.ipv6_prefix.len+7)/8;
-	    push_data(buf2, attr->key.prefix.ipv6_prefix.address, attr_len); /* Prefix */
-	    push_pad4(buf2);
-	    break;
+        case OSPF_TLV_INTRA_AREA_PREFIX:
+            push_be_uint(buf2, 2, 6); /* Type */
+            push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
+            push_be_uint(buf2, 1, 0);
+            push_be_uint(buf2, 3, attr->key.prefix.metric); /* Metric */
+            push_be_uint(buf2, 1, attr->key.prefix.ipv6_prefix.len); /* Prefix Length */
+            push_be_uint(buf2, 1, 0x00); /* Prefix Options */
+            push_be_uint(buf2, 2, 0);
+            attr_len = (attr->key.prefix.ipv6_prefix.len+7)/8;
+            push_data(buf2, attr->key.prefix.ipv6_prefix.address, attr_len); /* Prefix */
+            push_pad4(buf2);
+            break;
 
-	case OSPF_TLV_HOSTNAME:
-	    attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
-	    if (attr_len) {
-		push_be_uint(buf2, 2, 7); /* Type */
-		push_be_uint(buf2, 2, attr_len); /* Length */
-		push_data(buf2, (uint8_t *)attr->key.hostname, attr_len);
-		push_pad4(buf2);
-	    }
-	    break;
+        case OSPF_TLV_HOSTNAME:
+            attr_len = strnlen(attr->key.hostname, sizeof(attr->key.hostname));
+            if (attr_len) {
+                push_be_uint(buf2, 2, 7); /* Type */
+                push_be_uint(buf2, 2, attr_len); /* Length */
+                push_data(buf2, (uint8_t *)attr->key.hostname, attr_len);
+                push_pad4(buf2);
+            }
+            break;
 
-	case OSPF_TLV_SID_LABEL_RANGE:
-	    if (attr->key.cap.srgb_base && attr->key.cap.srgb_range) {
-		push_be_uint(buf2, 2, 9); /* Type */
-		push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
-		push_be_uint(buf2, 3, attr->key.cap.srgb_range); /* Range size */
-		push_be_uint(buf2, 1, 0); /* Reserved */
+        case OSPF_TLV_SID_LABEL_RANGE:
+            if (attr->key.cap.srgb_base && attr->key.cap.srgb_range) {
+                push_be_uint(buf2, 2, 9); /* Type */
+                push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
+                push_be_uint(buf2, 3, attr->key.cap.srgb_range); /* Range size */
+                push_be_uint(buf2, 1, 0); /* Reserved */
 
-		push_be_uint(buf2, 2, 7); /* SID Type Label */
-		push_be_uint(buf2, 2, 3); /* SID Type Length */
-		push_be_uint(buf2, 3, attr->key.cap.srgb_base);
-		push_pad4(buf2);
+                push_be_uint(buf2, 2, 7); /* SID Type Label */
+                push_be_uint(buf2, 2, 3); /* SID Type Length */
+                push_be_uint(buf2, 3, attr->key.cap.srgb_base);
+                push_pad4(buf2);
 
-		write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
-		push_pad4(buf2);
-	    }
-	    break;
+                write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
+                push_pad4(buf2);
+            }
+            break;
 
-	case OSPF_TLV_EXTENDED_PREFIX_RANGE:
-	    push_be_uint(buf2, 2, 2); /* Type */
-	    push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
-	    push_be_uint(buf2, 1, attr->key.prefix.ipv4_prefix.len);
-	    push_be_uint(buf2, 1, 0); /* AF ipv4 */
-	    push_be_uint(buf2, 2, 1); /* Range size */
-	    push_be_uint(buf2, 1, 0); /* Flags */
-	    push_be_uint(buf2, 3, 0); /* Reserved */
-	    push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Prefix */
-	    push_pad4(buf2);
-	    break;
+        case OSPF_TLV_EXTENDED_PREFIX_RANGE:
+            push_be_uint(buf2, 2, 2); /* Type */
+            push_be_uint(buf2, 2, 0); /* Length - will be overwritten later */
+            push_be_uint(buf2, 1, attr->key.prefix.ipv4_prefix.len);
+            push_be_uint(buf2, 1, 0); /* AF ipv4 */
+            push_be_uint(buf2, 2, 1); /* Range size */
+            push_be_uint(buf2, 1, 0); /* Flags */
+            push_be_uint(buf2, 3, 0); /* Reserved */
+            push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Prefix */
+            push_pad4(buf2);
+            break;
 
-	default:
+        default:
             LOG(ERROR, "No Level 2 open packet serializer for attr %s\n",
-		val2key(ospf_attr_names, attr->key.attr_cp[2]));
-	    return;
-	}
+                val2key(ospf_attr_names, attr->key.attr_cp[2]));
+            return;
+        }
 
-	lspgen_propagate_buffer_down(packet, 2);
+        lspgen_propagate_buffer_down(packet, 2);
     }
 
     /* open Level 3 */
     if (state & OPEN_LEVEL3) {
-	switch(attr->key.attr_cp[3]) {
-	case OSPF_SUBTLV_PREFIX_SID:
-	    push_be_uint(buf3, 2, 4); /* Type */
-	    push_be_uint(buf3, 2, 0); /* Length - will be overwritten later */
-	    push_be_uint(buf3, 1, 0); /* Flags */
-	    push_be_uint(buf3, 1, attr->key.prefix.algos[0].algo); /* Algorithm */
-	    push_be_uint(buf3, 2, 0); /* Reserved */
-	    push_be_uint(buf3, 4, attr->key.prefix.algos[0].sid); /* SID Index */
-	    break;
+        switch(attr->key.attr_cp[3]) {
+        case OSPF_SUBTLV_PREFIX_SID:
+            push_be_uint(buf3, 2, 4); /* Type */
+            push_be_uint(buf3, 2, 0); /* Length - will be overwritten later */
+            push_be_uint(buf3, 1, 0); /* Flags */
+            push_be_uint(buf3, 1, attr->key.prefix.algos[0].algo); /* Algorithm */
+            push_be_uint(buf3, 2, 0); /* Reserved */
+            push_be_uint(buf3, 4, attr->key.prefix.algos[0].sid); /* SID Index */
+            break;
 
-	default:
+        default:
             LOG(ERROR, "No Level 3 open packet serializer for attr %s\n",
-		val2key(ospf_attr_names, attr->key.attr_cp[3]));
-	    return;
-	}
+                val2key(ospf_attr_names, attr->key.attr_cp[3]));
+            return;
+        }
 
-	lspgen_propagate_buffer_down(packet, 3);
+        lspgen_propagate_buffer_down(packet, 3);
     }
 }
 
@@ -1519,121 +1519,121 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
  */
 void
 lspgen_serialize_ospf_attr(lsdb_attr_t *attr, lsdb_packet_t *packet,
-			   void (*serialize_cb)(lsdb_attr_t *, lsdb_packet_t *, uint16_t))
+                           void (*serialize_cb)(lsdb_attr_t *, lsdb_packet_t *, uint16_t))
 {
     uint16_t state;
 
     LOG(PACKET, "Serialize attr {0x%02x, 0x%02x, 0x%02x, 0x%02x}, last attr {0x%02x, 0x%02x, 0x%02x, 0x%02x}\n",
-	attr->key.attr_cp[0],
-	attr->key.attr_cp[1],
-	attr->key.attr_cp[2],
-	attr->key.attr_cp[3],
-	packet->prev_attr_cp[0],
-	packet->prev_attr_cp[1],
-	packet->prev_attr_cp[2],
-	packet->prev_attr_cp[3]);
+        attr->key.attr_cp[0],
+        attr->key.attr_cp[1],
+        attr->key.attr_cp[2],
+        attr->key.attr_cp[3],
+        packet->prev_attr_cp[0],
+        packet->prev_attr_cp[1],
+        packet->prev_attr_cp[2],
+        packet->prev_attr_cp[3]);
 
     /*
      * Fresh message ?
      */
     state = 0;
     if (attr->key.attr_cp[0] && packet->prev_attr_cp[0] == 0) {
-	state |= OPEN_LEVEL0;
-	if (attr->key.attr_cp[1] && packet->prev_attr_cp[1] == 0) {
-	    state |= OPEN_LEVEL1;
-	    if (attr->key.attr_cp[2] && packet->prev_attr_cp[2] == 0) {
-		state |= OPEN_LEVEL2;
-		if (attr->key.attr_cp[3] && packet->prev_attr_cp[3] == 0) {
-		    state |= OPEN_LEVEL3;
-		}
-	    }
-	}
-	(*serialize_cb)(attr, packet, state);
-	return;
+        state |= OPEN_LEVEL0;
+        if (attr->key.attr_cp[1] && packet->prev_attr_cp[1] == 0) {
+            state |= OPEN_LEVEL1;
+            if (attr->key.attr_cp[2] && packet->prev_attr_cp[2] == 0) {
+                state |= OPEN_LEVEL2;
+                if (attr->key.attr_cp[3] && packet->prev_attr_cp[3] == 0) {
+                    state |= OPEN_LEVEL3;
+                }
+            }
+        }
+        (*serialize_cb)(attr, packet, state);
+        return;
     }
 
     /*
      * Different L0 message ?
      */
     if (packet->prev_attr_cp[0] != attr->key.attr_cp[0]) {
-	state |= CLOSE_LEVEL0;
-	if (attr->key.attr_cp[0]) {
-	    state |= OPEN_LEVEL0;
-	}
-	if (packet->prev_attr_cp[3]) {
-	    state |= CLOSE_LEVEL3;
-	}
-	if (attr->key.attr_cp[3]) {
-	    state |= OPEN_LEVEL3;
-	}
-	if (packet->prev_attr_cp[2]) {
-	    state |= CLOSE_LEVEL2;
-	}
-	if (attr->key.attr_cp[2]) {
-	    state |= OPEN_LEVEL2;
-	}
-	if (packet->prev_attr_cp[1]) {
-	    state |= CLOSE_LEVEL1;
-	}
-	if (attr->key.attr_cp[1]) {
-	    state |= OPEN_LEVEL1;
-	}
-	(*serialize_cb)(attr, packet, state);
-	return;
+        state |= CLOSE_LEVEL0;
+        if (attr->key.attr_cp[0]) {
+            state |= OPEN_LEVEL0;
+        }
+        if (packet->prev_attr_cp[3]) {
+            state |= CLOSE_LEVEL3;
+        }
+        if (attr->key.attr_cp[3]) {
+            state |= OPEN_LEVEL3;
+        }
+        if (packet->prev_attr_cp[2]) {
+            state |= CLOSE_LEVEL2;
+        }
+        if (attr->key.attr_cp[2]) {
+            state |= OPEN_LEVEL2;
+        }
+        if (packet->prev_attr_cp[1]) {
+            state |= CLOSE_LEVEL1;
+        }
+        if (attr->key.attr_cp[1]) {
+            state |= OPEN_LEVEL1;
+        }
+        (*serialize_cb)(attr, packet, state);
+        return;
     }
 
     /*
      * Different L1 message ?
      */
     if (packet->prev_attr_cp[1] != attr->key.attr_cp[1]) {
-	state |= CLOSE_LEVEL1;
-	if (attr->key.attr_cp[1]) {
-	    state |= OPEN_LEVEL1;
-	}
-	if (packet->prev_attr_cp[2]) {
-	    state |= CLOSE_LEVEL2;
-	}
-	if (attr->key.attr_cp[2]) {
-	    state |= OPEN_LEVEL2;
-	}
-	if (packet->prev_attr_cp[3]) {
-	    state |= CLOSE_LEVEL3;
-	}
-	if (attr->key.attr_cp[3]) {
-	    state |= OPEN_LEVEL3;
-	}
-	(*serialize_cb)(attr, packet, state);
-	return;
+        state |= CLOSE_LEVEL1;
+        if (attr->key.attr_cp[1]) {
+            state |= OPEN_LEVEL1;
+        }
+        if (packet->prev_attr_cp[2]) {
+            state |= CLOSE_LEVEL2;
+        }
+        if (attr->key.attr_cp[2]) {
+            state |= OPEN_LEVEL2;
+        }
+        if (packet->prev_attr_cp[3]) {
+            state |= CLOSE_LEVEL3;
+        }
+        if (attr->key.attr_cp[3]) {
+            state |= OPEN_LEVEL3;
+        }
+        (*serialize_cb)(attr, packet, state);
+        return;
     }
 
     /*
      * Different L2 message ?
      */
     if (packet->prev_attr_cp[2] != attr->key.attr_cp[2]) {
-	state |= CLOSE_LEVEL2;
-	if (attr->key.attr_cp[2]) {
-	    state |= OPEN_LEVEL2;
-	}
-	if (packet->prev_attr_cp[3]) {
-	    state |= CLOSE_LEVEL3;
-	}
-	if (attr->key.attr_cp[3]) {
-	    state |= OPEN_LEVEL3;
-	}
-	(*serialize_cb)(attr, packet, state);
-	return;
+        state |= CLOSE_LEVEL2;
+        if (attr->key.attr_cp[2]) {
+            state |= OPEN_LEVEL2;
+        }
+        if (packet->prev_attr_cp[3]) {
+            state |= CLOSE_LEVEL3;
+        }
+        if (attr->key.attr_cp[3]) {
+            state |= OPEN_LEVEL3;
+        }
+        (*serialize_cb)(attr, packet, state);
+        return;
     }
 
     /*
      * Different L3 message ?
      */
     if (packet->prev_attr_cp[3] != attr->key.attr_cp[3]) {
-	state |= CLOSE_LEVEL3;
-	if (attr->key.attr_cp[3]) {
-	    state |= OPEN_LEVEL3;
-	}
-	(*serialize_cb)(attr, packet, state);
-	return;
+        state |= CLOSE_LEVEL3;
+        if (attr->key.attr_cp[3]) {
+            state |= OPEN_LEVEL3;
+        }
+        (*serialize_cb)(attr, packet, state);
+        return;
     }
 
     /*
@@ -1641,28 +1641,28 @@ lspgen_serialize_ospf_attr(lsdb_attr_t *attr, lsdb_packet_t *packet,
      */
     if (memcmp(packet->prev_attr_cp, attr->key.attr_cp, MAX_MSG_LEVEL) == 0) {
 
-	/*
-	 * Figure out max level.
-	 */
-	if (attr->key.attr_cp[3]) {
-	    state |= OPEN_LEVEL3;
-	} else if (attr->key.attr_cp[2]) {
-	    state |= OPEN_LEVEL2;
-	} else if (attr->key.attr_cp[1]) {
-	    state |= OPEN_LEVEL1;
-	} else if (attr->key.attr_cp[0]) {
-	    state |= OPEN_LEVEL0;
-	}
+        /*
+         * Figure out max level.
+         */
+        if (attr->key.attr_cp[3]) {
+            state |= OPEN_LEVEL3;
+        } else if (attr->key.attr_cp[2]) {
+            state |= OPEN_LEVEL2;
+        } else if (attr->key.attr_cp[1]) {
+            state |= OPEN_LEVEL1;
+        } else if (attr->key.attr_cp[0]) {
+            state |= OPEN_LEVEL0;
+        }
 
-	/* Enforce building fresh messages ?*/
-	if (attr->key.start_tlv) {
+        /* Enforce building fresh messages ?*/
+        if (attr->key.start_tlv) {
 
-	    /* Clone close state from open state */
-	    state |= state << 8;
-	}
+            /* Clone close state from open state */
+            state |= state << 8;
+        }
 
-	(*serialize_cb)(attr, packet, state);
-	return;
+        (*serialize_cb)(attr, packet, state);
+        return;
     }
 }
 
@@ -1678,16 +1678,16 @@ lspgen_serialize_attr(lsdb_ctx_t *ctx, lsdb_attr_t *attr, lsdb_packet_t *packet)
 {
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
-	lspgen_serialize_isis_attr(attr, packet);
-	break;
+        lspgen_serialize_isis_attr(attr, packet);
+        break;
     case PROTO_OSPF2:
-	lspgen_serialize_ospf_attr(attr, packet, lspgen_serialize_ospf2_state);
-	break;
+        lspgen_serialize_ospf_attr(attr, packet, lspgen_serialize_ospf2_state);
+        break;
     case PROTO_OSPF3:
-	lspgen_serialize_ospf_attr(attr, packet, lspgen_serialize_ospf3_state);
-	break;
+        lspgen_serialize_ospf_attr(attr, packet, lspgen_serialize_ospf3_state);
+        break;
     default:
-	LOG_NOARG(ERROR, "Unknown protocol\n");
+        LOG_NOARG(ERROR, "Unknown protocol\n");
     }
 
     /*
@@ -1737,7 +1737,7 @@ lspgen_reset_packet_buffer (struct lsdb_packet_ *packet)
     buf->idx = 0;
     buf->size = sizeof(packet->data);
     for (idx = 1; idx < MAX_MSG_LEVEL; idx++) {
-	memcpy(&packet->buf[idx], buf, sizeof(struct io_buffer_));
+        memcpy(&packet->buf[idx], buf, sizeof(struct io_buffer_));
     }
 
     /*
@@ -1782,17 +1782,17 @@ lspgen_add_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, uint32_t id)
         */
         CIRCLEQ_INSERT_TAIL(&ctx->packet_change_qhead, packet, packet_change_qnode);
         packet->on_change_list = true;
-	ctx->ctrl_stats.packets_queued++;
+        ctx->ctrl_stats.packets_queued++;
 
         /*
         * Parent
         */
         packet->parent = node;
 
-	/*
-	 * Reset buffers.
-	 */
-	lspgen_reset_packet_buffer(packet);
+        /*
+         * Reset buffers.
+         */
+        lspgen_reset_packet_buffer(packet);
 
         /*
         * Write header for link-state packet.
@@ -1827,10 +1827,10 @@ lspgen_refresh_cb (timer_s *timer)
      */
     if (ctx->ctrl_socket_path) {
 
-    if (!ctx->ctrl_socket_connect_timer) {
-        timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
-                   "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
-    }
+        if (!ctx->ctrl_socket_connect_timer) {
+            timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
+                       "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
+        }
     }
 }
 
@@ -1845,7 +1845,7 @@ lspgen_refresh_interval (lsdb_ctx_t *ctx)
 
     refresh = ctx->lsp_lifetime - 300;
     if (refresh < 60) {
-    refresh = 60;
+        refresh = 60;
     }
 
     return refresh;
@@ -1860,7 +1860,7 @@ lspgen_should_start_new_packet (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, st
     uint32_t min_len;
 
     if (!packet) {
-	return false;
+        return false;
     }
 
     min_len = lspgen_calculate_auth_len(ctx);
@@ -1871,44 +1871,44 @@ lspgen_should_start_new_packet (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, st
      */
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
-	min_len =+ TLV_OVERHEAD;
+        min_len =+ TLV_OVERHEAD;
         if (packet->buf[0].idx > (1462-min_len)) {
-	    return true;
-	}
-	break;
+            return true;
+        }
+        break;
 
     case PROTO_OSPF2:
-	if (packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
-	    return true;
-	}
-	break;
+        if (packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
+            return true;
+        }
+        break;
 
     case PROTO_OSPF3:
-	if (packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
-	    return true;
-	}
+        if (packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
+            return true;
+        }
 
-	/*
-	 * Do not build router-LSAs larger than IPv6 min MTU.
-	 */
-	if (attr->key.attr_cp[1] == OSPF_LSA_ROUTER &&
-	    packet->buf[2].idx > 1170) {
-	    LOG(PACKET, "Max OSPF3 Router LSA size of %u reached\n", packet->buf[2].idx);
-	    return true;
-	}
+        /*
+         * Do not build router-LSAs larger than IPv6 min MTU.
+         */
+        if (attr->key.attr_cp[1] == OSPF_LSA_ROUTER &&
+            packet->buf[2].idx > 1170) {
+            LOG(PACKET, "Max OSPF3 Router LSA size of %u reached\n", packet->buf[2].idx);
+            return true;
+        }
 
-	/*
-	 * Do not build Intra-Area-Prefix LSAs larger than IPv6 min MTU.
-	 */
-	if (attr->key.attr_cp[1] == OSPF_LSA_INTRA_AREA_PREFIX &&
-	    packet->buf[2].idx > 1170) {
-	    LOG(PACKET, "Max OSPF3 Intra-Area Prefix LSA size of %u reached\n", packet->buf[2].idx);
-	    return true;
-	}
-	break;
+        /*
+         * Do not build Intra-Area-Prefix LSAs larger than IPv6 min MTU.
+         */
+        if (attr->key.attr_cp[1] == OSPF_LSA_INTRA_AREA_PREFIX &&
+            packet->buf[2].idx > 1170) {
+            LOG(PACKET, "Max OSPF3 Intra-Area Prefix LSA size of %u reached\n", packet->buf[2].idx);
+            return true;
+        }
+        break;
     default:
-	LOG_NOARG(ERROR, "Unknown protocol\n");
-	break;
+        LOG_NOARG(ERROR, "Unknown protocol\n");
+        break;
     }
 
     return false;
@@ -1969,8 +1969,8 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
      * Start refresh timer.
      */
     if (ctx->ctrl_socket_path) {
-    timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
-               lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
+        timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
+                   lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
     }
 
     do {
@@ -2080,8 +2080,8 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
      * Start refresh timer.
      */
     if (ctx->ctrl_socket_path) {
-	timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
-			   lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
+        timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
+                           lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
     }
 
     do {
@@ -2093,8 +2093,8 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
         if (lspgen_should_start_new_packet(ctx, packet, attr)) {
 
             /*
-	     * No space left. Finalize this packet.
-	     */
+             * No space left. Finalize this packet.
+             */
             lspgen_finalize_packet(ctx, node, packet);
             packet = NULL;
 
@@ -2132,14 +2132,14 @@ lspgen_gen_packet_node(lsdb_node_t *node)
     ctx = node->ctx;
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
-	lspgen_gen_isis_packet_node(node);
-	break;
+        lspgen_gen_isis_packet_node(node);
+        break;
     case PROTO_OSPF2: /* fall through */
     case PROTO_OSPF3:
-	lspgen_gen_ospf_packet_node(node);
-	break;
+        lspgen_gen_ospf_packet_node(node);
+        break;
     default:
-	LOG_NOARG(ERROR, "Unknown protocol\n");
+        LOG_NOARG(ERROR, "Unknown protocol\n");
     }
 }
 
@@ -2172,17 +2172,17 @@ lspgen_gen_packet(lsdb_ctx_t *ctx)
     do {
         node = *dict_itor_datum(itor);
 
-	/*
-	 * Init per-packet tree for this node.
-	 */
-	if (!node->packet_dict) {
-	    node->packet_dict = hb_dict_new((dict_compare_func)lsdb_compare_packet);
-	}
+        /*
+         * Init per-packet tree for this node.
+         */
+        if (!node->packet_dict) {
+            node->packet_dict = hb_dict_new((dict_compare_func)lsdb_compare_packet);
+        }
 
-	/*
-	 * Generate the link-state packets for this node.
-	 */
-	lspgen_gen_packet_node(node);
+        /*
+         * Generate the link-state packets for this node.
+         */
+        lspgen_gen_packet_node(node);
 
     } while (dict_itor_next(itor));
 
@@ -2193,9 +2193,9 @@ lspgen_gen_packet(lsdb_ctx_t *ctx)
      */
     if (!ctx->quit_loop) {
 
-	/*
-	 * Distribute expiration of refresh timer over time.
-	 */
-	timer_smear_bucket(&ctx->timer_root, lspgen_refresh_interval(ctx), 0);
+        /*
+         * Distribute expiration of refresh timer over time.
+         */
+        timer_smear_bucket(&ctx->timer_root, lspgen_refresh_interval(ctx), 0);
     }
 }

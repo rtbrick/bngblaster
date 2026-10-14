@@ -49,7 +49,7 @@ enum {
 #define ISIS_SUBSUBTLV_FAD_FLAGS       4
 #define ISIS_FAD_FLAG_M                0x80
 
-#define ISIS_SUBTLV_IS_EXT_ADJ_SID	31
+#define ISIS_SUBTLV_IS_EXT_ADJ_SID      31
 #define ISIS_SUBTLV_IS_EXT_ASLA    16
 #define ISIS_SUBTLV_IS_EXT_LINK_MSD 15
 

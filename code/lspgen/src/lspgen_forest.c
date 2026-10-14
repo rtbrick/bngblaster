@@ -90,11 +90,11 @@ connect_node (lsdb_ctx_t *ctx, uint32_t base, int i, int j, uint32_t link_metric
      * Add local node.
      */
     addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
-	base + i - 1;
+        base + i - 1;
     if (ctx->protocol_id == PROTO_ISIS) {
-	lspgen_store_bcd_addr(addr, node_template.key.node_id, 4);
+        lspgen_store_bcd_addr(addr, node_template.key.node_id, 4);
     } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-	lspgen_store_addr(addr, node_template.key.node_id, 4);
+        lspgen_store_addr(addr, node_template.key.node_id, 4);
     }
     snprintf(node_name, sizeof(node_name), "node%u", base+i);
     node_template.node_name = node_name;
@@ -104,11 +104,11 @@ connect_node (lsdb_ctx_t *ctx, uint32_t base, int i, int j, uint32_t link_metric
      * Add remote node.
      */
     addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
-	base + j - 1;
+        base + j - 1;
     if (ctx->protocol_id == PROTO_ISIS) {
-	lspgen_store_bcd_addr(addr, node_template.key.node_id, 4);
+        lspgen_store_bcd_addr(addr, node_template.key.node_id, 4);
     } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-	lspgen_store_addr(addr, node_template.key.node_id, 4);
+        lspgen_store_addr(addr, node_template.key.node_id, 4);
     }
     snprintf(node_name, sizeof(node_name), "node%u", base+j);
     node_template.node_name = node_name;
@@ -116,46 +116,46 @@ connect_node (lsdb_ctx_t *ctx, uint32_t base, int i, int j, uint32_t link_metric
 
     for (link_index = 0; link_index < ctx->link_multiplier; link_index++) {
 
-	/*
-	 * Add outgoing link.
-	 */
-	link_template.link_metric = link_metric;
-	addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
-	    base + i - 1;
-	if (ctx->protocol_id == PROTO_ISIS) {
-	    lspgen_store_bcd_addr(addr, link_template.key.local_node_id, 4);
-	} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-	    lspgen_store_addr(addr, link_template.key.local_node_id, 4);
-	}
-	addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
-	    base + j - 1;
-	if (ctx->protocol_id == PROTO_ISIS) {
-	    lspgen_store_bcd_addr(addr, link_template.key.remote_node_id, 4);
-	} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-	    lspgen_store_addr(addr, link_template.key.remote_node_id, 4);
-	}
-	lspgen_store_addr(link_index, link_template.key.local_link_id, 4);
-	lsdb_add_link(ctx, local_node, &link_template);
+        /*
+         * Add outgoing link.
+         */
+        link_template.link_metric = link_metric;
+        addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
+            base + i - 1;
+        if (ctx->protocol_id == PROTO_ISIS) {
+            lspgen_store_bcd_addr(addr, link_template.key.local_node_id, 4);
+        } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+            lspgen_store_addr(addr, link_template.key.local_node_id, 4);
+        }
+        addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
+            base + j - 1;
+        if (ctx->protocol_id == PROTO_ISIS) {
+            lspgen_store_bcd_addr(addr, link_template.key.remote_node_id, 4);
+        } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+            lspgen_store_addr(addr, link_template.key.remote_node_id, 4);
+        }
+        lspgen_store_addr(link_index, link_template.key.local_link_id, 4);
+        lsdb_add_link(ctx, local_node, &link_template);
 
-	/*
-	 * Add incoming link.
-	 */
-	addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
-	    base + j - 1;
-	if (ctx->protocol_id == PROTO_ISIS) {
-	    lspgen_store_bcd_addr(addr, link_template.key.local_node_id, 4);
-	} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-	    lspgen_store_addr(addr, link_template.key.local_node_id, 4);
-	}
-	addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
-	    base + i - 1;
-	if (ctx->protocol_id == PROTO_ISIS) {
-	    lspgen_store_bcd_addr(addr, link_template.key.remote_node_id, 4);
-	} else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
-	    lspgen_store_addr(addr, link_template.key.remote_node_id, 4);
-	}
-	lspgen_store_addr(link_index, link_template.key.local_link_id, 4);
-	lsdb_add_link(ctx, remote_node, &link_template);
+        /*
+         * Add incoming link.
+         */
+        addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
+            base + j - 1;
+        if (ctx->protocol_id == PROTO_ISIS) {
+            lspgen_store_bcd_addr(addr, link_template.key.local_node_id, 4);
+        } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+            lspgen_store_addr(addr, link_template.key.local_node_id, 4);
+        }
+        addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
+            base + i - 1;
+        if (ctx->protocol_id == PROTO_ISIS) {
+            lspgen_store_bcd_addr(addr, link_template.key.remote_node_id, 4);
+        } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+            lspgen_store_addr(addr, link_template.key.remote_node_id, 4);
+        }
+        lspgen_store_addr(link_index, link_template.key.local_link_id, 4);
+        lsdb_add_link(ctx, remote_node, &link_template);
     }
 }
 
@@ -170,15 +170,15 @@ convert_matrix_graph(lsdb_ctx_t *ctx, uint32_t base, int v, int *adj_matrix)
         for (j = i + 1; j <= v; j++) {
             index = (i - 1) * v + j - 1;
             if (!adj_matrix[index]) {
-		continue;
-	    }
+                continue;
+            }
 
-	    if (!root) {
-		root = i;
-	    }
+            if (!root) {
+                root = i;
+            }
 
-	    connect_node(ctx, base, i, j, weights[adj_matrix[index]]);
-	}
+            connect_node(ctx, base, i, j, weights[adj_matrix[index]]);
+        }
     }
 
     return root;
@@ -203,13 +203,13 @@ convert_matrix_graph(lsdb_ctx_t *ctx, uint32_t base, int v, int *adj_matrix)
  */
 uint32_t
 lsdb_random_connected_graph(lsdb_ctx_t *ctx, int *tree, int *adj_matrix,
-			    uint32_t base, int v, int e, int max_wgt, int weight_flag)
+                            uint32_t base, int v, int e, int max_wgt, int weight_flag)
 {
     int i, j, count, index;
 
     if (v < 5) {
-	LOG(ERROR, " Minimal node count (5) not reached, %d.\n", v);
-	return 0;
+        LOG(ERROR, " Minimal node count (5) not reached, %d.\n", v);
+        return 0;
     }
 
     LOG(NORMAL, " Generating a subgraph of %d nodes and %d links\n", v, e);
@@ -231,7 +231,7 @@ lsdb_random_connected_graph(lsdb_ctx_t *ctx, int *tree, int *adj_matrix,
     for (i = 1; i < v; i++) {
         j = ran(i);
         adj_matrix[tree[i] * v + tree[j]] =
-	    adj_matrix[tree[j] * v + tree[i]] = weight_flag ? 1 + ran(max_wgt) : 1;
+            adj_matrix[tree[j] * v + tree[i]] = weight_flag ? 1 + ran(max_wgt) : 1;
     }
 
     /*
@@ -243,11 +243,11 @@ lsdb_random_connected_graph(lsdb_ctx_t *ctx, int *tree, int *adj_matrix,
 
         if (i == j) {
             continue;
-	}
+        }
 
         if (i > j) {
             swap(&i, &j);
-	}
+        }
 
         index = i * v + j;
         if (!adj_matrix[index]) {
@@ -284,9 +284,9 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
      * break it down to smaller maximum v=1000 matrixes and connect them.
      */
     if (v > MAX_SUBGRAPH_SIZE && v < MAX_SUBGRAPH_SIZE*2) {
-	v = (v+1)/2;
+        v = (v+1)/2;
     } else if (v > MAX_SUBGRAPH_SIZE) {
-	v = MAX_SUBGRAPH_SIZE;
+        v = MAX_SUBGRAPH_SIZE;
     }
     e = v*2;
 
@@ -310,14 +310,14 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
      */
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
-	/* BCD notation for IS-IS */
-	addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + root - 1;
-	lspgen_store_bcd_addr(addr, ctx->root_node_id, 4);
-	break;
+        /* BCD notation for IS-IS */
+        addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) + root - 1;
+        lspgen_store_bcd_addr(addr, ctx->root_node_id, 4);
+        break;
     default:
-	/* dotted decimal notation for everybody else */
-	memcpy(&ctx->root_node_id, &ctx->ipv4_node_prefix.address, 4);
-	break;
+        /* dotted decimal notation for everybody else */
+        memcpy(&ctx->root_node_id, &ctx->ipv4_node_prefix.address, 4);
+        break;
     }
 
     /*
@@ -325,33 +325,33 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
      */
     while (remaining_nodes > 0) {
 
-	/* split on penultimate pass ? */
-	if (remaining_nodes > MAX_SUBGRAPH_SIZE &&
-	    remaining_nodes < MAX_SUBGRAPH_SIZE*2) {
-	    v = (remaining_nodes+1)/2;
-	}
+        /* split on penultimate pass ? */
+        if (remaining_nodes > MAX_SUBGRAPH_SIZE &&
+            remaining_nodes < MAX_SUBGRAPH_SIZE*2) {
+            v = (remaining_nodes+1)/2;
+        }
 
-	/* last pass ? */
-	if (remaining_nodes < v) {
-	    v = remaining_nodes;
-	}
+        /* last pass ? */
+        if (remaining_nodes < v) {
+            v = remaining_nodes;
+        }
 
-	e = v*2;
-	lsdb_random_connected_graph(ctx, tree, adj_matrix, base, v, e, max_wgt, 1);
+        e = v*2;
+        lsdb_random_connected_graph(ctx, tree, adj_matrix, base, v, e, max_wgt, 1);
 
-	/*
-	 * Connect the first node of this subgraph
-	 * with the last node of the previous subgraph
-	 */
-	connect_node(ctx, base, -1, 0, 99);
-	/*
-	 * Connect the second node of this subgraph
-	 * with the penultimatenode of the previous subgraph
-	 */
-	connect_node(ctx, base, -2, 1, 99);
+        /*
+         * Connect the first node of this subgraph
+         * with the last node of the previous subgraph
+         */
+        connect_node(ctx, base, -1, 0, 99);
+        /*
+         * Connect the second node of this subgraph
+         * with the penultimatenode of the previous subgraph
+         */
+        connect_node(ctx, base, -2, 1, 99);
 
-	remaining_nodes -= v;
-	base += v;
+        remaining_nodes -= v;
+        base += v;
     }
 
     /*
@@ -362,7 +362,7 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
     node = lsdb_get_node(ctx, &node_template);
     if (!node) {
         LOG(ERROR, "Could not find root node %s\n", lsdb_format_node_id(node_template.key.node_id));
-	goto cleanup;
+        goto cleanup;
     }
 
     LOG(NORMAL, " Root node %s\n", lsdb_format_node(node));
@@ -378,13 +378,13 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
         for (idx = 0; idx < ctx->num_connector; idx++) {
             memset(&link_template, 0, sizeof(link_template));
             memcpy(&link_template.key.local_node_id, ctx->root_node_id,
-		   sizeof(link_template.key.local_node_id));
+                   sizeof(link_template.key.local_node_id));
             memcpy(&link_template.key.remote_node_id, ctx->connector[idx].remote_node_id,
-		   sizeof(link_template.key.remote_node_id));
+                   sizeof(link_template.key.remote_node_id));
             memcpy(&link_template.key.local_link_id, ctx->connector[idx].local_link_id,
-		   sizeof(link_template.key.local_link_id));
-	    link_template.key.remote_link_id[3] = idx+1;
-	    link_template.key.remote_node_id[7] = CONNECTOR_MARKER;
+                   sizeof(link_template.key.local_link_id));
+            link_template.key.remote_link_id[3] = idx+1;
+            link_template.key.remote_node_id[7] = CONNECTOR_MARKER;
             link_template.link_metric = 100;
             lsdb_add_link(ctx, node, &link_template);
         }
