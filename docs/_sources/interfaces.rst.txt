@@ -554,11 +554,11 @@ ring buffer and sent through RAW packet sockets.
 .. code-block:: none
 
     $ bngblaster -v
-    Version: 0.9.39
+    Version: 1.0.0
     Build OS: ubuntu-22.04
     Compiler: GNU (11.4.0)
     GIT:
-      REF: refs/tags/0.9.39
+      REF: refs/tags/1.0.0
       SHA: 56f126bd03a12d0ddc2b4e7f286aaf601afa1b4b
     IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback, dpdk, af_xdp
 
