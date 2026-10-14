@@ -382,9 +382,14 @@ class IsisSetup(IgpSetup):
         m = re.search(r"Source: (\S+)", text)
         return m.group(1) if m else None
 
-    def frr_algo_routes(self, algo):
-        """Return the IP prefixes of the FRR SPF result of an algorithm."""
-        text = self.frr.vtysh("show isis route algorithm %d" % algo, json_output=False)
+    def frr_algo_routes(self, algo=0):
+        """Return the IP prefixes of the FRR ISIS SPF result of an algorithm.
+        Unlike frr_routes, this does not depend on routes installed in the
+        kernel, which requires MPLS support with segment routing enabled."""
+        if algo:
+            text = self.frr.vtysh("show isis route algorithm %d" % algo, json_output=False)
+        else:
+            text = self.frr.vtysh("show isis route", json_output=False)
         return {line.split()[0] for line in text.splitlines()
                 if re.match(r"^ \S+/\d+\s+IP", line)}
 

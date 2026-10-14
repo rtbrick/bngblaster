@@ -176,8 +176,12 @@ def test_flex_algo_definition(isis, tmp_path):
 
     wait_until(lambda: len(frr_fads()) == 2, 10, message="Flex-Algo definitions in FRR")
     assert all(fads == expected for fads in frr_fads().values())
-    _, lsp_algos = isis.frr_prefix_sids()
-    assert all(lsp_algos.get("%s-00" % node) == [0, 128, 129] for node in topo.nodes)
+
+    def frr_sr_algos():
+        _, lsp_algos = isis.frr_prefix_sids()
+        return all(lsp_algos.get("%s-00" % node) == [0, 128, 129] for node in topo.nodes)
+
+    wait_until(frr_sr_algos, 10, message="SR algorithms of all nodes in FRR")
     isis.teardown()
 
 
@@ -244,7 +248,9 @@ def test_bbl_flex_algo(isis, tmp_path):
                message="Flex-Algo definition of the BNG Blaster elected")
     wait_until(lambda: "%s/32" % BBL_ROUTER_ID in isis.frr_algo_routes(128), 15,
                message="Flex-Algo 128 route to the BNG Blaster")
-    wait_until(lambda: topo.prefixes <= isis.frr_routes("ip"), 15,
+    # The ISIS SPF result is checked, because routes with SR labels are only
+    # installed in the kernel with MPLS support (not available in CI).
+    wait_until(lambda: topo.prefixes <= isis.frr_algo_routes(0), 15,
                message="FRR algorithm 0 routes to all nodes")
     assert not topo.prefixes & isis.frr_algo_routes(128)
     sids, algos = isis.frr_prefix_sids()
