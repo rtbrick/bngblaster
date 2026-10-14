@@ -30,13 +30,13 @@
       packages = {
         libdict = pkgs.stdenv.mkDerivation {
           pname = "libdict";
-          version = "1.0.6";
+          version = "1.0.7";
 
           src = pkgs.fetchFromGitHub {
             owner = "rtbrick";
             repo = "libdict";
-            rev = "1.0.6";
-            hash = "sha256-JO8gIZwSZ1vOigiM2IoGRYW2m2zoAa1af/eMBP3ZRjY=";
+            rev = "1.0.7";
+            hash = "sha256-vGQttkuV4WQn68Dn+fdp7HlIhYlh91o/NrH8yxEr0cI=";
           };
 
           cmakeFlags = [

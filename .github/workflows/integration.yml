@@ -26,9 +26,9 @@ jobs:
     - name: Install RtBrick libdict
       shell: bash
       run: |
-        wget https://github.com/rtbrick/libdict/releases/download/1.0.6/libdict-ubuntu-24.04.zip
+        wget https://github.com/rtbrick/libdict/releases/download/1.0.7/libdict-ubuntu-24.04.zip
         unzip libdict-ubuntu-24.04.zip
-        sudo dpkg -i libdict_1.0.6_amd64.deb libdict-dev_1.0.6_amd64.deb
+        sudo dpkg -i libdict_1.0.7_amd64.deb libdict-dev_1.0.7_amd64.deb
 
     - name: Install Dependencies
       shell: bash

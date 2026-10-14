@@ -41,12 +41,12 @@ and the following standard dependencies:
 
     sudo apt install -y wget unzip
 
-    # install libdict 1.0.6, where <os> is one of
+    # install libdict 1.0.7, where <os> is one of
     # ubuntu-22.04, ubuntu-24.04, ubuntu-26.04, bookworm or trixie
-    wget https://github.com/rtbrick/libdict/releases/download/1.0.6/libdict-<os>.zip
+    wget https://github.com/rtbrick/libdict/releases/download/1.0.7/libdict-<os>.zip
     unzip libdict-<os>.zip
-    sudo dpkg -i libdict_1.0.6_amd64.deb
-    sudo dpkg -i libdict-dev_1.0.6_amd64.deb
+    sudo dpkg -i libdict_1.0.7_amd64.deb
+    sudo dpkg -i libdict-dev_1.0.7_amd64.deb
 
     # install other dependencies
     sudo apt install -y build-essential cmake \
