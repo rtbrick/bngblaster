@@ -651,12 +651,12 @@ isis_lsp_self_dis(isis_adjacency_s *adjacency)
     if(!lsp) return;
     pdu = &lsp->pdu;
 
-    isis_pdu_add_tlv_ext_reachability(pdu, config->system_id, 0, 0, adjacency->adjacency_sid);
+    isis_pdu_add_tlv_ext_reachability(pdu, config->system_id, 0, 0, adjacency->adjacency_sid, NULL);
 
     peer = adjacency->peer;
     while(peer) {
         if(peer->state == ISIS_PEER_STATE_UP && ISIS_PDU_REMAINING(pdu) >= 13) {
-            isis_pdu_add_tlv_ext_reachability(pdu, peer->system_id, 0, 0, adjacency->adjacency_sid);
+            isis_pdu_add_tlv_ext_reachability(pdu, peer->system_id, 0, 0, adjacency->adjacency_sid, NULL);
         }
         peer = peer->next;
     }
@@ -701,17 +701,20 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
 
     loopback_prefix.address = config->router_id;
     loopback_prefix.len = 32;
-    if(config->sr_node_sid) {
-        /* Add Prefix-SID sub-TLV */
-        isis_sub_tlv_t stlv = {0};
-        uint8_t prefix_sid[6] = {0};
-        stlv.type = 3;
-        stlv.len = 6;
-        stlv.value = prefix_sid;
-        prefix_sid[0] = 64; /* N-Flag */
-        prefix_sid[1] = 0;  /* SPF */
-        *(uint32_t*)&prefix_sid[2] = htobe32(config->sr_node_sid);
-        isis_pdu_add_tlv_ext_ipv4_reachability(pdu, &loopback_prefix, 0, &stlv);
+    if(config->sr_node_sid_count) {
+        /* Add one Prefix-SID sub-TLV per SR algorithm */
+        isis_sub_tlv_t stlv[ISIS_MAX_NODE_SID] = {0};
+        uint8_t prefix_sid[ISIS_MAX_NODE_SID][6] = {0};
+        for(int i = 0; i < config->sr_node_sid_count; i++) {
+            stlv[i].type = 3;
+            stlv[i].len = 6;
+            stlv[i].value = prefix_sid[i];
+            if(i > 0) stlv[i-1].next = &stlv[i];
+            prefix_sid[i][0] = 64; /* N-Flag */
+            prefix_sid[i][1] = config->sr_node_sid[i].algo;
+            *(uint32_t*)&prefix_sid[i][2] = htobe32(config->sr_node_sid[i].index);
+        }
+        isis_pdu_add_tlv_ext_ipv4_reachability(pdu, &loopback_prefix, 0, stlv);
     } else {
         isis_pdu_add_tlv_ext_ipv4_reachability(pdu, &loopback_prefix, 0, NULL);
     }
@@ -719,7 +722,11 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
     if(config->sr_base && config->sr_range) {
         isis_pdu_add_tlv_router_cap(pdu, config->router_id, 
             config->protocol_ipv4, config->protocol_ipv6, 
-            config->sr_base, config->sr_range, config->sr_algo_count, config->sr_algo);
+            config->sr_base, config->sr_range, config->sr_algo_count, config->sr_algo,
+            config->node_msd);
+    }
+    for(int i = 0; i < config->flex_algo_count; i++) {
+        isis_pdu_add_tlv_router_cap_fad(pdu, config->router_id, &config->flex_algo[i]);
     }
 
     /* Add link networks */
@@ -729,7 +736,7 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
             goto NEXT;
         }
 
-        if(ISIS_PDU_REMAINING(pdu) < 48) {
+        if(ISIS_PDU_REMAINING(pdu) < 96) {
             isis_lsp_final(lsp);
             isis_lsp_flood(lsp);
             if(fragment == UINT8_MAX) return false;
@@ -751,20 +758,23 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
         if(adjacency->p2p) {
             isis_pdu_add_tlv_ext_reachability(pdu, 
                 adjacency->peer->system_id, 0,
-                adjacency->metric, adjacency->adjacency_sid);
+                adjacency->metric, adjacency->adjacency_sid,
+                &adjacency->link_attr);
         } else {
             if(adjacency->dis) {
                 isis_pdu_add_tlv_ext_reachability(pdu, 
                     adjacency->dis->system_id, 
                     adjacency->dis->pseudo_node_id,
-                    adjacency->metric, adjacency->adjacency_sid);
+                    adjacency->metric, adjacency->adjacency_sid,
+                    &adjacency->link_attr);
 
                 isis_lsp_self_dis_purge(adjacency);
             } else {
                 isis_pdu_add_tlv_ext_reachability(pdu, 
                     config->system_id,
                     adjacency->pseudo_node_id,
-                    adjacency->metric, adjacency->adjacency_sid);
+                    adjacency->metric, adjacency->adjacency_sid,
+                    &adjacency->link_attr);
 
                 isis_lsp_self_dis(adjacency);
             }
@@ -776,7 +786,7 @@ NEXT:
     
     external_connection = config->external_connection;
     while(external_connection) {
-        if(ISIS_PDU_REMAINING(pdu) < 16) {
+        if(ISIS_PDU_REMAINING(pdu) < 64) {
             isis_lsp_final(lsp);
             isis_lsp_flood(lsp);
             if(fragment == UINT8_MAX) return false;
@@ -787,7 +797,8 @@ NEXT:
 
         isis_pdu_add_tlv_ext_reachability(pdu, 
             external_connection->system_id, 0,
-            external_connection->level[level-1].metric, external_connection->adjacency_sid);
+            external_connection->level[level-1].metric, external_connection->adjacency_sid,
+            &external_connection->link_attr);
         external_connection = external_connection->next;
     }
 

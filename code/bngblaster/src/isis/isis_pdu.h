@@ -107,12 +107,17 @@ void
 isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key);
 
 void
-isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint8_t pseudo_node, uint32_t metric, uint16_t adjacency_sid);
+isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, uint8_t pseudo_node, uint32_t metric,
+                                  uint16_t adjacency_sid, isis_link_attr_s *link_attr);
 
 void
 isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id, 
                             bool ipv4, bool ipv6, 
-                            uint32_t sr_base, uint32_t sr_range, uint8_t sr_algo_count, uint8_t *sr_algo);
+                            uint32_t sr_base, uint32_t sr_range, uint8_t sr_algo_count, uint8_t *sr_algo,
+                            uint8_t node_msd);
+
+void
+isis_pdu_add_tlv_router_cap_fad(isis_pdu_s *pdu, ipv4addr_t router_id, isis_flex_algo_s *fad);
 
 void
 isis_pdu_padding(isis_pdu_s *pdu);

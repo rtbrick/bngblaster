@@ -58,6 +58,15 @@
 | **isis-l2-priority**              | | ISIS level 2 interface priority.                                   |
 |                                   | | Default: 10                                                        |
 +-----------------------------------+----------------------------------------------------------------------+
+| **isis-te-metric**                | | ISIS Flex-Algo TE metric.                                          |
+|                                   | | Default: 0 (disabled) Range: 0 - 16777215                          |
++-----------------------------------+----------------------------------------------------------------------+
+| **isis-delay**                    | | ISIS Flex-Algo min/max link delay in microseconds.                 |
+|                                   | | Default: 0 (disabled) Range: 0 - 16777215                          |
++-----------------------------------+----------------------------------------------------------------------+
+| **isis-admin-group**              | | ISIS Flex-Algo admin group (32 bit mask).                          |
+|                                   | | Default: 0 (disabled)                                              |
++-----------------------------------+----------------------------------------------------------------------+
 | **ospfv2-instance-id**            | | Assign the interface to an OSPFv2 instance.                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ospfv2-type**                   | | OSPFv2 interface type (p2p or broadcast).                          |

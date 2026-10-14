@@ -192,8 +192,55 @@ typedef struct isis_area_ {
     uint8_t    *value;
 } isis_area_s;
 
+/* Application-specific link attributes (RFC 8919) for Flex-Algo, 0 = not advertised */
+typedef struct isis_link_attr_ {
+    uint32_t te_metric;
+    uint32_t delay; /* min/max unidirectional link delay in microseconds */
+    uint32_t admin_group;
+} isis_link_attr_s;
+
+#define ISIS_LINK_ATTR_PRESENT(_attr) ((_attr)->te_metric || (_attr)->delay || (_attr)->admin_group)
+
+/* Router capability and IS reachability subTLVs */
+#define ISIS_SUBTLV_NODE_MSD            23
+#define ISIS_SUBTLV_FAD                 26
+#define ISIS_SUBSUBTLV_FAD_FLAGS        4
+#define ISIS_FAD_FLAG_M                 0x80
+#define ISIS_MSD_TYPE_BMI               1
+#define ISIS_SUBTLV_ADMIN_GROUP         3
+#define ISIS_SUBTLV_ASLA                16
+#define ISIS_SUBTLV_TE_METRIC           18
+#define ISIS_SUBTLV_MIN_MAX_DELAY       34
+#define ISIS_ASLA_SABM_X                0x10 /* Flex-Algo (RFC 9350) */
+#define ISIS_MAX_TE_VALUE               16777215 /* 24 bit */
+
+/* Node SIDs, one per SR algorithm */
+#define ISIS_MAX_NODE_SID               4
+
+typedef struct isis_node_sid_ {
+    uint32_t index;
+    uint8_t  algo;
+} isis_node_sid_s;
+
+/* Flex-Algo definition (RFC 9350) */
+#define ISIS_MAX_FLEX_ALGO              4
+#define ISIS_FAD_METRIC_IGP             0
+#define ISIS_FAD_METRIC_MIN_DELAY       1
+#define ISIS_FAD_METRIC_TE              2
+
+typedef struct isis_flex_algo_ {
+    uint8_t  algo;
+    uint8_t  metric_type;
+    uint8_t  priority;
+    bool     m_flag;
+    uint32_t exclude_any; /* admin groups, 0 = not advertised */
+    uint32_t include_any;
+    uint32_t include_all;
+} isis_flex_algo_s;
+
 typedef struct isis_external_connection_ {
     uint8_t  system_id[ISIS_SYSTEM_ID_LEN];
+    isis_link_attr_s link_attr;
 
     struct {
         uint32_t metric;
@@ -252,10 +299,14 @@ typedef struct isis_config_ {
 
     uint32_t            sr_base;
     uint32_t            sr_range;
-    uint32_t            sr_node_sid;
+    isis_node_sid_s     sr_node_sid[ISIS_MAX_NODE_SID];
+    uint8_t             sr_node_sid_count;
     uint8_t            *sr_algo;
     uint8_t             sr_algo_count;
     uint16_t            adjacency_sid;
+    uint8_t             node_msd; /* Base MPLS imposition MSD, 0 = not advertised */
+    isis_flex_algo_s    flex_algo[ISIS_MAX_FLEX_ALGO];
+    uint8_t             flex_algo_count;
     
     /* External */
     bool external_purge;
@@ -321,6 +372,7 @@ typedef struct isis_adjacency_ {
     
     uint32_t metric;
     uint16_t adjacency_sid;
+    isis_link_attr_s link_attr;
     uint64_t csnp_start;
 
     struct {

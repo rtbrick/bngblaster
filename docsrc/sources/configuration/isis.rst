@@ -103,6 +103,24 @@
 | **sr-node-sid**                  | | ISIS SR node SID.                                               |
 |                                  | | Default: 0 Range: 0 - 1048575                                   |
 +----------------------------------+-------------------------------------------------------------------+
+| **sr-node-sids**                 | | ISIS SR node SIDs, one per SR algorithm, as list                |
+|                                  | | of ``index`` (0 - 1048575) and ``algo`` (default 0), e.g.       |
+|                                  | | ``[{"algo": 0, "index": 1}, {"algo": 128, "index": 101}]``.     |
+|                                  | | Mutually exclusive with **sr-node-sid**.                        |
++----------------------------------+-------------------------------------------------------------------+
+| **node-msd**                     | | ISIS node maximum SID depth (BMI-MSD, RFC 8491).                |
+|                                  | | Advertised together with **sr-base** and **sr-range**.          |
+|                                  | | Default: 0 (disabled) Range: 0 - 255                            |
++----------------------------------+-------------------------------------------------------------------+
+| **flex-algo**                    | | ISIS Flex-Algo definitions (RFC 9350), up to 4                  |
+|                                  | | advertised in dedicated router capability TLVs, as list of      |
+|                                  | | ``algo`` (mandatory, 128 - 255), ``metric-type``                |
+|                                  | | (``igp`` (default), ``min-delay`` or ``te``), ``priority``      |
+|                                  | | (default 128), ``m-flag`` (default false) and the               |
+|                                  | | admin group masks ``exclude-any``, ``include-any`` and          |
+|                                  | | ``include-all``. The algorithms must be added to                |
+|                                  | | **sr-algo** as well.                                            |
++----------------------------------+-------------------------------------------------------------------+
 | **adjacency-sid-base**           | | Enable Adjacency SID generation.                                |
 |                                  | | Default: disabled Range: 256 - 4096                             |
 +----------------------------------+-------------------------------------------------------------------+

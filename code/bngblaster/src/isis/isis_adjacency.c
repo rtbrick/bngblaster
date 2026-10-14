@@ -88,6 +88,7 @@ isis_adjacency_init(bbl_network_interface_s *interface,
 	if(interface_config->isis_adjacency_sid > 0) {
 	    adjacency->adjacency_sid = interface_config->isis_adjacency_sid;
 	}
+        adjacency->link_attr = interface_config->isis_link_attr;
     }
     return true;
 }

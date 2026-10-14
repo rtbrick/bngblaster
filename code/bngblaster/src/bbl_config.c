@@ -840,6 +840,32 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     return true;
 }
 
+/**
+ * Parse optional application-specific link attributes (Flex-Algo)
+ * with keys <prefix>te-metric, <prefix>delay and <prefix>admin-group.
+ */
+static bool
+json_parse_isis_link_attr(json_t *obj, const char *section, const char *prefix, isis_link_attr_s *attr)
+{
+    const char *names[] = {"te-metric", "delay", "admin-group"};
+    uint32_t *values[] = {&attr->te_metric, &attr->delay, &attr->admin_group};
+    double max[] = {ISIS_MAX_TE_VALUE, ISIS_MAX_TE_VALUE, UINT32_MAX};
+    char key[32];
+    json_t *value;
+
+    for(int i = 0; i < 3; i++) {
+        snprintf(key, sizeof(key), "%s%s", prefix, names[i]);
+        value = json_object_get(obj, key);
+        if(!value) continue;
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= max[i])) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->%s (0 - %.0f)\n", section, key, max[i]);
+            return false;
+        }
+        *values[i] = json_number_value(value);
+    }
+    return true;
+}
+
 static bool
 json_parse_network_interface(json_t *network_interface, bbl_network_config_s *network_config)
 {
@@ -857,6 +883,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         "isis-instance-id", "isis-level", "isis-p2p",
         "isis-l1-metric", "isis-l2-metric",
         "isis-l1-priority", "isis-l2-priority",
+        "isis-te-metric", "isis-delay", "isis-admin-group",
         "ospfv2-instance-id", "ospfv2-metric", "ospfv2-type",
         "ospfv3-instance-id", "ospfv3-metric", "ospfv3-type",
         "cfm-cc", "cfm-level", "cfm-interval", "cfm-md-name", "cfm-md-name-format",
@@ -1004,6 +1031,9 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         }
         if(isis_config->adjacency_sid) {
             network_config->isis_adjacency_sid = isis_config->adjacency_sid++;
+        }
+        if(!json_parse_isis_link_attr(network_interface, "network", "isis-", &network_config->isis_link_attr)) {
+            return false;
         }
     }
 
@@ -1872,6 +1902,120 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
     return true;
 }
 
+/**
+ * Parse node SIDs per SR algorithm, e.g.
+ * "sr-node-sids": [{"algo": 0, "index": 1}, {"algo": 128, "index": 101}]
+ */
+static bool
+json_parse_isis_node_sids(json_t *isis, isis_config_s *isis_config)
+{
+    json_t *sids, *sid, *algo, *index;
+    size_t i;
+
+    sids = json_object_get(isis, "sr-node-sids");
+    if(!sids) return true;
+    if(!json_is_array(sids)) {
+        fprintf(stderr, "JSON config error: Invalid value for isis->sr-node-sids (list)\n");
+        return false;
+    }
+    if(isis_config->sr_node_sid_count) {
+        fprintf(stderr, "JSON config error: isis->sr-node-sid and isis->sr-node-sids are mutually exclusive\n");
+        return false;
+    }
+    json_array_foreach(sids, i, sid) {
+        algo = json_object_get(sid, "algo");
+        index = json_object_get(sid, "index");
+        if(!json_is_number(index) || json_number_value(index) < 0 || json_number_value(index) > 1048575 ||
+           (algo && (!json_is_number(algo) || json_number_value(algo) < 0 || json_number_value(algo) > 255))) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->sr-node-sids (index 0 - 1048575, algo 0 - 255)\n");
+            return false;
+        }
+        if(isis_config->sr_node_sid_count >= ISIS_MAX_NODE_SID) {
+            fprintf(stderr, "JSON config error: Too many isis->sr-node-sids (max %u)\n", ISIS_MAX_NODE_SID);
+            return false;
+        }
+        isis_config->sr_node_sid[isis_config->sr_node_sid_count].index = json_number_value(index);
+        isis_config->sr_node_sid[isis_config->sr_node_sid_count].algo = algo ? json_number_value(algo) : 0;
+        isis_config->sr_node_sid_count++;
+    }
+    return true;
+}
+
+/**
+ * Parse Flex-Algo definitions, e.g.
+ * "flex-algo": [{"algo": 128, "metric-type": "min-delay", "priority": 200}]
+ */
+static bool
+json_parse_isis_flex_algo(json_t *isis, isis_config_s *isis_config)
+{
+    const char *schema[] = {
+        "algo", "metric-type", "priority", "m-flag",
+        "exclude-any", "include-any", "include-all"
+    };
+    isis_flex_algo_s *fad;
+    json_t *list, *obj, *value;
+    const char *s;
+    size_t i;
+
+    list = json_object_get(isis, "flex-algo");
+    if(!list) return true;
+    if(!json_is_array(list)) {
+        fprintf(stderr, "JSON config error: Invalid value for isis->flex-algo (list)\n");
+        return false;
+    }
+    json_array_foreach(list, i, obj) {
+        if(!schema_validate(obj, "flex-algo", schema, sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
+        if(isis_config->flex_algo_count >= ISIS_MAX_FLEX_ALGO) {
+            fprintf(stderr, "JSON config error: Too many isis->flex-algo (max %u)\n", ISIS_MAX_FLEX_ALGO);
+            return false;
+        }
+        fad = &isis_config->flex_algo[isis_config->flex_algo_count++];
+        fad->priority = 128;
+        JSON_OBJ_GET_NUMBER(obj, value, "isis->flex-algo", "algo", 128, 255);
+        if(value) {
+            fad->algo = json_number_value(value);
+        } else {
+            fprintf(stderr, "JSON config error: Missing value for isis->flex-algo->algo\n");
+            return false;
+        }
+        if(json_unpack(obj, "{s:s}", "metric-type", &s) == 0) {
+            if(strcmp(s, "igp") == 0) {
+                fad->metric_type = ISIS_FAD_METRIC_IGP;
+            } else if(strcmp(s, "min-delay") == 0) {
+                fad->metric_type = ISIS_FAD_METRIC_MIN_DELAY;
+            } else if(strcmp(s, "te") == 0) {
+                fad->metric_type = ISIS_FAD_METRIC_TE;
+            } else {
+                fprintf(stderr, "JSON config error: Invalid value for isis->flex-algo->metric-type (igp, min-delay or te)\n");
+                return false;
+            }
+        }
+        JSON_OBJ_GET_NUMBER(obj, value, "isis->flex-algo", "priority", 0, 255);
+        if(value) {
+            fad->priority = json_number_value(value);
+        }
+        JSON_OBJ_GET_BOOL(obj, value, "isis->flex-algo", "m-flag");
+        if(value) {
+            fad->m_flag = json_boolean_value(value);
+        }
+        JSON_OBJ_GET_NUMBER(obj, value, "isis->flex-algo", "exclude-any", 0, 4294967295);
+        if(value) {
+            fad->exclude_any = json_number_value(value);
+        }
+        JSON_OBJ_GET_NUMBER(obj, value, "isis->flex-algo", "include-any", 0, 4294967295);
+        if(value) {
+            fad->include_any = json_number_value(value);
+        }
+        JSON_OBJ_GET_NUMBER(obj, value, "isis->flex-algo", "include-all", 0, 4294967295);
+        if(value) {
+            fad->include_all = json_number_value(value);
+        }
+    }
+    return true;
+}
+
 static bool
 json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
 {
@@ -1894,7 +2038,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         "area", "sr-base", "sr-range",
         "sr-node-sid", "teardown-time", "external",
         "external-auto-refresh", "lsp-buffer-size", "sr-algo",
-        "adjacency-sid-base"
+        "adjacency-sid-base", "sr-node-sids", "node-msd", "flex-algo"
     };
     if(!schema_validate(isis, "isis", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -2130,7 +2274,19 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
 
     JSON_OBJ_GET_NUMBER(isis, value, "isis", "sr-node-sid", 0, 1048575);
     if(value) {
-        isis_config->sr_node_sid = json_number_value(value);
+        isis_config->sr_node_sid[0].index = json_number_value(value);
+        isis_config->sr_node_sid_count = 1;
+    }
+    if(!json_parse_isis_node_sids(isis, isis_config)) {
+        return false;
+    }
+
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "node-msd", 0, 255);
+    if(value) {
+        isis_config->node_msd = json_number_value(value);
+    }
+    if(!json_parse_isis_flex_algo(isis, isis_config)) {
+        return false;
     }
 
     value = json_object_get(isis, "sr-algo");
@@ -2202,7 +2358,8 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                 c = json_array_get(con, i);
 
                 const char *schema[] = {
-                    "system-id", "l1-metric", "l2-metric"
+                    "system-id", "l1-metric", "l2-metric",
+                    "te-metric", "delay", "admin-group"
                 };
                 if(!schema_validate(c, "connections", schema, 
                 sizeof(schema)/sizeof(schema[0]))) {
@@ -2232,6 +2389,9 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                 }
                 if(isis_config->adjacency_sid) {
                     connection->adjacency_sid = isis_config->adjacency_sid++;
+                }
+                if(!json_parse_isis_link_attr(c, "isis->external->connections", "", &connection->link_attr)) {
+                    return false;
                 }
             }
         }

@@ -567,26 +567,23 @@ isis_pdu_add_tlv_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
 
 void
 isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id, 
-                                  uint8_t pseudo_node, 
-                                  uint32_t metric, uint16_t adjacency_sid)
+                                  uint8_t pseudo_node, uint32_t metric, 
+                                  uint16_t adjacency_sid, isis_link_attr_s *link_attr)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
+    uint8_t *stlv_len;
+    uint8_t *asla_len;
+
     tlv->type = ISIS_TLV_EXT_REACHABILITY;
-    if(adjacency_sid > 0 && pseudo_node == 0) {
-        tlv->len = 18;
-    } else {
-        tlv->len = 11;
-    }
     memcpy(tlv_cur, system_id, ISIS_SYSTEM_ID_LEN);
     tlv_cur += ISIS_SYSTEM_ID_LEN; 
     *(uint32_t*)tlv_cur = htobe32(metric);
     *tlv_cur = pseudo_node;
     tlv_cur += sizeof(metric);
+    stlv_len = tlv_cur++;
     /* implementation only for SubTLV 31 (non-DIS case), TODO for SubTLV 32 */
     if(adjacency_sid > 0 && pseudo_node == 0) {
-        *tlv_cur = 7;
-        tlv_cur += sizeof(uint8_t);
         *tlv_cur++ = 31;
         *tlv_cur++ = 5;
         /* set V and L flag always */
@@ -594,26 +591,53 @@ isis_pdu_add_tlv_ext_reachability(isis_pdu_s *pdu, uint8_t *system_id,
         *tlv_cur++ = 0;
         *tlv_cur++ = 0;
         *(uint16_t*)tlv_cur = htobe16(adjacency_sid);
-    } else {
-        *tlv_cur = 0;
+        tlv_cur += sizeof(uint16_t);
     }
+    if(link_attr && ISIS_LINK_ATTR_PRESENT(link_attr)) {
+        /* Application-specific link attributes for Flex-Algo (RFC 8919) */
+        *tlv_cur++ = ISIS_SUBTLV_ASLA;
+        asla_len = tlv_cur++;
+        *tlv_cur++ = 1; /* L-flag not set, SABM length */
+        *tlv_cur++ = 0; /* UDABM length */
+        *tlv_cur++ = ISIS_ASLA_SABM_X;
+        if(link_attr->admin_group) {
+            *tlv_cur++ = ISIS_SUBTLV_ADMIN_GROUP;
+            *tlv_cur++ = 4;
+            *(uint32_t*)tlv_cur = htobe32(link_attr->admin_group);
+            tlv_cur += sizeof(uint32_t);
+        }
+        if(link_attr->te_metric) {
+            *tlv_cur++ = ISIS_SUBTLV_TE_METRIC;
+            *tlv_cur++ = 3;
+            *tlv_cur++ = link_attr->te_metric >> 16;
+            *tlv_cur++ = link_attr->te_metric >> 8;
+            *tlv_cur++ = link_attr->te_metric;
+        }
+        if(link_attr->delay) {
+            *tlv_cur++ = ISIS_SUBTLV_MIN_MAX_DELAY;
+            *tlv_cur++ = 8;
+            *(uint32_t*)tlv_cur = htobe32(link_attr->delay);
+            tlv_cur += sizeof(uint32_t);
+            *(uint32_t*)tlv_cur = htobe32(link_attr->delay);
+            tlv_cur += sizeof(uint32_t);
+        }
+        *asla_len = tlv_cur - asla_len - 1;
+    }
+    *stlv_len = tlv_cur - stlv_len - 1;
+    tlv->len = tlv_cur - tlv->value;
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
 }
 
 void
 isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id, 
                             bool ipv4, bool ipv6, 
-                            uint32_t sr_base, uint32_t sr_range, uint8_t sr_algo_count, uint8_t *sr_algo)
+                            uint32_t sr_base, uint32_t sr_range, uint8_t sr_algo_count, uint8_t *sr_algo,
+                            uint8_t node_msd)
 {
 
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
     uint8_t *tlv_cur = tlv->value;
     tlv->type = ISIS_TLV_ROUTER_CAPABILITY;
-    if(sr_algo_count > 0) {
-        tlv->len = 18 + sr_algo_count;
-    } else {
-        tlv->len = 16;
-    }
     *(ipv4addr_t*)tlv_cur = router_id;
     tlv_cur += sizeof(ipv4addr_t);
     *tlv_cur++ = 0;
@@ -627,14 +651,63 @@ isis_pdu_add_tlv_router_cap(isis_pdu_s *pdu, ipv4addr_t router_id,
     *tlv_cur++ = 1;
     *(uint32_t*)tlv_cur = htobe32(sr_base);
     *tlv_cur = 3;
+    tlv_cur += sizeof(uint32_t);
     if(sr_algo_count > 0) {
-	tlv_cur += sizeof(uint32_t);
         *tlv_cur++ = 19;
         *tlv_cur++ = sr_algo_count;
         for(int i = 0; i < sr_algo_count; i++) {
             *tlv_cur++ = sr_algo[i];
         }
     }
+    if(node_msd) {
+        /* Node MSD (RFC 8491) with base MPLS imposition MSD */
+        *tlv_cur++ = ISIS_SUBTLV_NODE_MSD;
+        *tlv_cur++ = 2;
+        *tlv_cur++ = ISIS_MSD_TYPE_BMI;
+        *tlv_cur++ = node_msd;
+    }
+    tlv->len = tlv_cur - tlv->value;
+    ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
+}
+
+/**
+ * Add a router capability TLV with a single
+ * Flex-Algo definition subTLV (RFC 9350).
+ */
+void
+isis_pdu_add_tlv_router_cap_fad(isis_pdu_s *pdu, ipv4addr_t router_id, isis_flex_algo_s *fad)
+{
+    isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
+    uint8_t *tlv_cur = tlv->value;
+    uint8_t *stlv_len;
+    uint32_t admin_group[3] = {fad->exclude_any, fad->include_any, fad->include_all};
+
+    tlv->type = ISIS_TLV_ROUTER_CAPABILITY;
+    *(ipv4addr_t*)tlv_cur = router_id;
+    tlv_cur += sizeof(ipv4addr_t);
+    *tlv_cur++ = 0; /* flags, area scope */
+    *tlv_cur++ = ISIS_SUBTLV_FAD;
+    stlv_len = tlv_cur++;
+    *tlv_cur++ = fad->algo;
+    *tlv_cur++ = fad->metric_type;
+    *tlv_cur++ = 0; /* calculation type SPF */
+    *tlv_cur++ = fad->priority;
+    /* exclude-any (1), include-any (2) and include-all (3) admin groups */
+    for(int i = 0; i < 3; i++) {
+        if(admin_group[i]) {
+            *tlv_cur++ = i + 1;
+            *tlv_cur++ = 4;
+            *(uint32_t*)tlv_cur = htobe32(admin_group[i]);
+            tlv_cur += sizeof(uint32_t);
+        }
+    }
+    if(fad->m_flag) {
+        *tlv_cur++ = ISIS_SUBSUBTLV_FAD_FLAGS;
+        *tlv_cur++ = 1;
+        *tlv_cur++ = ISIS_FAD_FLAG_M;
+    }
+    *stlv_len = tlv_cur - stlv_len - 1;
+    tlv->len = tlv_cur - tlv->value;
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
 }
 

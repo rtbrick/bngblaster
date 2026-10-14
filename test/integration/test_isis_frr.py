@@ -9,7 +9,7 @@ import time
 import pytest
 
 from helpers import wait_until
-from igp_common import (BBL_ADDRESS, BBL_SYSTEM_ID, FRR_SYSTEM_ID,
+from igp_common import (BBL_ADDRESS, BBL_ROUTER_ID, BBL_SYSTEM_ID, FRR_SYSTEM_ID,
                         IsisSetup, levels)
 
 NODES = 50
@@ -219,4 +219,38 @@ def test_node_msd(isis, tmp_path):
     assert all(msd["%s-00" % n] == 10 for n in topo.nodes)
     wait_until(lambda: topo.prefixes <= isis.frr_routes("ip"), 15,
                message="FRR routes to all nodes")
+    isis.teardown()
+
+
+def test_bbl_flex_algo(isis, tmp_path):
+    """The BNG Blaster advertises node SIDs per SR algorithm, the node MSD,
+    application-specific link attributes and a Flex-Algo definition, which
+    wins the election with higher priority. The definition excludes the
+    admin group of the link to the emulated topology, which is therefore
+    not reachable with Flex-Algo 128 but with algorithm 0."""
+    topo = isis.lspgen(tmp_path / "isis", 10, flex_algo="128:igp")
+    isis.start(frr={"flex_algo": [128]}, bbl={
+        "mrt": topo.mrt,
+        "isis": {"sr-base": 10000, "sr-range": 100, "sr-algo": [0, 128],
+                 "sr-node-sids": [{"algo": 0, "index": 90}, {"algo": 128, "index": 91}],
+                 "adjacency-sid-base": 1000, "node-msd": 8,
+                 "flex-algo": [{"algo": 128, "priority": 200, "exclude-any": 1}]},
+        "connection": {"te-metric": 100, "delay": 50, "admin-group": 1},
+        "network": {"isis-te-metric": 100, "isis-delay": 50}})
+    isis.wait_established(1)
+    wait_until(lambda: set(isis.bbl_database(1)) <= set(isis.frr_database(1)), 30,
+               message="BNG Blaster database synchronized to FRR")
+    wait_until(lambda: isis.frr_flex_algo_source(128) == BBL_SYSTEM_ID, 10,
+               message="Flex-Algo definition of the BNG Blaster elected")
+    wait_until(lambda: "%s/32" % BBL_ROUTER_ID in isis.frr_algo_routes(128), 15,
+               message="Flex-Algo 128 route to the BNG Blaster")
+    wait_until(lambda: topo.prefixes <= isis.frr_routes("ip"), 15,
+               message="FRR algorithm 0 routes to all nodes")
+    assert not topo.prefixes & isis.frr_algo_routes(128)
+    sids, algos = isis.frr_prefix_sids()
+    assert sids["%s/32" % BBL_ROUTER_ID] == {(90, 0), (91, 128)}
+    assert algos["%s.00-00" % BBL_SYSTEM_ID] == [0, 128]
+    assert isis.frr_node_msd(1)["%s.00-00" % BBL_SYSTEM_ID] == 8
+    asla = isis.frr_asla()
+    assert asla[("%s.00-00" % BBL_SYSTEM_ID, "%s.00" % FRR_SYSTEM_ID)] == (100, 50, 50)
     isis.teardown()

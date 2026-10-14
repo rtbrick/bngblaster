@@ -173,7 +173,8 @@ class IsisSetup(IgpSetup):
             args.append("-O")
         return LspgenTopology(path, args)
 
-    def frr_config(self, level=1, p2p=True, auth=None, redistribute=False, flex_algo=None):
+    def frr_config(self, level=1, p2p=True, auth=None, redistribute=False, flex_algo=None,
+                   link_params=None):
         """Return FRR config. The auth tuple (type, key) is used for hellos,
         LSPs and SNPs of all levels. FRR participates in the flex_algo list
         of algorithms without advertising a definition. All links must have
@@ -197,6 +198,8 @@ class IsisSetup(IgpSetup):
             for l in levels(level):
                 lines.append(" redistribute ipv4 connected level-%d" % l)
                 lines.append(" redistribute ipv6 connected level-%d" % l)
+        if link_params:
+            lines += [" mpls-te on", " mpls-te router-address %s" % FRR_ADDRESS]
         if flex_algo:
             lines += [" segment-routing on",
                       " segment-routing global-block 16000 23999"]
@@ -215,10 +218,14 @@ class IsisSetup(IgpSetup):
             lines.append(" isis network point-to-point")
         if auth:
             lines.append(" isis password %s %s" % auth)
+        if link_params:
+            # (te-metric, delay) advertised as application-specific link attributes
+            lines += [" link-params", "  enable", "  metric %d" % link_params[0],
+                      "  delay %d min %d max %d" % (link_params[1], link_params[1], link_params[1]), " exit-link-params"]
         lines.append("exit")
         return "\n".join(lines) + "\n"
 
-    def bbl_config(self, level=1, p2p=True, isis=None, mrt=None):
+    def bbl_config(self, level=1, p2p=True, isis=None, mrt=None, connection=None, network=None):
         instance = {
             "instance-id": 1,
             "level": level,
@@ -230,10 +237,11 @@ class IsisSetup(IgpSetup):
             "hold-time": 10,
         }
         if mrt:
-            connection = {"system-id": "%s.00" % LSPGEN_ROOT_SYSTEM_ID}
+            external = {"system-id": "%s.00" % LSPGEN_ROOT_SYSTEM_ID}
             for l in levels(level):
-                connection["l%d-metric" % l] = 10
-            instance["external"] = {"mrt-file": mrt, "connections": [connection]}
+                external["l%d-metric" % l] = 10
+            external.update(connection or {})
+            instance["external"] = {"mrt-file": mrt, "connections": [external]}
         instance.update(isis or {})
         return {
             "interfaces": {
@@ -245,7 +253,8 @@ class IsisSetup(IgpSetup):
                     "gateway-ipv6": FRR_ADDRESS6,
                     "isis-instance-id": 1,
                     "isis-level": level,
-                    "isis-p2p": p2p
+                    "isis-p2p": p2p,
+                    **(network or {})
                 }
             },
             "isis": [instance]
