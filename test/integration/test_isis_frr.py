@@ -203,3 +203,20 @@ def test_flex_algo_spf(isis, tmp_path):
     assert len(topo.asla) and all(100 <= te <= 200 and 10 <= dmin == dmax <= 1000
                                   for te, dmin, dmax in topo.asla.values())
     isis.teardown()
+
+
+def test_node_msd(isis, tmp_path):
+    """lspgen advertises the node MSD (RFC 8491) and the E-flag (ELC) of the
+    node prefixes (RFC 9088), FRR decodes the node MSD of all nodes."""
+    topo = isis.lspgen(tmp_path / "isis", 10, node_msd=10, elc=True)
+    isis.start(bbl={"mrt": topo.mrt})
+    isis.wait_established(1)
+    wait_until(lambda: set(isis.bbl_database(1)) <= set(isis.frr_database(1)), 30,
+               message="BNG Blaster database synchronized to FRR")
+    wait_until(lambda: {"%s-00" % n for n in topo.nodes} <= set(isis.frr_node_msd(1)), 10,
+               message="node MSD of all nodes in FRR")
+    msd = isis.frr_node_msd(1)
+    assert all(msd["%s-00" % n] == 10 for n in topo.nodes)
+    wait_until(lambda: topo.prefixes <= isis.frr_routes("ip"), 15,
+               message="FRR routes to all nodes")
+    isis.teardown()

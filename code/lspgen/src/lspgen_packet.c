@@ -306,7 +306,8 @@ lsdb_attr_subtlvs_present(struct lsdb_attr_ *attr)
             if (attr->key.prefix.algo_count || attr->key.prefix.adv_tag) {
                 return true;
             }
-            if ((attr->key.prefix.ext_flag || attr->key.prefix.r_flag || attr->key.prefix.node_flag)) {
+            if ((attr->key.prefix.ext_flag || attr->key.prefix.r_flag ||
+                 attr->key.prefix.node_flag || attr->key.prefix.elc_flag)) {
                 return true;
             }
             break;
@@ -390,7 +391,8 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
          attr->key.attr_type == ISIS_TLV_EXTD_IPV6_REACH) &&
         (attr->key.prefix.ext_flag ||
          attr->key.prefix.r_flag ||
-         attr->key.prefix.node_flag)) {
+         attr->key.prefix.node_flag ||
+         attr->key.prefix.elc_flag)) {
 
         subtlv_start_idx = buf->idx;
         push_be_uint(buf, 1, ISIS_SUBTLV_PREFIX_FLAG); /* subTLV type */
@@ -406,6 +408,9 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
         if (attr->key.prefix.node_flag) {
             flags |= 0x20;
         }
+        if (attr->key.prefix.elc_flag) {
+            flags |= 0x10;
+        }
         push_be_uint(buf, 1, flags); /* flags */
 
         buf->data[subtlv_start_idx+1] = buf->idx - subtlv_start_idx - 2; /* Update subtlv length */
@@ -417,6 +422,28 @@ lspgen_serialize_prefix_subtlv(lsdb_attr_t *attr, io_buffer_t *buf,
         */
         buf->data[total_subtlv_length_idx] = buf->idx - total_subtlv_length_idx - 1;
     }
+}
+
+/*
+ * Write a node or link MSD subTLV (RFC 8491) if at least one MSD type is set.
+ */
+static void
+lspgen_serialize_msd(io_buffer_t *buf, uint8_t type, lsdb_msd_t *msd)
+{
+    uint32_t subtlv_start_idx;
+    int idx;
+
+    if (!msd[0].type) {
+        return;
+    }
+    subtlv_start_idx = buf->idx;
+    push_be_uint(buf, 1, type); /* subTLV type */
+    push_be_uint(buf, 1, 0); /* subTLV length */
+    for (idx = 0; idx < LSDB_MAX_MSD && msd[idx].type; idx++) {
+        push_be_uint(buf, 1, msd[idx].type);
+        push_be_uint(buf, 1, msd[idx].value);
+    }
+    buf->data[subtlv_start_idx+1] = buf->idx - subtlv_start_idx - 2; /* Update subtlv length */
 }
 
 /*
@@ -547,6 +574,7 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 		push_be_uint(buf, 1, 0);
 	        push_be_uint(buf, 2, attr->key.link.adjacency_sid);
 	    }
+            lspgen_serialize_msd(buf, ISIS_SUBTLV_IS_EXT_LINK_MSD, attr->key.link.msd);
             if (attr->key.link.asla) {
                 lspgen_serialize_asla(attr, buf);
             }
@@ -659,6 +687,7 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
                 push_be_uint(buf, 1, attr->key.cap.sr_algo_len); /* Area Length in bytes */
                 push_data(buf, attr->key.cap.sr_algo, attr->key.cap.sr_algo_len);
 	    }
+            lspgen_serialize_msd(buf, ISIS_SUBTLV_CAP_NODE_MSD, attr->key.cap.msd);
             break;
         case ISIS_TLV_BINDING:
             flags = 0;

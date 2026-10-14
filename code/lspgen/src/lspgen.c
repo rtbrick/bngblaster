@@ -63,6 +63,8 @@ static struct option long_options[] = {
     {"flex-algo", required_argument, NULL, 'F'},
     {"link-delay", required_argument, NULL, 'D'},
     {"te-metric", required_argument, NULL, 'E'},
+    {"node-msd", required_argument, NULL, 'B'},
+    {"elc", no_argument, NULL, 'O'},
     {"external-count", required_argument, NULL, 'e'},
     {"graphviz-file", required_argument, NULL, 'g'},
     {"help", no_argument, NULL, 'h'},
@@ -789,6 +791,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             lspgen_add_node_sids(ctx, node, &attr_template, false);
         }
         attr_template.key.prefix.node_flag = true;
+        attr_template.key.prefix.elc_flag = ctx->elc;
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_EXTD_IPV4_REACH;
         lsdb_add_node_attr(node, &attr_template);
@@ -810,6 +813,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             lspgen_add_node_sids(ctx, node, &attr_template, true);
         }
         attr_template.key.prefix.node_flag = true;
+        attr_template.key.prefix.elc_flag = ctx->elc;
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_EXTD_IPV6_REACH;
         lsdb_add_node_attr(node, &attr_template);
@@ -853,6 +857,10 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             }
             memcpy(attr_template.key.cap.sr_algo, ctx->sr_algo, ctx->sr_algo_count);
             attr_template.key.cap.sr_algo_len = ctx->sr_algo_count;
+            if (ctx->node_msd) {
+                attr_template.key.cap.msd[0].type = LSDB_MSD_TYPE_BMI;
+                attr_template.key.cap.msd[0].value = ctx->node_msd;
+            }
             attr_template.key.attr_type = ISIS_TLV_CAP;
             attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
@@ -1586,6 +1594,8 @@ int
 main(int argc, char *argv[])
 {
     int opt, idx, res;
+    char *end;
+    long value;
     struct lsdb_ctx_ *ctx;
 
     /*
@@ -1604,7 +1614,7 @@ main(int argc, char *argv[])
      * Parse options.
      */
     idx = 0;
-    while ((opt = getopt_long(argc, argv, "vhA:D:E:F:a:c:C:I:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:u:V:w:x:X:yzZ",
+    while ((opt = getopt_long(argc, argv, "vhA:B:D:E:F:Oa:c:C:I:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:u:V:w:x:X:yzZ",
                               long_options, &idx)) != -1) {
         switch (opt) {
             case 'v':
@@ -1675,6 +1685,19 @@ main(int argc, char *argv[])
                 if (!lspgen_parse_flex_algo(ctx, optarg)) {
                     exit(EXIT_FAILURE);
                 }
+                break;
+            case 'B':
+                /* node-msd */
+                value = strtol(optarg, &end, 10);
+                if (*end || end == optarg || value < 1 || value > 255) {
+                    LOG(ERROR, "Invalid node MSD %s\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
+                ctx->node_msd = value;
+                break;
+            case 'O':
+                /* elc */
+                ctx->elc = true;
                 break;
             case 'D':
                 /* link-delay */
@@ -1824,8 +1847,10 @@ main(int argc, char *argv[])
         LOG(ERROR, "SR algorithms are not supported for protocol %s\n", lsdb_format_proto(ctx));
         exit(EXIT_FAILURE);
     }
-    if ((ctx->link_delay_max || ctx->te_metric_max) && ctx->protocol_id != PROTO_ISIS) {
-        LOG(ERROR, "Link delay and TE metric are not supported for protocol %s\n", lsdb_format_proto(ctx));
+    if ((ctx->link_delay_max || ctx->te_metric_max || ctx->node_msd || ctx->elc) &&
+        ctx->protocol_id != PROTO_ISIS) {
+        LOG(ERROR, "Link delay, TE metric, node MSD and ELC are not supported for protocol %s\n",
+            lsdb_format_proto(ctx));
         exit(EXIT_FAILURE);
     }
     if (!lspgen_add_flex_algo_to_sr_algo(ctx)) {

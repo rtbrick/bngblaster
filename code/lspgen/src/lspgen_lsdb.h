@@ -53,6 +53,15 @@ typedef struct lsdb_node_id_ {
 #define LSDB_PREFIX_ALGO_SID          0x02 /* Advertise Prefix-SID */
 #define LSDB_PREFIX_ALGO_FAPM         0x01 /* Advertise Flex-Algo prefix metric */
 
+/* Maximum SID depth (RFC 8491) entries per node or link */
+#define LSDB_MAX_MSD                  2
+#define LSDB_MSD_TYPE_BMI             1
+
+typedef struct lsdb_msd_ {
+    uint8_t type;
+    uint8_t value;
+} lsdb_msd_t;
+
 /* Flex-Algo definition (RFC 9350) */
 #define LSDB_MAX_FLEX_ALGO            LSDB_MAX_PREFIX_ALGO
 #define LSDB_FAD_METRIC_IGP           0
@@ -108,6 +117,8 @@ typedef struct lsdb_ctx_
     uint32_t link_delay_max;
     uint32_t te_metric_min; /* Random TE metric range */
     uint32_t te_metric_max;
+    uint8_t node_msd; /* Base MPLS imposition MSD of all nodes, 0 = not advertised */
+    bool elc; /* Set the E-flag (ELC) of node prefixes */
     char *authentication_key;
     uint8_t authentication_type;
     uint32_t seed;
@@ -273,7 +284,8 @@ typedef struct lsdb_attr_prefix_ {
     s_flag:1, /* domain wide flooding */
     adv_range:1, /* Advertise range (binding TLV) */
     adv_tag:1, /* Advertise Tag */
-    small_metrics:1; /* old-style 6-bit metrics */
+    small_metrics:1, /* old-style 6-bit metrics */
+    elc_flag:1; /* Entropy label capability (RFC 9088) */
 
     uint8_t algo_count; /* Number of per algorithm entries */
     lsdb_prefix_algo_t algos[LSDB_MAX_PREFIX_ALGO];
@@ -296,6 +308,7 @@ typedef struct lsdb_attr_link_ {
     uint32_t min_delay; /* microseconds */
     uint32_t max_delay; /* microseconds */
     uint32_t admin_group;
+    lsdb_msd_t msd[LSDB_MAX_MSD]; /* Link MSD, type 0 = unused */
 } lsdb_attr_link_t;
 
 /*
@@ -324,6 +337,7 @@ typedef struct lsdb_attr_cap_ {
     mpls_ipv6_flag:1;
     uint8_t sr_algo[8];
     uint8_t sr_algo_len;
+    lsdb_msd_t msd[LSDB_MAX_MSD]; /* Node MSD, type 0 = unused */
 } lsdb_attr_cap_t;
 
 #define MAX_MSG_LEVEL 4

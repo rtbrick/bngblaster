@@ -12,6 +12,61 @@
 #include "lspgen_isis.h"
 #include "lspgen_ospf.h"
 
+/*
+ * Write a node or link MSD list, e.g. "msd": [{"type": 1, "value": 10}]
+ */
+static void
+lspgen_write_msd_config(json_t *obj, lsdb_msd_t *msd)
+{
+    json_t *arr, *msd_obj;
+    int idx;
+
+    if (!msd[0].type) {
+        return;
+    }
+    arr = json_array();
+    for (idx = 0; idx < LSDB_MAX_MSD && msd[idx].type; idx++) {
+        msd_obj = json_object();
+        json_object_set_new(msd_obj, "type", json_integer(msd[idx].type));
+        json_object_set_new(msd_obj, "value", json_integer(msd[idx].value));
+        json_array_append_new(arr, msd_obj);
+    }
+    json_object_set_new(obj, "msd", arr);
+}
+
+/*
+ * Read a node or link MSD list, e.g. "msd": [{"type": 1, "value": 10}]
+ */
+static void
+lspgen_read_msd_config(json_t *obj, lsdb_msd_t *msd)
+{
+    json_t *arr, *msd_obj, *type, *value;
+    size_t idx;
+    int count = 0;
+
+    arr = json_object_get(obj, "msd");
+    if (!arr || !json_is_array(arr)) {
+        return;
+    }
+    json_array_foreach(arr, idx, msd_obj) {
+        type = json_object_get(msd_obj, "type");
+        value = json_object_get(msd_obj, "value");
+        if (!json_is_integer(type) || !json_is_integer(value) ||
+            json_integer_value(type) < 1 || json_integer_value(type) > 255 ||
+            json_integer_value(value) < 0 || json_integer_value(value) > 255) {
+            LOG_NOARG(ERROR, "Ignore invalid MSD\n");
+            continue;
+        }
+        if (count >= LSDB_MAX_MSD) {
+            LOG(ERROR, "Ignore MSDs exceeding the maximum of %u\n", LSDB_MAX_MSD);
+            return;
+        }
+        msd[count].type = json_integer_value(type);
+        msd[count].value = json_integer_value(value);
+        count++;
+    }
+}
+
 void
 lspgen_write_area_config(json_t *arr, lsdb_attr_t *attr)
 {
@@ -61,6 +116,7 @@ lspgen_write_link_config(lsdb_ctx_t *ctx, json_t *arr, lsdb_attr_t *attr)
             json_object_set_new(obj, "admin_group", json_integer(attr->key.link.admin_group));
         }
     }
+    lspgen_write_msd_config(obj, attr->key.link.msd);
     json_array_append_new(arr, obj);
 }
 
@@ -94,6 +150,7 @@ lspgen_write_cap_config(json_t *arr, lsdb_attr_t *attr)
         }
         json_object_set_new(obj, "sr_algo_list", algo_arr);
     }
+    lspgen_write_msd_config(obj, attr->key.cap.msd);
     json_array_append_new(arr, obj);
 }
 
@@ -227,6 +284,9 @@ lspgen_write_common_prefix_config(json_t *obj, lsdb_attr_t *attr)
     }
     if (attr->key.prefix.s_flag) {
         json_object_set_new(obj, "s_flag", json_boolean(1));
+    }
+    if (attr->key.prefix.elc_flag) {
+        json_object_set_new(obj, "elc_flag", json_boolean(1));
     }
 }
 
@@ -1078,6 +1138,10 @@ lspgen_read_common_prefix_config(lsdb_attr_t *attr, json_t *obj)
     if (value && json_is_boolean(value)) {
         attr->key.prefix.small_metrics = json_boolean_value(value);
     }
+    value = json_object_get(obj, "elc_flag");
+    if (value && json_is_boolean(value)) {
+        attr->key.prefix.elc_flag = json_boolean_value(value);
+    }
 }
 
 void
@@ -1339,6 +1403,7 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
                 attr_template.key.cap.sr_algo[idx] = (uint8_t) json_integer_value(json_array_get(arr, idx));
             }
         }
+        lspgen_read_msd_config(obj, attr_template.key.cap.msd);
     }
 
     attr_template.key.ordinal = 1;
@@ -1455,6 +1520,7 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, ui
                     (*adj_sid)++;
 		}
 		lspgen_read_link_asla_config(&attr_template, link_obj);
+		lspgen_read_msd_config(link_obj, attr_template.key.link.msd);
 	    }
 
 	    memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 7);

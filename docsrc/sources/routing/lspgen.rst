@@ -53,6 +53,8 @@ The default protocol is ISIS which can be changed using the argument ``-P ospf2`
       -F --flex-algo <algo:igp|min-delay|te[:priority],...>
       -D --link-delay <min>[:<max>]
       -E --te-metric <min>[:<max>]
+      -B --node-msd <args>
+      -O --elc
       -e --external-count <args>
       -g --graphviz-file <filename>
       -h --help
@@ -217,6 +219,16 @@ delay and TE metric are equal to the IGP metric.
 
     lspgen -m isis.mrt -c 100 -F 128:igp,129:min-delay,130:te -D 10:1000 -E 100:200
 
+The argument ``-B`` adds the node maximum SID depth (MSD, RFC 8491)
+of type BMI-MSD with the given value (1 - 255) to all nodes of ISIS
+topologies. The argument ``-O`` sets the E-flag of the prefix attribute
+flags, which signals the entropy label capability (ELC, RFC 9088) for
+the node prefixes.
+
+.. code-block:: none
+
+    lspgen -m isis.mrt -c 100 -B 10 -O
+
 In configuration files, multiple Prefix-SIDs are defined per prefix
 with ``segment_ids``. The ``index`` is mandatory, the ``algo`` defaults
 to 0 and the optional ``flags`` are ``no-php``, ``explicit-null``,
@@ -240,6 +252,24 @@ supported per prefix, and only the first one is used for OSPF.
 
 The SR algorithms of the router capability are defined with
 ``sr_algo_list`` (e.g. ``"sr_algo_list": [0, 1, 128]``).
+
+The node MSD is defined in the ``capability_list`` and the link MSD
+per neighbor with ``msd``, a list of up to two entries with ``type``
+(e.g. 1 for BMI-MSD) and ``value``. The E-flag (ELC) is set per prefix
+with ``"elc_flag": true``.
+
+.. code-block:: json
+
+    {
+        "capability_list": [
+            {
+                "router_id": "10.0.0.1",
+                "srgb_base": 100000,
+                "srgb_range": 36000,
+                "msd": [{"type": 1, "value": 10}]
+            }
+        ]
+    }
 
 Flex-Algo prefix metrics (FAPM) are added per prefix with
 ``flex_algo_metrics``, for example for prefixes advertised between levels.

@@ -154,7 +154,7 @@ class IsisSetup(IgpSetup):
 
     @staticmethod
     def lspgen(path, nodes, level=1, auth=None, sr_algo=None, flex_algo=None,
-               link_delay=None, te_metric=None):
+               link_delay=None, te_metric=None, node_msd=None, elc=False):
         args = ["-a", "%s/24" % ISIS_AREA, "-c", str(nodes), "-V", str(level),
                 "-C", BBL_SYSTEM_ID]
         if auth:
@@ -167,6 +167,10 @@ class IsisSetup(IgpSetup):
             args += ["-D", link_delay]
         if te_metric:
             args += ["-E", te_metric]
+        if node_msd:
+            args += ["-B", str(node_msd)]
+        if elc:
+            args.append("-O")
         return LspgenTopology(path, args)
 
     def frr_config(self, level=1, p2p=True, auth=None, redistribute=False, flex_algo=None):
@@ -374,6 +378,17 @@ class IsisSetup(IgpSetup):
         text = self.frr.vtysh("show isis route algorithm %d" % algo, json_output=False)
         return {line.split()[0] for line in text.splitlines()
                 if re.match(r"^ \S+/\d+\s+IP", line)}
+
+    def frr_node_msd(self, level):
+        """Return {lsp-id: node MSD} of an FRR database level."""
+        result = {}
+        for area in self.frr.vtysh("show isis database detail").get("areas", []):
+            for db_level in area.get("levels", []):
+                if db_level.get("id") == level:
+                    for lsp in db_level.get("lsps", []):
+                        if "msd" in lsp:
+                            result[lsp["lsp"]["id"]] = lsp["msd"]
+        return result
 
     def frr_lsp(self, level, lsp_id):
         """Return an LSP of an FRR database level (detail output)."""
