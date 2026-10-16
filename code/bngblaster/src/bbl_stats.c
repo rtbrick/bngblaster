@@ -449,8 +449,14 @@ bbl_stats_stdout(bbl_stats_s *stats) {
     printf("\n==============================================================================\n");
     printf("Test Duration: %lus\n", test_duration());
     if(g_ctx->sessions) {
-        printf("Sessions PPPoE: %u PPPoL2TP: %u IPoE: %u\n", g_ctx->sessions_pppoe, g_ctx->sessions_pppol2tp,
-               g_ctx->sessions_ipoe);
+        if(g_ctx->sessions_pppol2tp) {
+            printf("Sessions PPPoE: %u PPPoL2TP: %u IPoE: %u\n", 
+                   g_ctx->sessions_pppoe, g_ctx->sessions_pppol2tp,
+                   g_ctx->sessions_ipoe);
+        } else {
+            printf("Sessions PPPoE: %u IPoE: %u\n", 
+                   g_ctx->sessions_pppoe, g_ctx->sessions_ipoe);
+        }
         printf("Sessions established: %u/%u\n", g_ctx->sessions_established_max, g_ctx->sessions);
         printf("DHCPv6 sessions established: %u\n", g_ctx->dhcpv6_established_max);
         printf("Setup Time: %u ms\n", g_ctx->stats.setup_time);
