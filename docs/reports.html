@@ -58,7 +58,7 @@
 </li>
 <li class="toctree-l1"><a class="reference internal" href="configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
-<li class="toctree-l1"><a class="reference internal" href="controller.html">Controller</a></li>
+<li class="toctree-l1"><a class="reference internal" href="controller.html">Controller and Web UI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="performance.html">Performance Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="faq.html">Frequently Asked Questions</a></li>
@@ -217,6 +217,7 @@ Access Interface Protocol Packet Stats:
 
 Access Interface Protocol Timeout Stats:
   LCP Echo Request:          0
+  LCP Echo Expired:          0
   LCP Request:               0
   IPCP Request:              0
   IP6CP Request:             0
@@ -268,6 +269,7 @@ Access Interface Protocol Packet Stats:
 
 Access Interface Protocol Timeout Stats:
   LCP Echo Request:          0
+  LCP Echo Expired:          0
   LCP Request:               0
   IPCP Request:              0
   IP6CP Request:             0
@@ -509,6 +511,7 @@ argument <code class="docutils literal notranslate"><span class="pre">-J</span> 
 <span class="w">          </span><span class="nt">&quot;rx-icmpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1840</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;rx-ipv4-fragmented&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;lcp-echo-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">          </span><span class="nt">&quot;lcp-echo-expired&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;lcp-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;ipcp-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;ip6cp-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
@@ -577,6 +580,7 @@ argument <code class="docutils literal notranslate"><span class="pre">-J</span> 
 <span class="w">          </span><span class="nt">&quot;rx-icmpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1816</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;rx-ipv4-fragmented&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;lcp-echo-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">          </span><span class="nt">&quot;lcp-echo-expired&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;lcp-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;ipcp-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
 <span class="w">          </span><span class="nt">&quot;ip6cp-request-timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>

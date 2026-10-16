@@ -1,12 +1,11 @@
 .. _controller:
 
-Controller
-==========
+Controller and Web UI
+=====================
 
-The BNG Blaster controller offers a convenient REST API that allows users to start and stop 
-multiple test instances with ease. The REST API serves as an interface to the BNG Blaster's 
-underlying functionality, providing a simplified way to interact with the controller and 
-manage test instances.
+The BNG Blaster controller allows users to create, start, stop and observe multiple
+test instances with ease, either programmatically through a REST API or interactively
+through a :ref:`web UI <controller-web-ui>` in the browser.
 
 By exposing the BNG Blaster :ref:`JSON RPC API <api>` as a REST API, the controller enables 
 users to perform various operations programmatically. This includes initiating test instances, 
@@ -14,19 +13,14 @@ configuring test parameters, monitoring test progress, and terminating test exec
 The REST API provides a standardized and intuitive way to control the BNG Blaster, making it 
 accessible to automation scripts, external applications, or custom integrations.
 
-Furthermore, the BNG Blaster controller's REST API also offers endpoints to download logs and reports. 
-These endpoints enable users to retrieve detailed information about the test execution, such as 
-test results, performance metrics, and any encountered errors or issues. By accessing logs and reports 
-through the REST API, users can analyze the outcomes of their tests, troubleshoot problems, and generate 
-comprehensive documentation for further analysis or reporting purposes.
+Furthermore, the REST API offers endpoints to upload files like configurations and to download
+logs and reports. These endpoints enable users to retrieve detailed information about the test
+execution, such as test results, performance metrics, and any encountered errors or issues.
 
-The REST API provided by the BNG Blaster controller simplifies the management of test instances and
-enhances the overall usability and integration capabilities of the BNG Blaster. Whether it's starting
-and stopping tests, retrieving logs and reports, or integrating with other systems, the REST API streamlines
-the testing process and facilitates seamless interaction with the BNG Blaster's functionalities.
-
-On top of the REST API, the controller also includes an experimental :ref:`web UI <controller-web-ui>`
-to create, start, stop and observe test instances from a browser.
+The web UI is built on top of the same REST API and provides a dashboard of all
+test instances. It allows to create, start and stop test instances, watch live statistics, run
+commands, follow the log and download logs, reports and captures without any additional tools,
+which makes it convenient for manual and exploratory testing.
 
 https://github.com/rtbrick/bngblaster-controller
 
@@ -127,7 +121,7 @@ rebinding attacks (e.g. ``-allowed-hosts lab01,lab01.example.com``).
 Web UI
 ------
 
-The controller includes an embedded, experimental web UI to create
+The controller includes an embedded web UI to create
 and observe test instances without calling the REST API directly.
 With the default options, it is available at ``http://<host>:8001/``.
 

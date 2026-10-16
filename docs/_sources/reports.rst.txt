@@ -124,6 +124,7 @@ Standard Output Reports
 
     Access Interface Protocol Timeout Stats:
       LCP Echo Request:          0
+      LCP Echo Expired:          0
       LCP Request:               0
       IPCP Request:              0
       IP6CP Request:             0
@@ -175,6 +176,7 @@ Standard Output Reports
 
     Access Interface Protocol Timeout Stats:
       LCP Echo Request:          0
+      LCP Echo Expired:          0
       LCP Request:               0
       IPCP Request:              0
       IP6CP Request:             0
@@ -420,6 +422,7 @@ argument ``-J <filename>``.
               "rx-icmpv6": 1840,
               "rx-ipv4-fragmented": 0,
               "lcp-echo-timeout": 0,
+              "lcp-echo-expired": 0,
               "lcp-request-timeout": 0,
               "ipcp-request-timeout": 0,
               "ip6cp-request-timeout": 0,
@@ -488,6 +491,7 @@ argument ``-J <filename>``.
               "rx-icmpv6": 1816,
               "rx-ipv4-fragmented": 0,
               "lcp-echo-timeout": 0,
+              "lcp-echo-expired": 0,
               "lcp-request-timeout": 0,
               "ipcp-request-timeout": 0,
               "ip6cp-request-timeout": 0,

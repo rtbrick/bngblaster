@@ -51,7 +51,7 @@
 <li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
 <li class="toctree-l1"><a class="reference internal" href="index.html">API/CLI</a></li>
-<li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller and Web UI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance Guide</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
 <li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
@@ -104,19 +104,29 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>network-interfaces</strong></p></td>
+<tr class="row-even"><td><p><strong>access-protocol-stats</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display access interface protocol packet and timeout statistics</div>
+<div class="line">as included in the final report (protocol-stats).</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">interface</span></code></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>network-interfaces</strong></p></td>
 <td><div class="line-block">
 <div class="line">List all network interface functions.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>a10nsp-interfaces</strong></p></td>
+<tr class="row-even"><td><p><strong>a10nsp-interfaces</strong></p></td>
 <td><div class="line-block">
 <div class="line">List all a10nsp interface functions.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lag-info</strong></p></td>
+<tr class="row-odd"><td><p><strong>lag-info</strong></p></td>
 <td><div class="line-block">
 <div class="line">List all link aggregation (LAG) interfaces.</div>
 <div class="line"><br /></div>
@@ -125,7 +135,7 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>interface-enable</strong></p></td>
+<tr class="row-even"><td><p><strong>interface-enable</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable interface.</div>
 <div class="line"><br /></div>
@@ -134,7 +144,7 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>interface-disable</strong></p></td>
+<tr class="row-odd"><td><p><strong>interface-disable</strong></p></td>
 <td><div class="line-block">
 <div class="line">Disable interface.</div>
 <div class="line"><br /></div>
@@ -143,7 +153,7 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>interface-topology</strong></p></td>
+<tr class="row-even"><td><p><strong>interface-topology</strong></p></td>
 <td><div class="line-block">
 <div class="line">Display NUMA node, local CPU set and I/O thread pinning</div>
 <div class="line">(CPU, queue and state) per interface.</div>
@@ -155,6 +165,13 @@
 </tr>
 </tbody>
 </table>
+<p>The access protocol statistics include packet counters per protocol
+and timeout counters. The counter
+<code class="docutils literal notranslate"><span class="pre">lcp-echo-timeout</span></code> is incremented for each LCP echo request without
+response and <code class="docutils literal notranslate"><span class="pre">lcp-echo-expired</span></code> for each session terminated because
+all LCP echo requests (<code class="docutils literal notranslate"><span class="pre">lcp</span></code> <code class="docutils literal notranslate"><span class="pre">keepalive-retry</span></code>) remained without
+response.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">access-protocol-stats</span> <span class="pre">interface</span> <span class="pre">eth1</span></code></p>
 <p>The interface topology command helps to verify NUMA locality and CPU
 pinning of the RX and TX threads configured with <code class="docutils literal notranslate"><span class="pre">rx-cpuset</span></code>,
 <code class="docutils literal notranslate"><span class="pre">tx-cpuset</span></code>, <code class="docutils literal notranslate"><span class="pre">rx-auto-cpuset</span></code> or <code class="docutils literal notranslate"><span class="pre">tx-auto-cpuset</span></code>. The queue
