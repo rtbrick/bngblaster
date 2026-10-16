@@ -15,7 +15,7 @@
 #   docker run -d -p 8001:8001 -v $PWD/instances:/var/bngblaster bngblaster
 #
 # Additional controller options can be passed as command, e.g. to disable
-# the web UI and file upload (supported by controller versions > 0.1.3):
+# the web UI and file upload:
 #   docker run -d -p 8001:8001 bngblaster -ui=false -upload=false
 
 ARG DEBIAN_VERSION=trixie
@@ -53,6 +53,9 @@ FROM golang:${DEBIAN_VERSION} AS controller-build
 ARG CONTROLLER_VERSION=latest
 ARG CONTROLLER_REPO=https://github.com/rtbrick/bngblaster-controller
 
+# The tag list invalidates the build cache with each new controller release.
+ADD https://api.github.com/repos/rtbrick/bngblaster-controller/git/refs/tags /tmp/controller-tags.json
+
 # The release tags have no v prefix, therefore the controller is built
 # from a clone instead of go install. GOTOOLCHAIN=auto downloads a newer
 # Go version if required by the controller.
@@ -82,7 +85,7 @@ COPY --from=controller-build /bngblasterctrl /usr/bin/bngblasterctrl
 VOLUME ["/var/bngblaster"]
 EXPOSE 8001
 
-# The executable is set explicitly, older controller versions default to /usr/sbin.
-ENTRYPOINT ["/usr/bin/tini", "--", "/usr/bin/bngblasterctrl", \
-            "-e", "/usr/bin/bngblaster", "-d", "/var/bngblaster", "-addr", ":8001"]
+# The controller defaults match the image (executable /usr/bin/bngblaster,
+# instance directory /var/bngblaster, port 8001 and the configuration schema).
+ENTRYPOINT ["/usr/bin/tini", "--", "/usr/bin/bngblasterctrl"]
 CMD []
