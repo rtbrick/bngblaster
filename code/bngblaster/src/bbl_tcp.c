@@ -282,6 +282,21 @@ bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
             }
         }
         pbuf_free(p);
+    } else if(err == ERR_OK && tcpc->error_cb) {
+        /* FIN received, the connection was closed by the remote host.
+         * The pcb remains valid until the application closes it. */
+        if(tcpc->af == AF_INET) {
+            LOG(TCP, "TCP (%s %s:%u - %s:%u) closed by peer\n",
+                tcpc->ifname,
+                format_ipv4_address(&tcpc->local_addr.u_addr.ip4.addr), tcpc->local_port,
+                format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr), tcpc->remote_port);
+        } else {
+            LOG(TCP, "TCP (%s [%s]:%u - [%s]:%u) closed by peer\n",
+                tcpc->ifname,
+                format_ipv6_address((ipv6addr_t*)&tcpc->local_addr.u_addr.ip6.addr), tcpc->local_port,
+                format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr), tcpc->remote_port);
+        }
+        (tcpc->error_cb)(tcpc->arg, ERR_CLSD);
     }
     return err;
 }

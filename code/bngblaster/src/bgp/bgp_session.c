@@ -410,6 +410,13 @@ bgp_session_state_established(bgp_session_s *session)
     /* RFC 4271 6.8: the Established connection always wins. */
     bgp_session_collision_teardown(session);
 
+    /* Abort a still pending active connect, which would otherwise
+     * complete later and be closed with a collision NOTIFICATION. */
+    if(session->connecting_tcpc) {
+        bbl_tcp_ctx_free_deferred(session->connecting_tcpc);
+        session->connecting_tcpc = NULL;
+    }
+
     /* Start BGP keepalive */
     if(session->peer.hold_time < session->config->hold_time) {
         keepalive_interval = session->peer.hold_time/2U;

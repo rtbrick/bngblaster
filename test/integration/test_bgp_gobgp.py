@@ -80,6 +80,19 @@ def test_connection_collision(bgp, bbl_id):
     bgp.teardown()
 
 
+def test_peer_close(bgp):
+    """The peer closes the established connection without NOTIFICATION
+    (GoBGP killed, the kernel sends FIN). The session must go down
+    immediately instead of waiting for the next KEEPALIVE."""
+    bgp.start()
+    bgp.wait_established()
+    bgp.gobgp.proc.kill()
+    bgp.gobgp.proc.wait(5)
+    wait_until(lambda: bgp.bbl_session()["state"] != "established", 5,
+               message="BNG Blaster session down after peer close")
+    assert bgp.bbl.terminate(30) == 0
+
+
 @pytest.mark.usefixtures("md5_kernel")
 def test_md5(bgp):
     bgp.start(gobgp={"md5": "BNGBlasterMD5"},
