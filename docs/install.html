@@ -43,6 +43,7 @@
               <ul class="current">
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
 <li class="toctree-l2"><a class="reference internal" href="#install-ubuntu">Install Ubuntu</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#container-image">Container Image</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#build-from-sources">Build from Sources</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#dependencies">Dependencies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#build">Build</a></li>
@@ -115,6 +116,60 @@ and Debian Bookworm and Trixie.</p>
 <p>This command installs the BNG Blaster to <code class="docutils literal notranslate"><span class="pre">/usr/bin/bngblaster</span></code>.
 The Debian package also creates compatibility symlinks in <code class="docutils literal notranslate"><span class="pre">/usr/sbin</span></code>
 for <code class="docutils literal notranslate"><span class="pre">bngblaster</span></code>, <code class="docutils literal notranslate"><span class="pre">bngblaster-cli</span></code> and <code class="docutils literal notranslate"><span class="pre">lspgen</span></code>.</p>
+</section>
+<section id="container-image">
+<span id="install-container"></span><h2>Container Image<a class="headerlink" href="#container-image" title="Permalink to this headline"></a></h2>
+<p>A container image (amd64) with the BNG Blaster, the tools
+<code class="docutils literal notranslate"><span class="pre">bngblaster-cli</span></code>, <code class="docutils literal notranslate"><span class="pre">lspgen</span></code>, <code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code> and <code class="docutils literal notranslate"><span class="pre">ldpupdate</span></code>
+and the <a class="reference internal" href="controller.html#controller"><span class="std std-ref">BNG Blaster controller</span></a> is published
+to the GitHub Container Registry:
+<a class="reference external" href="https://github.com/rtbrick/bngblaster/pkgs/container/bngblaster">https://github.com/rtbrick/bngblaster/pkgs/container/bngblaster</a></p>
+<p>The following tags are available:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">latest</span></code>: latest release</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">&lt;version&gt;</span></code>: specific release (e.g. <code class="docutils literal notranslate"><span class="pre">1.0.1</span></code>)</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">dev</span></code>: latest commit on the <code class="docutils literal notranslate"><span class="pre">dev</span></code> branch</p></li>
+</ul>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>docker pull ghcr.io/rtbrick/bngblaster:latest
+</pre></div>
+</div>
+<p>The image starts the controller, which provides the REST API and
+<a class="reference internal" href="controller.html#controller-web-ui"><span class="std std-ref">web UI</span></a> on port <code class="docutils literal notranslate"><span class="pre">8001</span></code>. The BNG Blaster
+needs direct access to the network interfaces used for testing,
+therefore the container should be started in the host network namespace
+with the capabilities to send raw packets and change interface settings.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>docker run -d --name bngblaster \
+    --network host --cap-add NET_ADMIN --cap-add NET_RAW \
+    -v $PWD/instances:/var/bngblaster \
+    ghcr.io/rtbrick/bngblaster:latest
+</pre></div>
+</div>
+<p>The web UI is then available at <code class="docutils literal notranslate"><span class="pre">http://&lt;host&gt;:8001/</span></code>.
+The instance directory <code class="docutils literal notranslate"><span class="pre">/var/bngblaster</span></code> can be mounted as shown above
+to provide configurations and additional files (e.g. MRT files) and
+to access logs, reports and captures of the test instances directly.</p>
+<p>Additional <a class="reference internal" href="controller.html#controller"><span class="std std-ref">controller options</span></a> can be passed
+as command, e.g. to listen on another port or to disable the web UI
+and file upload:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>docker run -d --name bngblaster \
+    --network host --cap-add NET_ADMIN --cap-add NET_RAW \
+    ghcr.io/rtbrick/bngblaster:latest -addr :8080 -ui=false -upload=false
+</pre></div>
+</div>
+<p>The BNG Blaster can also be started directly without the controller
+by overriding the entrypoint:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>docker run -it --rm \
+    --network host --cap-add NET_ADMIN --cap-add NET_RAW \
+    -v $PWD:/work -w /work \
+    --entrypoint bngblaster \
+    ghcr.io/rtbrick/bngblaster:latest -C config.json -I
+</pre></div>
+</div>
+<p>The image can also be built locally from the repository root
+using the provided <code class="docutils literal notranslate"><span class="pre">docker/Dockerfile</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>docker build -f docker/Dockerfile -t bngblaster .
+</pre></div>
+</div>
 </section>
 <section id="build-from-sources">
 <h2>Build from Sources<a class="headerlink" href="#build-from-sources" title="Permalink to this headline"></a></h2>

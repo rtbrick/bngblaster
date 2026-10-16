@@ -56,6 +56,9 @@ The corresponding service will be started automatically.
         CGroup: /system.slice/rtbrick-bngblasterctrl.service
                 └─682535 /usr/local/bin/bngblasterctrl
 
+Alternatively, the BNG Blaster :ref:`container image <install-container>`
+includes the controller together with the BNG Blaster.
+
 
 Configuration
 -------------

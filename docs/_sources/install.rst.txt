@@ -27,6 +27,73 @@ This command installs the BNG Blaster to ``/usr/bin/bngblaster``.
 The Debian package also creates compatibility symlinks in ``/usr/sbin``
 for ``bngblaster``, ``bngblaster-cli`` and ``lspgen``.
 
+.. _install-container:
+
+Container Image
+---------------
+
+A container image (amd64) with the BNG Blaster, the tools
+``bngblaster-cli``, ``lspgen``, ``bgpupdate`` and ``ldpupdate``
+and the :ref:`BNG Blaster controller <controller>` is published
+to the GitHub Container Registry:
+https://github.com/rtbrick/bngblaster/pkgs/container/bngblaster
+
+The following tags are available:
+
+* ``latest``: latest release
+* ``<version>``: specific release (e.g. ``1.0.1``)
+* ``dev``: latest commit on the ``dev`` branch
+
+.. code-block:: none
+
+    docker pull ghcr.io/rtbrick/bngblaster:latest
+
+The image starts the controller, which provides the REST API and
+:ref:`web UI <controller-web-ui>` on port ``8001``. The BNG Blaster
+needs direct access to the network interfaces used for testing,
+therefore the container should be started in the host network namespace
+with the capabilities to send raw packets and change interface settings.
+
+.. code-block:: none
+
+    docker run -d --name bngblaster \
+        --network host --cap-add NET_ADMIN --cap-add NET_RAW \
+        -v $PWD/instances:/var/bngblaster \
+        ghcr.io/rtbrick/bngblaster:latest
+
+The web UI is then available at ``http://<host>:8001/``.
+The instance directory ``/var/bngblaster`` can be mounted as shown above
+to provide configurations and additional files (e.g. MRT files) and
+to access logs, reports and captures of the test instances directly.
+
+Additional :ref:`controller options <controller>` can be passed
+as command, e.g. to listen on another port or to disable the web UI
+and file upload:
+
+.. code-block:: none
+
+    docker run -d --name bngblaster \
+        --network host --cap-add NET_ADMIN --cap-add NET_RAW \
+        ghcr.io/rtbrick/bngblaster:latest -addr :8080 -ui=false -upload=false
+
+The BNG Blaster can also be started directly without the controller
+by overriding the entrypoint:
+
+.. code-block:: none
+
+    docker run -it --rm \
+        --network host --cap-add NET_ADMIN --cap-add NET_RAW \
+        -v $PWD:/work -w /work \
+        --entrypoint bngblaster \
+        ghcr.io/rtbrick/bngblaster:latest -C config.json -I
+
+The image can also be built locally from the repository root
+using the provided ``docker/Dockerfile``.
+
+.. code-block:: none
+
+    docker build -f docker/Dockerfile -t bngblaster .
+
 Build from Sources
 ------------------
 
