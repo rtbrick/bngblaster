@@ -1,22 +1,19 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="./">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Installation &mdash; BNG Blaster 1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=411f5019" />
-
+      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
   
-      <script src="_static/jquery.js?v=5d32c60e"></script>
-      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="_static/documentation_options.js?v=f2a433a1"></script>
-      <script src="_static/doctools.js?v=fd6eb6e6"></script>
-      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
+        <script src="_static/jquery.js"></script>
+        <script src="_static/underscore.js"></script>
+        <script src="_static/doctools.js"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -28,17 +25,16 @@
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="index.html" class="icon icon-home">
-            BNG Blaster
-              <img src="_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+        <div class="wy-side-nav-search"  style="background: #fcfcfc" >
+            <a href="index.html" class="icon icon-home"> BNG Blaster
+            <img src="_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
+              <div class="version">
+                1.0.X
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -81,7 +77,7 @@
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #fcfcfc" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="index.html">BNG Blaster</a>
       </nav>
@@ -90,8 +86,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
-      <li class="breadcrumb-item active">Installation</li>
+      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
+      <li>Installation</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/install.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -102,12 +98,12 @@
            <div itemprop="articleBody">
              
   <section id="installation">
-<span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
+<span id="install"></span><h1>Installation<a class="headerlink" href="#installation" title="Permalink to this headline"></a></h1>
 <p>The BNG Blaster should run on any modern Linux distribution
 but is built and tested on Ubuntu 22.04, 24.04 and 26.04 LTS
 and Debian Bookworm and Trixie.</p>
 <section id="install-ubuntu">
-<h2>Install Ubuntu<a class="headerlink" href="#install-ubuntu" title="Link to this heading"></a></h2>
+<h2>Install Ubuntu<a class="headerlink" href="#install-ubuntu" title="Permalink to this headline"></a></h2>
 <p>Install dependencies:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install -y libssl3 libncurses6 libjansson4
 </pre></div>
@@ -121,9 +117,9 @@ The Debian package also creates compatibility symlinks in <code class="docutils 
 for <code class="docutils literal notranslate"><span class="pre">bngblaster</span></code>, <code class="docutils literal notranslate"><span class="pre">bngblaster-cli</span></code> and <code class="docutils literal notranslate"><span class="pre">lspgen</span></code>.</p>
 </section>
 <section id="build-from-sources">
-<h2>Build from Sources<a class="headerlink" href="#build-from-sources" title="Link to this heading"></a></h2>
+<h2>Build from Sources<a class="headerlink" href="#build-from-sources" title="Permalink to this headline"></a></h2>
 <section id="dependencies">
-<h3>Dependencies<a class="headerlink" href="#dependencies" title="Link to this heading"></a></h3>
+<h3>Dependencies<a class="headerlink" href="#dependencies" title="Permalink to this headline"></a></h3>
 <p>The BNG Blaster has dependencies on the RtBrick
 <a class="reference external" href="https://github.com/rtbrick/libdict">libdict fork</a>
 and the following standard dependencies:</p>
@@ -146,7 +142,7 @@ sudo apt install -y build-essential cmake \
 </div>
 </section>
 <section id="build">
-<h3>Build<a class="headerlink" href="#build" title="Link to this heading"></a></h3>
+<h3>Build<a class="headerlink" href="#build" title="Permalink to this headline"></a></h3>
 <p>Per default cmake (<code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">.</span></code>) will build the BNG Blaster as a release
 version with optimization and debug symbols (RelWithDebInfo).</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>git clone https://github.com/rtbrick/bngblaster.git
@@ -182,7 +178,7 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback
 </div>
 </section>
 <section id="id1">
-<h3>Install<a class="headerlink" href="#id1" title="Link to this heading"></a></h3>
+<h3>Install<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h3>
 <p>Then BNG Blaster can be installed using the make install target.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo make install
 </pre></div>
@@ -191,7 +187,7 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback
 <code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code> and <code class="docutils literal notranslate"><span class="pre">ldpupdate</span></code> to <code class="docutils literal notranslate"><span class="pre">/usr/bin</span></code>.</p>
 </section>
 <section id="build-options">
-<h3>Build Options<a class="headerlink" href="#build-options" title="Link to this heading"></a></h3>
+<h3>Build Options<a class="headerlink" href="#build-options" title="Permalink to this headline"></a></h3>
 <p>The following cmake options are disabled by default:</p>
 <ul class="simple">
 <li><p><code class="docutils literal notranslate"><span class="pre">BNGBLASTER_TESTS</span></code>: build unit tests (requires CMocka)</p></li>
@@ -206,7 +202,7 @@ logging flags</p></li>
 </ul>
 </section>
 <section id="build-and-run-unit-tests">
-<h3>Build and Run Unit Tests<a class="headerlink" href="#build-and-run-unit-tests" title="Link to this heading"></a></h3>
+<h3>Build and Run Unit Tests<a class="headerlink" href="#build-and-run-unit-tests" title="Permalink to this headline"></a></h3>
 <p>Building and running unit tests requires CMocka to be installed:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo apt install libcmocka-dev
 </pre></div>
@@ -237,7 +233,7 @@ Total Test time (real) =   0.00 sec
 </div>
 </section>
 <section id="build-with-dpdk-support">
-<span id="install-dpdk"></span><h3>Build with DPDK Support<a class="headerlink" href="#build-with-dpdk-support" title="Link to this heading"></a></h3>
+<span id="install-dpdk"></span><h3>Build with DPDK Support<a class="headerlink" href="#build-with-dpdk-support" title="Permalink to this headline"></a></h3>
 <p>The following steps are required to build the BNG Blaster with experimental
 <a class="reference internal" href="performance.html#dpdk-usage"><span class="std std-ref">DPDK</span></a> support.</p>
 <div class="admonition note">
@@ -286,7 +282,7 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback, dpdk
 </div>
 </section>
 <section id="build-with-af-xdp-support">
-<span id="install-af-xdp"></span><h3>Build with AF_XDP Support<a class="headerlink" href="#build-with-af-xdp-support" title="Link to this heading"></a></h3>
+<span id="install-af-xdp"></span><h3>Build with AF_XDP Support<a class="headerlink" href="#build-with-af-xdp-support" title="Permalink to this headline"></a></h3>
 <p>The following steps are required to build the BNG Blaster with experimental
 <a class="reference internal" href="performance.html#af-xdp-usage"><span class="std std-ref">AF_XDP</span></a> support.</p>
 <div class="admonition note">
@@ -327,7 +323,7 @@ IO Modes: packet_mmap_raw (default), packet_mmap, raw, loopback, af_xdp
 </section>
 </section>
 <section id="running-bng-blaster">
-<h2>Running BNG Blaster<a class="headerlink" href="#running-bng-blaster" title="Link to this heading"></a></h2>
+<h2>Running BNG Blaster<a class="headerlink" href="#running-bng-blaster" title="Permalink to this headline"></a></h2>
 <p>The BNG Blaster needs permission to send raw packets and change network interface
 settings. The easiest way to run the BNG Blaster is either as the root user or
 with <code class="docutils literal notranslate"><span class="pre">sudo</span></code>:</p>

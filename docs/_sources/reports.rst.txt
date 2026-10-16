@@ -75,7 +75,7 @@ Standard Output Reports
     Report:
     ==============================================================================
     Test Duration: 139s
-    Sessions PPPoE: 1000 PPPoL2TP: 0 IPoE: 0
+    Sessions PPPoE: 1000 IPoE: 0
     Sessions established: 1000/1000
     DHCPv6 sessions established: 1000
     Setup Time: 55661 ms

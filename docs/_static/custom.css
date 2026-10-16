@@ -7,3 +7,12 @@ table {
     max-width: 100%;
     table-layout: auto;
 }
+/* Project name and version on the light logo header. */
+.wy-side-nav-search > a,
+.wy-side-nav-search > div.version {
+    color: #48547a;
+}
+
+.wy-side-nav-search input[type="text"] {
+    border-color: #48547a;
+}

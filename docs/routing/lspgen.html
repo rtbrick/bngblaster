@@ -1,22 +1,19 @@
-
-
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" data-content_root="../">
+<html class="writer-html5" lang="en" >
 <head>
-  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LSPGEN &mdash; BNG Blaster 1.0 documentation</title>
-      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
-      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=411f5019" />
-
+      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
+      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
   
-      <script src="../_static/jquery.js?v=5d32c60e"></script>
-      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-      <script src="../_static/documentation_options.js?v=f2a433a1"></script>
-      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
-      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
+        <script src="../_static/jquery.js"></script>
+        <script src="../_static/underscore.js"></script>
+        <script src="../_static/doctools.js"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -28,17 +25,16 @@
   <div class="wy-grid-for-nav">
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
-        <div class="wy-side-nav-search" >
-
-          
-          
-          <a href="../index.html" class="icon icon-home">
-            BNG Blaster
-              <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+        <div class="wy-side-nav-search"  style="background: #fcfcfc" >
+            <a href="../index.html" class="icon icon-home"> BNG Blaster
+            <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
+              <div class="version">
+                1.0.X
+              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -81,7 +77,7 @@
       </div>
     </nav>
 
-    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #fcfcfc" >
           <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
           <a href="../index.html">BNG Blaster</a>
       </nav>
@@ -90,9 +86,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
-          <li class="breadcrumb-item"><a href="index.html">Routing Protocols</a></li>
-      <li class="breadcrumb-item active">LSPGEN</li>
+      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
+          <li><a href="index.html">Routing Protocols</a> &raquo;</li>
+      <li>LSPGEN</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/routing/lspgen.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -103,7 +99,7 @@
            <div itemprop="articleBody">
              
   <section id="lspgen">
-<span id="id1"></span><h1>LSPGEN<a class="headerlink" href="#lspgen" title="Link to this heading"></a></h1>
+<span id="id1"></span><h1>LSPGEN<a class="headerlink" href="#lspgen" title="Permalink to this headline"></a></h1>
 <p>The BNG Blaster includes a tool called <code class="docutils literal notranslate"><span class="pre">lspgen</span></code> which is able to generate
 ISIS and OSPF topologies with the corresponding link state packets for export
 as MRT and PCAP files. Initially, <code class="docutils literal notranslate"><span class="pre">lspgen</span></code> was developed exclusively for ISIS,
@@ -170,7 +166,7 @@ Usage: lspgen [OPTIONS]
 <p>You can generate random topologies or define a topology manually
 using configuration files.</p>
 <section id="connector">
-<h2>Connector<a class="headerlink" href="#connector" title="Link to this heading"></a></h2>
+<h2>Connector<a class="headerlink" href="#connector" title="Permalink to this headline"></a></h2>
 <p>The connector (<code class="docutils literal notranslate"><span class="pre">-C</span> <span class="pre">--connector</span> <span class="pre">&lt;args&gt;</span></code>) represents the link between the generated
 topology and the attached BNG Blaster instance.</p>
 <p>For ISIS topologies, the connector must be set to the <code class="docutils literal notranslate"><span class="pre">system-id</span></code> of the ISIS
@@ -184,29 +180,29 @@ Sep 04 10:50:55.780127  Root node 1921.6800.0000.00 (node1)
 ...
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;area&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;49.0001/24&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1921.6800.1001&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;router-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.1.1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;level1-auth-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;secret123&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;level1-auth-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;mrt-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;isis.mrt&quot;</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                    </span><span class="p">{</span>
-<span class="w">                        </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1921.6800.0000.00&quot;</span>
-<span class="w">                    </span><span class="p">}</span>
-<span class="w">                </span><span class="p">]</span>
-<span class="w">            </span><span class="p">}</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;area&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;49.0001/24&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1921.6800.1001&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;router-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.1.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;level1-auth-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;secret123&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;level1-auth-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;md5&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;mrt-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;isis.mrt&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                    </span><span class="p">{</span><span class="w"></span>
+<span class="w">                        </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1921.6800.0000.00&quot;</span><span class="w"></span>
+<span class="w">                    </span><span class="p">}</span><span class="w"></span>
+<span class="w">                </span><span class="p">]</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>This is simlar for OSPFv2 but here the connector is constructed based on remote router-id
@@ -219,30 +215,30 @@ Sep 04 11:02:59.242827  Root node 10.10.0.1 (node1)
 ...
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;router-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.11&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
-<span class="w">                </span><span class="nt">&quot;mrt-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ospf.mrt&quot;</span><span class="p">,</span>
-<span class="w">                </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                    </span><span class="p">{</span>
-<span class="w">                        </span><span class="nt">&quot;router-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.0.1&quot;</span><span class="p">,</span>
-<span class="w">                        </span><span class="nt">&quot;local-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span>
-<span class="w">                    </span><span class="p">}</span>
-<span class="w">                </span><span class="p">]</span>
-<span class="w">            </span><span class="p">}</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;version&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;router-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.11&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;mrt-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ospf.mrt&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                    </span><span class="p">{</span><span class="w"></span>
+<span class="w">                        </span><span class="nt">&quot;router-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                        </span><span class="nt">&quot;local-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="w"></span>
+<span class="w">                    </span><span class="p">}</span><span class="w"></span>
+<span class="w">                </span><span class="p">]</span><span class="w"></span>
+<span class="w">            </span><span class="p">}</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 </section>
 <section id="random-topologies">
-<h2>Random Topologies<a class="headerlink" href="#random-topologies" title="Link to this heading"></a></h2>
+<h2>Random Topologies<a class="headerlink" href="#random-topologies" title="Permalink to this headline"></a></h2>
 <p>The following example generates a random topology with 1000 nodes.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>lspgen -m isis.mrt -c 1000 -K &lt;secret&gt; -T md5
 </pre></div>
@@ -255,7 +251,7 @@ This allows the generation of a large random topology that can be modified
 manually.</p>
 </section>
 <section id="segment-routing">
-<h2>Segment Routing<a class="headerlink" href="#segment-routing" title="Link to this heading"></a></h2>
+<h2>Segment Routing<a class="headerlink" href="#segment-routing" title="Permalink to this headline"></a></h2>
 <p>Randomly generated topologies advertise an IPv4 and IPv6 node SID
 (Prefix-SID) per node for the SR algorithm 0 (SPF), which can be
 disabled with the argument <code class="docutils literal notranslate"><span class="pre">-y</span></code>.</p>
@@ -307,16 +303,16 @@ to 0 and the optional <code class="docutils literal notranslate"><span class="pr
 encoded as 20-bit label. The attribute <code class="docutils literal notranslate"><span class="pre">segment_id</span></code> is a short form
 for a single Prefix-SID with algorithm 0. Up to 4 Prefix-SIDs are
 supported per prefix, and only the first one is used for OSPF.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1/32&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;node_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;segment_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span><span class="nt">&quot;index&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span><span class="nt">&quot;index&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1001</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span><span class="nt">&quot;index&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;no-php&quot;</span><span class="p">]}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1/32&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;node_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;segment_ids&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="nt">&quot;index&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="nt">&quot;index&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1001</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="nt">&quot;index&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2001</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;flags&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;no-php&quot;</span><span class="p">]}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>The SR algorithms of the router capability are defined with
@@ -325,40 +321,40 @@ supported per prefix, and only the first one is used for OSPF.</p>
 per neighbor with <code class="docutils literal notranslate"><span class="pre">msd</span></code>, a list of up to two entries with <code class="docutils literal notranslate"><span class="pre">type</span></code>
 (e.g. 1 for BMI-MSD) and <code class="docutils literal notranslate"><span class="pre">value</span></code>. The E-flag (ELC) is set per prefix
 with <code class="docutils literal notranslate"><span class="pre">&quot;elc_flag&quot;:</span> <span class="pre">true</span></code>.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;capability_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;srgb_base&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;srgb_range&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">36000</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;msd&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">}]</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;capability_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;srgb_base&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;srgb_range&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">36000</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;msd&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[{</span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;value&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">}]</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>Flex-Algo prefix metrics (FAPM) are added per prefix with
 <code class="docutils literal notranslate"><span class="pre">flex_algo_metrics</span></code>, for example for prefixes advertised between levels.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.1.0.0/24&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;flex_algo_metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.1.0.0/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;flex_algo_metrics&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>The application-specific link attributes are defined per neighbor
 with <code class="docutils literal notranslate"><span class="pre">te_metric</span></code>, <code class="docutils literal notranslate"><span class="pre">min_delay</span></code> and <code class="docutils literal notranslate"><span class="pre">max_delay</span></code> in microseconds
 and the 32 bit <code class="docutils literal notranslate"><span class="pre">admin_group</span></code>.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0002.00&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;te_metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;min_delay&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;max_delay&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1200</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;admin_group&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0002.00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;te_metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;min_delay&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;max_delay&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;admin_group&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>Flex-Algo definitions are defined per node with <code class="docutils literal notranslate"><span class="pre">flex_algo_list</span></code>.
@@ -368,151 +364,151 @@ The <code class="docutils literal notranslate"><span class="pre">algo</span></co
 and the 32 bit admin group masks <code class="docutils literal notranslate"><span class="pre">exclude_any</span></code>, <code class="docutils literal notranslate"><span class="pre">include_any</span></code> and
 <code class="docutils literal notranslate"><span class="pre">include_all</span></code> are only advertised if not zero. The <code class="docutils literal notranslate"><span class="pre">router_id</span></code> of
 the router capability TLV should be set to the router ID of the node.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;flex_algo_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;metric_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;igp&quot;</span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">129</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;metric_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;min-delay&quot;</span><span class="p">,</span>
-<span class="w">         </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;m_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;exclude_any&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;flex_algo_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;metric_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;igp&quot;</span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;algo&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">129</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;metric_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;min-delay&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">         </span><span class="nt">&quot;priority&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;m_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;exclude_any&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 </section>
 <section id="topology-from-configuration-file">
-<h2>Topology from Configuration File<a class="headerlink" href="#topology-from-configuration-file" title="Link to this heading"></a></h2>
+<h2>Topology from Configuration File<a class="headerlink" href="#topology-from-configuration-file" title="Permalink to this headline"></a></h2>
 <p>In addition to randomly generated topologies, it is also possible to
 create them specifically using configuration. The following example
 shows the configuration for a topology with three nodes.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
-<span class="w">    </span><span class="nt">&quot;instance&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;protocol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;isis&quot;</span><span class="p">,</span>
-<span class="w">    </span><span class="nt">&quot;level1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0001&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R1&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;area_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;49.1337/24&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;protocol_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;ipv4&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;ipv4_address_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;10.13.37.1&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;ipv4_prefix_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.1/32&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;segment_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30005</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;node_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-<span class="w">                </span><span class="p">},</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.0/24&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span>
-<span class="w">                </span><span class="p">},</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.2.0/24&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span>
-<span class="w">                </span><span class="p">}</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;capability_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.1&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;mpls_ipv4_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;mpls_ipv6_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;srgb_base&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;srgb_range&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">36000</span>
-<span class="w">                </span><span class="p">}</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;neighbor_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0000.00&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
-<span class="w">                </span><span class="p">},</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0002.00&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
-<span class="w">                </span><span class="p">},</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0003.00&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
-<span class="w">                </span><span class="p">}</span>
-<span class="w">            </span><span class="p">]</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0002&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R2&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;area_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;49.1337/24&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;protocol_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;ipv4&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;ipv4_address_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;10.13.37.2&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;ipv4_prefix_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.2/32&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;segment_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30003</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;node_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-<span class="w">                </span><span class="p">}</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;capability_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.2&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;mpls_ipv4_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;mpls_ipv6_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;srgb_base&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;srgb_range&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">36000</span>
-<span class="w">                </span><span class="p">}</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;neighbor_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0001.00&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
-<span class="w">                </span><span class="p">}</span>
-<span class="w">            </span><span class="p">]</span>
-<span class="w">        </span><span class="p">},</span>
-<span class="w">        </span><span class="p">{</span>
-<span class="w">            </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0003&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R3&quot;</span><span class="p">,</span>
-<span class="w">            </span><span class="nt">&quot;area_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;49.1337/24&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;protocol_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;ipv4&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;ipv4_address_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="s2">&quot;10.13.37.3&quot;</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;ipv4_prefix_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.3/32&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;segment_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30004</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;node_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
-<span class="w">                </span><span class="p">}</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;capability_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.3&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;mpls_ipv4_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;mpls_ipv6_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;srgb_base&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;srgb_range&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">36000</span>
-<span class="w">                </span><span class="p">}</span>
-<span class="w">            </span><span class="p">],</span>
-<span class="w">            </span><span class="nt">&quot;neighbor_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
-<span class="w">                </span><span class="p">{</span>
-<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0001.00&quot;</span><span class="p">,</span>
-<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span>
-<span class="w">                </span><span class="p">}</span>
-<span class="w">            </span><span class="p">]</span>
-<span class="w">        </span><span class="p">}</span>
-<span class="w">    </span><span class="p">]</span>
-<span class="p">}</span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;instance&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;default&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;protocol&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;isis&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;level1&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0001&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;area_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;49.1337/24&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;protocol_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;ipv4&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;ipv4_address_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;10.13.37.1&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;ipv4_prefix_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.1/32&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;segment_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30005</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;node_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
+<span class="w">                </span><span class="p">},</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.0/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w"></span>
+<span class="w">                </span><span class="p">},</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.2.0/24&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;capability_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;mpls_ipv4_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;mpls_ipv6_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;srgb_base&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;srgb_range&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">36000</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;neighbor_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0000.00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">                </span><span class="p">},</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0002.00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">                </span><span class="p">},</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0003.00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">]</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0002&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;area_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;49.1337/24&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;protocol_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;ipv4&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;ipv4_address_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;10.13.37.2&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;ipv4_prefix_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.2/32&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;segment_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30003</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;node_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;capability_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.2&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;mpls_ipv4_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;mpls_ipv6_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;srgb_base&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;srgb_range&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">36000</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;neighbor_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0001.00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">]</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0003&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;hostname&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;R3&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;area_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;49.1337/24&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;protocol_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;ipv4&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;ipv4_address_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="s2">&quot;10.13.37.3&quot;</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;ipv4_prefix_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;ipv4_prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.3/32&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;segment_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">30004</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;node_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;capability_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;router_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.13.37.3&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;mpls_ipv4_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;mpls_ipv6_flag&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;srgb_base&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;srgb_range&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">36000</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">],</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;neighbor_list&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">                </span><span class="p">{</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;remote_node_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1337.0000.0001.00&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">                    </span><span class="nt">&quot;metric&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="w"></span>
+<span class="w">                </span><span class="p">}</span><span class="w"></span>
+<span class="w">            </span><span class="p">]</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
 </pre></div>
 </div>
 <p>The randomly generated topologies can be also written to a file
