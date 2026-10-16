@@ -15,6 +15,7 @@ NODES = 50
 FRR_PREFIXES = 8
 OSPF_LSA_TYPE_ROUTER = 1
 OSPF_LSA_TYPE_EXTERNAL = 5
+OSPF_LSA_TYPE_OPAQUE_AREA = 10
 OSPF_MAX_AGE = 3600
 OSPF_MAX_LINK_METRIC = 0xffff
 
@@ -151,6 +152,49 @@ def test_opaque_incapable_neighbor(ospf, tmp_path):
     ospf.wait_established()
     wait_until(lambda: topo.prefixes <= ospf.frr_routes("ip"), 15,
                message="FRR routes to all nodes")
+    ospf.teardown()
+
+
+def frr_router_information(ospf):
+    """Return the router information LSA of the BNG Blaster in FRR."""
+    database = ospf.frr.vtysh("show ip ospf database opaque-area adv-router %s" % BBL_ROUTER_ID)
+    for lsa in database.get("areaLocalOpaqueLsa", {}).get("areas", {}).get("0.0.0.0", []):
+        if lsa.get("opaqueType") == "Router Information LSA":
+            return lsa
+    return None
+
+
+def bbl_router_information(ospf):
+    for lsa in ospf.bbl_database():
+        if lsa["type"] == OSPF_LSA_TYPE_OPAQUE_AREA and lsa["router"] == BBL_ROUTER_ID:
+            return lsa
+    return None
+
+
+def test_router_information_restart(ospf):
+    """FRR still holds the router information LSA of a previous run
+    (BNG Blaster killed without purge) with another hostname, the same
+    sequence number and a larger checksum, so FRR's copy is more recent
+    (RFC 2328 section 13.1). The BNG Blaster must re-originate its own
+    LSA above the received sequence number (RFC 2328 section 13.4)."""
+    ospf.start(bbl={"ospf": {"hostname": "new"}})
+    ospf.wait_established()
+    wait_until(lambda: frr_router_information(ospf), 10, message="router information LSA in FRR database")
+    old = frr_router_information(ospf)
+    ospf.bbl.kill()
+
+    ospf.start_bbl({"ospf": {"hostname": "bngblaster-new"}})
+    ospf.wait_established()
+    own = bbl_router_information(ospf)
+    if own["seq"] == "0x%s" % old["lsaSeqNumber"]:
+        assert int(old["checksum"], 16) > int(own["checksum"], 16)
+
+    def replaced():
+        lsa = frr_router_information(ospf)
+        own = bbl_router_information(ospf)
+        return (lsa and own and lsa["checksum"] != old["checksum"] and
+                int(lsa["checksum"], 16) == int(own["checksum"], 16))
+    wait_until(replaced, 10, message="router information LSA replaced in FRR database")
     ospf.teardown()
 
 

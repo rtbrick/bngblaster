@@ -410,7 +410,7 @@ ospf_lsa_verify_checksum(ospf_lsa_header_s *hdr)
     }
 }
 
-static void
+void
 ospf_lsa_refresh(ospf_lsa_s *lsa)
 {
     clock_gettime(CLOCK_MONOTONIC, &lsa->timestamp);
@@ -1787,8 +1787,14 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
                         format_ipv4_address(&lsa_router), lsa->seq);
                 }
             } else if(lsa->source.type == OSPF_SOURCE_SELF) {
+                /* Re-originate this self originated LSA (e.g. router
+                 * information) with a sequence number above the received
+                 * one (RFC2328 section 13.4). */
+                LOG(OSPF, "OSPF RX TYPE-%u-LSA %s (seq %u router %s) refresh self originated LSA\n",
+                    lsa_type, format_ipv4_address(&lsa_id), be32toh(hdr->seq),
+                    format_ipv4_address(&lsa_router));
                 lsa->seq = be32toh(hdr->seq);
-                ospf_lsa_self_update(ospf_instance);
+                ospf_lsa_refresh(lsa);
                 continue;
             }
         } else {

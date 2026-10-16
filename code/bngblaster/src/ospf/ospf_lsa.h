@@ -31,6 +31,9 @@ void
 ospf_lsa_flood(ospf_lsa_s *lsa);
 
 void
+ospf_lsa_refresh(ospf_lsa_s *lsa);
+
+void
 ospf_lsa_update_age(ospf_lsa_s *lsa, struct timespec *now);
 
 void

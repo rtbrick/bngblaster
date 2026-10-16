@@ -619,8 +619,10 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
                 continue;
             }
             if(lsa->source.type == OSPF_SOURCE_SELF) {
+                /* Re-originate this self originated LSA with a sequence
+                 * number above the received one (RFC2328 section 13.4). */
                 lsa->seq = be32toh(hdr->seq);
-                ospf_lsa_self_update(ospf_instance);
+                ospf_lsa_refresh(lsa);
                 continue;
             }
         }
