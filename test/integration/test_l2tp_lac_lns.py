@@ -204,6 +204,11 @@ def test_lcp_echo_timeout(lac_lns):
     lns.kill()
     wait_until(lambda: lac_counters(lac)["sessions-established"] == 0, 15,
                message="LAC sessions down after LCP echo timeout")
+    stats = lac.ctrl("access-protocol-stats")["access-protocol-stats"]
+    assert sum(i["lcp-echo-expired"] for i in stats) == SESSIONS
+    name = stats[0]["name"]
+    assert [i["name"] for i in lac.ctrl("access-protocol-stats", interface=name)["access-protocol-stats"]] == [name]
+    assert lac.ctrl("access-protocol-stats", interface="unknown")["access-protocol-stats"] == []
     assert lac.terminate(60) == 0
 
 

@@ -5,6 +5,12 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **access-interfaces**             | | List all access interface functions.                               |
 +-----------------------------------+----------------------------------------------------------------------+
+| **access-protocol-stats**         | | Display access interface protocol packet and timeout statistics    |
+|                                   | | as included in the final report (protocol-stats).                  |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``interface``                                                      |
++-----------------------------------+----------------------------------------------------------------------+
 | **network-interfaces**            | | List all network interface functions.                              |
 +-----------------------------------+----------------------------------------------------------------------+
 | **a10nsp-interfaces**             | | List all a10nsp interface functions.                               |
@@ -30,6 +36,15 @@
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``interface``                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
+
+The access protocol statistics include packet counters per protocol
+and timeout counters. The counter
+``lcp-echo-timeout`` is incremented for each LCP echo request without
+response and ``lcp-echo-expired`` for each session terminated because
+all LCP echo requests (``lcp`` ``keepalive-retry``) remained without
+response.
+
+``$ sudo bngblaster-cli run.sock access-protocol-stats interface eth1``
 
 The interface topology command helps to verify NUMA locality and CPU
 pinning of the RX and TX threads configured with ``rx-cpuset``,

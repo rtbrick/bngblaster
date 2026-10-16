@@ -633,6 +633,7 @@ bbl_interactive_window_job(timer_s *timer)
 
             wprintw(stats_win, "\nTimeout Stats\n");
             wprintw(stats_win, "  LCP Echo Request: %10u\n", g_access_if->stats.lcp_echo_timeout);
+            wprintw(stats_win, "  LCP Echo Expired: %10u\n", g_access_if->stats.lcp_echo_expired);
             wprintw(stats_win, "  LCP Request:      %10u\n", g_access_if->stats.lcp_timeout);
             wprintw(stats_win, "  IPCP Request:     %10u\n", g_access_if->stats.ipcp_timeout);
             wprintw(stats_win, "  IP6CP Request:    %10u\n", g_access_if->stats.ip6cp_timeout);

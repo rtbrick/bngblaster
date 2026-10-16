@@ -48,6 +48,7 @@ typedef struct bbl_access_interface_
         uint32_t lcp_rx;
         uint32_t lcp_timeout;
         uint32_t lcp_echo_timeout;
+        uint32_t lcp_echo_expired;
         uint32_t pap_tx;
         uint32_t pap_rx;
         uint32_t pap_timeout;
@@ -150,5 +151,11 @@ bbl_ppp_rx(bbl_access_interface_s *interface,
 
 int
 bbl_access_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_access_ctrl_protocol_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+json_t *
+bbl_access_interface_protocol_stats_json(bbl_access_interface_s *interface);
 
 #endif

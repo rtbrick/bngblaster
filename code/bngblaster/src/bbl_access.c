@@ -1339,6 +1339,7 @@ bbl_access_lcp_echo(timer_s *timer)
         }
         if(session->lcp_retries > g_ctx->config.lcp_keepalive_retry) {
             LOG(PPPOE, "LCP ECHO TIMEOUT (ID: %u)\n", session->session_id);
+            interface->stats.lcp_echo_expired++;
             /* Force terminate session after timeout. */
             session->lcp_state = BBL_PPP_CLOSED;
             if(session->ipcp_state > BBL_PPP_DISABLED) {
@@ -2177,6 +2178,60 @@ bbl_access_interface_json(bbl_access_interface_s *interface)
                     );
 }
 
+/**
+ * bbl_access_interface_protocol_stats_json
+ *
+ * @param interface access interface
+ * @return json object with protocol packet and timeout statistics
+ */
+json_t *
+bbl_access_interface_protocol_stats_json(bbl_access_interface_s *interface)
+{
+    json_t *stats;
+
+    stats = json_object();
+    json_object_set_new(stats, "tx-arp", json_integer(interface->stats.arp_tx));
+    json_object_set_new(stats, "rx-arp", json_integer(interface->stats.arp_rx));
+    json_object_set_new(stats, "tx-padi", json_integer(interface->stats.padi_tx));
+    json_object_set_new(stats, "rx-pado", json_integer(interface->stats.pado_rx));
+    json_object_set_new(stats, "tx-padr", json_integer(interface->stats.padr_tx));
+    json_object_set_new(stats, "rx-pads", json_integer(interface->stats.pads_rx));
+    json_object_set_new(stats, "tx-padt", json_integer(interface->stats.padt_tx));
+    json_object_set_new(stats, "rx-padt", json_integer(interface->stats.padt_rx));
+    json_object_set_new(stats, "tx-lcp", json_integer(interface->stats.lcp_tx));
+    json_object_set_new(stats, "rx-lcp", json_integer(interface->stats.lcp_rx));
+    json_object_set_new(stats, "tx-pap", json_integer(interface->stats.pap_tx));
+    json_object_set_new(stats, "rx-pap", json_integer(interface->stats.pap_rx));
+    json_object_set_new(stats, "tx-chap", json_integer(interface->stats.chap_tx));
+    json_object_set_new(stats, "rx-chap", json_integer(interface->stats.chap_rx));
+    json_object_set_new(stats, "tx-ipcp", json_integer(interface->stats.ipcp_tx));
+    json_object_set_new(stats, "rx-ipcp", json_integer(interface->stats.ipcp_rx));
+    json_object_set_new(stats, "tx-ip6cp", json_integer(interface->stats.ip6cp_tx));
+    json_object_set_new(stats, "rx-ip6cp", json_integer(interface->stats.ip6cp_rx));
+    json_object_set_new(stats, "tx-igmp", json_integer(interface->stats.igmp_tx));
+    json_object_set_new(stats, "rx-igmp", json_integer(interface->stats.igmp_rx));
+    json_object_set_new(stats, "tx-icmp", json_integer(interface->stats.icmp_tx));
+    json_object_set_new(stats, "rx-icmp", json_integer(interface->stats.icmp_rx));
+    json_object_set_new(stats, "tx-dhcp", json_integer(interface->stats.dhcp_tx));
+    json_object_set_new(stats, "rx-dhcp", json_integer(interface->stats.dhcp_rx));
+    json_object_set_new(stats, "tx-dhcpv6", json_integer(interface->stats.dhcpv6_tx));
+    json_object_set_new(stats, "rx-dhcpv6", json_integer(interface->stats.dhcpv6_rx));
+    json_object_set_new(stats, "tx-icmpv6", json_integer(interface->stats.icmpv6_tx));
+    json_object_set_new(stats, "rx-icmpv6", json_integer(interface->stats.icmpv6_rx));
+    json_object_set_new(stats, "rx-ipv4-fragmented", json_integer(interface->stats.ipv4_fragmented_rx));
+    json_object_set_new(stats, "lcp-echo-timeout", json_integer(interface->stats.lcp_echo_timeout));
+    json_object_set_new(stats, "lcp-echo-expired", json_integer(interface->stats.lcp_echo_expired));
+    json_object_set_new(stats, "lcp-request-timeout", json_integer(interface->stats.lcp_timeout));
+    json_object_set_new(stats, "ipcp-request-timeout", json_integer(interface->stats.ipcp_timeout));
+    json_object_set_new(stats, "ip6cp-request-timeout", json_integer(interface->stats.ip6cp_timeout));
+    json_object_set_new(stats, "pap-timeout", json_integer(interface->stats.pap_timeout));
+    json_object_set_new(stats, "chap-timeout", json_integer(interface->stats.chap_timeout));
+    json_object_set_new(stats, "dhcp-timeout", json_integer(interface->stats.dhcp_timeout));
+    json_object_set_new(stats, "dhcpv6-timeout", json_integer(interface->stats.dhcpv6_timeout));
+    json_object_set_new(stats, "icmpv6-rs-timeout", json_integer(interface->stats.icmpv6_rs_timeout));
+    return stats;
+}
+
 /* Control Socket Commands */
 
 int
@@ -2196,6 +2251,40 @@ bbl_access_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), 
                      "status", "ok",
                      "code", 200,
                      "access-interfaces", interfaces);
+    if(root) {
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(interfaces);
+    }
+    return result;
+}
+
+int
+bbl_access_ctrl_protocol_stats(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    int result = 0;
+    json_t *root, *interfaces, *jobj, *stats;
+    bbl_interface_s *interface;
+    const char *s = NULL;
+
+    json_unpack(arguments, "{s:s}", "interface", &s);
+
+    interfaces = json_array();
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        if(interface->access && !(s && strcmp(interface->name, s))) {
+            jobj = json_pack("{ss}", "name", interface->name);
+            stats = bbl_access_interface_protocol_stats_json(interface->access);
+            json_object_update(jobj, stats);
+            json_decref(stats);
+            json_array_append_new(interfaces, jobj);
+        }
+    }
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "access-protocol-stats", interfaces);
     if(root) {
         result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
