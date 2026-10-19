@@ -91,10 +91,18 @@ typedef struct io_af_xdp_queue_ {
 
 /* Conservative worst-case per-packet overhead (double VLAN tag, ...) added
  * on top of the interface MTU when checking it against the AF_XDP frame
- * size. AF_XDP has no multi-buffer support here, so a single UMEM frame
- * must be able to hold an entire received frame or the driver will refuse
- * to attach (native mode) or frames will be dropped (generic mode). */
+ * size. */
 #define AF_XDP_MTU_OVERHEAD 128
+
+/* The kernel places received frames at XDP_PACKET_HEADROOM within the
+ * UMEM frame, which limits the max size of a received frame. */
+#define AF_XDP_RX_FRAME_MAX (XSK_UMEM__DEFAULT_FRAME_SIZE - XDP_PACKET_HEADROOM)
+
+/* A failed native mode attempt has already bound the queue, which the
+ * kernel releases asynchronously after the socket is closed. The generic
+ * mode bind to the same queue fails with EBUSY until then. */
+#define AF_XDP_BIND_RETRIES     20
+#define AF_XDP_BIND_RETRY_NS    50000000 /* 50ms */
 
 static uint32_t
 next_pow2(uint32_t v)
@@ -110,15 +118,17 @@ next_pow2(uint32_t v)
 }
 
 /**
- * AF_XDP has no multi-buffer support here, so the interface MTU must fit
- * within a single UMEM frame (XSK_UMEM__DEFAULT_FRAME_SIZE, 4096 byte).
- * Interfaces are commonly left at a larger (e.g. jumbo) MTU for other
- * purposes even though BNG Blaster itself never sends packets that large
- * unless jumbo-frames is enabled (which is already rejected for AF_XDP),
- * so check this explicitly and fail with a clear, actionable message
- * instead of a confusing low-level bind/attach error.
+ * AF_XDP sockets are bound without multi-buffer support (XDP_USE_SG), so
+ * received frames larger than a single UMEM frame are dropped by the
+ * kernel. Interfaces are commonly left at a larger (e.g. jumbo) MTU for
+ * other purposes even though BNG Blaster itself never sends packets that
+ * large unless jumbo-frames is enabled (which is rejected for AF_XDP), so
+ * a larger MTU is accepted. However, some drivers (e.g. i40e) refuse to
+ * attach an XDP program without multi-buffer (frags) support in native
+ * mode if the MTU exceeds their max linear frame size, in which case the
+ * socket falls back to the much slower generic (SKB) mode.
  */
-static bool
+static void
 io_af_xdp_check_mtu(bbl_interface_s *interface)
 {
     struct ifreq ifr = {0};
@@ -127,24 +137,22 @@ io_af_xdp_check_mtu(bbl_interface_s *interface)
 
     fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
     if(fd == -1) {
-        return true; /* best effort, do not block on this check */
+        return;
     }
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
     if(ioctl(fd, SIOCGIFMTU, &ifr) == -1) {
         close(fd);
-        return true;
+        return;
     }
     close(fd);
     mtu = ifr.ifr_mtu;
 
-    if((uint32_t)mtu + AF_XDP_MTU_OVERHEAD > XSK_UMEM__DEFAULT_FRAME_SIZE) {
-        LOG(ERROR, "AF_XDP: interface %s has MTU %d which does not fit into the "
-            "%u byte AF_XDP frame size, please lower the interface MTU "
-            "(e.g. 'ip link set %s mtu 1500')\n",
-            interface->name, mtu, XSK_UMEM__DEFAULT_FRAME_SIZE, interface->name);
-        return false;
+    if((uint32_t)mtu + AF_XDP_MTU_OVERHEAD > AF_XDP_RX_FRAME_MAX) {
+        LOG(INFO, "Warning: AF_XDP interface %s has MTU %d, received frames larger than "
+            "%u byte are dropped and native mode might not be supported by the driver, "
+            "please lower the interface MTU (e.g. 'ip link set %s mtu 1500')\n",
+            interface->name, mtu, AF_XDP_RX_FRAME_MAX, interface->name);
     }
-    return true;
 }
 
 /**
@@ -512,12 +520,57 @@ io_af_xdp_constrain_rss(bbl_interface_s *interface, uint32_t rx_queues, uint32_t
     return true;
 }
 
+/**
+ * Delete the UMEM of a queue without socket (e.g. after a failed bind).
+ *
+ * libbpf < 0.8.1 and older libxdp versions do not unmap the fill and
+ * completion rings in xsk_umem__delete() if xsk_socket__create() failed.
+ * Those mappings keep the UMEM socket alive, so its queue remains bound
+ * and every further bind to this queue fails with EBUSY. Therefore unmap
+ * the rings if they are still mapped after the UMEM is deleted. This is
+ * safe because no other thread creates mappings during interface init.
+ */
+static void
+io_af_xdp_umem_delete(io_af_xdp_queue_s *q)
+{
+    struct xdp_mmap_offsets off = {0};
+    socklen_t optlen = sizeof(off);
+    void *fill_map = NULL;
+    void *comp_map = NULL;
+    size_t fill_len = 0;
+    size_t comp_len = 0;
+
+    if(!q->umem) return;
+    if(q->fill.ring && q->comp.ring &&
+       getsockopt(xsk_umem__fd(q->umem), SOL_XDP, XDP_MMAP_OFFSETS, &off, &optlen) == 0 &&
+       optlen == sizeof(off)) {
+        fill_map = (uint8_t*)q->fill.ring - off.fr.desc;
+        fill_len = off.fr.desc + q->fill.size * sizeof(uint64_t);
+        comp_map = (uint8_t*)q->comp.ring - off.cr.desc;
+        comp_len = off.cr.desc + q->comp.size * sizeof(uint64_t);
+    }
+    xsk_umem__delete(q->umem);
+    q->umem = NULL;
+
+    /* msync() fails with ENOMEM if the range is not mapped. */
+    if(fill_map && msync(fill_map, fill_len, MS_ASYNC) == 0) {
+        munmap(fill_map, fill_len);
+    }
+    if(comp_map && msync(comp_map, comp_len, MS_ASYNC) == 0) {
+        munmap(comp_map, comp_len);
+    }
+    memset(&q->fill, 0, sizeof(q->fill));
+    memset(&q->comp, 0, sizeof(q->comp));
+    memset(&q->rx, 0, sizeof(q->rx));
+    memset(&q->tx, 0, sizeof(q->tx));
+}
+
 static void
 io_af_xdp_queue_destroy(io_af_xdp_queue_s *q)
 {
     if(!q) return;
     if(q->xsk) xsk_socket__delete(q->xsk);
-    if(q->umem) xsk_umem__delete(q->umem);
+    io_af_xdp_umem_delete(q);
     free(q->tx_free);
     free(q->umem_area);
     free(q);
@@ -550,7 +603,7 @@ io_af_xdp_seed_fill(io_af_xdp_queue_s *q)
 
 static bool
 io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_qmode_t qmode,
-                        io_af_xdp_queue_s **queue_out)
+                        uint32_t *xdp_flags, io_af_xdp_queue_s **queue_out)
 {
     bbl_link_config_s *config = interface->config;
     io_af_xdp_queue_s *q;
@@ -558,11 +611,14 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
     struct xsk_socket_config sock_cfg = {0};
     struct xsk_ring_cons *rx_ring;
     struct xsk_ring_prod *tx_ring;
+    struct timespec retry_delay = {.tv_sec = 0, .tv_nsec = AF_XDP_BIND_RETRY_NS};
     uint32_t page_size = getpagesize();
     bool want_rx = (qmode != AF_XDP_Q_TX_ONLY);
     bool want_tx = (qmode != AF_XDP_Q_RX_ONLY);
+    uint32_t retries = 0;
     uint32_t i;
     int ret;
+    int err;
 
     q = calloc(1, sizeof(io_af_xdp_queue_s));
     if(!q) {
@@ -607,20 +663,6 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
     umem_cfg.frame_headroom = 0;
     umem_cfg.flags = 0;
 
-    ret = xsk_umem__create(&q->umem, q->umem_area, q->umem_size, &q->fill, &q->comp, &umem_cfg);
-    if(ret) {
-        LOG(ERROR, "AF_XDP: failed to create UMEM for interface %s queue %u (error %d)\n",
-            interface->name, queue_id, ret);
-        io_af_xdp_queue_destroy(q);
-        return false;
-    }
-    if(want_rx && !io_af_xdp_seed_fill(q)) {
-        LOG(ERROR, "AF_XDP: failed to seed fill ring for interface %s queue %u\n",
-            interface->name, queue_id);
-        io_af_xdp_queue_destroy(q);
-        return false;
-    }
-
     /* A NULL ring pointer (with the matching *_size left at 0) tells
      * libbpf to not set up that direction at all, giving us an RX-only
      * or TX-only socket as needed - each queue still gets its own
@@ -630,31 +672,20 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
     sock_cfg.rx_size = want_rx ? q->rx_frames : 0;
     sock_cfg.tx_size = want_tx ? q->tx_frames : 0;
     sock_cfg.libbpf_flags = 0;
-    sock_cfg.bind_flags = XDP_USE_NEED_WAKEUP;
 
     /* Prefer native (driver) mode for the best performance and fall back
      * to generic (SKB) mode transparently, e.g. for virtual interfaces
-     * (veth, ...) or drivers without native XDP support. A failed native
-     * attempt can leave the UMEM/xsk in a state some libbpf versions do
-     * not fully unwind, so the fallback attempt is done against a freshly
-     * created UMEM rather than reusing the one from the failed attempt. */
-    sock_cfg.xdp_flags = XDP_FLAGS_DRV_MODE;
-    ret = xsk_socket__create(&q->xsk, interface->name, queue_id, q->umem, rx_ring, tx_ring, &sock_cfg);
-    if(ret) {
-        LOG(DEBUG, "AF_XDP: native mode not available for interface %s queue %u (error %d), "
-            "falling back to generic (SKB) mode\n", interface->name, queue_id, ret);
-
-        q->xsk = NULL;
-        xsk_umem__delete(q->umem);
-        q->umem = NULL;
-        memset(&q->fill, 0, sizeof(q->fill));
-        memset(&q->comp, 0, sizeof(q->comp));
-        memset(&q->rx, 0, sizeof(q->rx));
-        memset(&q->tx, 0, sizeof(q->tx));
-
+     * (veth, ...), drivers without native XDP support or an MTU which is
+     * not supported in native mode. The selected mode is returned via
+     * xdp_flags, so further queues of the same interface skip a native
+     * attempt which already failed. A failed attempt can leave the UMEM
+     * in a state some libbpf versions do not fully unwind, so every
+     * attempt is done against a freshly created UMEM. */
+    sock_cfg.xdp_flags = *xdp_flags;
+    while(true) {
         ret = xsk_umem__create(&q->umem, q->umem_area, q->umem_size, &q->fill, &q->comp, &umem_cfg);
         if(ret) {
-            LOG(ERROR, "AF_XDP: failed to re-create UMEM for interface %s queue %u (error %d)\n",
+            LOG(ERROR, "AF_XDP: failed to create UMEM for interface %s queue %u (error %d)\n",
                 interface->name, queue_id, ret);
             io_af_xdp_queue_destroy(q);
             return false;
@@ -665,18 +696,43 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
             io_af_xdp_queue_destroy(q);
             return false;
         }
-
-        sock_cfg.xdp_flags = XDP_FLAGS_SKB_MODE;
+        /* Without XDP_COPY, the kernel binds in zero-copy mode if the
+         * driver supports it, regardless of the XDP mode. In generic mode,
+         * the driver (e.g. i40e) then neither receives nor sends anything
+         * on this queue because no native XDP program is attached. */
+        sock_cfg.bind_flags = XDP_USE_NEED_WAKEUP;
+        if(sock_cfg.xdp_flags == XDP_FLAGS_SKB_MODE) {
+            sock_cfg.bind_flags |= XDP_COPY;
+        }
         ret = xsk_socket__create(&q->xsk, interface->name, queue_id, q->umem, rx_ring, tx_ring, &sock_cfg);
+        if(!ret) {
+            break;
+        }
+        /* Some libbpf < 1.0 errors are returned as -1 with errno set. */
+        err = ret == -1 ? errno : -ret;
+
+        q->xsk = NULL;
+        io_af_xdp_umem_delete(q);
+
+        if(sock_cfg.xdp_flags == XDP_FLAGS_DRV_MODE) {
+            LOG(INFO, "Warning: AF_XDP native mode not available for interface %s (%s), "
+                "falling back to generic (SKB) mode\n", interface->name, strerror(err));
+            sock_cfg.xdp_flags = XDP_FLAGS_SKB_MODE;
+        } else if(err == EBUSY && retries < AF_XDP_BIND_RETRIES) {
+            retries++;
+            LOG(DEBUG, "AF_XDP: interface %s queue %u busy, retry bind (%u/%u)\n",
+                interface->name, queue_id, retries, AF_XDP_BIND_RETRIES);
+            nanosleep(&retry_delay, NULL);
+        } else {
+            LOG(ERROR, "AF_XDP: failed to create socket for interface %s queue %u (%s) - "
+                "possible causes: not enough RX/TX queues on the interface, an XDP "
+                "program already attached to it, or missing CAP_NET_RAW/CAP_BPF privileges\n",
+                interface->name, queue_id, strerror(err));
+            io_af_xdp_queue_destroy(q);
+            return false;
+        }
     }
-    if(ret) {
-        LOG(ERROR, "AF_XDP: failed to create socket for interface %s queue %u (error %d) - "
-            "possible causes: not enough RX/TX queues on the interface, an XDP "
-            "program already attached to it, or missing CAP_NET_RAW/CAP_BPF privileges\n",
-            interface->name, queue_id, ret);
-        io_af_xdp_queue_destroy(q);
-        return false;
-    }
+    *xdp_flags = sock_cfg.xdp_flags;
     q->fd = xsk_socket__fd(q->xsk);
 
     {
@@ -1144,6 +1200,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
     uint16_t total_queues = rx_queues + tx_queues;
     uint16_t queue;
     uint32_t nic_queue_id;
+    uint32_t xdp_flags = XDP_FLAGS_DRV_MODE;
 
     io_af_xdp_queue_s *q;
     io_handle_s *rx_io;
@@ -1155,9 +1212,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
         return false;
     }
 
-    if(!io_af_xdp_check_mtu(interface)) {
-        return false;
-    }
+    io_af_xdp_check_mtu(interface);
 
     if(!io_af_xdp_disable_rxvlan_offload(interface)) {
         return false;
@@ -1174,7 +1229,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
     }
 
     for(queue = 0; queue < rx_queues; queue++) {
-        if(!io_af_xdp_queue_create(interface, queue, AF_XDP_Q_RX_ONLY, &q)) {
+        if(!io_af_xdp_queue_create(interface, queue, AF_XDP_Q_RX_ONLY, &xdp_flags, &q)) {
             return false;
         }
 
@@ -1203,7 +1258,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
 
     for(queue = 0; queue < tx_queues; queue++) {
         nic_queue_id = rx_queues + queue;
-        if(!io_af_xdp_queue_create(interface, nic_queue_id, AF_XDP_Q_TX_ONLY, &q)) {
+        if(!io_af_xdp_queue_create(interface, nic_queue_id, AF_XDP_Q_TX_ONLY, &xdp_flags, &q)) {
             return false;
         }
 

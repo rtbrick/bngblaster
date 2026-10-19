@@ -588,9 +588,12 @@ extra TX threads.
 
 .. note::
 
-    AF_XDP frames are limited to 4096 bytes, so ``jumbo-frames`` are not
-    supported by this I/O mode and the maximum stream packet length is
-    reduced accordingly.
+    Each packet is stored in a single AF_XDP frame (buffer) of 4096 bytes,
+    so ``jumbo-frames`` are not supported by this I/O mode and the maximum
+    stream packet length is reduced accordingly. On receive, the kernel
+    reserves 256 bytes of each frame as headroom, so received packets larger
+    than 3840 bytes are dropped by the kernel. The interface MTU may be
+    larger than this.
 
 Like DPDK, AF_XDP requires the NIC to actually provide as many hardware
 queues as bngblaster needs, i.e. ``rx-threads`` + ``tx-threads`` (each
@@ -603,7 +606,33 @@ instead of combined ones), it is logged with a hint to configure it
 manually. Native (driver) mode additionally requires a driver with native
 XDP support; BNG Blaster automatically falls back to generic (SKB) mode -
 which works on any interface, including ``veth`` - if native mode is not
-available.
+available. Some drivers do not support native mode if the interface MTU
+exceeds their maximum linear frame size (e.g. i40e with an MTU larger than
+3046 bytes), so lower the MTU (e.g. ``ip link set <interface> mtu 2048``)
+to get native zero-copy mode, which performs much better than generic mode.
+
+The mode is not selected based on the MTU. Native mode is always tried
+first, and BNG Blaster falls back to generic mode only if the driver rejects
+it, which is logged once per interface:
+
+.. code-block:: none
+
+    Warning: AF_XDP native mode not available for interface eth1 (Invalid argument), falling back to generic (SKB) mode
+
+The selected mode is then used for all queues of this interface. Independent
+of this, a warning is logged at startup if the interface MTU exceeds 3712
+bytes (MTU plus 128 bytes of worst-case header overhead does not fit into the
+3840 bytes of a received frame). The actual mode of each queue is logged with
+``-l af_xdp``:
+
+.. code-block:: none
+
+    AF_XDP: interface eth1 queue 0 bound (native mode, zero-copy, RX only, 4096 RX / 0 TX frames of 4096 byte)
+    AF_XDP: interface eth2 queue 0 bound (generic mode, copy, RX only, 4096 RX / 0 TX frames of 4096 byte)
+
+Here, ``4096 RX / 0 TX frames`` is the number of frames (``io-slots``, or
+``io-slots-rx`` and ``io-slots-tx`` per link, rounded up to a power of 2) and ``of 4096 byte`` is the size
+of each frame, not the maximum packet size.
 
 .. note::
 
