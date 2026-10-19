@@ -485,9 +485,6 @@ io_interface_init(bbl_interface_s *interface)
                 return false;
             }
         }
-        if(!set_promisc(interface)) {
-            return false;
-        }
         if(*(uint32_t*)config->mac) {
             memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
         }
@@ -496,12 +493,21 @@ io_interface_init(bbl_interface_s *interface)
             if(!io_af_xdp_interface_init(interface)) {
                 return false;
             }
+            /* Changing the number of queues resets SR-IOV VFs (e.g. iavf),
+             * which clears promiscuous mode in hardware. Enable it only after
+             * the AF_XDP setup, so the driver applies it to the reset VF. */
+            if(!set_promisc(interface)) {
+                return false;
+            }
 #else
             LOG(ERROR, "IO mode af_xdp requested for interface %s but BNG Blaster "
                 "was built without AF_XDP support\n", interface->name);
             return false;
 #endif
         } else {
+            if(!set_promisc(interface)) {
+                return false;
+            }
             if(!io_interface_init_rx(interface)) {
                 return false;
             }
