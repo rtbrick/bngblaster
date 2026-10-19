@@ -643,6 +643,15 @@ of each frame, not the maximum packet size.
     affected flows. This is exactly what the automatic queue
     reconfiguration above avoids.
 
+BNG Blaster removes its AF_XDP sockets on exit, which also detaches the XDP
+program from the interface. If BNG Blaster built with libxdp is killed or
+crashes, the XDP program stays attached, as libxdp attaches it via netlink
+and not via a BPF link that is released with the process. Such a program
+does not prevent further tests, but keeps the interface in XDP mode (e.g.
+the MTU can't be increased beyond the driver limit) and is not removed by
+later tests. Remove it manually with ``xdp-loader unload <interface> --all``,
+which also removes the files pinned by libxdp in ``/sys/fs/bpf/xdp/``
+(``ip link set <interface> xdp off`` detaches the program only).
 
 AF_XDP Tuning
 ~~~~~~~~~~~~~

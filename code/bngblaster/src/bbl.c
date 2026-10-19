@@ -794,6 +794,9 @@ main(int argc, char *argv[])
 
     /* Cleanup resources. */
 CLEANUP:
+#ifdef BNGBLASTER_AF_XDP
+    io_af_xdp_cleanup();
+#endif
     bbl_interface_unlock_all();
     if(g_ctx->ctrl_socket_path) {
         bbl_ctrl_socket_close();

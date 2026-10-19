@@ -569,11 +569,47 @@ static void
 io_af_xdp_queue_destroy(io_af_xdp_queue_s *q)
 {
     if(!q) return;
-    if(q->xsk) xsk_socket__delete(q->xsk);
-    io_af_xdp_umem_delete(q);
+    if(q->xsk) {
+        /* The socket owns and unmaps the rings. */
+        xsk_socket__delete(q->xsk);
+        xsk_umem__delete(q->umem);
+    } else {
+        io_af_xdp_umem_delete(q);
+    }
     free(q->tx_free);
     free(q->umem_area);
     free(q);
+}
+
+/**
+ * Delete all AF_XDP sockets after the IO threads are stopped.
+ *
+ * With libxdp, the XDP program is attached via netlink and remains
+ * attached after the process exits. It is detached only if the last
+ * socket of the interface is deleted with xsk_socket__delete().
+ */
+void
+io_af_xdp_cleanup()
+{
+    bbl_interface_s *interface;
+    io_handle_s *io;
+
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        for(io = interface->io.rx; io; io = io->next) {
+            if(io->mode == IO_MODE_AF_XDP && io->af_xdp_queue) {
+                io_af_xdp_queue_destroy(io->af_xdp_queue);
+                io->af_xdp_queue = NULL;
+                io->fd = -1;
+            }
+        }
+        for(io = interface->io.tx; io; io = io->next) {
+            if(io->mode == IO_MODE_AF_XDP && io->af_xdp_queue) {
+                io_af_xdp_queue_destroy(io->af_xdp_queue);
+                io->af_xdp_queue = NULL;
+                io->fd = -1;
+            }
+        }
+    }
 }
 
 /**
