@@ -647,7 +647,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         "tx-auto-cpuset", "rx-auto-cpuset",
         "rx-cpuset", "tx-cpuset", 
         "lag-interface", "lacp-priority",
-        "loopback-peer"
+        "loopback-peer", "af-xdp-mode"
     };
     if(!schema_validate(link, "links", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -711,6 +711,20 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         }
     } else {
         link_config->io_mode = g_ctx->config.io_mode;
+    }
+    if(json_unpack(link, "{s:s}", "af-xdp-mode", &s) == 0) {
+        if(strcmp(s, "auto") == 0) {
+            link_config->af_xdp_mode = AF_XDP_MODE_AUTO;
+        } else if(strcmp(s, "zero-copy") == 0) {
+            link_config->af_xdp_mode = AF_XDP_MODE_ZERO_COPY;
+        } else if(strcmp(s, "copy") == 0) {
+            link_config->af_xdp_mode = AF_XDP_MODE_COPY;
+        } else if(strcmp(s, "generic") == 0) {
+            link_config->af_xdp_mode = AF_XDP_MODE_GENERIC;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for links->af-xdp-mode\n");
+            return false;
+        }
     }
     JSON_OBJ_GET_NUMBER(link, value, "links", "io-slots", 32, 65534);
     if(value) {

@@ -668,7 +668,18 @@ it, which is logged once per interface:
 
     Warning: AF_XDP native mode not available for interface eth1 (Invalid argument), falling back to generic (SKB) mode
 
-The selected mode is then used for all queues of this interface. Independent
+The selected mode is then used for all queues of this interface. The mode can be
+selected per link with ``af-xdp-mode``: ``auto`` (default) uses native mode with zero-copy if
+supported by the driver, ``zero-copy`` fails instead of falling back, ``copy`` uses native mode
+without zero-copy and ``generic`` uses generic mode.
+
+Zero-copy mode depends on the driver filling the NIC RX ring from the AF_XDP fill ring. With
+the Intel ice driver (E810) and an IOMMU in translation mode (``DMA`` or ``DMA-FQ`` in
+``/sys/bus/pci/devices/<pci>/iommu_group/type``), some kernels (e.g. 6.8) fill the ring only with
+a few buffers per interrupt, which drops most of the received packets. This is visible as
+``Failed to allocate some buffers on XSK buffer pool enabled Rx ring`` in the kernel log and
+``rx_dropped`` increasing with only few packets per RX queue (``rx_queue_<n>_packets``). Use
+``iommu=pt`` if possible, otherwise ``af-xdp-mode`` ``copy`` for such interfaces. Independent
 of this, a warning is logged at startup if the interface MTU exceeds 3712
 bytes (MTU plus 128 bytes of worst-case header overhead does not fit into the
 3840 bytes of a received frame). The actual mode of each queue is logged with

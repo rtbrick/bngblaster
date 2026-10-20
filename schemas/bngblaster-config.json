@@ -2368,9 +2368,20 @@
                 },
                 "io-slots-rx": {
                     "type": "integer",
-                    "description": "Overwrite the RX IO slots (ring size)",
+                    "description": "Overwrite the RX IO slots (ring size), with AF_XDP sized automatically to at least twice the NIC RX ring if not set",
                     "minimum": 32,
                     "maximum": 65534
+                },
+                "af-xdp-mode": {
+                    "type": "string",
+                    "description": "AF_XDP socket mode",
+                    "default": "auto",
+                    "enum": [
+                        "auto",
+                        "zero-copy",
+                        "copy",
+                        "generic"
+                    ]
                 },
                 "qdisc-bypass": {
                     "type": "boolean",

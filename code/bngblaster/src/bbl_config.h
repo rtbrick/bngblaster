@@ -194,6 +194,14 @@ typedef struct bbl_a10nsp_config_
     bbl_a10nsp_interface_s *a10nsp_interface;
 } bbl_a10nsp_config_s;
 
+/* AF_XDP socket mode, see io_af_xdp_queue_create() */
+typedef enum {
+    AF_XDP_MODE_AUTO = 0,   /* native zero-copy if supported, otherwise copy or generic */
+    AF_XDP_MODE_ZERO_COPY,  /* native zero-copy only */
+    AF_XDP_MODE_COPY,       /* native or generic copy mode */
+    AF_XDP_MODE_GENERIC,    /* generic (SKB) copy mode */
+} af_xdp_mode_t;
+
 typedef struct bbl_link_config_
 {
     char *interface;
@@ -205,6 +213,7 @@ typedef struct bbl_link_config_
     uint16_t io_slots_tx;
     uint16_t io_slots_rx;
     bool io_slots_rx_set; /* io-slots-rx configured explicitly */
+    af_xdp_mode_t af_xdp_mode;
     uint16_t io_burst;
 
     bool qdisc_bypass;

@@ -59,6 +59,12 @@ for interface links referenced by interface functions.
 |                                   | | With AF_XDP, the RX frames are sized automatically to at least     |
 |                                   | | twice the NIC RX ring if not set explicitly.                       |
 +-----------------------------------+----------------------------------------------------------------------+
+| **af-xdp-mode**                   | | AF_XDP socket mode: ``auto``, ``zero-copy``, ``copy``              |
+|                                   | | or ``generic``. ``auto`` prefers native zero-copy mode             |
+|                                   | | and falls back to copy or generic mode. ``copy``                   |
+|                                   | | avoids the zero-copy mode of the driver.                           |
+|                                   | | Default: auto                                                      |
++-----------------------------------+----------------------------------------------------------------------+
 | **qdisc-bypass**                  | | Overwrite the kernel's qdisc layer configuration.                  |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tx-interval**                   | | Overwrite the TX polling interval in milliseconds.                 |

@@ -1145,10 +1145,15 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
         /* Without XDP_COPY, the kernel binds in zero-copy mode if the
          * driver supports it, regardless of the XDP mode. In generic mode,
          * the driver (e.g. i40e) then neither receives nor sends anything
-         * on this queue because no native XDP program is attached. */
+         * on this queue because no native XDP program is attached.
+         * Copy mode can be selected explicitly, e.g. if the zero-copy
+         * mode of the driver performs badly (ice with IOMMU translation
+         * fills the NIC RX ring only partially on some kernels). */
         sock_cfg.bind_flags = XDP_USE_NEED_WAKEUP;
-        if(sock_cfg.xdp_flags == XDP_FLAGS_SKB_MODE) {
+        if(sock_cfg.xdp_flags == XDP_FLAGS_SKB_MODE || config->af_xdp_mode == AF_XDP_MODE_COPY) {
             sock_cfg.bind_flags |= XDP_COPY;
+        } else if(config->af_xdp_mode == AF_XDP_MODE_ZERO_COPY) {
+            sock_cfg.bind_flags |= XDP_ZEROCOPY;
         }
         ret = xsk_socket__create(&q->xsk, interface->name, queue_id, q->umem, rx_ring, tx_ring, &sock_cfg);
         if(!ret) {
@@ -1160,7 +1165,7 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
         q->xsk = NULL;
         io_af_xdp_umem_delete(q);
 
-        if(sock_cfg.xdp_flags == XDP_FLAGS_DRV_MODE) {
+        if(sock_cfg.xdp_flags == XDP_FLAGS_DRV_MODE && config->af_xdp_mode != AF_XDP_MODE_ZERO_COPY) {
             LOG(INFO, "Warning: AF_XDP native mode not available for interface %s (%s), "
                 "falling back to generic (SKB) mode\n", interface->name, strerror(err));
             sock_cfg.xdp_flags = XDP_FLAGS_SKB_MODE;
@@ -1172,8 +1177,10 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
         } else {
             LOG(ERROR, "AF_XDP: failed to create socket for interface %s queue %u (%s) - "
                 "possible causes: not enough RX/TX queues on the interface, an XDP "
-                "program already attached to it, or missing CAP_NET_RAW/CAP_BPF privileges\n",
-                interface->name, queue_id, strerror(err));
+                "program already attached to it, missing CAP_NET_RAW/CAP_BPF privileges%s\n",
+                interface->name, queue_id, strerror(err),
+                config->af_xdp_mode == AF_XDP_MODE_ZERO_COPY ?
+                " or zero-copy mode not supported by the driver (af-xdp-mode)" : "");
             io_af_xdp_queue_destroy(q);
             return false;
         }
@@ -1660,7 +1667,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
     uint16_t total_queues = rx_queues + tx_queues;
     uint16_t queue;
     uint32_t nic_queue_id;
-    uint32_t xdp_flags = XDP_FLAGS_DRV_MODE;
+    uint32_t xdp_flags = config->af_xdp_mode == AF_XDP_MODE_GENERIC ? XDP_FLAGS_SKB_MODE : XDP_FLAGS_DRV_MODE;
 
     io_af_xdp_queue_s *q;
     io_handle_s *rx_io;
