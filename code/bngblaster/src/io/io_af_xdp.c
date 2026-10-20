@@ -89,6 +89,23 @@ typedef struct io_af_xdp_queue_ {
     uint64_t tx_kick_last; /* timestamp of last kick (nsec) */
 } io_af_xdp_queue_s;
 
+/* NIC configuration found before the AF_XDP initialization changed it,
+ * restored by io_af_xdp_cleanup(). A setting with cmd 0 could not be read
+ * and is not restored. */
+typedef struct io_af_xdp_state_ {
+    struct ethtool_channels channels;
+    struct ethtool_value flags;
+    uint32_t *rss_indir; /* RSS indirection table */
+    uint32_t rss_indir_size;
+    bool rss_default; /* table was the driver default (entry i -> i % RX queues) */
+    bool rss_changed; /* table was written by io_af_xdp_clamp_rss_indir() */
+} io_af_xdp_state_s;
+
+/* Some drivers (e.g. i40e) reject configuration changes with EBUSY while
+ * a reset caused by a previous change is still in progress. */
+#define AF_XDP_ETHTOOL_RETRIES      20
+#define AF_XDP_ETHTOOL_RETRY_NS     50000000 /* 50ms */
+
 /* Conservative worst-case per-packet overhead (double VLAN tag, ...) added
  * on top of the interface MTU when checking it against the AF_XDP frame
  * size. */
@@ -115,6 +132,102 @@ next_pow2(uint32_t v)
         p <<= 1;
     }
     return p;
+}
+
+static int
+io_af_xdp_ethtool_set(int fd, struct ifreq *ifr)
+{
+    struct timespec retry_delay = {.tv_sec = 0, .tv_nsec = AF_XDP_ETHTOOL_RETRY_NS};
+    uint32_t retries = 0;
+
+    while(ioctl(fd, SIOCETHTOOL, ifr) == -1) {
+        if((errno != EBUSY && errno != EAGAIN) || retries++ >= AF_XDP_ETHTOOL_RETRIES) {
+            return -1;
+        }
+        nanosleep(&retry_delay, NULL);
+    }
+    return 0;
+}
+
+static uint32_t
+io_af_xdp_rx_channels(struct ethtool_channels *ch)
+{
+    return ch->combined_count ? ch->combined_count : ch->rx_count;
+}
+
+/**
+ * Save the NIC configuration changed by the AF_XDP initialization
+ * (channels, RSS indirection table and RX VLAN offload flag), which is
+ * restored by io_af_xdp_cleanup() to leave the NIC as found.
+ */
+static bool
+io_af_xdp_save_state(bbl_interface_s *interface)
+{
+    io_af_xdp_state_s *state;
+    struct ifreq ifr = {0};
+    struct ethtool_rxfh size_probe = {0};
+    struct ethtool_rxfh *rxfh;
+    uint32_t rx_channels;
+    uint32_t i;
+    int fd;
+
+    state = calloc(1, sizeof(io_af_xdp_state_s));
+    if(!state) {
+        return false;
+    }
+    interface->io.af_xdp_state = state;
+
+    fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if(fd == -1) {
+        return true;
+    }
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+
+    state->channels.cmd = ETHTOOL_GCHANNELS;
+    ifr.ifr_data = (void*)&state->channels;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        state->channels.cmd = 0;
+    }
+    state->flags.cmd = ETHTOOL_GFLAGS;
+    ifr.ifr_data = (void*)&state->flags;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        state->flags.cmd = 0;
+    }
+
+    size_probe.cmd = ETHTOOL_GRSSH;
+    ifr.ifr_data = (void*)&size_probe;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == 0 && size_probe.indir_size) {
+        /* Read the indirection table only (key_size 0), the hash key
+         * is never changed. */
+        rxfh = calloc(1, sizeof(struct ethtool_rxfh) + size_probe.indir_size * sizeof(uint32_t));
+        if(!rxfh) {
+            close(fd);
+            return false;
+        }
+        rxfh->cmd = ETHTOOL_GRSSH;
+        rxfh->indir_size = size_probe.indir_size;
+        ifr.ifr_data = (void*)rxfh;
+        if(ioctl(fd, SIOCETHTOOL, &ifr) == 0) {
+            state->rss_indir_size = size_probe.indir_size;
+            state->rss_indir = malloc(state->rss_indir_size * sizeof(uint32_t));
+            if(!state->rss_indir) {
+                free(rxfh);
+                close(fd);
+                return false;
+            }
+            memcpy(state->rss_indir, rxfh->rss_config, state->rss_indir_size * sizeof(uint32_t));
+            rx_channels = state->channels.cmd ? io_af_xdp_rx_channels(&state->channels) : 0;
+            state->rss_default = rx_channels > 0;
+            for(i = 0; i < state->rss_indir_size && state->rss_default; i++) {
+                if(state->rss_indir[i] != i % rx_channels) {
+                    state->rss_default = false;
+                }
+            }
+        }
+        free(rxfh);
+    }
+    close(fd);
+    return true;
 }
 
 /**
@@ -238,7 +351,7 @@ io_af_xdp_disable_rxvlan_offload(bbl_interface_s *interface)
     eval.cmd = ETHTOOL_SFLAGS;
     eval.data &= ~ETH_FLAG_RXVLAN;
     ifr.ifr_data = (void*)&eval;
-    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+    if(io_af_xdp_ethtool_set(fd, &ifr) == -1) {
         LOG(ERROR, "AF_XDP: failed to disable RX VLAN offload on interface %s (%s), "
             "VLAN tags will be missing from received frames, please disable it "
             "manually (e.g. 'ethtool -K %s rxvlan off')\n",
@@ -253,24 +366,29 @@ io_af_xdp_disable_rxvlan_offload(bbl_interface_s *interface)
 }
 
 /**
- * Read the NIC's RSS indirection table and rebuild it as an even
- * round-robin over 0..limit-1 (entry i -> i % limit), writing the table
- * back if anything changed.
+ * Read the NIC's RSS indirection table and bring it within 0..limit-1,
+ * writing the table back if anything changed.
  *
- * This is used both to keep TX-only queues excluded from RX distribution
- * (io_af_xdp_constrain_rss()) and, before shrinking the channel count in
- * io_af_xdp_set_channels(), to bring the table within the new bound first:
- * once an RSS indirection table has been explicitly configured (which a
- * prior bngblaster run with more rx-threads/tx-threads does), the kernel
- * refuses ETHTOOL_SCHANNELS with EINVAL if that table still references a
- * queue index at or beyond the channel count being requested.
+ * With rebalance, the table is rebuilt as an even round-robin over
+ * 0..limit-1 (entry i -> i % limit). This keeps TX-only queues excluded
+ * from RX distribution (io_af_xdp_constrain_rss()), after the channels
+ * have been configured.
  *
- * The table is unconditionally rebuilt by index rather than only remapping
- * out-of-range entries by value. Patching only out-of-range entries is not
- * enough: a table previously collapsed onto a single queue (e.g. by an
- * earlier run with rx-threads 1, where every entry % 1 == 0) has every
- * entry already in range for any larger limit, so it would never be
- * touched again and RSS would stay collapsed onto queue 0 even after
+ * Without rebalance, only entries referencing a queue at or beyond limit
+ * are remapped (entry -> entry % limit). This is required before shrinking
+ * the channel count: once an RSS indirection table has been explicitly
+ * configured (which a prior bngblaster run with more rx-threads/tx-threads
+ * does), the kernel refuses ETHTOOL_SCHANNELS with EINVAL if that table
+ * still references a queue index at or beyond the channel count being
+ * requested. Rebalancing at this point is not possible, as the table must
+ * remain valid for the current channel count as well.
+ *
+ * The rebalanced table is unconditionally rebuilt by index rather than only
+ * remapping out-of-range entries by value. Patching only out-of-range
+ * entries is not enough: a table previously collapsed onto a single queue
+ * (e.g. by an earlier run with rx-threads 1, where every entry % 1 == 0)
+ * has every entry already in range for any larger limit, so it would never
+ * be touched again and RSS would stay collapsed onto queue 0 even after
  * rx-threads is increased. Remapping in-range values by their old value
  * is also not sufficient, since old_combined % limit != 0 skews a handful
  * of low queue indices with extra weight from the wrapped-around entries.
@@ -278,7 +396,7 @@ io_af_xdp_disable_rxvlan_offload(bbl_interface_s *interface)
  * regardless of the table's prior content.
  */
 static bool
-io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool *changed)
+io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool rebalance, bool *changed)
 {
     struct ifreq ifr = {0};
     struct ethtool_rxfh size_probe = {0};
@@ -293,7 +411,9 @@ io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool *chan
 
     fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
     if(fd == -1) {
-        return true; /* best effort */
+        LOG(ERROR, "AF_XDP: failed to open socket to configure the RSS indirection "
+            "table of interface %s (%s)\n", interface->name, strerror(errno));
+        return false;
     }
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
 
@@ -327,7 +447,7 @@ io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool *chan
     buf = calloc(1, buf_len);
     if(!buf) {
         close(fd);
-        return true; /* best effort */
+        return false;
     }
     rxfh = (struct ethtool_rxfh*)buf;
     rxfh->cmd = ETHTOOL_GRSSH;
@@ -347,9 +467,9 @@ io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool *chan
      * key_size byte of hash key (left untouched below). */
     indir = rxfh->rss_config;
     for(i = 0; i < rxfh->indir_size; i++) {
-        uint32_t balanced = i % limit;
-        if(indir[i] != balanced) {
-            indir[i] = balanced;
+        uint32_t entry = rebalance ? i % limit : indir[i] % limit;
+        if(indir[i] != entry) {
+            indir[i] = entry;
             *changed = true;
         }
     }
@@ -362,7 +482,10 @@ io_af_xdp_clamp_rss_indir(bbl_interface_s *interface, uint32_t limit, bool *chan
     rxfh->cmd = ETHTOOL_SRSSH;
     rxfh->rss_context = 0;
     ifr.ifr_data = (void*)rxfh;
-    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+    if(interface->io.af_xdp_state) {
+        interface->io.af_xdp_state->rss_changed = true;
+    }
+    if(io_af_xdp_ethtool_set(fd, &ifr) == -1) {
         LOG(ERROR, "AF_XDP: failed to constrain the RSS indirection table on interface %s "
             "to the first %u queue%s (%s), please configure it manually "
             "(e.g. 'ethtool -X %s equal %u')\n",
@@ -427,14 +550,14 @@ io_af_xdp_set_channels(bbl_interface_s *interface, uint32_t queues)
         }
         if(queues < old_combined) {
             bool rss_changed;
-            if(!io_af_xdp_clamp_rss_indir(interface, queues, &rss_changed)) {
+            if(!io_af_xdp_clamp_rss_indir(interface, queues, false, &rss_changed)) {
                 close(fd);
                 return false;
             }
         }
         ch.cmd = ETHTOOL_SCHANNELS;
         ch.combined_count = queues;
-        if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        if(io_af_xdp_ethtool_set(fd, &ifr) == -1) {
             LOG(ERROR, "AF_XDP: failed to reconfigure interface %s to %u combined "
                 "queue%s (%s), please configure it manually "
                 "(e.g. 'ethtool -L %s combined %u')\n",
@@ -460,7 +583,7 @@ io_af_xdp_set_channels(bbl_interface_s *interface, uint32_t queues)
         }
         if(queues < ch.rx_count) {
             bool rss_changed;
-            if(!io_af_xdp_clamp_rss_indir(interface, queues, &rss_changed)) {
+            if(!io_af_xdp_clamp_rss_indir(interface, queues, false, &rss_changed)) {
                 close(fd);
                 return false;
             }
@@ -468,7 +591,7 @@ io_af_xdp_set_channels(bbl_interface_s *interface, uint32_t queues)
         ch.cmd = ETHTOOL_SCHANNELS;
         ch.rx_count = queues;
         ch.tx_count = queues;
-        if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        if(io_af_xdp_ethtool_set(fd, &ifr) == -1) {
             LOG(ERROR, "AF_XDP: failed to reconfigure interface %s to %u RX/TX "
                 "queues (%s), please configure it manually "
                 "(e.g. 'ethtool -L %s rx %u tx %u')\n",
@@ -505,7 +628,7 @@ io_af_xdp_constrain_rss(bbl_interface_s *interface, uint32_t rx_queues, uint32_t
         return true;
     }
 
-    if(!io_af_xdp_clamp_rss_indir(interface, rx_queues, &changed)) {
+    if(!io_af_xdp_clamp_rss_indir(interface, rx_queues, true, &changed)) {
         /* Cannot guarantee TX-only queues are excluded from RX traffic
          * distribution - io_af_xdp_clamp_rss_indir() already logged why. */
         return false;
@@ -582,17 +705,189 @@ io_af_xdp_queue_destroy(io_af_xdp_queue_s *q)
 }
 
 /**
- * Delete all AF_XDP sockets after the IO threads are stopped.
+ * Restore the channels before the RSS indirection table, which might
+ * reference queues that do not exist before. A table referencing queues
+ * beyond the restored channel count is clamped before (see
+ * io_af_xdp_clamp_rss_indir()).
+ */
+static bool
+io_af_xdp_restore_channels(bbl_interface_s *interface, io_af_xdp_state_s *state, int fd, struct ifreq *ifr)
+{
+    struct ethtool_channels ch = {0};
+    struct timespec retry_delay = {.tv_sec = 0, .tv_nsec = AF_XDP_ETHTOOL_RETRY_NS};
+    uint32_t rx_channels = io_af_xdp_rx_channels(&state->channels);
+    uint32_t retries = 0;
+    bool rss_changed;
+
+    ch.cmd = ETHTOOL_GCHANNELS;
+    ifr->ifr_data = (void*)&ch;
+    if(ioctl(fd, SIOCETHTOOL, ifr) == -1) {
+        LOG(ERROR, "AF_XDP: failed to read channels of interface %s (%s)\n",
+            interface->name, strerror(errno));
+        return false;
+    }
+    if(ch.combined_count == state->channels.combined_count &&
+       ch.rx_count == state->channels.rx_count &&
+       ch.tx_count == state->channels.tx_count) {
+        return true;
+    }
+    if(rx_channels && rx_channels < io_af_xdp_rx_channels(&ch)) {
+        if(!io_af_xdp_clamp_rss_indir(interface, rx_channels, false, &rss_changed)) {
+            return false;
+        }
+    }
+    /* The kernel refuses to remove queues with an AF_XDP socket bound
+     * (EINVAL), which it releases asynchronously after the socket is
+     * deleted. */
+    state->channels.cmd = ETHTOOL_SCHANNELS;
+    ifr->ifr_data = (void*)&state->channels;
+    while(io_af_xdp_ethtool_set(fd, ifr) == -1) {
+        if(errno != EINVAL || retries++ >= AF_XDP_ETHTOOL_RETRIES) {
+            LOG(ERROR, "AF_XDP: failed to restore channels of interface %s (%s), please restore "
+                "them manually (e.g. 'ethtool -L %s combined %u')\n",
+                interface->name, strerror(errno), interface->name, rx_channels);
+            return false;
+        }
+        nanosleep(&retry_delay, NULL);
+    }
+    LOG(AFXDP, "AF_XDP: interface %s channels restored (%u combined, %u RX, %u TX)\n",
+        interface->name, state->channels.combined_count, state->channels.rx_count,
+        state->channels.tx_count);
+    return true;
+}
+
+/**
+ * Writing the RSS indirection table marks it as configured by the user,
+ * which prevents the driver from adjusting it to later channel changes.
+ * Therefore a table that was the driver default before is reset to the
+ * default (indir_size 0) instead of written back.
+ */
+static bool
+io_af_xdp_restore_rss(bbl_interface_s *interface, io_af_xdp_state_s *state, int fd, struct ifreq *ifr)
+{
+    struct ethtool_rxfh *rxfh;
+
+    rxfh = calloc(1, sizeof(struct ethtool_rxfh) + state->rss_indir_size * sizeof(uint32_t));
+    if(!rxfh) {
+        return false;
+    }
+    rxfh->cmd = ETHTOOL_SRSSH;
+    if(!state->rss_default) {
+        rxfh->indir_size = state->rss_indir_size;
+        memcpy(rxfh->rss_config, state->rss_indir, state->rss_indir_size * sizeof(uint32_t));
+    }
+    ifr->ifr_data = (void*)rxfh;
+    if(io_af_xdp_ethtool_set(fd, ifr) == -1) {
+        LOG(ERROR, "AF_XDP: failed to restore the RSS indirection table of interface %s (%s)\n",
+            interface->name, strerror(errno));
+        free(rxfh);
+        return false;
+    }
+    LOG(AFXDP, "AF_XDP: interface %s RSS indirection table restored%s\n",
+        interface->name, state->rss_default ? " to default" : "");
+    free(rxfh);
+    return true;
+}
+
+/**
+ * Restore the RX VLAN offload flag only, other flags are not changed.
+ */
+static bool
+io_af_xdp_restore_flags(bbl_interface_s *interface, io_af_xdp_state_s *state, int fd, struct ifreq *ifr)
+{
+    struct ethtool_value eval = {0};
+
+    eval.cmd = ETHTOOL_GFLAGS;
+    ifr->ifr_data = (void*)&eval;
+    if(ioctl(fd, SIOCETHTOOL, ifr) == -1) {
+        LOG(ERROR, "AF_XDP: failed to read flags of interface %s (%s)\n",
+            interface->name, strerror(errno));
+        return false;
+    }
+    if((eval.data & ETH_FLAG_RXVLAN) == (state->flags.data & ETH_FLAG_RXVLAN)) {
+        return true;
+    }
+    eval.cmd = ETHTOOL_SFLAGS;
+    eval.data = (eval.data & ~ETH_FLAG_RXVLAN) | (state->flags.data & ETH_FLAG_RXVLAN);
+    if(io_af_xdp_ethtool_set(fd, ifr) == -1) {
+        LOG(ERROR, "AF_XDP: failed to restore RX VLAN offload of interface %s (%s)\n",
+            interface->name, strerror(errno));
+        return false;
+    }
+    LOG(AFXDP, "AF_XDP: RX VLAN offload restored on interface %s\n", interface->name);
+    return true;
+}
+
+/**
+ * Restore the NIC configuration saved by io_af_xdp_save_state(), after
+ * all sockets of the interface are deleted.
+ */
+static bool
+io_af_xdp_restore_state(bbl_interface_s *interface)
+{
+    io_af_xdp_state_s *state = interface->io.af_xdp_state;
+    struct ifreq ifr = {0};
+    bool success = true;
+    int fd;
+
+    if(!state) {
+        return true;
+    }
+    if(if_nametoindex(interface->name) != interface->kernel_index) {
+        LOG(ERROR, "AF_XDP: interface %s was removed or recreated, NIC configuration not restored\n",
+            interface->name);
+        success = false;
+        goto FREE;
+    }
+    fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if(fd == -1) {
+        LOG(ERROR, "AF_XDP: failed to open socket to restore the NIC configuration of interface %s (%s)\n",
+            interface->name, strerror(errno));
+        success = false;
+        goto FREE;
+    }
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+
+    if(state->channels.cmd && !io_af_xdp_restore_channels(interface, state, fd, &ifr)) {
+        success = false;
+        if(state->rss_changed) {
+            LOG(ERROR, "AF_XDP: RSS indirection table of interface %s not restored "
+                "because restoring the channels failed\n", interface->name);
+            state->rss_changed = false;
+        }
+    }
+    if(state->rss_changed && state->rss_indir && !io_af_xdp_restore_rss(interface, state, fd, &ifr)) {
+        success = false;
+    }
+    if(state->flags.cmd && !io_af_xdp_restore_flags(interface, state, fd, &ifr)) {
+        success = false;
+    }
+    close(fd);
+FREE:
+    interface->io.af_xdp_state = NULL;
+    free(state->rss_indir);
+    free(state);
+    return success;
+}
+
+/**
+ * Delete all AF_XDP sockets after the IO threads are stopped and restore
+ * the NIC configuration. This is also called if the initialization of
+ * an interface failed.
  *
  * With libxdp, the XDP program is attached via netlink and remains
  * attached after the process exits. It is detached only if the last
  * socket of the interface is deleted with xsk_socket__delete().
+ *
+ * @return false if the NIC configuration of an interface was not
+ * completely restored
  */
-void
+bool
 io_af_xdp_cleanup()
 {
     bbl_interface_s *interface;
     io_handle_s *io;
+    bool success = true;
 
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         for(io = interface->io.rx; io; io = io->next) {
@@ -609,7 +904,11 @@ io_af_xdp_cleanup()
                 io->fd = -1;
             }
         }
+        if(!io_af_xdp_restore_state(interface)) {
+            success = false;
+        }
     }
+    return success;
 }
 
 /**
@@ -1247,6 +1546,10 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
         return false;
     }
 
+    if(!io_af_xdp_save_state(interface)) {
+        LOG(ERROR, "AF_XDP: failed to save the NIC configuration of interface %s\n", interface->name);
+        return false;
+    }
     io_af_xdp_check_mtu(interface);
 
     if(!io_af_xdp_disable_rxvlan_offload(interface)) {

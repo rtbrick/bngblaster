@@ -44,6 +44,7 @@ typedef struct bbl_interface_
         struct timer_ *tx_job;
         io_handle_s *rx;
         io_handle_s *tx;
+        struct io_af_xdp_state_ *af_xdp_state;
     } io;
 } bbl_interface_s;
 
