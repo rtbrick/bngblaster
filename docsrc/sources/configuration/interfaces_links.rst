@@ -50,6 +50,8 @@ for interface links referenced by interface functions.
 | **io-slots-tx**                   | | Overwrite the TX IO slots (ring size).                             |
 +-----------------------------------+----------------------------------------------------------------------+
 | **io-slots-rx**                   | | Overwrite the RX IO slots (ring size).                             |
+|                                   | | With AF_XDP, the RX frames are sized automatically to at least     |
+|                                   | | twice the NIC RX ring if not set explicitly.                       |
 +-----------------------------------+----------------------------------------------------------------------+
 | **qdisc-bypass**                  | | Overwrite the kernel's qdisc layer configuration.                  |
 +-----------------------------------+----------------------------------------------------------------------+

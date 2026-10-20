@@ -144,7 +144,8 @@ AF_XDP socket, defined per RX thread by ``io-slots-rx`` (rounded up to the next
 power of two). The NIC RX ring should not exceed half of those frames, otherwise
 the frames still waiting to be processed are missing to refill the ring, which
 results in even more ``rx_missed_errors``. For example, a NIC RX ring of 8160
-requires ``io-slots-rx`` of 16384.
+requires ``io-slots-rx`` of 16384. BNG Blaster takes care of both automatically
+for AF_XDP, see :ref:`AF_XDP <af-xdp-usage>`.
 
 .. _ddp-pppoe:
 
@@ -643,6 +644,21 @@ Here, ``4096 RX / 0 TX frames`` is the number of frames (``io-slots``, or
 ``io-slots-rx`` and ``io-slots-tx`` per link, rounded up to a power of 2) and ``of 4096 byte`` is the size
 of each frame, not the maximum packet size.
 
+BNG Blaster increases the NIC RX ring to 4096 descriptors (limited to the NIC
+maximum, a larger ring is kept), as the small default of some drivers (e.g. 512
+on i40e) causes RX loss at high rates (see :ref:`NIC RX ring <performance>`).
+The RX frames are sized to at least twice the NIC RX ring, e.g. 8192 RX frames
+for a ring of 4096 or 16384 for a ring of 8160, unless ``io-slots-rx`` is
+configured explicitly for the link, in which case a too small value is only
+logged as warning. ``io-slots`` is used as minimum. Each frame uses 4096 bytes
+of memory, so a ring of 4096 requires 32 MB per RX queue (64 MB for a ring of
+8160).
+
+.. code-block:: none
+
+    AF_XDP: interface eth1 NIC RX ring increased to 4096 (was 512)
+    AF_XDP: interface eth1 uses 8192 RX frames per queue for NIC RX ring 4096
+
 .. note::
 
     If the NIC has more queues configured than bngblaster binds AF_XDP
@@ -652,14 +668,33 @@ of each frame, not the maximum packet size.
     affected flows. This is exactly what the automatic queue
     reconfiguration above avoids.
 
+BNG Blaster changes the number of queues, the RSS indirection table, the NIC
+RX ring and the RX VLAN offload of the interface. This configuration is saved
+before and restored on exit, also if the initialization failed. The queues are
+restored before the RSS indirection table, which might reference queues that
+do not exist before. An RSS indirection table that was the driver default is
+reset to the default (``ethtool -X <interface> default``), so that the driver
+still adjusts it to later changes of the number of queues. If the
+configuration can't be restored completely, this is logged as error and BNG
+Blaster exits with a non-zero exit status. The configuration is not restored
+if BNG Blaster is killed (e.g. ``SIGKILL``) or crashes, in which case the next
+test restores the configuration it found at startup.
+
 BNG Blaster removes its AF_XDP sockets on exit, which also detaches the XDP
 program from the interface. If BNG Blaster built with libxdp is killed or
 crashes, the XDP program stays attached, as libxdp attaches it via netlink
 and not via a BPF link that is released with the process. Such a program
 does not prevent further tests, but keeps the interface in XDP mode (e.g.
 the MTU can't be increased beyond the driver limit) and is not removed by
-later tests. Remove it manually with ``xdp-loader unload <interface> --all``,
-which also removes the files pinned by libxdp in ``/sys/fs/bpf/xdp/``
+later tests, as it might also be used by another application. A warning is
+logged at startup if an XDP program is already attached:
+
+.. code-block:: none
+
+    Warning: AF_XDP interface eth1 has XDP program 194 already attached (e.g. left behind by a killed BNG Blaster), please remove it if not used by another application (e.g. 'xdp-loader unload eth1 --all')
+
+Remove it manually with ``xdp-loader unload <interface> --all``, which also
+removes the files pinned by libxdp in ``/sys/fs/bpf/xdp/``
 (``ip link set <interface> xdp off`` detaches the program only).
 
 AF_XDP Tuning
@@ -694,6 +729,9 @@ siblings share the resources of one physical core.
 **Buffers:** Short delays of RX threads can be absorbed with larger buffers.
 In our tests, a NIC RX ring of 8160 with ``io-slots-rx`` of 16384 removed the
 remaining loss caused by such delays (see the NIC RX ring requirements above).
+BNG Blaster increases the NIC RX ring only to 4096, so set the larger ring
+before the test (``ethtool -G <interface> rx 8160``), the RX frames are then
+sized automatically.
 
 .. _single-queue:
 
