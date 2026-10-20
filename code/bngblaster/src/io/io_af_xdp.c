@@ -1278,6 +1278,8 @@ io_af_xdp_thread_rx_run_fn(io_thread_s *thread)
 
     const struct xdp_desc *desc;
     uint64_t addrs[AF_XDP_BURST];
+    uint8_t *bufs[AF_XDP_BURST];
+    uint16_t lens[AF_XDP_BURST];
     uint32_t idx_rx = 0;
     uint32_t rcvd;
     uint32_t i;
@@ -1311,14 +1313,11 @@ io_af_xdp_thread_rx_run_fn(io_thread_s *thread)
         for(i = 0; i < rcvd; i++) {
             desc = xsk_ring_cons__rx_desc(&q->rx, idx_rx + i);
             addrs[i] = desc->addr;
-            io->buf = xsk_umem__get_data(q->umem_area, desc->addr);
-            io->buf_len = desc->len;
-            io->vlan_tci = 0;
-            /* Process packet */
-            if(io_thread_rx_handler(thread, io) == IO_FULL) {
-                io->stats.dropped++;
-            }
+            bufs[i] = xsk_umem__get_data(q->umem_area, desc->addr);
+            lens[i] = desc->len;
         }
+        io->vlan_tci = 0;
+        io_thread_rx_burst(thread, io, bufs, lens, rcvd);
         xsk_ring_cons__release(&q->rx, rcvd);
         io_af_xdp_refill(q, addrs, rcvd);
     }

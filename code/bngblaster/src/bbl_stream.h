@@ -154,8 +154,8 @@ typedef struct bbl_stream_args_
  * corresponds to one or two flows, namely upstream and downstream. 
  * Each flow is encapsulated within a bbl_stream_s structure and is 
  * assigned a unique 32-bit flow identifier. The structure is organized 
- * into three distinct sections, each separated by cache-line aligned 
- * padding (pad0 and pad1). The first section is dedicated to writes 
+ * into three distinct sections, each starting on a new cache line.
+ * The first section is dedicated to writes
  * by the TX thread, the second section by the RX thread, and the 
  * final section by the main thread. This design was used to allow 
  * lock-free but thread-safe access across different threads.
@@ -194,9 +194,7 @@ typedef struct bbl_stream_
     };
 
     /* RX Thread */
-    char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
-
-    uint64_t rx_packets;
+    uint64_t rx_packets __attribute__((__aligned__(CACHE_LINE_SIZE)));
     uint64_t rx_loss;
     uint64_t rx_last_seq;
     uint64_t rx_min_delay_us;
@@ -211,8 +209,9 @@ typedef struct bbl_stream_
     uint32_t rx_wrong_order;
     uint16_t rx_flags;
     volatile bool verified;
+    bool rx_nat; /* Upstream NAT stream, RX copy to avoid reading TX cache lines */
 
-    /* All variables used in RX hot path are defined until 
+    /* All variables used in RX hot path are defined until
      * here and fit into a single cache line. */
 
     uint64_t rx_first_seq;

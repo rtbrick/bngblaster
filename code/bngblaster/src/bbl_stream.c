@@ -1839,6 +1839,36 @@ bbl_stream_io_stop(io_handle_s *io)
     }
 }
 
+/* Number of streams prefetched ahead of the current stream. */
+#define STREAM_TX_PREFETCH_DISTANCE 8
+
+/**
+ * Advance the prefetch lookahead of the bucket by one stream.
+ *
+ * The lookahead stream was prefetched in the previous step, so
+ * its pointers to the session (endpoint) and TX buffer can be
+ * read and prefetched now, long before the stream is sent. The
+ * stream cache lines written by the TX thread are prefetched for
+ * the next stream in the list.
+ */
+static inline void
+bbl_stream_io_prefetch_next(io_bucket_s *io_bucket)
+{
+    bbl_stream_s *stream = io_bucket->stream_prefetch;
+    if(stream) {
+        __builtin_prefetch(stream->endpoint);
+        if(stream->tx_buf) {
+            __builtin_prefetch(stream->tx_buf + stream->tx_len - 1, 1);
+        }
+        stream = stream->io_next;
+        if(stream) {
+            __builtin_prefetch(&stream->tx_packets, 1);
+            __builtin_prefetch(&stream->flow_seq, 1);
+        }
+        io_bucket->stream_prefetch = stream;
+    }
+}
+
 /**
  * bbl_stream_io_send_iter
  *
@@ -1853,12 +1883,17 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
     bbl_stream_s *stream;
     uint64_t min = now - g_ctx->config.stream_burst_ms;
     uint64_t expired;
+    int i;
     while(io_bucket) {
         if(io_bucket->stream_cur) {
             stream = io_bucket->stream_cur;
         } else {
             stream = io_bucket->stream_head;
             io_bucket->stream_cur = stream;
+            io_bucket->stream_prefetch = stream;
+            for(i = 0; i < STREAM_TX_PREFETCH_DISTANCE; i++) {
+                bbl_stream_io_prefetch_next(io_bucket);
+            }
             if(io_bucket->base) {
                 io_bucket->base += io_bucket->nsec;
                 if(io_bucket->base < min) {
@@ -1881,8 +1916,7 @@ bbl_stream_io_send_iter(io_handle_s *io, uint64_t now)
                 io_bucket->stream_cur = stream;
                 break;
             }
-            __builtin_prefetch(&stream->setup, 1, 0);
-            __builtin_prefetch(&stream->session_version, 0, 0);
+            bbl_stream_io_prefetch_next(io_bucket);
             if(bbl_stream_io_send(stream) == PROTOCOL_SUCCESS) {
                 io_bucket->stream_cur = stream->io_next;
                 io->bucket_cur = io_bucket;
@@ -2146,6 +2180,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
                 stream_up->endpoint = &(session->endpoint.ipv4);
                 if(config->nat) {
                     stream_up->tx_flags |= STREAM_FLAG_NAT;
+                    stream_up->rx_nat = true;
                 }
                 break;
             case BBL_SUB_TYPE_IPV6:
@@ -2781,7 +2816,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                 stream->rx_wrong_order++;
                 stream->rx_packets++;
             }
-            if((stream->tx_flags & STREAM_FLAG_NAT) && stream->direction == BBL_DIRECTION_UP && eth->type == ETH_TYPE_IPV4) {
+            if(stream->rx_nat && eth->type == ETH_TYPE_IPV4) {
                 bbl_stream_rx_nat(eth, stream);
             }
         } else {
@@ -2854,7 +2889,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                     }
                 }
             }
-            if((stream->tx_flags & STREAM_FLAG_NAT) && stream->direction == BBL_DIRECTION_UP && eth->type == ETH_TYPE_IPV4) {
+            if(stream->rx_nat && eth->type == ETH_TYPE_IPV4) {
                 bbl_stream_rx_nat(eth, stream);
             }
             stream->rx_first_seq = flow_seq;

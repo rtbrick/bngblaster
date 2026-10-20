@@ -15,4 +15,7 @@ io_interface_init(bbl_interface_s *interface);
 bool
 io_interface_init_topology(bbl_interface_s *interface, int numa_node_hint);
 
+uint16_t
+io_interface_irq_cpus(bbl_interface_s *interface, bool *irq_cpus);
+
 #endif
