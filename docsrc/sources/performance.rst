@@ -679,8 +679,10 @@ the Intel ice driver (E810) and an IOMMU in translation mode (``DMA`` or ``DMA-F
 a few buffers per interrupt, which drops most of the received packets. This is visible as
 ``Failed to allocate some buffers on XSK buffer pool enabled Rx ring`` in the kernel log and
 ``rx_dropped`` increasing with only few packets per RX queue (``rx_queue_<n>_packets``). Use
-``iommu=pt`` if possible, otherwise ``af-xdp-mode`` ``copy`` for such interfaces. Independent
-of this, a warning is logged at startup if the interface MTU exceeds 3712
+``iommu=pt`` if possible, otherwise ``af-xdp-mode`` ``copy`` for such interfaces (see
+:ref:`AF_XDP Tuning <af-xdp-tuning>`).
+
+A warning is logged at startup if the interface MTU exceeds 3712
 bytes (MTU plus 128 bytes of worst-case header overhead does not fit into the
 3840 bytes of a received frame). The actual mode of each queue is logged with
 ``-l af_xdp``:
@@ -747,6 +749,8 @@ Remove it manually with ``xdp-loader unload <interface> --all``, which also
 removes the files pinned by libxdp in ``/sys/fs/bpf/xdp/``
 (``ip link set <interface> xdp off`` detaches the program only).
 
+.. _af-xdp-tuning:
+
 AF_XDP Tuning
 ~~~~~~~~~~~~~
 
@@ -782,6 +786,15 @@ remaining loss caused by such delays (see the NIC RX ring requirements above).
 BNG Blaster increases the NIC RX ring only to 4096, so set the larger ring
 before the test (``ethtool -G <interface> rx 8160``), the RX frames are then
 sized automatically.
+
+**Zero-copy or copy mode:** Native zero-copy mode is the fastest mode and used by
+default if supported by the driver. Copy mode (``"af-xdp-mode": "copy"``) copies each
+packet between the driver and the AF_XDP frames, which limits the packet rate. In our
+tests, a single RX and TX thread reached about 4.4 Mpps in copy mode compared to 11 Mpps
+(10G line rate) in zero-copy mode. Use copy mode only for interfaces where zero-copy
+mode performs badly, e.g. the Intel ice driver with an IOMMU in translation mode (see
+above), where copy mode performed much better than zero-copy mode. Check the actual
+mode of each queue with ``-l af_xdp``.
 
 .. _single-queue:
 
