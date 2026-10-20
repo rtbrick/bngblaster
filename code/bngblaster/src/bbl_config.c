@@ -5188,7 +5188,7 @@ json_parse_config(json_t *root)
                 "network-interface", "receive-window-size", "max-retry", "congestion-mode",
                 "data-control-priority", "data-length", "data-offset", "control-tos",
                 "data-control-tos", "hello-interval", "lcp-padding", "lcp-start",
-                "calling-number", "called-number"
+                "calling-number", "called-number", "tx-connect-speed", "rx-connect-speed"
             };
             if(!schema_validate(sub, "l2tp-client", schema, sizeof(schema)/sizeof(schema[0]))) {
                 return false;
@@ -5258,6 +5258,16 @@ json_parse_config(json_t *root)
             }
             if(json_unpack(sub, "{s:s}", "called-number", &s) == 0) {
                 l2tp_client->called_number = strdup(s);
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "tx-connect-speed", 1, 4294967295);
+            if(value) {
+                l2tp_client->tx_connect_speed = json_number_value(value);
+            } else {
+                l2tp_client->tx_connect_speed = 100000000;
+            }
+            JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "rx-connect-speed", 1, 4294967295);
+            if(value) {
+                l2tp_client->rx_connect_speed = json_number_value(value);
             }
         }
     } else if(json_is_object(section)) {

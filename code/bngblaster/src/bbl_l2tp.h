@@ -128,6 +128,8 @@ typedef struct bbl_l2tp_client_
     char *network_interface;
     char *calling_number; /* Optional ICRQ Calling Number (AVP 22) */
     char *called_number;  /* Optional ICRQ Called Number (AVP 21) */
+    uint32_t tx_connect_speed; /* ICCN TX Connect Speed in bps (AVP 24) */
+    uint32_t rx_connect_speed; /* Optional ICCN RX Connect Speed in bps (AVP 38), 0 if not sent */
 
     void *next; /* Pointer to next L2TP client configuration */
 

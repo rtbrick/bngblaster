@@ -996,13 +996,24 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
         case L2TP_MESSAGE_ICCN:
             /* TX Connect Speed */
             if(l2tp_session) {
-                v32 = 100000000;
+                v32 = l2tp_tunnel->client ? l2tp_tunnel->client->tx_connect_speed : 100000000;
                 avp.m = true;
                 avp.type = L2TP_AVP_TX_CONNECT_SPEED;
                 avp.len = 4;
                 avp.value_type = L2TP_AVP_VALUE_UINT32;
                 avp.value = (void*)&v32;
                 bbl_l2tp_avp_encode(&buf, len, &avp);
+                /* RX Connect Speed (optional, AVP 38), the M-bit
+                 * must be set to 0 (RFC 2661 section 4.4.5) */
+                if(l2tp_tunnel->client && l2tp_tunnel->client->rx_connect_speed) {
+                    v32 = l2tp_tunnel->client->rx_connect_speed;
+                    avp.m = false;
+                    avp.type = L2TP_AVP_RX_CONNECT_SPEED;
+                    avp.len = 4;
+                    avp.value_type = L2TP_AVP_VALUE_UINT32;
+                    avp.value = (void*)&v32;
+                    bbl_l2tp_avp_encode(&buf, len, &avp);
+                }
                 /* Framing Type */
                 v32 = 1; /* Synchronous */
                 avp.m = true;

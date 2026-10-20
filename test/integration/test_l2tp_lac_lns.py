@@ -8,6 +8,7 @@ which verifies the L2TP teardown (CDN/StopCCN) of LAC and LNS.
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import struct
 import time
 
 import pytest
@@ -20,7 +21,11 @@ LNS_ADDRESS = "10.0.0.2"
 EXIT_TIMEOUT = 30
 
 
-def lac_config(ifname, sessions=SESSIONS, ip6cp=False, keepalive=0, auth="PAP"):
+def lac_config(ifname, sessions=SESSIONS, ip6cp=False, keepalive=0, auth="PAP",
+               client_options=None):
+    """client_options maps the LAC number (1 or 2) to additional
+    l2tp-client options of this LAC."""
+    client_options = client_options or {}
     return {
         "interfaces": {
             "network": {
@@ -71,7 +76,8 @@ def lac_config(ifname, sessions=SESSIONS, ip6cp=False, keepalive=0, auth="PAP"):
                 "client-address": "10.0.0.1%d" % i,
                 "server-address": LNS_ADDRESS,
                 "secret": "test",
-                "max-retry": 3
+                "max-retry": 3,
+                **client_options.get(i, {})
             } for i in (1, 2)
         ]
     }
@@ -244,3 +250,63 @@ def test_lcp_conf_request_disabled(topology, processes, tmp_path):
     time.sleep(3)
     assert lac_counters(lac)["sessions-established"] == 0
     assert_clean_exit(lac, lns)
+
+
+def lns_sessions_by_lac(lns):
+    """Map LAC name (peer name of the tunnel) to its LNS sessions."""
+    names = {t["tunnel-id"]: t["peer-name"] for t in lns_tunnels(lns)}
+    sessions = {}
+    for session in lns_sessions(lns):
+        sessions.setdefault(names[session["tunnel-id"]], []).append(session)
+    return sessions
+
+
+def connect_speed_avp(avp_type, value, mandatory):
+    """L2TP AVP (RFC 2661) with 32 bit value as sent in ICCN."""
+    flags_len = (0x8000 if mandatory else 0) | 10
+    return struct.pack("!HHHI", flags_len, 0, avp_type, value)
+
+
+def test_connect_speed(lac_lns):
+    """TX (AVP 24) and RX (AVP 38) connect speeds are configurable per
+    LAC, the defaults (100 Mbps TX, no RX) remain unchanged."""
+    lac, lns = lac_lns(sessions=4, client_options={
+        1: {"tx-connect-speed": 22001000, "rx-connect-speed": 1172000}})
+    sessions = lns_sessions_by_lac(lns)
+    assert set(sessions) == {"LAC1", "LAC2"}
+    for session in sessions["LAC1"]:
+        assert (session["peer-tx-bps"], session["peer-rx-bps"]) == (22001000, 1172000)
+    for session in sessions["LAC2"]:
+        assert (session["peer-tx-bps"], session["peer-rx-bps"]) == (100000000, 0)
+    assert_clean_exit(lac, lns)
+
+    # The M-bit is set for TX and must not be set for RX connect speed.
+    with open(lac.path("pcap"), "rb") as f:
+        pcap = f.read()
+    assert connect_speed_avp(24, 22001000, True) in pcap
+    assert connect_speed_avp(38, 1172000, False) in pcap
+    assert connect_speed_avp(24, 100000000, True) in pcap
+    assert struct.pack("!HHH", 10, 0, 38) + struct.pack("!I", 0) not in pcap
+
+
+def test_connect_speed_limits(lac_lns):
+    """Connect speeds use the full 32 bit range of the AVP."""
+    lac, lns = lac_lns(sessions=4, client_options={
+        1: {"tx-connect-speed": 4294967295, "rx-connect-speed": 4294967295},
+        2: {"tx-connect-speed": 1, "rx-connect-speed": 1}})
+    sessions = lns_sessions_by_lac(lns)
+    for session in sessions["LAC1"]:
+        assert (session["peer-tx-bps"], session["peer-rx-bps"]) == (4294967295, 4294967295)
+    for session in sessions["LAC2"]:
+        assert (session["peer-tx-bps"], session["peer-rx-bps"]) == (1, 1)
+    assert_clean_exit(lac, lns)
+
+
+@pytest.mark.parametrize("option", ["tx-connect-speed", "rx-connect-speed"])
+@pytest.mark.parametrize("value", [0, 4294967296, "100M"])
+def test_connect_speed_invalid(topology, tmp_path, option, value):
+    lac = BngBlaster(topology.a, tmp_path, "lac")
+    with pytest.raises(RuntimeError, match="exited on start"):
+        lac.start(lac_config(topology.if_a, sessions=1, client_options={1: {option: value}}))
+    with open(lac.path("stdout")) as f:
+        assert "Invalid value for l2tp-client->%s" % option in f.read()

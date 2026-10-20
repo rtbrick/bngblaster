@@ -2107,7 +2107,7 @@ l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
         }
     }
 
-    return json_pack("{ss si si si si si ss ss ss ss ss si si ss ss sI sI sI sI}",
+    return json_pack("{ss si si si si si ss ss ss ss ss sI sI ss ss sI sI sI sI}",
                      "state", l2tp_session_state_string(l2tp_session->state),
                      "tunnel-id", l2tp_session->key.tunnel_id,
                      "session-id", l2tp_session->key.session_id,
@@ -2119,8 +2119,8 @@ l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
                      "peer-called-number", string_or_na(l2tp_session->peer_called_number),
                      "peer-calling-number", string_or_na(l2tp_session->peer_calling_number),
                      "peer-sub-address", string_or_na(l2tp_session->peer_sub_address),
-                     "peer-tx-bps", l2tp_session->peer_tx_bps,
-                     "peer-rx-bps", l2tp_session->peer_rx_bps,
+                     "peer-tx-bps", (json_int_t)l2tp_session->peer_tx_bps,
+                     "peer-rx-bps", (json_int_t)l2tp_session->peer_rx_bps,
                      "peer-ari", string_or_na(l2tp_session->peer_ari),
                      "peer-aci", string_or_na(l2tp_session->peer_aci),
                      "data-packets-rx", l2tp_session->stats.data_rx,

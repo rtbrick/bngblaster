@@ -1409,6 +1409,19 @@
                     "called-number": {
                         "type": "string",
                         "description": "Called number AVP value"
+                    },
+                    "tx-connect-speed": {
+                        "type": "integer",
+                        "description": "TX connect speed in bits per second sent in ICCN (AVP 24)",
+                        "default": 100000000,
+                        "minimum": 1,
+                        "maximum": 4294967295
+                    },
+                    "rx-connect-speed": {
+                        "type": "integer",
+                        "description": "RX connect speed in bits per second sent in ICCN (AVP 38), not sent if not configured",
+                        "minimum": 1,
+                        "maximum": 4294967295
                     }
                 }
             }
