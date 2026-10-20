@@ -311,7 +311,16 @@ optimize placement as follows:
 * Prefer CPUs local to the NIC.
 * Prefer one hardware thread per physical core before using SMT siblings.
 * Avoid reusing the same CPU across interfaces until the local CPU pool is exhausted.
+* Avoid CPUs handling NIC interrupts of the used interfaces until no other CPU is free.
 * Fall back to the NUMA node CPU list and finally to the system online CPU list if no local CPU list is exposed.
+
+The kernel driver processes the NIC queues (NAPI) on the CPUs handling their interrupts, which is
+also the case for AF_XDP. An RX or TX thread on such a CPU permanently competes with this processing,
+which can significantly limit the throughput (e.g. AF_XDP TX completions). A warning is logged for
+each RX or TX thread running on a CPU which handles NIC interrupts, including manually pinned threads.
+The interrupt CPUs are shown in ``/proc/interrupts``. Those may change at runtime if ``irqbalance``
+is running, which can be prevented by excluding those CPUs from ``irqbalance`` or by setting the
+interrupt affinity manually.
 
 Following an example configuration using automatic CPU placement.
 

@@ -8,6 +8,7 @@
  */
 #include "io.h"
 #include "ifaddrs.h"
+#include <dirent.h>
 
 static bool
 read_first_line(const char *path, char *buf, size_t len)
@@ -186,6 +187,120 @@ order_cpuset_physical_first(uint16_t **cpuset, uint16_t count)
     free(ordered);
     free(seen_package);
     free(seen_core);
+}
+
+/**
+ * Check if an interrupt is requested by a driver, which
+ * is the case if it has an action (named subdirectory).
+ *
+ * @param irq interrupt number
+ * @param name optional name, which must be part of the action name
+ * @return true if requested (and matching name)
+ */
+static bool
+irq_requested(const char *irq, const char *name)
+{
+    char path[512];
+    struct dirent *entry;
+    DIR *dir;
+    bool requested = false;
+
+    snprintf(path, sizeof(path), "/proc/irq/%s", irq);
+    dir = opendir(path);
+    if(!dir) {
+        return false;
+    }
+    while((entry = readdir(dir))) {
+        if(entry->d_type == DT_DIR && entry->d_name[0] != '.') {
+            if(!name || strstr(entry->d_name, name)) {
+                requested = true;
+                break;
+            }
+        }
+    }
+    closedir(dir);
+    return requested;
+}
+
+/**
+ * Mark all CPUs handling interrupts of the interface (NIC).
+ *
+ * The NIC queues raise interrupts on those CPUs and the kernel
+ * driver processes the queues there (NAPI). A busy polling
+ * I/O thread on the same CPU delays this processing, which
+ * limits the throughput of the interface.
+ *
+ * Only interrupts requested by the driver are considered. If
+ * the names of those interrupts contain the interface name
+ * (e.g. i40e-eth1-TxRx-0), only those are considered to skip
+ * other interrupts of the device (e.g. i40e-0000:01:00.0:misc).
+ *
+ * @param interface interface
+ * @param irq_cpus array of CPU_SETSIZE flags
+ * @return number of interrupts found
+ */
+uint16_t
+io_interface_irq_cpus(bbl_interface_s *interface, bool *irq_cpus)
+{
+    char path[512];
+    char buf[4096];
+    const char *name = NULL;
+    uint16_t *cpuset;
+    uint16_t count;
+    uint16_t irqs = 0;
+    uint16_t i;
+    struct dirent *entry;
+    DIR *dir;
+
+    if(interface->config->io_mode == IO_MODE_DPDK ||
+       interface->config->io_mode == IO_MODE_LOOPBACK) {
+        return 0;
+    }
+
+    snprintf(path, sizeof(path), "/sys/class/net/%s/device/msi_irqs", interface->name);
+    dir = opendir(path);
+    if(!dir) {
+        return 0;
+    }
+    while((entry = readdir(dir))) {
+        if(isdigit((unsigned char)entry->d_name[0]) &&
+           irq_requested(entry->d_name, interface->name)) {
+            name = interface->name;
+            break;
+        }
+    }
+    rewinddir(dir);
+    while((entry = readdir(dir))) {
+        if(!isdigit((unsigned char)entry->d_name[0]) ||
+           !irq_requested(entry->d_name, name)) {
+            continue;
+        }
+        /* The effective affinity is the CPU actually handling the
+         * interrupt, while the configured affinity may contain many
+         * CPUs and is only used if it contains a single CPU. */
+        cpuset = NULL;
+        count = 0;
+        snprintf(path, sizeof(path), "/proc/irq/%s/effective_affinity_list", entry->d_name);
+        if(!(read_first_line(path, buf, sizeof(buf)) && parse_cpuset(buf, &cpuset, &count))) {
+            snprintf(path, sizeof(path), "/proc/irq/%s/smp_affinity_list", entry->d_name);
+            if(!(read_first_line(path, buf, sizeof(buf)) && parse_cpuset(buf, &cpuset, &count))) {
+                continue;
+            }
+            if(count != 1) {
+                free(cpuset);
+                continue;
+            }
+        }
+        for(i = 0; i < count; i++) {
+            if(cpuset[i] < CPU_SETSIZE) {
+                irq_cpus[cpuset[i]] = true;
+            }
+        }
+        free(cpuset);
+        irqs++;
+    }
+    closedir(dir);
+    return irqs;
 }
 
 bool

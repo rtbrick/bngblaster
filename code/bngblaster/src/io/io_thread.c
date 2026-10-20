@@ -339,8 +339,18 @@ io_thread_main(void *thread_data)
     return NULL;
 }
 
+/**
+ * Select a CPU for an I/O thread from the CPUs local to the
+ * interface, preferring CPUs which are neither used by other
+ * I/O threads nor handling NIC interrupts.
+ *
+ * @param thread thread handle
+ * @param io IO handle
+ * @param irq_cpus CPUs handling NIC interrupts
+ * @return true if CPU affinity is set
+ */
 static bool
-io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io)
+io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io, bool *irq_cpus)
 {
     bbl_interface_s *interface = io->interface;
     bbl_link_config_s *config = interface->config;
@@ -348,6 +358,7 @@ io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io)
     uint16_t start;
     uint16_t index;
     uint16_t cpu;
+    int pass;
 
     if(!interface->local_cpuset_count) {
         return false;
@@ -369,9 +380,16 @@ io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io)
     CPU_ZERO(&thread->cpuset);
 
     start = *cursor % interface->local_cpuset_count;
-    for(index = 0; index < interface->local_cpuset_count; index++) {
-        cpu = interface->local_cpuset[(start + index) % interface->local_cpuset_count];
-        if(cpu < CPU_SETSIZE && !g_io_cpu_reserved[cpu]) {
+    for(pass = 0; pass < 2; pass++) {
+        for(index = 0; index < interface->local_cpuset_count; index++) {
+            cpu = interface->local_cpuset[(start + index) % interface->local_cpuset_count];
+            if(cpu >= CPU_SETSIZE || g_io_cpu_reserved[cpu]) {
+                continue;
+            }
+            /* Use CPUs handling NIC interrupts only if no other CPU is free. */
+            if(pass == 0 && irq_cpus[cpu]) {
+                continue;
+            }
             CPU_SET(cpu, &thread->cpuset);
             thread->selected_cpu = cpu;
             g_io_cpu_reserved[cpu] = true;
@@ -480,10 +498,45 @@ io_thread_init(io_handle_s *io)
             config->tx_cpuset_cur = 0;
         }
     }
-    if(!thread->set_cpu_affinity) {
-        io_thread_auto_affinity(thread, io);
-    }
+    /* Automatic CPU affinity is selected with all threads started,
+     * when the CPUs of all manually pinned threads and the NIC
+     * interrupts of all interfaces are known. */
     return true;
+}
+
+/**
+ * Select CPUs for threads without manual CPU affinity and
+ * warn about threads running on CPUs handling NIC interrupts.
+ */
+static void
+io_thread_set_affinity_all()
+{
+    io_thread_s *thread;
+    bbl_interface_s *interface;
+    bool irq_cpus[CPU_SETSIZE] = {0};
+    uint16_t irqs;
+
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        irqs = io_interface_irq_cpus(interface, irq_cpus);
+        if(irqs) {
+            LOG(DEBUG, "Found %u interrupts of interface %s\n", irqs, interface->name);
+        }
+    }
+
+    thread = g_ctx->io_threads;
+    while(thread) {
+        if(!thread->set_cpu_affinity) {
+            io_thread_auto_affinity(thread, thread->io, irq_cpus);
+        }
+        if(thread->set_cpu_affinity &&
+           thread->selected_cpu < CPU_SETSIZE && irq_cpus[thread->selected_cpu]) {
+            LOG(INFO, "Warning: %s thread of interface %s runs on CPU %d which handles NIC interrupts, "
+                "this may limit the throughput (see /proc/interrupts)\n",
+                thread->io->direction == IO_INGRESS ? "RX" : "TX",
+                thread->io->interface->name, thread->selected_cpu);
+        }
+        thread = thread->next;
+    }
 }
 
 void
@@ -507,6 +560,7 @@ io_thread_start_all()
         LOG(INFO, "Warning: %d I/O threads plus main thread exceed %d available CPUs\n",
             threads, CPU_COUNT(&cpuset));
     }
+    io_thread_set_affinity_all();
     thread = g_ctx->io_threads;
 
     sleep.tv_nsec = 7800179; /* prime number between 7 and 8ms */
