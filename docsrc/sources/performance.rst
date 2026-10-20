@@ -335,8 +335,10 @@ Those are no simple lock files, which would remain after a crash, but locks held
 (``flock``), which are released when the instance exits, also if it is killed or crashes. The files
 are removed on exit, while files left behind by a killed instance are not locked anymore and simply
 reused. Do not remove those files while BNG Blaster is running, as this allows other instances to
-use the same interface or CPU. If all local CPUs are used, a thread shares a CPU with another
-instance, which keeps its lock, and a warning is logged:
+use the same interface or CPU. If all local CPUs are used, a thread shares the CPU used by the
+fewest other instances and a warning is logged. Each instance sharing a CPU holds its own lock
+(``/run/lock/bngblaster_cpu<N>.<slot>.lock``), so that the CPU is still known to be used if the
+first instance exits.
 
 .. code-block:: none
 

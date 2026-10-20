@@ -7,10 +7,13 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "io.h"
+#include <sys/file.h>
 
 static bool g_io_cpu_reserved[CPU_SETSIZE];
-static bool g_io_cpu_locked[CPU_SETSIZE]; /* see io_thread_cpu_lock() */
+/* CPU locks of this instance, see io_thread_cpu_lock(). */
+static bool g_io_cpu_locked[CPU_SETSIZE];
 static int g_io_cpu_lock_fd[CPU_SETSIZE];
+static uint16_t g_io_cpu_lock_slot[CPU_SETSIZE];
 
 /* CPUs allowed for this process (e.g. restricted with taskset or a
  * cgroup cpuset), saved at startup before DPDK pins the main thread. */
@@ -362,37 +365,100 @@ io_thread_main(void *thread_data)
     return NULL;
 }
 
+/* Max number of instances sharing a CPU with a lock each. */
+#define IO_CPU_LOCK_SLOTS 32
+
+/* Each instance using a CPU locks its own lock file (slot) of this CPU,
+ * slot 0 is "bngblaster_cpu<N>.lock" and further slots used for sharing
+ * the CPU are "bngblaster_cpu<N>.<slot>.lock". */
+static void
+io_thread_cpu_lock_path(char *path, size_t len, uint16_t cpu, uint16_t slot)
+{
+    if(slot) {
+        snprintf(path, len, "/run/lock/bngblaster_cpu%u.%u.lock", cpu, slot);
+    } else {
+        snprintf(path, len, "/run/lock/bngblaster_cpu%u.lock", cpu);
+    }
+}
+
 /**
- * Lock a CPU for this instance, so that the automatic CPU placement of
- * other instances running in parallel skips it. The lock is released
- * by the kernel if the process exits for any reason (see
- * lock_file_acquire()).
+ * Count other instances using a CPU, which hold a lock of this CPU.
  *
  * @param cpu CPU
- * @return false if the CPU is locked by another instance
+ * @return number of other instances using the CPU
  */
-static bool
-io_thread_cpu_lock(uint16_t cpu)
+static uint16_t
+io_thread_cpu_users(uint16_t cpu)
 {
     char path[64];
+    uint16_t users = 0;
+    uint16_t slot;
+    int fd;
+
+    for(slot = 0; slot < IO_CPU_LOCK_SLOTS; slot++) {
+        if(g_io_cpu_locked[cpu] && g_io_cpu_lock_slot[cpu] == slot) {
+            continue;
+        }
+        io_thread_cpu_lock_path(path, sizeof(path), cpu, slot);
+        fd = open(path, O_RDONLY|O_CLOEXEC);
+        if(fd == -1) {
+            continue;
+        }
+        /* A shared lock is refused only if another process holds the
+         * exclusive lock, and is released immediately by close(). */
+        if(flock(fd, LOCK_SH|LOCK_NB) == -1 && errno == EWOULDBLOCK) {
+            users++;
+        }
+        close(fd);
+    }
+    return users;
+}
+
+/**
+ * Lock a CPU for this instance, so that the automatic CPU placement of
+ * other instances running in parallel skips it, or shares it evenly if
+ * no other CPU is free. The lock is released by the kernel if the
+ * process exits for any reason (see lock_file_acquire()).
+ *
+ * @param cpu CPU
+ * @param share lock the CPU also if used by other instances
+ * @return false if the CPU is used by another instance and share is false
+ */
+static bool
+io_thread_cpu_lock(uint16_t cpu, bool share)
+{
+    char path[64];
+    uint16_t slot;
     int fd;
 
     if(g_io_cpu_locked[cpu]) {
         return true;
     }
-    snprintf(path, sizeof(path), "/run/lock/bngblaster_cpu%u.lock", cpu);
-    fd = lock_file_acquire(path);
-    if(fd == -1) {
-        if(errno == EWOULDBLOCK) {
+    for(slot = 0; slot < (share ? IO_CPU_LOCK_SLOTS : 1); slot++) {
+        io_thread_cpu_lock_path(path, sizeof(path), cpu, slot);
+        fd = lock_file_acquire(path);
+        if(fd == -1) {
+            if(errno == EWOULDBLOCK) {
+                continue;
+            }
+            /* The CPU can't be coordinated with other instances. */
+            LOG(DEBUG, "Failed to lock CPU %u with %s (%s)\n", cpu, path, strerror(errno));
+            return true;
+        }
+        g_io_cpu_locked[cpu] = true;
+        g_io_cpu_lock_fd[cpu] = fd;
+        g_io_cpu_lock_slot[cpu] = slot;
+        /* The first lock of a CPU might be free while another
+         * instance still shares this CPU with a further lock. */
+        if(!share && io_thread_cpu_users(cpu)) {
+            lock_file_release(fd, path);
+            g_io_cpu_locked[cpu] = false;
             return false;
         }
-        /* The CPU can't be coordinated with other instances. */
-        LOG(DEBUG, "Failed to lock CPU %u with %s (%s)\n", cpu, path, strerror(errno));
         return true;
     }
-    g_io_cpu_locked[cpu] = true;
-    g_io_cpu_lock_fd[cpu] = fd;
-    return true;
+    /* Too many instances sharing this CPU to lock it. */
+    return share;
 }
 
 /**
@@ -406,7 +472,7 @@ io_thread_unlock_cpus()
 
     for(cpu = 0; cpu < CPU_SETSIZE; cpu++) {
         if(g_io_cpu_locked[cpu]) {
-            snprintf(path, sizeof(path), "/run/lock/bngblaster_cpu%u.lock", cpu);
+            io_thread_cpu_lock_path(path, sizeof(path), cpu, g_io_cpu_lock_slot[cpu]);
             lock_file_release(g_io_cpu_lock_fd[cpu], path);
             g_io_cpu_locked[cpu] = false;
         }
@@ -416,26 +482,32 @@ io_thread_unlock_cpus()
 /**
  * Select a CPU from the CPUs local to the interface, preferring CPUs
  * which are neither used by other threads of this or other instances
- * nor handling NIC interrupts. The selected CPU is reserved and locked.
+ * nor handling NIC interrupts. If all CPUs are used by other instances,
+ * the CPU used by the fewest other instances is shared. The selected
+ * CPU is reserved and locked.
  *
  * @param interface interface
  * @param cursor index of the local CPU to start with, updated
  * @param irq_cpus CPUs handling NIC interrupts
+ * @param share accept CPUs used by other instances
  * @param shared set to true if the CPU is used by another instance
- * @return selected CPU or -1 if all local CPUs are used by this instance
+ * @return selected CPU or -1 if no CPU is available
  */
 static int
-io_thread_select_cpu(bbl_interface_s *interface, uint16_t *cursor, bool *irq_cpus, bool *shared)
+io_thread_select_cpu(bbl_interface_s *interface, uint16_t *cursor, bool *irq_cpus,
+                     bool share, bool *shared)
 {
     uint16_t start = *cursor % interface->local_cpuset_count;
     uint16_t index;
+    uint16_t selected = 0;
+    uint16_t users;
+    uint16_t min_users = UINT16_MAX;
     uint16_t cpu;
     int pass;
 
-    /* Pass 0 skips CPUs handling NIC interrupts and pass 2
-     * accepts CPUs used by another instance. */
+    /* Pass 0 skips CPUs handling NIC interrupts. */
     *shared = false;
-    for(pass = 0; pass < 3; pass++) {
+    for(pass = 0; pass < 2; pass++) {
         for(index = 0; index < interface->local_cpuset_count; index++) {
             cpu = interface->local_cpuset[(start + index) % interface->local_cpuset_count];
             if(cpu >= CPU_SETSIZE || g_io_cpu_reserved[cpu]) {
@@ -444,16 +516,37 @@ io_thread_select_cpu(bbl_interface_s *interface, uint16_t *cursor, bool *irq_cpu
             if(pass == 0 && irq_cpus[cpu]) {
                 continue;
             }
-            if(pass < 2 && !io_thread_cpu_lock(cpu)) {
+            if(!io_thread_cpu_lock(cpu, false)) {
                 continue;
             }
             g_io_cpu_reserved[cpu] = true;
             *cursor = (start + index + 1) % interface->local_cpuset_count;
-            *shared = (pass == 2);
             return cpu;
         }
     }
-    return -1;
+    if(!share) {
+        return -1;
+    }
+    for(index = 0; index < interface->local_cpuset_count; index++) {
+        cpu = interface->local_cpuset[(start + index) % interface->local_cpuset_count];
+        if(cpu >= CPU_SETSIZE || g_io_cpu_reserved[cpu]) {
+            continue;
+        }
+        users = io_thread_cpu_users(cpu);
+        if(users < min_users) {
+            min_users = users;
+            selected = index;
+        }
+    }
+    if(min_users == UINT16_MAX) {
+        return -1;
+    }
+    cpu = interface->local_cpuset[(start + selected) % interface->local_cpuset_count];
+    io_thread_cpu_lock(cpu, true);
+    g_io_cpu_reserved[cpu] = true;
+    *cursor = (start + selected + 1) % interface->local_cpuset_count;
+    *shared = true;
+    return cpu;
 }
 
 /**
@@ -492,7 +585,7 @@ io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io, bool *irq_cpus)
     thread->set_cpu_affinity = true;
     CPU_ZERO(&thread->cpuset);
 
-    cpu = io_thread_select_cpu(interface, cursor, irq_cpus, &shared);
+    cpu = io_thread_select_cpu(interface, cursor, irq_cpus, true, &shared);
     if(cpu < 0) {
         cpu = interface->local_cpuset[*cursor % interface->local_cpuset_count];
         *cursor = (*cursor + 1) % interface->local_cpuset_count;
@@ -538,8 +631,8 @@ io_thread_main_affinity(bool *irq_cpus)
         return;
     }
     interface = local;
-    cpu = io_thread_select_cpu(interface, &cursor, irq_cpus, &shared);
-    if(cpu < 0 || shared) {
+    cpu = io_thread_select_cpu(interface, &cursor, irq_cpus, false, &shared);
+    if(cpu < 0) {
         LOG(INFO, "Warning: No free CPU for the main thread\n");
         return;
     }
@@ -677,7 +770,8 @@ io_thread_set_affinity_all(bool *irq_cpus)
     thread = g_ctx->io_threads;
     while(thread) {
         if(thread->set_cpu_affinity && thread->selected_cpu >= 0 &&
-           thread->selected_cpu < CPU_SETSIZE && !io_thread_cpu_lock(thread->selected_cpu)) {
+           thread->selected_cpu < CPU_SETSIZE && !io_thread_cpu_lock(thread->selected_cpu, false)) {
+            io_thread_cpu_lock(thread->selected_cpu, true);
             LOG(INFO, "Warning: %s thread of interface %s runs on CPU %d which is also used "
                 "by another BNG Blaster instance\n",
                 thread->io->direction == IO_INGRESS ? "RX" : "TX",
