@@ -2146,6 +2146,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
                 stream_up->endpoint = &(session->endpoint.ipv4);
                 if(config->nat) {
                     stream_up->tx_flags |= STREAM_FLAG_NAT;
+                    stream_up->rx_nat = true;
                 }
                 break;
             case BBL_SUB_TYPE_IPV6:
@@ -2781,7 +2782,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                 stream->rx_wrong_order++;
                 stream->rx_packets++;
             }
-            if((stream->tx_flags & STREAM_FLAG_NAT) && stream->direction == BBL_DIRECTION_UP && eth->type == ETH_TYPE_IPV4) {
+            if(stream->rx_nat && eth->type == ETH_TYPE_IPV4) {
                 bbl_stream_rx_nat(eth, stream);
             }
         } else {
@@ -2854,7 +2855,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                     }
                 }
             }
-            if((stream->tx_flags & STREAM_FLAG_NAT) && stream->direction == BBL_DIRECTION_UP && eth->type == ETH_TYPE_IPV4) {
+            if(stream->rx_nat && eth->type == ETH_TYPE_IPV4) {
                 bbl_stream_rx_nat(eth, stream);
             }
             stream->rx_first_seq = flow_seq;
