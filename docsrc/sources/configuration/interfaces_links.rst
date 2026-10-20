@@ -36,10 +36,16 @@ for interface links referenced by interface functions.
 | **tx-auto-cpuset**                | | Automatically pin TX threads to CPUs local to the interface.       |
 |                                   | | BNG Blaster prefers local physical cores before SMT siblings.      |
 |                                   | | Default: **interfaces->tx-auto-cpuset** (false)                    |
+|                                   | | Uses only CPUs allowed for the process (e.g. taskset) and avoids   |
+|                                   | | CPUs used by other instances, see                                  |
+|                                   | | :ref:`CPU pinning <cpu-pinning>`.                                  |
 +-----------------------------------+----------------------------------------------------------------------+
 | **rx-auto-cpuset**                | | Automatically pin RX threads to CPUs local to the interface.       |
 |                                   | | BNG Blaster prefers local physical cores before SMT siblings.      |
 |                                   | | Default: **interfaces->rx-auto-cpuset** (false)                    |
+|                                   | | Uses only CPUs allowed for the process (e.g. taskset) and avoids   |
+|                                   | | CPUs used by other instances, see                                  |
+|                                   | | :ref:`CPU pinning <cpu-pinning>`.                                  |
 +-----------------------------------+----------------------------------------------------------------------+
 | **io-mode**                       | | Overwrite the IO mode.                                             |
 +-----------------------------------+----------------------------------------------------------------------+

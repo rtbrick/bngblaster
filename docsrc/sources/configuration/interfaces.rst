@@ -41,9 +41,15 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **tx-auto-cpuset**                | | Automatically pin TX threads to CPUs local to the interface.       |
 |                                   | | Default: false                                                     |
+|                                   | | Uses only CPUs allowed for the process (e.g. taskset) and avoids   |
+|                                   | | CPUs used by other instances, see                                  |
+|                                   | | :ref:`CPU pinning <cpu-pinning>`.                                  |
 +-----------------------------------+----------------------------------------------------------------------+
 | **rx-auto-cpuset**                | | Automatically pin RX threads to CPUs local to the interface.       |
 |                                   | | Default: false                                                     |
+|                                   | | Uses only CPUs allowed for the process (e.g. taskset) and avoids   |
+|                                   | | CPUs used by other instances, see                                  |
+|                                   | | :ref:`CPU pinning <cpu-pinning>`.                                  |
 +-----------------------------------+----------------------------------------------------------------------+
 | **capture-include-streams**       | | Include traffic streams in the capture.                            |
 |                                   | | Default: false                                                     |

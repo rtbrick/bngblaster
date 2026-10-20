@@ -269,6 +269,8 @@ method were not tested together.
     We are continuously working to increase performance. Contributions, proposals,
     or recommendations on how to further increase performance are welcome!
 
+.. _cpu-pinning:
+
 NUMA
 ----
 
