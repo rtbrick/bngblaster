@@ -50,6 +50,7 @@ typedef struct io_bucket_ {
 
     bbl_stream_s *stream_head;
     bbl_stream_s *stream_cur;
+    bbl_stream_s *stream_prefetch; /* Prefetch lookahead, ahead of stream_cur */
     uint32_t stream_count;
 } io_bucket_s;
 
