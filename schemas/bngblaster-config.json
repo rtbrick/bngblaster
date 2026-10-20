@@ -2313,15 +2313,24 @@
                     "description": "Peer link for IO mode loopback"
                 },
                 "tx-cpuset": {
-                    "type": "array",
-                    "description": "Pin TX threads to CPU cores (cpuset)",
-                    "items": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4095
-                    },
-                    "uniqueItems": true,
-                    "minItems": 1
+                    "description": "Pin TX threads to CPU cores (cpuset), a single CPU or a list of CPUs",
+                    "oneOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4095
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 4095
+                            },
+                            "uniqueItems": true,
+                            "minItems": 1
+                        }
+                    ]
                 },
                 "tx-auto-cpuset": {
                     "type": "boolean",
@@ -2329,15 +2338,24 @@
                     "default": false
                 },
                 "rx-cpuset": {
-                    "type": "array",
-                    "description": "Pin RX threads to CPU cores (cpuset)",
-                    "items": {
-                        "type": "integer",
-                        "minimum": 0,
-                        "maximum": 4095
-                    },
-                    "uniqueItems": true,
-                    "minItems": 1
+                    "description": "Pin RX threads to CPU cores (cpuset), a single CPU or a list of CPUs",
+                    "oneOf": [
+                        {
+                            "type": "integer",
+                            "minimum": 0,
+                            "maximum": 4095
+                        },
+                        {
+                            "type": "array",
+                            "items": {
+                                "type": "integer",
+                                "minimum": 0,
+                                "maximum": 4095
+                            },
+                            "uniqueItems": true,
+                            "minItems": 1
+                        }
+                    ]
                 },
                 "rx-auto-cpuset": {
                     "type": "boolean",
