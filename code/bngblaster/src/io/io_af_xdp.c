@@ -37,8 +37,10 @@
 
 #ifdef BNGBLASTER_LIBXDP
 #include <xdp/xsk.h>
+#include <xdp/libxdp.h>
 #else
 #include <bpf/xsk.h>
+#include <bpf/libbpf.h>
 #endif
 #include <linux/if_link.h>
 #include <linux/ethtool.h>
@@ -240,6 +242,40 @@ io_af_xdp_save_state(bbl_interface_s *interface)
     }
     close(fd);
     return true;
+}
+
+/**
+ * With libxdp, the XDP program is attached via netlink and remains
+ * attached if BNG Blaster is killed or crashes. Such a program does not
+ * prevent further tests with libxdp, but might also be used by another
+ * application, so it is not removed automatically.
+ */
+static void
+io_af_xdp_check_xdp_program(bbl_interface_s *interface)
+{
+    uint32_t prog_id = 0;
+
+#ifdef BNGBLASTER_LIBXDP
+    /* libxdp might be used with libbpf < 0.8, which does not provide
+     * bpf_xdp_query_id(). */
+    struct xdp_multiprog *mp = xdp_multiprog__get_from_ifindex(interface->kernel_index);
+    if(!libxdp_get_error(mp) && mp) {
+        if(xdp_multiprog__main_prog(mp)) {
+            prog_id = xdp_program__id(xdp_multiprog__main_prog(mp));
+        }
+        xdp_multiprog__close(mp);
+    }
+#else
+    if(bpf_get_link_xdp_id(interface->kernel_index, &prog_id, 0) != 0) {
+        prog_id = 0;
+    }
+#endif
+    if(prog_id) {
+        LOG(INFO, "Warning: AF_XDP interface %s has XDP program %u already attached "
+            "(e.g. left behind by a killed BNG Blaster), please remove it if not used "
+            "by another application (e.g. 'xdp-loader unload %s --all')\n",
+            interface->name, prog_id, interface->name);
+    }
 }
 
 /**
@@ -1625,6 +1661,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
         LOG(ERROR, "AF_XDP: failed to save the NIC configuration of interface %s\n", interface->name);
         return false;
     }
+    io_af_xdp_check_xdp_program(interface);
     io_af_xdp_check_mtu(interface);
 
     if(!io_af_xdp_disable_rxvlan_offload(interface)) {
