@@ -15,6 +15,9 @@ io_thread_save_allowed_cpus();
 bool
 io_thread_cpu_allowed(uint16_t cpu);
 
+void
+io_thread_unlock_cpus();
+
 bool
 io_thread_init(io_handle_s *io);
 

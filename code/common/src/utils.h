@@ -64,4 +64,8 @@ uint64_t timespec_to_nsec(struct timespec *timestamp);
 
 int compare_mac_addresses(uint8_t *mac1, uint8_t *mac2);
 
+int lock_file_acquire(const char *path);
+void lock_file_release(int fd, const char *path);
+int lock_file_owner(const char *path);
+
 #endif

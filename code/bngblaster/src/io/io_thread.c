@@ -7,11 +7,10 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "io.h"
-#include <fcntl.h>
-#include <sys/file.h>
 
 static bool g_io_cpu_reserved[CPU_SETSIZE];
 static bool g_io_cpu_locked[CPU_SETSIZE]; /* see io_thread_cpu_lock() */
+static int g_io_cpu_lock_fd[CPU_SETSIZE];
 
 /* CPUs allowed for this process (e.g. restricted with taskset or a
  * cgroup cpuset), saved at startup before DPDK pins the main thread. */
@@ -365,9 +364,9 @@ io_thread_main(void *thread_data)
 
 /**
  * Lock a CPU for this instance, so that the automatic CPU placement of
- * other instances running in parallel skips it. The lock file is kept
- * open until exit, the kernel releases the lock also if the process is
- * killed or crashes.
+ * other instances running in parallel skips it. The lock is released
+ * by the kernel if the process exits for any reason (see
+ * lock_file_acquire()).
  *
  * @param cpu CPU
  * @return false if the CPU is locked by another instance
@@ -377,29 +376,41 @@ io_thread_cpu_lock(uint16_t cpu)
 {
     char path[64];
     int fd;
-    int err;
 
     if(g_io_cpu_locked[cpu]) {
         return true;
     }
     snprintf(path, sizeof(path), "/run/lock/bngblaster_cpu%u.lock", cpu);
-    fd = open(path, O_RDONLY|O_CREAT|O_CLOEXEC, 0644);
+    fd = lock_file_acquire(path);
     if(fd == -1) {
-        /* The CPU can't be coordinated with other instances. */
-        LOG(DEBUG, "Failed to open CPU lock file %s (%s)\n", path, strerror(errno));
-        return true;
-    }
-    if(flock(fd, LOCK_EX|LOCK_NB) == -1) {
-        err = errno;
-        close(fd);
-        if(err == EWOULDBLOCK) {
+        if(errno == EWOULDBLOCK) {
             return false;
         }
-        LOG(DEBUG, "Failed to lock CPU lock file %s (%s)\n", path, strerror(err));
+        /* The CPU can't be coordinated with other instances. */
+        LOG(DEBUG, "Failed to lock CPU %u with %s (%s)\n", cpu, path, strerror(errno));
         return true;
     }
     g_io_cpu_locked[cpu] = true;
+    g_io_cpu_lock_fd[cpu] = fd;
     return true;
+}
+
+/**
+ * Release all CPUs locked by this instance.
+ */
+void
+io_thread_unlock_cpus()
+{
+    char path[64];
+    uint16_t cpu;
+
+    for(cpu = 0; cpu < CPU_SETSIZE; cpu++) {
+        if(g_io_cpu_locked[cpu]) {
+            snprintf(path, sizeof(path), "/run/lock/bngblaster_cpu%u.lock", cpu);
+            lock_file_release(g_io_cpu_lock_fd[cpu], path);
+            g_io_cpu_locked[cpu] = false;
+        }
+    }
 }
 
 /**

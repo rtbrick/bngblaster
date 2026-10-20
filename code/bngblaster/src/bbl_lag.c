@@ -65,6 +65,7 @@ bbl_lag_add()
         interface->type = LAG_INTERFACE;
         interface->state = INTERFACE_DOWN;
         interface->ifindex = g_ctx->interfaces++;
+        interface->lock_fd = -1;
         interface->lag = lag;
         memcpy(interface->mac, config->mac, ETH_ADDR_LEN);
 

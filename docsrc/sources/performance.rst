@@ -330,9 +330,13 @@ interrupt affinity manually.
 Multiple BNG Blaster instances running in parallel (e.g. one per SR-IOV virtual function) coordinate
 their automatic CPU placement. Each instance locks the CPUs of its threads using the files
 ``/run/lock/bngblaster_cpu<N>.lock``, which are skipped by the automatic CPU placement of other
-instances. Those locks are released by the kernel when the instance exits, also if it is killed or
-crashes. If all local CPUs are used, a thread shares a CPU with another instance, which is logged
-as warning:
+instances. The same applies to the interfaces, locked with ``/run/lock/bngblaster_<interface>.lock``.
+Those are no simple lock files, which would remain after a crash, but locks held by the kernel
+(``flock``), which are released when the instance exits, also if it is killed or crashes. The files
+are removed on exit, while files left behind by a killed instance are not locked anymore and simply
+reused. Do not remove those files while BNG Blaster is running, as this allows other instances to
+use the same interface or CPU. If all local CPUs are used, a thread shares a CPU with another
+instance, which keeps its lock, and a warning is logged:
 
 .. code-block:: none
 

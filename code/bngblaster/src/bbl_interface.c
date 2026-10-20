@@ -107,61 +107,30 @@ interface_io_mode_string(io_mode_t mode)
 /**
  * bbl_interface_lock
  *
- * @brief This functions locks the interface
- * creating the file "/run/lock/bngblaster_<interface>.lock".
+ * @brief This functions locks the interface using the file
+ * "/run/lock/bngblaster_<interface>.lock" (see lock_file_acquire()),
+ * which is released by the kernel if the process exits for any reason.
  *
- * @param interface_name interface name
+ * @param interface interface
  * @return false if failed to lock (e.g. in use)
  */
 static bool
-bbl_interface_lock(char *interface_name)
+bbl_interface_lock(bbl_interface_s *interface)
 {
-    FILE *lock_file;
-    char  lock_path[FILE_PATH_LEN];
-    int   lock_pid;
-    char  proc_pid_path[FILE_PATH_LEN];
+    char lock_path[FILE_PATH_LEN];
 
-    struct stat sts;
-    pid_t pid = getpid();
-
-    snprintf(lock_path, sizeof(lock_path), "/run/lock/bngblaster_%s.lock", interface_name);
-    lock_file = fopen(lock_path, "r");
-    if(lock_file) {
-        /* lock file exists */
-        if(fscanf(lock_file,"%d", &lock_pid) == 1 && lock_pid > 1) {
-            snprintf(proc_pid_path, sizeof(proc_pid_path), "/proc/%d", lock_pid);
-            if(!(stat(proc_pid_path, &sts) == -1 && errno == ENOENT)) {
-                LOG(ERROR, "Interface %s in use by process %d (%s)\n", interface_name, lock_pid, lock_path);
-                if(!g_ctx->config.interface_lock_force) {
-                    fclose(lock_file);
-                    return false;
-                }
-            }
-        } else {
-            LOG(ERROR, "Invalid interface lock file %s\n", lock_path);
-            if(!g_ctx->config.interface_lock_force) {
-                fclose(lock_file);
-                return false;
-            }
+    snprintf(lock_path, sizeof(lock_path), "/run/lock/bngblaster_%s.lock", interface->name);
+    interface->lock_fd = lock_file_acquire(lock_path);
+    if(interface->lock_fd == -1) {
+        if(errno == EWOULDBLOCK) {
+            LOG(ERROR, "Interface %s in use by process %d (%s)\n",
+                interface->name, lock_file_owner(lock_path), lock_path);
+            return g_ctx->config.interface_lock_force;
         }
-        fclose(lock_file);
-    }
-    /* create lock file */
-    lock_pid = pid;
-    lock_file = fopen(lock_path, "w");
-    if(!lock_file) {
-        LOG(ERROR, "Failed to open interface lock file %s %s (%d)\n", 
-            lock_path, strerror(errno), errno);
+        LOG(ERROR, "Failed to lock interface %s with %s (%s)\n",
+            interface->name, lock_path, strerror(errno));
         return false;
     }
-    fprintf(lock_file, "%d", lock_pid);
-    {
-        int fd = fileno(lock_file);
-        if(fd >= 0) {
-            fchmod(fd, 0666);
-        }
-    }
-    fclose(lock_file);
     return true;
 }
 
@@ -176,8 +145,11 @@ bbl_interface_unlock_all()
     char lock_path[FILE_PATH_LEN];
     struct bbl_interface_ *interface;
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        snprintf(lock_path, sizeof(lock_path), "/run/lock/bngblaster_%s.lock", interface->name);
-        remove(lock_path);
+        if(interface->lock_fd >= 0) {
+            snprintf(lock_path, sizeof(lock_path), "/run/lock/bngblaster_%s.lock", interface->name);
+            lock_file_release(interface->lock_fd, lock_path);
+            interface->lock_fd = -1;
+        }
     }
 }
 
@@ -201,8 +173,9 @@ bbl_interface_link_add(char *interface_name, bbl_link_config_s *link_config)
     interface->name = strdup(interface_name);
     interface->ifindex = g_ctx->interfaces++;
     interface->state = INTERFACE_UP;
-    
-    if(!bbl_interface_lock(interface_name)) {
+    interface->lock_fd = -1;
+
+    if(!bbl_interface_lock(interface)) {
         return NULL;
     }
     CIRCLEQ_INSERT_TAIL(&g_ctx->interface_qhead, interface, interface_qnode);

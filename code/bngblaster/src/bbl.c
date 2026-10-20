@@ -803,6 +803,7 @@ CLEANUP:
     }
 #endif
     bbl_interface_unlock_all();
+    io_thread_unlock_cpus();
     if(g_ctx->ctrl_socket_path) {
         bbl_ctrl_socket_close();
     }

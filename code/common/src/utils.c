@@ -9,6 +9,10 @@
  */
 #include "utils.h"
 #include <sys/utsname.h>
+#include <sys/file.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
 
 /*
  * Get linux kernel version major, minor and patch number.
@@ -796,4 +800,91 @@ compare_mac_addresses(uint8_t *mac1, uint8_t *mac2)
             return -1; /* mac2 is larger */
     }
     return 0; /* MAC addresses are equal */
+}
+
+/**
+ * Lock a file exclusively with flock(), creating it if needed.
+ *
+ * Unlike the existence of a file, the lock is released by the kernel
+ * if the process exits for any reason (e.g. killed or crashed), so a
+ * lock is never stale. The locked file is checked to be still the file
+ * at this path, as another process might have removed it with
+ * lock_file_release() in between, which would otherwise allow two
+ * processes to lock different files of the same path.
+ *
+ * The PID of the process is written into the file for information.
+ *
+ * @param path lock file path
+ * @return file descriptor or -1 with errno EWOULDBLOCK
+ *         if locked by another process or another error
+ */
+int
+lock_file_acquire(const char *path)
+{
+    struct stat fd_stat;
+    struct stat path_stat;
+    char pid[16];
+    int len;
+    int err;
+    int fd;
+
+    while(true) {
+        fd = open(path, O_RDWR|O_CREAT|O_CLOEXEC, 0666);
+        if(fd == -1) {
+            return -1;
+        }
+        if(flock(fd, LOCK_EX|LOCK_NB) == -1) {
+            err = errno;
+            close(fd);
+            errno = err;
+            return -1;
+        }
+        if(fstat(fd, &fd_stat) == 0 && stat(path, &path_stat) == 0 &&
+           fd_stat.st_dev == path_stat.st_dev && fd_stat.st_ino == path_stat.st_ino) {
+            break;
+        }
+        close(fd);
+    }
+    /* Allow processes of other users to lock the file, independent of umask. */
+    fchmod(fd, 0666);
+    len = snprintf(pid, sizeof(pid), "%d\n", getpid());
+    if(ftruncate(fd, 0) == 0) {
+        len = write(fd, pid, len);
+    }
+    return fd;
+}
+
+/**
+ * Release a lock acquired with lock_file_acquire() and remove
+ * the file, which is still locked while it is removed.
+ *
+ * @param fd file descriptor
+ * @param path lock file path
+ */
+void
+lock_file_release(int fd, const char *path)
+{
+    unlink(path);
+    close(fd);
+}
+
+/**
+ * @param path lock file path
+ * @return PID written into the lock file or 0 if unknown
+ */
+int
+lock_file_owner(const char *path)
+{
+    char buf[16] = {0};
+    int fd;
+
+    fd = open(path, O_RDONLY|O_CLOEXEC);
+    if(fd == -1) {
+        return 0;
+    }
+    if(read(fd, buf, sizeof(buf) - 1) <= 0) {
+        buf[0] = 0;
+    }
+    close(fd);
+    return atoi(buf);
 }

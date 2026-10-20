@@ -18,6 +18,7 @@ typedef struct bbl_interface_
     uint32_t state_transitions; /* interface state transitions */
     uint32_t ifindex; /* internal interface index */
     uint32_t kernel_index; /* kernel interface index  */
+    int lock_fd; /* see bbl_interface_lock() */
     uint16_t port_id; /* DPDK port identifier */
     int numa_node; /* local NUMA node if known */
     uint16_t *local_cpuset; /* auto-discovered local CPU list */
