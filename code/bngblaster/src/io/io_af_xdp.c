@@ -1208,6 +1208,22 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
     return true;
 }
 
+/**
+ * With XDP_USE_NEED_WAKEUP, the driver fills the NIC RX ring from the
+ * fill ring only if woken up, e.g. after the NIC RX ring ran empty or if
+ * the driver could not fill it when the socket was bound (e.g. ice). An
+ * empty NIC RX ring drops all packets without interrupt, so the driver
+ * must be woken up also if nothing was received, otherwise RX stalls
+ * forever (visible as increasing rx_dropped).
+ */
+static inline void
+io_af_xdp_rx_wakeup(io_af_xdp_queue_s *q)
+{
+    if(xsk_ring_prod__needs_wakeup(&q->fill)) {
+        recvfrom(q->fd, NULL, 0, MSG_DONTWAIT, NULL, NULL);
+    }
+}
+
 static void
 io_af_xdp_refill(io_af_xdp_queue_s *q, uint64_t *addrs, uint32_t n)
 {
@@ -1226,10 +1242,7 @@ io_af_xdp_refill(io_af_xdp_queue_s *q, uint64_t *addrs, uint32_t n)
         *xsk_ring_prod__fill_addr(&q->fill, idx + i) = addrs[i];
     }
     xsk_ring_prod__submit(&q->fill, n);
-    if(xsk_ring_prod__needs_wakeup(&q->fill)) {
-        /* The driver may be sleeping waiting for fill ring entries. */
-        recvfrom(q->fd, NULL, 0, MSG_DONTWAIT, NULL, NULL);
-    }
+    io_af_xdp_rx_wakeup(q);
 }
 
 static void
@@ -1332,6 +1345,7 @@ io_af_xdp_rx_job(timer_s *timer)
         xsk_ring_cons__release(&q->rx, rcvd);
         io_af_xdp_refill(q, addrs, rcvd);
     }
+    io_af_xdp_rx_wakeup(q);
     if(pcap) {
         pcapng_fflush();
     }
@@ -1472,6 +1486,7 @@ io_af_xdp_thread_rx_run_fn(io_thread_s *thread)
     while(thread->active) {
         rcvd = xsk_ring_cons__peek(&q->rx, AF_XDP_BURST, &idx_rx);
         if(!rcvd) {
+            io_af_xdp_rx_wakeup(q);
             if(++idle_rounds >= idle_spin_rounds) {
                 nanosleep(&sleep, &rem);
                 idle_rounds = 0;
