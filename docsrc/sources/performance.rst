@@ -572,7 +572,7 @@ extra TX threads.
 
     {
         "interfaces": {
-            "io-slots": 4096,
+            "io-slots": 8192,
             "links": [
                 {
                     "interface": "eth1",
@@ -643,15 +643,26 @@ of each frame, not the maximum packet size.
     affected flows. This is exactly what the automatic queue
     reconfiguration above avoids.
 
-BNG Blaster removes its AF_XDP sockets on exit, which also detaches the XDP
-program from the interface. If BNG Blaster built with libxdp is killed or
-crashes, the XDP program stays attached, as libxdp attaches it via netlink
-and not via a BPF link that is released with the process. Such a program
-does not prevent further tests, but keeps the interface in XDP mode (e.g.
-the MTU can't be increased beyond the driver limit) and is not removed by
-later tests. Remove it manually with ``xdp-loader unload <interface> --all``,
-which also removes the files pinned by libxdp in ``/sys/fs/bpf/xdp/``
-(``ip link set <interface> xdp off`` detaches the program only).
+After configuring channels, BNG Blaster raises the hardware RX ring to 4096
+descriptors, capped by the device maximum, without shrinking a larger ring.
+Configure ``io-slots-rx`` per link to at least twice the hardware RX ring
+size, for example 8192 slots for a 4096-descriptor ring. Initialization fails
+if the pool is too small or the requested ring size cannot be verified.
+
+On orderly exit, including initialization failure, BNG Blaster deletes its
+AF_XDP sockets and UMEM, detaches its owned XDP program and restores the saved
+channels, RSS table/key, rings and legacy offload flags before releasing
+interface locks. Before changing channels, only RSS entries outside the
+target range are remapped; no new queue IDs are introduced before they exist.
+The saved RSS configuration is restored only after restoring channels succeeds.
+Cleanup failures are logged and result in a nonzero exit status, even if the
+traffic report was already written successfully.
+
+Existing XDP programs are rejected rather than shared or replaced.
+SIGKILL and crashes cannot reliably restore configuration, and libxdp may
+leave its netlink-attached program behind. Investigate ownership and remove
+stale programs only after verifying that no other instance uses them.
+Concurrent external NIC reconfiguration is not supported.
 
 AF_XDP Tuning
 ~~~~~~~~~~~~~

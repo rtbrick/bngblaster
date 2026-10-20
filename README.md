@@ -32,6 +32,41 @@ service edge routers with detailed per-flow statistics like receive rate, loss
 or latency. EVPN VPWS services can be verified with Ethernet over MPLS traffic 
 streams. For high-rate tests, the BNG Blaster supports DPDK and AF_XDP.
 
+For AF_XDP, promiscuous membership is acquired after queue, RSS and socket
+initialization, before packet processing starts. This avoids losing hardware
+promiscuity when queue reconfiguration reinitializes an SR-IOV VF (for example,
+with the Linux iavf driver).
+
+AF_XDP prepares the hardware RX ring after queue configuration, increasing it
+to 4096 descriptors (or the device maximum if lower). Configure `io-slots-rx`
+per entry in `interfaces.links` to at least twice the hardware RX ring size,
+for example 8192 for a 4096-descriptor ring. Insufficient capacity fails
+initialization rather than silently running with an undersized buffer pool.
+These slots allocate 4096-byte UMEM frames per RX queue; size memory accordingly.
+
+On orderly shutdown and initialization failure, AF_XDP sockets and UMEM are
+released and the saved channel count, RSS table/key, hardware rings and legacy
+offload flags are restored before interface locks are released. Cleanup errors
+produce a nonzero exit status. Interfaces with existing XDP programs are rejected
+instead of sharing or replacing them. Detachment checks the owned program ID and
+uses an expected-program FD to avoid removing a replacement program. SIGKILL,
+process crashes and concurrent external NIC changes cannot be rolled back
+reliably; investigate stale programs instead of unconditionally detaching them.
+
+Before restoring channels, RSS entries outside the target range are remapped
+without expanding the table to queues that do not exist yet. The original RSS
+table and key are restored only after channel restoration succeeds. RX setup
+still balances traffic across the configured RX queues, excluding TX-only queues.
+
+The mocked regression tests require no NIC changes or root privileges:
+configure with `-DBNGBLASTER_AF_XDP=ON -DBNGBLASTER_TESTS=ON`, build
+`test-af-xdp-ring` and `test-af-xdp-restore`, then run
+`ctest --test-dir <build-directory> -R 'TestAfXdp(Ring|Restore)' --output-on-failure`.
+They check growing/shrinking channels, exact RSS table/key restoration, failure
+handling and RX rebalancing. Real driver timing and deferred kernel UMEM release
+still require a separate hardware test; these changes do not suppress kernel
+workqueue warnings or claim to fix TX buffer pressure.
+
 The BNG Blaster is used by leading network operators like Deutsche Telekom AG
 with their famous Access 4.0 project, network hard- and software vendors like
 RtBrick and many more.

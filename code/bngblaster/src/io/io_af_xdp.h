@@ -15,7 +15,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface);
 void
 io_af_xdp_set_max_stream_len();
 
-void
-io_af_xdp_cleanup();
+bool
+io_af_xdp_cleanup(void);
 
 #endif
