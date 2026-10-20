@@ -94,12 +94,19 @@ typedef struct io_af_xdp_queue_ {
  * and is not restored. */
 typedef struct io_af_xdp_state_ {
     struct ethtool_channels channels;
+    struct ethtool_ringparam ring;
     struct ethtool_value flags;
     uint32_t *rss_indir; /* RSS indirection table */
     uint32_t rss_indir_size;
     bool rss_default; /* table was the driver default (entry i -> i % RX queues) */
     bool rss_changed; /* table was written by io_af_xdp_clamp_rss_indir() */
+    bool ring_changed;
+    uint32_t rx_frames; /* RX frames per queue, see io_af_xdp_prepare_rx_ring() */
 } io_af_xdp_state_s;
+
+/* NIC RX ring size configured if the ring is smaller and supported by the
+ * NIC, see io_af_xdp_prepare_rx_ring(). */
+#define AF_XDP_RX_RING 4096
 
 /* Some drivers (e.g. i40e) reject configuration changes with EBUSY while
  * a reset caused by a previous change is still in progress. */
@@ -157,8 +164,8 @@ io_af_xdp_rx_channels(struct ethtool_channels *ch)
 
 /**
  * Save the NIC configuration changed by the AF_XDP initialization
- * (channels, RSS indirection table and RX VLAN offload flag), which is
- * restored by io_af_xdp_cleanup() to leave the NIC as found.
+ * (channels, RSS indirection table, RX ring and RX VLAN offload flag),
+ * which is restored by io_af_xdp_cleanup() to leave the NIC as found.
  */
 static bool
 io_af_xdp_save_state(bbl_interface_s *interface)
@@ -187,6 +194,11 @@ io_af_xdp_save_state(bbl_interface_s *interface)
     ifr.ifr_data = (void*)&state->channels;
     if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
         state->channels.cmd = 0;
+    }
+    state->ring.cmd = ETHTOOL_GRINGPARAM;
+    ifr.ifr_data = (void*)&state->ring;
+    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1) {
+        state->ring.cmd = 0;
     }
     state->flags.cmd = ETHTOOL_GFLAGS;
     ifr.ifr_data = (void*)&state->flags;
@@ -269,47 +281,74 @@ io_af_xdp_check_mtu(bbl_interface_s *interface)
 }
 
 /**
- * The NIC RX ring is filled with frames of the AF_XDP socket. If the
- * ring exceeds half of those frames, the frames still waiting to be
- * processed are missing to refill the ring. A small ring can't absorb
- * short delays of the RX thread. Both cause RX loss, visible only as
- * rx_missed_errors in the NIC statistics, so warn about it.
+ * The NIC RX ring is filled with frames of the AF_XDP socket. A small
+ * ring can't absorb short delays of the RX thread, and if the ring
+ * exceeds half of those frames, the frames still waiting to be processed
+ * are missing to refill the ring. Both cause RX loss, visible only as
+ * rx_missed_errors in the NIC statistics.
+ *
+ * Therefore increase the RX ring to AF_XDP_RX_RING (limited to the NIC
+ * maximum, a larger ring is kept) and size the RX frames to at least twice
+ * the ring, unless io-slots-rx is configured explicitly. The ring is
+ * restored on exit.
  */
 static void
-io_af_xdp_check_rx_ring(bbl_interface_s *interface)
+io_af_xdp_prepare_rx_ring(bbl_interface_s *interface)
 {
+    io_af_xdp_state_s *state = interface->io.af_xdp_state;
+    bbl_link_config_s *config = interface->config;
     struct ifreq ifr = {0};
-    struct ethtool_ringparam ring = {0};
-    uint32_t rx_frames = next_pow2(interface->config->io_slots_rx);
-    uint32_t rx_ring_limit = rx_frames / 2;
+    struct ethtool_ringparam ring = state->ring;
+    uint32_t rx_ring = ring.rx_pending;
+    uint32_t rx_frames;
     int fd;
 
-    fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
-    if(fd == -1) {
+    state->rx_frames = next_pow2(config->io_slots_rx);
+    if(!ring.cmd || !rx_ring) {
+        /* RX ring size not supported by the driver. */
         return;
     }
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
-    ring.cmd = ETHTOOL_GRINGPARAM;
-    ifr.ifr_data = (void*)&ring;
-    if(ioctl(fd, SIOCETHTOOL, &ifr) == -1 || !ring.rx_pending) {
-        close(fd);
-        return;
-    }
-    close(fd);
 
-    if(ring.rx_pending > rx_ring_limit) {
+    if(rx_ring < AF_XDP_RX_RING && ring.rx_max_pending > rx_ring) {
+        fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+        if(fd != -1) {
+            snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+            ring.cmd = ETHTOOL_SRINGPARAM;
+            ring.rx_pending = ring.rx_max_pending < AF_XDP_RX_RING ? ring.rx_max_pending : AF_XDP_RX_RING;
+            ifr.ifr_data = (void*)&ring;
+            state->ring_changed = true;
+            if(io_af_xdp_ethtool_set(fd, &ifr) == -1) {
+                LOG(INFO, "Warning: AF_XDP failed to increase the NIC RX ring of interface %s "
+                    "from %u to %u (%s), which might cause RX loss\n",
+                    interface->name, rx_ring, ring.rx_pending, strerror(errno));
+            }
+            /* The driver might adjust the requested size. */
+            ring.cmd = ETHTOOL_GRINGPARAM;
+            if(ioctl(fd, SIOCETHTOOL, &ifr) == 0 && ring.rx_pending) {
+                if(ring.rx_pending != rx_ring) {
+                    LOG(AFXDP, "AF_XDP: interface %s NIC RX ring increased to %u (was %u)\n",
+                        interface->name, ring.rx_pending, rx_ring);
+                }
+                rx_ring = ring.rx_pending;
+            }
+            close(fd);
+        }
+    }
+
+    rx_frames = next_pow2(rx_ring * 2);
+    if(rx_frames <= state->rx_frames) {
+        return;
+    }
+    if(config->io_slots_rx_set) {
         LOG(INFO, "Warning: AF_XDP NIC RX ring %u of interface %s exceeds half of "
             "the %u RX frames (io-slots-rx), which causes RX loss, please increase "
-            "io-slots-rx to %u or reduce the NIC RX ring (e.g. 'ethtool -G %s rx %u')\n",
-            ring.rx_pending, interface->name, rx_frames, next_pow2(ring.rx_pending * 2),
-            interface->name, rx_ring_limit);
-    } else if(ring.rx_pending < 2048 && ring.rx_max_pending > ring.rx_pending) {
-        rx_ring_limit = ring.rx_max_pending < 4096 ? ring.rx_max_pending : 4096;
-        LOG(INFO, "Warning: AF_XDP NIC RX ring %u of interface %s is small (max %u), "
-            "please increase it (e.g. 'ethtool -G %s rx %u') with io-slots-rx of at least %u\n",
-            ring.rx_pending, interface->name, ring.rx_max_pending,
-            interface->name, rx_ring_limit, next_pow2(rx_ring_limit * 2));
+            "io-slots-rx to %u or remove it to size the RX frames automatically\n",
+            rx_ring, interface->name, state->rx_frames, rx_frames);
+        return;
     }
+    LOG(AFXDP, "AF_XDP: interface %s uses %u RX frames per queue for NIC RX ring %u\n",
+        interface->name, rx_frames, rx_ring);
+    state->rx_frames = rx_frames;
 }
 
 /**
@@ -790,6 +829,39 @@ io_af_xdp_restore_rss(bbl_interface_s *interface, io_af_xdp_state_s *state, int 
 }
 
 /**
+ * Restore the RX ring only, other ring parameters are not changed.
+ */
+static bool
+io_af_xdp_restore_ring(bbl_interface_s *interface, io_af_xdp_state_s *state, int fd, struct ifreq *ifr)
+{
+    struct ethtool_ringparam ring = {0};
+    uint32_t rx_ring;
+
+    ring.cmd = ETHTOOL_GRINGPARAM;
+    ifr->ifr_data = (void*)&ring;
+    if(ioctl(fd, SIOCETHTOOL, ifr) == -1) {
+        LOG(ERROR, "AF_XDP: failed to read the NIC RX ring of interface %s (%s)\n",
+            interface->name, strerror(errno));
+        return false;
+    }
+    if(ring.rx_pending == state->ring.rx_pending) {
+        return true;
+    }
+    rx_ring = ring.rx_pending;
+    ring.cmd = ETHTOOL_SRINGPARAM;
+    ring.rx_pending = state->ring.rx_pending;
+    if(io_af_xdp_ethtool_set(fd, ifr) == -1) {
+        LOG(ERROR, "AF_XDP: failed to restore the NIC RX ring of interface %s (%s), please restore "
+            "it manually (e.g. 'ethtool -G %s rx %u')\n",
+            interface->name, strerror(errno), interface->name, state->ring.rx_pending);
+        return false;
+    }
+    LOG(AFXDP, "AF_XDP: interface %s NIC RX ring restored to %u (was %u)\n",
+        interface->name, state->ring.rx_pending, rx_ring);
+    return true;
+}
+
+/**
  * Restore the RX VLAN offload flag only, other flags are not changed.
  */
 static bool
@@ -857,6 +929,9 @@ io_af_xdp_restore_state(bbl_interface_s *interface)
         }
     }
     if(state->rss_changed && state->rss_indir && !io_af_xdp_restore_rss(interface, state, fd, &ifr)) {
+        success = false;
+    }
+    if(state->ring_changed && !io_af_xdp_restore_ring(interface, state, fd, &ifr)) {
         success = false;
     }
     if(state->flags.cmd && !io_af_xdp_restore_flags(interface, state, fd, &ifr)) {
@@ -965,7 +1040,7 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
      * ring (they belong to the UMEM, not to a socket's RX/TX bind), but
      * a direction this queue does not use only needs the kernel-enforced
      * minimum ring size instead of the full configured slot count. */
-    q->rx_frames = want_rx ? next_pow2(config->io_slots_rx) : 2;
+    q->rx_frames = want_rx ? interface->io.af_xdp_state->rx_frames : 2;
     q->tx_frames = want_tx ? next_pow2(config->io_slots_tx) : 2;
     q->queue_id = queue_id;
 
@@ -1560,7 +1635,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
         return false;
     }
 
-    io_af_xdp_check_rx_ring(interface);
+    io_af_xdp_prepare_rx_ring(interface);
 
     if(!io_af_xdp_constrain_rss(interface, rx_queues, total_queues)) {
         return false;

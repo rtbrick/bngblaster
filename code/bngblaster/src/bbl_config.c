@@ -727,6 +727,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
     JSON_OBJ_GET_NUMBER(link, value, "links", "io-slots-rx", 32, 65534);
     if(value) {
         link_config->io_slots_rx = json_number_value(value);
+        link_config->io_slots_rx_set = true;
     }
     JSON_OBJ_GET_NUMBER(link, value, "links", "io-burst", 1, 65535);
     if(value) {

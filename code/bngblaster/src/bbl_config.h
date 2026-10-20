@@ -204,6 +204,7 @@ typedef struct bbl_link_config_
 
     uint16_t io_slots_tx;
     uint16_t io_slots_rx;
+    bool io_slots_rx_set; /* io-slots-rx configured explicitly */
     uint16_t io_burst;
 
     bool qdisc_bypass;
