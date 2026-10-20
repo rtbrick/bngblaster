@@ -130,7 +130,8 @@ typedef struct io_thread_ {
     pthread_mutex_t mutex;
     volatile bool active;
     volatile bool stopped;
-    
+    bool started;
+
     bool set_cpu_affinity;
     int selected_cpu;
     cpu_set_t cpuset;

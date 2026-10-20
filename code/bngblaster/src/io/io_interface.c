@@ -303,6 +303,22 @@ io_interface_irq_cpus(bbl_interface_s *interface, bool *irq_cpus)
     return irqs;
 }
 
+/* Remove CPUs not allowed for this process (e.g. restricted with taskset
+ * or a cgroup cpuset), so that parallel instances can be separated. */
+static uint16_t
+filter_allowed_cpus(uint16_t *cpuset, uint16_t count)
+{
+    uint16_t allowed = 0;
+    uint16_t i;
+
+    for(i = 0; i < count; i++) {
+        if(io_thread_cpu_allowed(cpuset[i])) {
+            cpuset[allowed++] = cpuset[i];
+        }
+    }
+    return allowed;
+}
+
 bool
 io_interface_init_topology(bbl_interface_s *interface, int numa_node_hint)
 {
@@ -336,22 +352,36 @@ io_interface_init_topology(bbl_interface_s *interface, int numa_node_hint)
         snprintf(path, sizeof(path), "/sys/class/net/%s/device/local_cpulist", interface->name);
     }
     if(read_first_line(path, buf, sizeof(buf)) && parse_cpuset(buf, &cpuset, &count)) {
-        use_local = true;
-        goto SUCCESS;
+        count = filter_allowed_cpus(cpuset, count);
+        if(count) {
+            use_local = true;
+            goto SUCCESS;
+        }
+        free(cpuset);
+        cpuset = NULL;
     }
 
     if(numa_node >= 0) {
         snprintf(path, sizeof(path), "/sys/devices/system/node/node%d/cpulist", numa_node);
         if(read_first_line(path, buf, sizeof(buf)) && parse_cpuset(buf, &cpuset, &count)) {
-            use_numa = true;
-            goto SUCCESS;
+            count = filter_allowed_cpus(cpuset, count);
+            if(count) {
+                use_numa = true;
+                goto SUCCESS;
+            }
+            free(cpuset);
+            cpuset = NULL;
         }
     }
 
     use_online = true;
     if(read_first_line("/sys/devices/system/cpu/online", buf, sizeof(buf)) &&
        parse_cpuset(buf, &cpuset, &count)) {
-        goto SUCCESS;
+        count = filter_allowed_cpus(cpuset, count);
+        if(count) {
+            goto SUCCESS;
+        }
+        free(cpuset);
     }
     return false;
 
@@ -361,7 +391,7 @@ SUCCESS:
     interface->local_cpuset = cpuset;
     interface->local_cpuset_count = count;
     if(use_online) {
-        LOG(INFO, "Auto CPU placement for interface %s uses system online CPUs (%u entries)\n",
+        LOG(INFO, "Auto CPU placement for interface %s uses all allowed CPUs (%u entries)\n",
             interface->name, count);
     } else if(use_local && numa_node >= 0) {
         LOG(INFO, "Auto CPU placement for interface %s uses local CPU list on NUMA node %d (%u entries)\n",

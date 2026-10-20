@@ -503,6 +503,7 @@ main(int argc, char *argv[])
     if(!bbl_ctx_add()) {
         exit(2);
     }
+    io_thread_save_allowed_cpus();
 
     /* Clear logging global array. */
     memset(log_id, 0, sizeof(struct log_id_) * LOG_ID_MAX);
@@ -736,7 +737,9 @@ main(int argc, char *argv[])
     io_stream_smear_all();
 
     /* Start threads. */
-    io_thread_start_all();
+    if(!io_thread_start_all()) {
+        goto CLEANUP;
+    }
 
     /* Smear all buckets. */
     timer_smear_all_buckets(&g_ctx->timer_root);

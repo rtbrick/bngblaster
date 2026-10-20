@@ -10,6 +10,27 @@
 
 static bool g_io_cpu_reserved[CPU_SETSIZE];
 
+/* CPUs allowed for this process (e.g. restricted with taskset or a
+ * cgroup cpuset), saved at startup before DPDK pins the main thread. */
+static cpu_set_t g_io_cpu_allowed;
+static bool g_io_cpu_allowed_saved;
+
+void
+io_thread_save_allowed_cpus()
+{
+    CPU_ZERO(&g_io_cpu_allowed);
+    g_io_cpu_allowed_saved = sched_getaffinity(0, sizeof(cpu_set_t), &g_io_cpu_allowed) == 0;
+}
+
+bool
+io_thread_cpu_allowed(uint16_t cpu)
+{
+    if(!g_io_cpu_allowed_saved) {
+        return true;
+    }
+    return cpu < CPU_SETSIZE && CPU_ISSET(cpu, &g_io_cpu_allowed);
+}
+
 /** 
  * This function redirects the packet in the
  * IO buffer to the main thread via the TXQ 
@@ -539,15 +560,24 @@ io_thread_set_affinity_all()
     }
 }
 
-void
+/**
+ * Start all I/O threads. The CPU affinity is set before the thread is
+ * created, so that it never runs on another CPU. If a thread can't be
+ * started (e.g. its CPU is not allowed for this process), all threads
+ * already started are stopped.
+ *
+ * @return false if not all threads are started
+ */
+bool
 io_thread_start_all()
 {
     io_thread_s *thread = g_ctx->io_threads;
     struct timespec sleep = {0};
     struct timespec rem = {0};
     char name[16]; /* thread names are limited to 15 characters */
-    cpu_set_t cpuset;
+    pthread_attr_t attr;
     int threads = 0;
+    int ret;
 
     /* Each I/O thread and the main thread should have its own CPU,
      * otherwise threads are delayed, which causes packet loss. */
@@ -555,34 +585,46 @@ io_thread_start_all()
         threads++;
         thread = thread->next;
     }
-    if(threads && sched_getaffinity(0, sizeof(cpuset), &cpuset) == 0 &&
-       threads + 1 > CPU_COUNT(&cpuset)) {
+    if(threads && g_io_cpu_allowed_saved && threads + 1 > CPU_COUNT(&g_io_cpu_allowed)) {
         LOG(INFO, "Warning: %d I/O threads plus main thread exceed %d available CPUs\n",
-            threads, CPU_COUNT(&cpuset));
+            threads, CPU_COUNT(&g_io_cpu_allowed));
     }
     io_thread_set_affinity_all();
     thread = g_ctx->io_threads;
 
     sleep.tv_nsec = 7800179; /* prime number between 7 and 8ms */
     while(thread) {
-        thread->active = true;
-        pthread_create(&thread->thread, NULL, io_thread_main, (void *)thread);
         /* Thread name with direction first, so that it is kept
          * if long interface names are truncated (e.g. rx0-eth1). */
         snprintf(name, sizeof(name), "%s%d-%s",
                  thread->io->direction == IO_INGRESS ? "rx" : "tx",
                  thread->io->id, thread->io->interface->name);
-        pthread_setname_np(thread->thread, name);
+        pthread_attr_init(&attr);
         if(thread->set_cpu_affinity) {
-            if(pthread_setaffinity_np(thread->thread, sizeof(cpu_set_t), &thread->cpuset)) {
-                LOG_NOARG(ERROR, "Failed to set thread CPU affinity\n");
-                return;
-            }
+            pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &thread->cpuset);
         }
+        thread->active = true;
+        ret = pthread_create(&thread->thread, &attr, io_thread_main, (void *)thread);
+        pthread_attr_destroy(&attr);
+        if(ret) {
+            thread->active = false;
+            if(thread->set_cpu_affinity) {
+                LOG(ERROR, "Failed to start I/O thread %s on CPU %d (%s), "
+                    "the CPU might not be allowed for this process\n",
+                    name, thread->selected_cpu, strerror(ret));
+            } else {
+                LOG(ERROR, "Failed to start I/O thread %s (%s)\n", name, strerror(ret));
+            }
+            io_thread_stop_all();
+            return false;
+        }
+        thread->started = true;
+        pthread_setname_np(thread->thread, name);
 
         nanosleep(&sleep, &rem);
         thread = thread->next;
     }
+    return true;
 }
 
 void
@@ -596,7 +638,10 @@ io_thread_stop_all()
     /* Wait for threads to be stopped */
     thread = g_ctx->io_threads;
     while(thread) {
-        pthread_join(thread->thread, NULL);
+        if(thread->started) {
+            pthread_join(thread->thread, NULL);
+            thread->started = false;
+        }
         thread = thread->next;
     }
 }

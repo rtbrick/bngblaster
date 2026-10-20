@@ -9,10 +9,16 @@
 #ifndef __BBL_IO_THREAD_H__
 #define __BBL_IO_THREAD_H__
 
+void
+io_thread_save_allowed_cpus();
+
+bool
+io_thread_cpu_allowed(uint16_t cpu);
+
 bool
 io_thread_init(io_handle_s *io);
 
-void
+bool
 io_thread_start_all();
 
 void
