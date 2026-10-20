@@ -313,7 +313,11 @@ optimize placement as follows:
 * Prefer one hardware thread per physical core before using SMT siblings.
 * Avoid reusing the same CPU across interfaces until the local CPU pool is exhausted.
 * Avoid CPUs handling NIC interrupts of the used interfaces until no other CPU is free.
-* Fall back to the NUMA node CPU list and finally to the system online CPU list if no local CPU list is exposed.
+* Avoid CPUs used by other BNG Blaster instances running in parallel until no other CPU is free.
+* Use only CPUs allowed for the process (see below).
+* Fall back to the NUMA node CPU list and finally to all allowed CPUs if no local CPU list is exposed
+  or none of the local CPUs is allowed.
+* Pin the main thread to a free CPU as well, after all RX and TX threads got their CPU.
 
 The kernel driver processes the NIC queues (NAPI) on the CPUs handling their interrupts, which is
 also the case for AF_XDP. An RX or TX thread on such a CPU permanently competes with this processing,
@@ -322,6 +326,33 @@ each RX or TX thread running on a CPU which handles NIC interrupts, including ma
 The interrupt CPUs are shown in ``/proc/interrupts``. Those may change at runtime if ``irqbalance``
 is running, which can be prevented by excluding those CPUs from ``irqbalance`` or by setting the
 interrupt affinity manually.
+
+Multiple BNG Blaster instances running in parallel (e.g. one per SR-IOV virtual function) coordinate
+their automatic CPU placement. Each instance locks the CPUs of its threads using the files
+``/run/lock/bngblaster_cpu<N>.lock``, which are skipped by the automatic CPU placement of other
+instances. Those locks are released by the kernel when the instance exits, also if it is killed or
+crashes. If all local CPUs are used, a thread shares a CPU with another instance, which is logged
+as warning:
+
+.. code-block:: none
+
+    Warning: No free CPU for RX thread of interface eth1, sharing CPU 4 with another BNG Blaster instance
+
+A warning is also logged for a manually pinned thread running on a CPU used by another instance.
+
+The CPUs used by an instance can be restricted, for example to separate instances explicitly or to
+keep CPUs free for other applications. The automatic CPU placement uses only CPUs allowed for the
+process, which can be restricted with ``taskset``, the systemd property ``AllowedCPUs`` or the
+cpuset of a container.
+
+.. code-block:: none
+
+    taskset -c 8-15 bngblaster -C test.json
+    systemd-run --scope -p AllowedCPUs=8-15 bngblaster -C test.json
+
+With ``taskset``, manually pinned threads (``rx-cpuset`` and ``tx-cpuset``) may still use other
+CPUs, while a cgroup cpuset (``AllowedCPUs``, containers) is enforced. A thread which can't be
+started on its CPU stops BNG Blaster with an error.
 
 Following an example configuration using automatic CPU placement.
 

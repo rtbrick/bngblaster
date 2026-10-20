@@ -7,8 +7,11 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "io.h"
+#include <fcntl.h>
+#include <sys/file.h>
 
 static bool g_io_cpu_reserved[CPU_SETSIZE];
+static bool g_io_cpu_locked[CPU_SETSIZE]; /* see io_thread_cpu_lock() */
 
 /* CPUs allowed for this process (e.g. restricted with taskset or a
  * cgroup cpuset), saved at startup before DPDK pins the main thread. */
@@ -361,9 +364,89 @@ io_thread_main(void *thread_data)
 }
 
 /**
- * Select a CPU for an I/O thread from the CPUs local to the
- * interface, preferring CPUs which are neither used by other
- * I/O threads nor handling NIC interrupts.
+ * Lock a CPU for this instance, so that the automatic CPU placement of
+ * other instances running in parallel skips it. The lock file is kept
+ * open until exit, the kernel releases the lock also if the process is
+ * killed or crashes.
+ *
+ * @param cpu CPU
+ * @return false if the CPU is locked by another instance
+ */
+static bool
+io_thread_cpu_lock(uint16_t cpu)
+{
+    char path[64];
+    int fd;
+    int err;
+
+    if(g_io_cpu_locked[cpu]) {
+        return true;
+    }
+    snprintf(path, sizeof(path), "/run/lock/bngblaster_cpu%u.lock", cpu);
+    fd = open(path, O_RDONLY|O_CREAT|O_CLOEXEC, 0644);
+    if(fd == -1) {
+        /* The CPU can't be coordinated with other instances. */
+        LOG(DEBUG, "Failed to open CPU lock file %s (%s)\n", path, strerror(errno));
+        return true;
+    }
+    if(flock(fd, LOCK_EX|LOCK_NB) == -1) {
+        err = errno;
+        close(fd);
+        if(err == EWOULDBLOCK) {
+            return false;
+        }
+        LOG(DEBUG, "Failed to lock CPU lock file %s (%s)\n", path, strerror(err));
+        return true;
+    }
+    g_io_cpu_locked[cpu] = true;
+    return true;
+}
+
+/**
+ * Select a CPU from the CPUs local to the interface, preferring CPUs
+ * which are neither used by other threads of this or other instances
+ * nor handling NIC interrupts. The selected CPU is reserved and locked.
+ *
+ * @param interface interface
+ * @param cursor index of the local CPU to start with, updated
+ * @param irq_cpus CPUs handling NIC interrupts
+ * @param shared set to true if the CPU is used by another instance
+ * @return selected CPU or -1 if all local CPUs are used by this instance
+ */
+static int
+io_thread_select_cpu(bbl_interface_s *interface, uint16_t *cursor, bool *irq_cpus, bool *shared)
+{
+    uint16_t start = *cursor % interface->local_cpuset_count;
+    uint16_t index;
+    uint16_t cpu;
+    int pass;
+
+    /* Pass 0 skips CPUs handling NIC interrupts and pass 2
+     * accepts CPUs used by another instance. */
+    *shared = false;
+    for(pass = 0; pass < 3; pass++) {
+        for(index = 0; index < interface->local_cpuset_count; index++) {
+            cpu = interface->local_cpuset[(start + index) % interface->local_cpuset_count];
+            if(cpu >= CPU_SETSIZE || g_io_cpu_reserved[cpu]) {
+                continue;
+            }
+            if(pass == 0 && irq_cpus[cpu]) {
+                continue;
+            }
+            if(pass < 2 && !io_thread_cpu_lock(cpu)) {
+                continue;
+            }
+            g_io_cpu_reserved[cpu] = true;
+            *cursor = (start + index + 1) % interface->local_cpuset_count;
+            *shared = (pass == 2);
+            return cpu;
+        }
+    }
+    return -1;
+}
+
+/**
+ * Select a CPU for an I/O thread from the CPUs local to the interface.
  *
  * @param thread thread handle
  * @param io IO handle
@@ -376,10 +459,8 @@ io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io, bool *irq_cpus)
     bbl_interface_s *interface = io->interface;
     bbl_link_config_s *config = interface->config;
     uint16_t *cursor = NULL;
-    uint16_t start;
-    uint16_t index;
-    uint16_t cpu;
-    int pass;
+    bool shared;
+    int cpu;
 
     if(!interface->local_cpuset_count) {
         return false;
@@ -400,32 +481,64 @@ io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io, bool *irq_cpus)
     thread->set_cpu_affinity = true;
     CPU_ZERO(&thread->cpuset);
 
-    start = *cursor % interface->local_cpuset_count;
-    for(pass = 0; pass < 2; pass++) {
-        for(index = 0; index < interface->local_cpuset_count; index++) {
-            cpu = interface->local_cpuset[(start + index) % interface->local_cpuset_count];
-            if(cpu >= CPU_SETSIZE || g_io_cpu_reserved[cpu]) {
-                continue;
-            }
-            /* Use CPUs handling NIC interrupts only if no other CPU is free. */
-            if(pass == 0 && irq_cpus[cpu]) {
-                continue;
-            }
-            CPU_SET(cpu, &thread->cpuset);
-            thread->selected_cpu = cpu;
-            g_io_cpu_reserved[cpu] = true;
-            *cursor = (start + index + 1) % interface->local_cpuset_count;
-            return true;
-        }
+    cpu = io_thread_select_cpu(interface, cursor, irq_cpus, &shared);
+    if(cpu < 0) {
+        cpu = interface->local_cpuset[*cursor % interface->local_cpuset_count];
+        *cursor = (*cursor + 1) % interface->local_cpuset_count;
+        LOG(INFO, "Warning: No free CPU for %s thread of interface %s, sharing CPU %d with another thread\n",
+            io->direction == IO_INGRESS ? "RX" : "TX", interface->name, cpu);
+    } else if(shared) {
+        LOG(INFO, "Warning: No free CPU for %s thread of interface %s, sharing CPU %d "
+            "with another BNG Blaster instance\n",
+            io->direction == IO_INGRESS ? "RX" : "TX", interface->name, cpu);
     }
-
-    cpu = interface->local_cpuset[start];
     CPU_SET(cpu, &thread->cpuset);
     thread->selected_cpu = cpu;
-    *cursor = (start + 1) % interface->local_cpuset_count;
-    LOG(INFO, "Warning: No free CPU for %s thread of interface %s, sharing CPU %u with another thread\n",
-        io->direction == IO_INGRESS ? "RX" : "TX", interface->name, cpu);
     return true;
+}
+
+/**
+ * Pin the main thread to a free CPU local to the first interface if the
+ * automatic CPU placement is used, so that it does not run on the CPUs of
+ * I/O threads of this or other instances. This is done after all I/O
+ * threads are started, which would otherwise inherit its CPU affinity.
+ */
+static void
+io_thread_main_affinity(bool *irq_cpus)
+{
+    bbl_interface_s *interface;
+    bbl_interface_s *local = NULL;
+    cpu_set_t cpuset;
+    uint16_t cursor = 0;
+    bool shared;
+    int cpu;
+
+    /* The main thread is already pinned (e.g. by DPDK). */
+    if(sched_getaffinity(0, sizeof(cpuset), &cpuset) == 0 && CPU_COUNT(&cpuset) == 1) {
+        return;
+    }
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        if(interface->local_cpuset_count) {
+            local = interface;
+            break;
+        }
+    }
+    if(!local) {
+        return;
+    }
+    interface = local;
+    cpu = io_thread_select_cpu(interface, &cursor, irq_cpus, &shared);
+    if(cpu < 0 || shared) {
+        LOG(INFO, "Warning: No free CPU for the main thread\n");
+        return;
+    }
+    CPU_ZERO(&cpuset);
+    CPU_SET(cpu, &cpuset);
+    if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
+        LOG(INFO, "Warning: Failed to pin the main thread to CPU %d\n", cpu);
+        return;
+    }
+    LOG(DEBUG, "Main thread pinned to CPU %d\n", cpu);
 }
 
 bool
@@ -527,15 +640,19 @@ io_thread_init(io_handle_s *io)
 
 /**
  * Select CPUs for threads without manual CPU affinity and
- * warn about threads running on CPUs handling NIC interrupts.
+ * warn about threads running on CPUs handling NIC interrupts
+ * or used by other instances.
+ *
+ * @param irq_cpus CPUs handling NIC interrupts, set
+ * @return true if the automatic CPU placement is used
  */
-static void
-io_thread_set_affinity_all()
+static bool
+io_thread_set_affinity_all(bool *irq_cpus)
 {
     io_thread_s *thread;
     bbl_interface_s *interface;
-    bool irq_cpus[CPU_SETSIZE] = {0};
     uint16_t irqs;
+    bool auto_cpuset = false;
 
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         irqs = io_interface_irq_cpus(interface, irq_cpus);
@@ -544,10 +661,24 @@ io_thread_set_affinity_all()
         }
     }
 
+    /* Lock the CPUs of manually pinned threads first, which are
+     * skipped by the automatic CPU placement of other instances. */
     thread = g_ctx->io_threads;
     while(thread) {
-        if(!thread->set_cpu_affinity) {
-            io_thread_auto_affinity(thread, thread->io, irq_cpus);
+        if(thread->set_cpu_affinity && thread->selected_cpu >= 0 &&
+           thread->selected_cpu < CPU_SETSIZE && !io_thread_cpu_lock(thread->selected_cpu)) {
+            LOG(INFO, "Warning: %s thread of interface %s runs on CPU %d which is also used "
+                "by another BNG Blaster instance\n",
+                thread->io->direction == IO_INGRESS ? "RX" : "TX",
+                thread->io->interface->name, thread->selected_cpu);
+        }
+        thread = thread->next;
+    }
+
+    thread = g_ctx->io_threads;
+    while(thread) {
+        if(!thread->set_cpu_affinity && io_thread_auto_affinity(thread, thread->io, irq_cpus)) {
+            auto_cpuset = true;
         }
         if(thread->set_cpu_affinity &&
            thread->selected_cpu < CPU_SETSIZE && irq_cpus[thread->selected_cpu]) {
@@ -558,6 +689,7 @@ io_thread_set_affinity_all()
         }
         thread = thread->next;
     }
+    return auto_cpuset;
 }
 
 /**
@@ -576,6 +708,8 @@ io_thread_start_all()
     struct timespec rem = {0};
     char name[16]; /* thread names are limited to 15 characters */
     pthread_attr_t attr;
+    bool irq_cpus[CPU_SETSIZE] = {0};
+    bool auto_cpuset;
     int threads = 0;
     int ret;
 
@@ -589,7 +723,7 @@ io_thread_start_all()
         LOG(INFO, "Warning: %d I/O threads plus main thread exceed %d available CPUs\n",
             threads, CPU_COUNT(&g_io_cpu_allowed));
     }
-    io_thread_set_affinity_all();
+    auto_cpuset = io_thread_set_affinity_all(irq_cpus);
     thread = g_ctx->io_threads;
 
     sleep.tv_nsec = 7800179; /* prime number between 7 and 8ms */
@@ -623,6 +757,9 @@ io_thread_start_all()
 
         nanosleep(&sleep, &rem);
         thread = thread->next;
+    }
+    if(auto_cpuset) {
+        io_thread_main_affinity(irq_cpus);
     }
     return true;
 }
