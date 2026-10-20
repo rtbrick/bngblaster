@@ -25,7 +25,8 @@
 #define BBL_UDP_PORT                    65056
 #define BBL_HEADER_LEN                  48
 #define BBL_MIN_LEN                     90
-#define BBL_TYPE_UNICAST        1
+#define BBL_FLOW_ID_OFFSET              24 /* Offset of flow-id in BBL header */
+#define BBL_TYPE_UNICAST                1
 #define BBL_TYPE_MULTICAST              2
 #define BBL_SUB_TYPE_IPV4               1
 #define BBL_SUB_TYPE_IPV6               2

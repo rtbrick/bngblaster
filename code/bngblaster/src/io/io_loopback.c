@@ -322,6 +322,8 @@ io_loopback_thread_rx_run_fn(io_thread_s *thread)
 
     io_loopback_ring_s *ring;
     io_loopback_slot_s *slot;
+    uint8_t *bufs[IO_LOOPBACK_BURST];
+    uint16_t lens[IO_LOOPBACK_BURST];
     uint32_t cons;
     uint32_t rcvd;
     uint32_t total;
@@ -356,14 +358,11 @@ io_loopback_thread_rx_run_fn(io_thread_s *thread)
             cons = atomic_load_explicit(&ring->cons.index, memory_order_relaxed);
             for(i = 0; i < rcvd; i++) {
                 slot = io_loopback_ring_slot(ring, cons + i);
-                io->buf = slot->packet;
-                io->buf_len = slot->len;
-                io->vlan_tci = 0;
-                /* Process packet */
-                if(io_thread_rx_handler(thread, io) == IO_FULL) {
-                    io->stats.dropped++;
-                }
+                bufs[i] = slot->packet;
+                lens[i] = slot->len;
             }
+            io->vlan_tci = 0;
+            io_thread_rx_burst(thread, io, bufs, lens, rcvd);
             io_loopback_ring_release(ring, rcvd);
         }
         if(total) {

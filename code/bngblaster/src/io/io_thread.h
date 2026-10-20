@@ -18,7 +18,13 @@ io_thread_start_all();
 void
 io_thread_stop_all();
 
+#define IO_RX_BURST_MAX 256
+
 io_result_t
 io_thread_rx_handler(io_thread_s *thread, io_handle_s *io);
+
+void
+io_thread_rx_burst(io_thread_s *thread, io_handle_s *io,
+                   uint8_t **bufs, uint16_t *lens, uint16_t count);
 
 #endif

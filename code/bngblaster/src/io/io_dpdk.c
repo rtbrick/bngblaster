@@ -444,6 +444,8 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
 
     struct rte_mbuf *pkts_burst[BURST_SIZE_RX];
     struct rte_mbuf *packet;
+    uint8_t *bufs[BURST_SIZE_RX];
+    uint16_t lens[BURST_SIZE_RX];
 
     uint16_t port_id = interface->port_id;
     uint16_t nb_rx;
@@ -462,26 +464,13 @@ io_dpdk_thread_rx_run_fn(io_thread_s *thread)
         }
         /* Get RX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
-        /* Prefetch the first few packets of the burst before processing
-         * starts, so their data has time to land before it's touched. */
-        for(i = 0; i < PREFETCH_OFFSET && i < nb_rx; i++) {
-            rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i], void *));
-        }
         for(i = 0; i < nb_rx; i++) {
-            /* Prefetch packets ahead of the one being processed to hide
-             * memory latency behind the current packet's processing. */
-            if(likely(i + PREFETCH_OFFSET < nb_rx)) {
-                rte_prefetch0(rte_pktmbuf_mtod(pkts_burst[i + PREFETCH_OFFSET], void *));
-            }
             packet = pkts_burst[i];
-            io->buf = rte_pktmbuf_mtod(packet, uint8_t *);
-            io->buf_len = packet->pkt_len;
-            /* Process packet */
-            if(io_thread_rx_handler(thread, io) == IO_FULL) {
-                io->stats.dropped++;
-            }
-            rte_pktmbuf_free(packet);
+            bufs[i] = rte_pktmbuf_mtod(packet, uint8_t *);
+            lens[i] = packet->pkt_len;
         }
+        io_thread_rx_burst(thread, io, bufs, lens, nb_rx);
+        rte_pktmbuf_free_bulk(pkts_burst, nb_rx);
     }
 }
 

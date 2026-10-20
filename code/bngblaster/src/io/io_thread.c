@@ -52,8 +52,8 @@ redirect(io_thread_s *thread, io_handle_s *io)
  * @param io IO handle
  * @return IO result
  */
-io_result_t
-io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
+static inline __attribute__((always_inline)) io_result_t
+rx_handler(io_thread_s *thread, io_handle_s *io)
 {
     assert(io->direction == IO_INGRESS);
     assert(io->thread != NULL);
@@ -96,8 +96,126 @@ io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
     return redirect(thread, io);
 }
 
-/** 
- * This job is scheduled in the main loop receiving 
+io_result_t
+io_thread_rx_handler(io_thread_s *thread, io_handle_s *io)
+{
+    return rx_handler(thread, io);
+}
+
+/* Number of packets each prefetch stage runs ahead of the next one. */
+#define IO_RX_PREFETCH_DISTANCE 4
+
+/* Minimum number of streams to prefetch stream state. With
+ * less streams, their RX cache lines stay in the CPU cache
+ * and prefetching them would only add overhead. */
+#define IO_RX_PREFETCH_STREAMS_MIN 256
+
+static inline __attribute__((always_inline)) void
+rx_prefetch_packet(uint8_t *buf, uint16_t len)
+{
+    uint8_t *bbl;
+    if(len >= BBL_MIN_LEN) {
+        bbl = buf + len - BBL_HEADER_LEN;
+        __builtin_prefetch(buf);
+        __builtin_prefetch(bbl);
+        __builtin_prefetch(bbl + BBL_HEADER_LEN - 1);
+    }
+}
+
+/**
+ * This function processes a burst of received packets
+ * from RX threads.
+ *
+ * The stream lookup of each packet depends on a chain of
+ * memory loads (packet, stream index, stream), which miss
+ * the cache with many flows. Those loads are prefetched in
+ * a software pipeline running ahead of packet processing,
+ * so that the cache misses of multiple packets overlap:
+ *
+ * Stage 1: prefetch packet and BBL header (trailer)
+ * Stage 2: read flow-id and prefetch stream index entry
+ * Stage 3: read stream index and prefetch stream RX cache line
+ * Stage 4: process packet
+ *
+ * With only a few streams, stages 2 and 3 are skipped.
+ *
+ * @param thread thread handle
+ * @param io IO handle
+ * @param bufs packet buffers
+ * @param lens packet lengths
+ * @param count number of packets (max IO_RX_BURST_MAX)
+ */
+void
+io_thread_rx_burst(io_thread_s *thread, io_handle_s *io,
+                   uint8_t **bufs, uint16_t *lens, uint16_t count)
+{
+    uint32_t flow_ids[IO_RX_BURST_MAX];
+    uint32_t flow_id;
+    bbl_stream_s *stream;
+    uint8_t *bbl;
+    int i, j;
+
+    assert(count <= IO_RX_BURST_MAX);
+
+    if(g_ctx->streams < IO_RX_PREFETCH_STREAMS_MIN) {
+        for(i = 0; i < count + IO_RX_PREFETCH_DISTANCE; i++) {
+            if(i < count) {
+                rx_prefetch_packet(bufs[i], lens[i]);
+            }
+            j = i - IO_RX_PREFETCH_DISTANCE;
+            if(j >= 0) {
+                io->buf = bufs[j];
+                io->buf_len = lens[j];
+                if(rx_handler(thread, io) == IO_FULL) {
+                    io->stats.dropped++;
+                }
+            }
+        }
+        return;
+    }
+
+    for(i = 0; i < count + 3 * IO_RX_PREFETCH_DISTANCE; i++) {
+        /* Stage 1 */
+        if(i < count) {
+            rx_prefetch_packet(bufs[i], lens[i]);
+        }
+        /* Stage 2 */
+        j = i - IO_RX_PREFETCH_DISTANCE;
+        if(j >= 0 && j < count) {
+            flow_id = 0;
+            if(packet_is_bbl(bufs[j], lens[j])) {
+                bbl = bufs[j] + lens[j] - BBL_HEADER_LEN;
+                flow_id = *(uint32_t*)(bbl + BBL_FLOW_ID_OFFSET);
+                if(g_ctx->stream_index && flow_id <= g_ctx->streams && flow_id > 0) {
+                    __builtin_prefetch(&g_ctx->stream_index[flow_id-1]);
+                } else {
+                    flow_id = 0;
+                }
+            }
+            flow_ids[j] = flow_id;
+        }
+        /* Stage 3 */
+        j -= IO_RX_PREFETCH_DISTANCE;
+        if(j >= 0 && j < count && flow_ids[j]) {
+            stream = g_ctx->stream_index[flow_ids[j]-1];
+            if(stream) {
+                __builtin_prefetch(&stream->rx_packets, 1);
+            }
+        }
+        /* Stage 4 */
+        j -= IO_RX_PREFETCH_DISTANCE;
+        if(j >= 0) {
+            io->buf = bufs[j];
+            io->buf_len = lens[j];
+            if(rx_handler(thread, io) == IO_FULL) {
+                io->stats.dropped++;
+            }
+        }
+    }
+}
+
+/**
+ * This job is scheduled in the main loop receiving
  * packets from a RX thread via TXQ ring buffer. 
  */
 void
