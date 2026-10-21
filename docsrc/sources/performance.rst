@@ -748,7 +748,10 @@ if BNG Blaster is killed (e.g. ``SIGKILL``) or crashes, in which case the next
 test restores the configuration it found at startup.
 
 BNG Blaster removes its AF_XDP sockets on exit, which also detaches the XDP
-program from the interface. If BNG Blaster built with libxdp is killed or
+program from the interface. An XDP program which is still attached after
+the sockets are removed is detached on exit as well, if the interface had no
+XDP program attached at startup (e.g. attached via netlink by libbpf before
+version 1.0 instead of a BPF link). If BNG Blaster built with libxdp is killed or
 crashes, the XDP program stays attached, as libxdp attaches it via netlink
 and not via a BPF link that is released with the process. Such a program
 does not prevent further tests, but keeps the interface in XDP mode (e.g.

@@ -16,12 +16,21 @@
 #include <cmocka.h>
 
 #include "../src/io/io.h"
+#ifdef BNGBLASTER_LIBXDP
+#include <xdp/xsk.h>
+#include <xdp/libxdp.h>
+#else
+#include <bpf/xsk.h>
+#include <bpf/libbpf.h>
+#endif
 
 static int test_socket(int domain, int type, int protocol);
 static int test_close(int fd);
 static int test_ioctl(int fd, unsigned long request, ...);
 static unsigned int test_if_nametoindex(const char *ifname);
 static int test_nanosleep(const struct timespec *req, struct timespec *rem);
+static uint32_t test_xdp_prog_id(int ifindex);
+static int test_xdp_detach(int ifindex);
 
 /* Log messages are not printed, but their format is still checked. */
 #undef LOG
@@ -31,6 +40,16 @@ static int test_nanosleep(const struct timespec *req, struct timespec *rem);
 #define ioctl test_ioctl
 #define if_nametoindex test_if_nametoindex
 #define nanosleep test_nanosleep
+/* XDP program queries and detach of libbpf and libxdp. */
+#define bpf_get_link_xdp_id(ifindex, id, flags) (*(id) = test_xdp_prog_id(ifindex), 0)
+#define bpf_set_link_xdp_fd(ifindex, fd, flags) test_xdp_detach(ifindex)
+#define xdp_multiprog__get_from_ifindex(ifindex) \
+    ((struct xdp_multiprog *)(test_xdp_prog_id(ifindex) ? (void *)(intptr_t)(ifindex) : NULL))
+#define libxdp_get_error(ptr) 0
+#define xdp_multiprog__main_prog(mp) ((struct xdp_program *)(mp))
+#define xdp_program__id(prog) test_xdp_prog_id((int)(intptr_t)(prog))
+#define xdp_multiprog__close(mp) ((void)(mp))
+#define xdp_multiprog__detach(mp) test_xdp_detach((int)(intptr_t)(mp))
 #include "../src/io/io_af_xdp.c"
 #undef socket
 #undef close
@@ -51,6 +70,7 @@ static struct {
     uint32_t rx_ring_max;
     uint32_t flags;
     uint32_t kernel_index;
+    uint32_t xdp_prog; /* attached XDP program */
     uint32_t xsk_bound; /* channel changes refused while AF_XDP sockets are released */
     bool reject_channels;
     uint32_t invalid; /* requests the kernel would refuse */
@@ -82,6 +102,21 @@ static int
 test_nanosleep(const struct timespec *req, struct timespec *rem)
 {
     (void)req; (void)rem;
+    return 0;
+}
+
+static uint32_t
+test_xdp_prog_id(int ifindex)
+{
+    assert_int_equal(ifindex, TEST_KERNEL_INDEX);
+    return nic.xdp_prog;
+}
+
+static int
+test_xdp_detach(int ifindex)
+{
+    assert_int_equal(ifindex, TEST_KERNEL_INDEX);
+    nic.xdp_prog = 0;
     return 0;
 }
 
@@ -253,6 +288,7 @@ static void
 test_init(uint16_t rx_queues, uint16_t tx_queues)
 {
     assert_true(io_af_xdp_save_state(&test_interface));
+    io_af_xdp_check_xdp_program(&test_interface);
     assert_true(io_af_xdp_disable_rxvlan_offload(&test_interface));
     assert_true(io_af_xdp_set_channels(&test_interface, rx_queues + tx_queues));
     io_af_xdp_prepare_rx_ring(&test_interface);
@@ -431,6 +467,27 @@ test_af_xdp_rx_ring(void **unused)
     assert_int_equal(nic.invalid, 0);
 }
 
+static void
+test_af_xdp_xdp_program(void **unused)
+{
+    (void)unused;
+
+    /* A program left behind after the sockets are deleted (e.g. attached
+     * via netlink by libbpf) is detached if none was attached before. */
+    test_init(1, 1);
+    nic.xdp_prog = 42;
+    assert_true(io_af_xdp_restore_state(&test_interface));
+    assert_int_equal(nic.xdp_prog, 0);
+
+    /* A program attached before might be used by another application. */
+    test_setup(NULL);
+    nic.xdp_prog = 7;
+    test_init(1, 1);
+    assert_true(test_interface.io.af_xdp_state->xdp_program);
+    assert_true(io_af_xdp_restore_state(&test_interface));
+    assert_int_equal(nic.xdp_prog, 7);
+}
+
 int
 main()
 {
@@ -440,6 +497,7 @@ main()
         cmocka_unit_test_setup_teardown(test_af_xdp_restore_configured, test_setup, test_teardown),
         cmocka_unit_test_setup_teardown(test_af_xdp_restore_failed, test_setup, test_teardown),
         cmocka_unit_test_setup_teardown(test_af_xdp_rx_ring, test_setup, test_teardown),
+        cmocka_unit_test_setup_teardown(test_af_xdp_xdp_program, test_setup, test_teardown),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

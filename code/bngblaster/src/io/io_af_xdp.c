@@ -104,6 +104,7 @@ typedef struct io_af_xdp_state_ {
     bool rss_changed; /* table was written by io_af_xdp_clamp_rss_indir() */
     bool ring_changed;
     uint32_t rx_frames; /* RX frames per queue, see io_af_xdp_prepare_rx_ring() */
+    bool xdp_program; /* XDP program attached before the initialization */
 } io_af_xdp_state_s;
 
 /* NIC RX ring size configured if the ring is smaller and supported by the
@@ -244,14 +245,8 @@ io_af_xdp_save_state(bbl_interface_s *interface)
     return true;
 }
 
-/**
- * With libxdp, the XDP program is attached via netlink and remains
- * attached if BNG Blaster is killed or crashes. Such a program does not
- * prevent further tests with libxdp, but might also be used by another
- * application, so it is not removed automatically.
- */
-static void
-io_af_xdp_check_xdp_program(bbl_interface_s *interface)
+static uint32_t
+io_af_xdp_program_id(bbl_interface_s *interface)
 {
     uint32_t prog_id = 0;
 
@@ -270,12 +265,66 @@ io_af_xdp_check_xdp_program(bbl_interface_s *interface)
         prog_id = 0;
     }
 #endif
+    return prog_id;
+}
+
+/**
+ * With libxdp, the XDP program is attached via netlink and remains
+ * attached if BNG Blaster is killed or crashes. Such a program does not
+ * prevent further tests with libxdp, but might also be used by another
+ * application, so it is not removed automatically.
+ */
+static void
+io_af_xdp_check_xdp_program(bbl_interface_s *interface)
+{
+    uint32_t prog_id = io_af_xdp_program_id(interface);
+
     if(prog_id) {
+        interface->io.af_xdp_state->xdp_program = true;
         LOG(INFO, "Warning: AF_XDP interface %s has XDP program %u already attached "
             "(e.g. left behind by a killed BNG Blaster), please remove it if not used "
             "by another application (e.g. 'xdp-loader unload %s --all')\n",
             interface->name, prog_id, interface->name);
     }
+}
+
+/**
+ * Detach an XDP program attached by this instance, which remains after
+ * all sockets are deleted. libbpf < 1.0 attaches the program via netlink
+ * instead of a BPF link, if attaching a BPF link fails (e.g. because
+ * libbpf probes BPF link support with the loopback interface, which
+ * fails if another process probes at the same time). Such a program is
+ * not detached when the sockets are deleted.
+ *
+ * @param interface interface
+ * @return false if the program could not be detached
+ */
+static bool
+io_af_xdp_detach_xdp_program(bbl_interface_s *interface)
+{
+    uint32_t prog_id = io_af_xdp_program_id(interface);
+
+    if(!prog_id) {
+        return true;
+    }
+#ifdef BNGBLASTER_LIBXDP
+    struct xdp_multiprog *mp = xdp_multiprog__get_from_ifindex(interface->kernel_index);
+    if(!libxdp_get_error(mp) && mp) {
+        xdp_multiprog__detach(mp);
+        xdp_multiprog__close(mp);
+    }
+#else
+    bpf_set_link_xdp_fd(interface->kernel_index, -1, XDP_FLAGS_DRV_MODE);
+    bpf_set_link_xdp_fd(interface->kernel_index, -1, XDP_FLAGS_SKB_MODE);
+#endif
+    if(io_af_xdp_program_id(interface)) {
+        LOG(ERROR, "AF_XDP: failed to detach XDP program %u from interface %s, please remove it "
+            "manually (e.g. 'ip link set %s xdp off')\n", prog_id, interface->name, interface->name);
+        return false;
+    }
+    LOG(AFXDP, "AF_XDP: detached XDP program %u left behind on interface %s\n",
+        prog_id, interface->name);
+    return true;
 }
 
 /**
@@ -956,6 +1005,9 @@ io_af_xdp_restore_state(bbl_interface_s *interface)
     }
     snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
 
+    if(!state->xdp_program && !io_af_xdp_detach_xdp_program(interface)) {
+        success = false;
+    }
     if(state->channels.cmd && !io_af_xdp_restore_channels(interface, state, fd, &ifr)) {
         success = false;
         if(state->rss_changed) {
