@@ -140,6 +140,12 @@ for all kinds of interface functions. The member links support RX threads
 (``rx-threads``) but no TX threads, so ``tx-threads`` must not be configured
 for LAG members.
 
+With LACP, a member link starts collecting once the partner is in sync and
+distributing (state ``Up``) once the partner collects as well, as defined
+by IEEE 802.1AX. Changes of the own LACP state are sent immediately, without
+waiting for the next periodic LACP PDU. This also allows to connect two
+BNG Blaster LAG interfaces with LACP back to back.
+
 .. include:: configuration/interfaces_lag.rst
 
 .. code-block:: json
