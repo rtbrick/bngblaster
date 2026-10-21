@@ -104,6 +104,7 @@ def start_parallel(tmp_path, processes, indexes, name="bbl"):
 
 
 def log(instance):
+    """The log file is written completely once the instance exited."""
     with open(instance.path("log")) as f:
         return f.read()
 
@@ -125,13 +126,13 @@ def test_parallel_start_disjoint_cpus(tmp_path, processes, round):
         pinned = pinned_cpus(instance)
         assert "bngblaster" in pinned, "main thread of %s not pinned" % instance.name
         assert locks[instance.proc.pid] == set(pinned.values())
-        assert "sharing CPU" not in log(instance)
         used += pinned.values()
     assert len(used) == 3 * count
     assert len(set(used)) == len(used), "CPU selected twice: %s" % used
 
     for instance in instances:
         assert instance.terminate(EXIT_TIMEOUT) == 0
+        assert "sharing CPU" not in log(instance)
     locks = lock_files()
     assert not any(instance.proc.pid in locks for instance in instances)
 
@@ -153,10 +154,10 @@ def test_parallel_start_shared_cpus(tmp_path, processes):
     allowed = os.sched_getaffinity(0)
     counts = [users.get(cpu, 0) for cpu in allowed]
     assert max(counts) - min(counts) <= 1, "uneven CPU sharing: %s" % dict(users)
-    assert any("sharing CPU" in log(instance) for instance in instances)
 
     for instance in instances:
         assert instance.terminate(EXIT_TIMEOUT) == 0
+    assert any("sharing CPU" in log(instance) for instance in instances)
 
 
 def test_killed_instance(tmp_path, processes):
@@ -174,7 +175,7 @@ def test_killed_instance(tmp_path, processes):
 
     instance = start_parallel(tmp_path, processes, [1], name="next")[0]
     assert set(pinned_cpus(instance).values()) == killed_cpus
-    assert "sharing CPU" not in log(instance)
     assert killed.proc.pid not in lock_files()
     assert instance.terminate(EXIT_TIMEOUT) == 0
+    assert "sharing CPU" not in log(instance)
     assert not {"bngblaster_lo1a.lock", "bngblaster_lo1b.lock"} & set(os.listdir(LOCK_DIR))

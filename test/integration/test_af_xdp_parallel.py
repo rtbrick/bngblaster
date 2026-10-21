@@ -71,10 +71,11 @@ def test_parallel_start(af_xdp, veth, tmp_path, processes, round):
         for future in futures:
             future.result()
     for instance in instances:
+        assert instance.terminate(EXIT_TIMEOUT) == 0
+    # The log file is written completely once the instance exited.
+    for instance in instances:
         with open(instance.path("log")) as f:
             log = f.read()
         assert "queue 0 bound" in log and "queue 1 bound" in log
-    for instance in instances:
-        assert instance.terminate(EXIT_TIMEOUT) == 0
     for ifname in (IF1, IF2):
         assert not xdp_attached(veth, ifname), "XDP program left on %s" % ifname
