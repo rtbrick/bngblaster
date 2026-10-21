@@ -370,11 +370,9 @@ io_thread_main(void *thread_data)
 /* Each instance locks the file "bngblaster_cpu<N>.<PID>.lock" for every
  * CPU used by its threads until exit, which is released by the kernel
  * also if the instance is killed or crashes. The CPUs are selected while
- * holding the selection lock "bngblaster_cpus.lock", so that instances
- * started at the same time select their CPUs one after another. */
-#define IO_CPU_LOCK_DIR             "/run/lock"
-#define IO_CPU_SELECT_LOCK          IO_CPU_LOCK_DIR "/bngblaster_cpus.lock"
-#define IO_CPU_SELECT_TIMEOUT_MS    5000
+ * holding the startup lock (see bbl.c), so that instances started at the
+ * same time select their CPUs one after another. */
+#define IO_CPU_LOCK_DIR "/run/lock"
 
 static void
 io_thread_cpu_lock_path(char *path, size_t len, uint16_t cpu)
@@ -383,44 +381,9 @@ io_thread_cpu_lock_path(char *path, size_t len, uint16_t cpu)
 }
 
 /**
- * Acquire the CPU selection lock, waiting while another instance
- * selects its CPUs. The file is never removed.
- *
- * @return file descriptor or -1 if CPUs are selected without coordination
- */
-static int
-io_thread_cpu_select_lock()
-{
-    struct timespec delay = {.tv_sec = 0, .tv_nsec = 10000000};
-    int fd;
-    int i;
-
-    fd = open(IO_CPU_SELECT_LOCK, O_RDWR|O_CREAT|O_CLOEXEC, 0666);
-    if(fd == -1) {
-        LOG(DEBUG, "Failed to open CPU selection lock %s (%s)\n", IO_CPU_SELECT_LOCK, strerror(errno));
-        return -1;
-    }
-    /* Allow processes of other users to lock the file, independent of umask. */
-    fchmod(fd, 0666);
-    for(i = 0; i < IO_CPU_SELECT_TIMEOUT_MS / 10; i++) {
-        if(flock(fd, LOCK_EX|LOCK_NB) == 0) {
-            return fd;
-        }
-        if(errno != EWOULDBLOCK) {
-            break;
-        }
-        nanosleep(&delay, NULL);
-    }
-    LOG(INFO, "Warning: Failed to acquire CPU selection lock %s, "
-        "CPUs are selected without coordination with other instances\n", IO_CPU_SELECT_LOCK);
-    close(fd);
-    return -1;
-}
-
-/**
  * Count the other instances using each CPU, which hold a lock file
  * of this CPU, and remove lock files left behind by killed instances.
- * This is done while holding the selection lock, so no other instance
+ * This is done while holding the startup lock, so no other instance
  * locks a CPU at the same time.
  */
 static void
@@ -793,7 +756,6 @@ io_thread_set_affinity_all()
     uint16_t irqs;
     bool auto_cpuset = false;
     int main_cpu = -1;
-    int select_fd;
 
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         irqs = io_interface_irq_cpus(interface, irq_cpus);
@@ -802,7 +764,6 @@ io_thread_set_affinity_all()
         }
     }
 
-    select_fd = io_thread_cpu_select_lock();
     io_thread_cpu_scan();
 
     /* Lock the CPUs of manually pinned threads first, which are
@@ -838,9 +799,6 @@ io_thread_set_affinity_all()
     }
     if(auto_cpuset) {
         main_cpu = io_thread_main_select_cpu(irq_cpus);
-    }
-    if(select_fd >= 0) {
-        close(select_fd);
     }
     return main_cpu;
 }

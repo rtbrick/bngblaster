@@ -480,6 +480,36 @@ bbl_mlockall(void)
  * @param argv argument values
  * @return int return code
  */
+/* Instances started at the same time are initialized one after another,
+ * which prevents conflicts during the initialization (e.g. AF_XDP socket
+ * setup, NIC configuration or CPU selection). The lock is released by the
+ * kernel if the instance holding it exits for any reason, so waiting long
+ * for many instances does not risk waiting for a stale lock. */
+#define BBL_STARTUP_LOCK                "/run/lock/bngblaster_startup.lock"
+#define BBL_STARTUP_LOCK_LOG_INTERVAL_MS 30000
+#define BBL_STARTUP_LOCK_TIMEOUT_MS     1800000
+
+static int
+bbl_startup_lock()
+{
+    uint32_t waited = 0;
+    int fd;
+
+    fd = lock_file_wait(BBL_STARTUP_LOCK, 0);
+    while(fd == -1 && errno == EWOULDBLOCK && waited < BBL_STARTUP_LOCK_TIMEOUT_MS) {
+        LOG(INFO, "Waiting for the startup of another BNG Blaster instance (process %d)\n",
+            lock_file_owner(BBL_STARTUP_LOCK));
+        fd = lock_file_wait(BBL_STARTUP_LOCK, BBL_STARTUP_LOCK_LOG_INTERVAL_MS);
+        waited += BBL_STARTUP_LOCK_LOG_INTERVAL_MS;
+    }
+    if(fd == -1) {
+        LOG(INFO, "Warning: Failed to acquire startup lock %s (%s), "
+            "starting without coordination with other instances\n",
+            BBL_STARTUP_LOCK, strerror(errno));
+    }
+    return fd;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -488,6 +518,7 @@ main(int argc, char *argv[])
     uint32_t ipv4;
     bbl_stats_s stats = {0};
     int exit_status = 1;
+    int startup_lock = -1;
 
     const char *config_file = NULL;
     const char *config_streams_file = NULL;
@@ -646,6 +677,8 @@ main(int argc, char *argv[])
 
     bbl_fragment_init();
 
+    startup_lock = bbl_startup_lock();
+
 #ifdef BNGBLASTER_DPDK
     /* Init DPDK. */
     if(!io_dpdk_init()) {
@@ -740,6 +773,10 @@ main(int argc, char *argv[])
     if(!io_thread_start_all()) {
         goto CLEANUP;
     }
+    if(startup_lock >= 0) {
+        close(startup_lock);
+        startup_lock = -1;
+    }
 
     /* Smear all buckets. */
     timer_smear_all_buckets(&g_ctx->timer_root);
@@ -797,6 +834,9 @@ main(int argc, char *argv[])
 
     /* Cleanup resources. */
 CLEANUP:
+    if(startup_lock >= 0) {
+        close(startup_lock);
+    }
 #ifdef BNGBLASTER_AF_XDP
     if(!io_af_xdp_cleanup()) {
         exit_status = 1;

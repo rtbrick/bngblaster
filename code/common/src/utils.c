@@ -888,3 +888,46 @@ lock_file_owner(const char *path)
     close(fd);
     return atoi(buf);
 }
+
+/**
+ * Wait for an exclusive flock() of a file, which serializes an
+ * operation between processes. The file is created if needed but never
+ * removed, so it is always the same file for all processes. The PID of
+ * the process holding the lock is written into the file for information.
+ *
+ * @param path lock file path
+ * @param timeout_ms max time to wait in milliseconds
+ * @return file descriptor or -1 on timeout or error
+ */
+int
+lock_file_wait(const char *path, uint32_t timeout_ms)
+{
+    struct timespec delay = {.tv_sec = 0, .tv_nsec = 10000000};
+    uint32_t waited = 0;
+    char pid[16];
+    int len;
+    int err;
+    int fd;
+
+    fd = open(path, O_RDWR|O_CREAT|O_CLOEXEC, 0666);
+    if(fd == -1) {
+        return -1;
+    }
+    /* Allow processes of other users to lock the file, independent of umask. */
+    fchmod(fd, 0666);
+    while(flock(fd, LOCK_EX|LOCK_NB) == -1) {
+        if(errno != EWOULDBLOCK || waited >= timeout_ms) {
+            err = errno;
+            close(fd);
+            errno = err;
+            return -1;
+        }
+        nanosleep(&delay, NULL);
+        waited += 10;
+    }
+    len = snprintf(pid, sizeof(pid), "%d\n", getpid());
+    if(ftruncate(fd, 0) == 0) {
+        len = pwrite(fd, pid, len, 0);
+    }
+    return fd;
+}

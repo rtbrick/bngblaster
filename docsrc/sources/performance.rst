@@ -334,10 +334,19 @@ their automatic CPU placement. Each instance locks every CPU used by its threads
 ``/run/lock/bngblaster_cpu<N>.<PID>.lock``, so ``ls /run/lock/bngblaster_cpu*`` shows which process
 uses which CPU. A CPU locked by another instance is skipped by the automatic CPU placement. If all
 local CPUs are used, a thread shares the CPU used by the fewest other instances and a warning is
-logged. Instances started at the same time select their CPUs one after another, serialized by the
-file ``/run/lock/bngblaster_cpus.lock``, so that they never select the same free CPU. An instance
-waits up to 5 seconds for this lock and otherwise selects its CPUs without coordination, which is
-logged as warning.
+logged.
+
+Instances started at the same time are initialized one after another, serialized by the file
+``/run/lock/bngblaster_startup.lock``, from the interface initialization until all threads are
+started. This prevents conflicts during the initialization, for example selecting the same free
+CPU, changing the configuration of the same NIC, or attaching AF_XDP sockets at the same time
+(libbpf before version 1.0 fails if two processes attach AF_XDP sockets at the same time). With many
+instances started at once, an instance can wait several minutes for its startup, which is logged
+every 30 seconds. After 30 minutes, it starts without coordination and logs a warning.
+
+.. code-block:: none
+
+    Waiting for the startup of another BNG Blaster instance (process 4711)
 
 The interfaces are locked with ``/run/lock/bngblaster_<interface>.lock``, so that two instances can
 not use the same interface. All those are no simple lock files, which would remain after a crash,
