@@ -134,6 +134,7 @@ bbl_lag_select(bbl_lag_s *lag)
     io_handle_s *io;
 
     uint8_t active_count = 0;
+    uint8_t selected_count = 0;
     uint8_t actor_state;
     uint8_t key;
 
@@ -144,29 +145,39 @@ bbl_lag_select(bbl_lag_s *lag)
         member->primary = false;
         if(member->interface->state != INTERFACE_DISABLED) {
             actor_state = member->actor_state;
-            /* As the mux machine of IEEE 802.1AX, a member collects once the
-             * partner is in sync and distributes once the partner collects
-             * as well. Collecting only once distributing, would let two
-             * BNG Blaster instances wait for each other forever. */
-            if(member->lacp_state == LACP_CURRENT &&
-               member->partner_state & LACP_STATE_FLAG_IN_SYNC) {
-                if(!(member->partner_state & LACP_STATE_FLAG_COLLECTING)) {
+            /* As in IEEE 802.1AX, the members with current partner information
+             * are selected in order of their port priority, up to the maximum
+             * number of active links, independent of the partner state. Further
+             * members are standby, which are not in sync, so that the partner
+             * does not use them either. A selected member is in sync, collects
+             * once the partner is in sync and distributes once the partner
+             * collects as well. Collecting only once distributing would let
+             * two BNG Blaster instances wait for each other forever. */
+            if(member->lacp_state != LACP_CURRENT) {
+                bbl_lag_member_update_state(member, INTERFACE_DOWN);
+                member->actor_state &= ~(LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
+            } else if(selected_count >= LAG_MEMBER_ACTIVE_MAX ||
+                      selected_count >= lag->config->lacp_max_active_links) {
+                bbl_lag_member_update_state(member, INTERFACE_STANDBY);
+                member->actor_state &= ~(LACP_STATE_FLAG_IN_SYNC|LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
+            } else {
+                selected_count++;
+                member->actor_state |= LACP_STATE_FLAG_IN_SYNC;
+                if(!(member->partner_state & LACP_STATE_FLAG_IN_SYNC)) {
                     bbl_lag_member_update_state(member, INTERFACE_DOWN);
+                    member->actor_state &= ~(LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
+                } else if(!(member->partner_state & LACP_STATE_FLAG_COLLECTING)) {
+                    bbl_lag_member_update_state(member, INTERFACE_DOWN);
+                    member->actor_state |= LACP_STATE_FLAG_COLLECTING;
                     member->actor_state &= ~LACP_STATE_FLAG_DISTRIBUTING;
-                } else if(active_count >= LAG_MEMBER_ACTIVE_MAX ||
-                          active_count >= lag->config->lacp_max_active_links) {
-                    bbl_lag_member_update_state(member, INTERFACE_STANDBY);
                 } else {
                     if(active_count == 0) {
                         member->primary = true;
                     }
                     lag->active_list[active_count++] = member;
                     bbl_lag_member_update_state(member, INTERFACE_UP);
+                    member->actor_state |= (LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
                 }
-                member->actor_state |= LACP_STATE_FLAG_COLLECTING;
-            } else {
-                bbl_lag_member_update_state(member, INTERFACE_DOWN);
-                member->actor_state &= ~(LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
             }
             if(member->lacp_state != LACP_DISABLED && member->actor_state != actor_state) {
                 /* Inform the partner immediately instead of

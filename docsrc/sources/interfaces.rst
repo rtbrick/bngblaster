@@ -146,6 +146,12 @@ by IEEE 802.1AX. Changes of the own LACP state are sent immediately, without
 waiting for the next periodic LACP PDU. This also allows to connect two
 BNG Blaster LAG interfaces with LACP back to back.
 
+With ``lacp-max-active-links``, the member links with the best ``lacp-priority``
+are selected up to this number, while further member links are standby (state
+``Standby``). A standby member link signals neither synchronization nor collecting
+and distributing, so that the partner does not use it either, and replaces a
+selected member link which fails.
+
 .. include:: configuration/interfaces_lag.rst
 
 .. code-block:: json
