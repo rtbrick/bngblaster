@@ -32,12 +32,12 @@ jobs:
 
     - name: Install Dependencies
       shell: bash
-      run: sudo apt install -y libncurses-dev libssl-dev libjansson-dev libpcap-dev
+      run: sudo apt install -y libncurses-dev libssl-dev libjansson-dev libpcap-dev libxdp-dev libbpf-dev
 
     - name: Build
       shell: bash
       run: |
-        cmake -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=$BUILD_TYPE -DBNGBLASTER_AF_XDP=ON
         cmake --build build --config $BUILD_TYPE
 
     - uses: actions/setup-go@v5

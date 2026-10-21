@@ -18,6 +18,8 @@ Functional tests over veth pairs between network namespaces:
 * Automatic CPU placement of BNG Blaster instances started in
   parallel on loopback links, running on the host without namespaces
   (`test_cpu_placement.py`)
+* AF_XDP instances started in parallel on a veth pair, skipped if the
+  BNG Blaster is built without AF_XDP (`test_af_xdp_parallel.py`)
 
 Each test creates two namespaces `bbl-it-<n>-a` and `bbl-it-<n>-b`
 connected by a veth pair. Configs, logs, pcaps and JSON reports of all
