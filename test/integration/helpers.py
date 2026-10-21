@@ -182,7 +182,10 @@ class BngBlaster:
     def path(self, suffix):
         return str(self.workdir / ("%s.%s" % (self.name, suffix)))
 
-    def start(self, config, logging=("info",), args=()):
+    def start(self, config, logging=("info",), args=(), wait_started=True, timeout=60):
+        """Start the instance and wait until its control socket exists and,
+        with wait_started, until its startup is completed (test-info status
+        is no longer starting), as the socket is opened before the startup."""
         config_file = self.path("json")
         with open(config_file, "w") as f:
             json.dump(config, f, indent=4)
@@ -200,6 +203,13 @@ class BngBlaster:
         if self.proc.poll() is not None:
             raise RuntimeError("%s exited on start (%d), see %s" % (
                 self.name, self.proc.returncode, self.path("log")))
+        if wait_started:
+            wait_until(lambda: self.proc.poll() is not None or
+                       self.ctrl("test-info")["test-info"]["status"] != "starting",
+                       timeout, 0.1, "%s startup" % self.name)
+            if self.proc.poll() is not None:
+                raise RuntimeError("%s exited on start (%d), see %s" % (
+                    self.name, self.proc.returncode, self.path("log")))
         return self
 
     def alive(self):

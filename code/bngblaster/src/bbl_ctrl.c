@@ -235,12 +235,19 @@ bbl_ctrl_test_info(int fd, uint32_t session_id __attribute__((unused)), json_t *
 {
     int result = 0;
     json_t *root;
-    root = json_pack("{ss si s{ss si}}",
+    root = json_pack("{ss si s{ss si ss ss si}}",
                      "status", "ok",
                      "code", 200,
                      "test-info",
                      "state", test_state(),
-                     "duration", test_duration());
+                     "duration", test_duration(),
+                     "status", test_status(),
+                     "task", test_task(),
+                     "pid", getpid());
+    if(root && test_startup_lock_pid()) {
+        json_object_set_new(json_object_get(root, "test-info"), "startup-lock-pid",
+                            json_integer(test_startup_lock_pid()));
+    }
     if(root) {
         result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
         json_decref(root);
@@ -311,6 +318,7 @@ static int bbl_ctrl_commands(int fd, uint32_t session_id, json_t *arguments);
 
 static const struct action actions[] = {
     {"test-info", bbl_ctrl_test_info, schema_no_args, true},
+    {"threads", io_thread_ctrl_threads, schema_no_args, true},
     {"test-stop", bbl_ctrl_test_stop, schema_no_args, true},
     {"terminate", bbl_ctrl_terminate, schema_session_terminate, false},
     {"traffic-start", bbl_ctrl_traffic_start, schema_no_args, false},
@@ -429,6 +437,32 @@ static const struct action actions[] = {
     /* END */
     {NULL, NULL, NULL, false},
 };
+
+/**
+ * The control socket is opened before the startup and closed after the
+ * shutdown, while commands executed by the main thread or accessing state
+ * created during the startup are available only while the main loop runs.
+ *
+ * @param action index of the action
+ * @return true if the command is available
+ */
+static bool
+bbl_ctrl_available(size_t action)
+{
+    if(test_main_loop()) {
+        return true;
+    }
+    /* A teardown request during the startup aborts the startup. */
+    if(actions[action].fn == bbl_ctrl_test_info ||
+       actions[action].fn == bbl_ctrl_commands ||
+       actions[action].fn == bbl_ctrl_test_stop) {
+        return true;
+    }
+    if(actions[action].fn == io_thread_ctrl_threads) {
+        return io_thread_started();
+    }
+    return false;
+}
 
 static const char *
 bbl_ctrl_schema_arg_type_string(schema_arg_type_t type)
@@ -655,6 +689,17 @@ bbl_ctrl_socket_thread(void *thread_data)
                         } else if(strcmp(actions[i].name, command) == 0) {
                             if(actions[i].schema && !bbl_ctrl_schema(arguments, actions[i].schema)) {
                                 bbl_ctrl_status(fd, "error", 400, "invalid argument");
+                                break;
+                            }
+                            if(actions[i].fn == bbl_ctrl_terminate && !session_id && !test_main_loop()) {
+                                /* Terminate is executed by the main loop, which
+                                 * is not running during startup and shutdown. */
+                                bbl_ctrl_test_stop(fd, session_id, arguments);
+                                break;
+                            }
+                            if(!bbl_ctrl_available(i)) {
+                                bbl_ctrl_status(fd, "warning", 503, strcmp(test_status(), "starting") == 0 ?
+                                                "not available while starting" : "not available while stopping");
                                 break;
                             }
                             if(actions[i].thread_safe) {

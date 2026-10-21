@@ -24,6 +24,12 @@ io_thread_init(io_handle_s *io);
 bool
 io_thread_start_all();
 
+bool
+io_thread_started();
+
+int
+io_thread_ctrl_threads(int fd, uint32_t session_id, json_t *arguments);
+
 void
 io_thread_stop_all();
 

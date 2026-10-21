@@ -7,6 +7,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "io.h"
+#include <sys/syscall.h>
 #include <dirent.h>
 #include <sys/file.h>
 
@@ -16,6 +17,10 @@ static bool g_io_cpu_locked[CPU_SETSIZE];
 static int g_io_cpu_lock_fd[CPU_SETSIZE];
 /* Number of other instances using a CPU, see io_thread_cpu_scan(). */
 static uint16_t g_io_cpu_users[CPU_SETSIZE];
+
+/* All I/O threads are started and the main thread pinned (CPU or -1). */
+static volatile bool g_io_threads_started;
+static int g_io_main_cpu = -1;
 
 /* CPUs allowed for this process (e.g. restricted with taskset or a
  * cgroup cpuset), saved at startup before DPDK pins the main thread. */
@@ -353,6 +358,7 @@ void *
 io_thread_main(void *thread_data)
 {
     io_thread_s *thread = thread_data;
+    thread->tid = syscall(SYS_gettid);
     if(thread->setup_fn) {
         (*thread->setup_fn)(thread);
     }
@@ -573,7 +579,9 @@ io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io, bool *irq_cpus)
     thread->set_cpu_affinity = true;
     CPU_ZERO(&thread->cpuset);
 
+    thread->cpu_auto = true;
     cpu = io_thread_select_cpu(interface, cursor, irq_cpus, true, &shared);
+    thread->cpu_shared = cpu < 0 || shared;
     if(cpu < 0) {
         cpu = interface->local_cpuset[*cursor % interface->local_cpuset_count];
         *cursor = (*cursor + 1) % interface->local_cpuset_count;
@@ -640,6 +648,7 @@ io_thread_main_pin(int cpu)
         LOG(INFO, "Warning: Failed to pin the main thread to CPU %d\n", cpu);
         return;
     }
+    g_io_main_cpu = cpu;
     LOG(DEBUG, "Main thread pinned to CPU %d\n", cpu);
 }
 
@@ -775,6 +784,7 @@ io_thread_set_affinity_all()
         }
         if(thread->set_cpu_affinity && thread->selected_cpu >= 0 &&
            thread->selected_cpu < CPU_SETSIZE && g_io_cpu_users[thread->selected_cpu]) {
+            thread->cpu_shared = true;
             LOG(INFO, "Warning: %s thread of interface %s runs on CPU %d which is also used "
                 "by another BNG Blaster instance\n",
                 thread->io->direction == IO_INGRESS ? "RX" : "TX",
@@ -801,6 +811,16 @@ io_thread_set_affinity_all()
         main_cpu = io_thread_main_select_cpu(irq_cpus);
     }
     return main_cpu;
+}
+
+/* Thread name with direction first, so that it is kept
+ * if long interface names are truncated (e.g. rx0-eth1). */
+static void
+io_thread_name(io_thread_s *thread, char *name, size_t len)
+{
+    snprintf(name, len, "%s%d-%s",
+             thread->io->direction == IO_INGRESS ? "rx" : "tx",
+             thread->io->id, thread->io->interface->name);
 }
 
 /**
@@ -838,11 +858,7 @@ io_thread_start_all()
 
     sleep.tv_nsec = 7800179; /* prime number between 7 and 8ms */
     while(thread) {
-        /* Thread name with direction first, so that it is kept
-         * if long interface names are truncated (e.g. rx0-eth1). */
-        snprintf(name, sizeof(name), "%s%d-%s",
-                 thread->io->direction == IO_INGRESS ? "rx" : "tx",
-                 thread->io->id, thread->io->interface->name);
+        io_thread_name(thread, name, sizeof(name));
         pthread_attr_init(&attr);
         if(thread->set_cpu_affinity) {
             pthread_attr_setaffinity_np(&attr, sizeof(cpu_set_t), &thread->cpuset);
@@ -871,7 +887,69 @@ io_thread_start_all()
     if(main_cpu >= 0) {
         io_thread_main_pin(main_cpu);
     }
+    g_io_threads_started = true;
     return true;
+}
+
+bool
+io_thread_started()
+{
+    return g_io_threads_started;
+}
+
+static json_t *
+io_thread_json(const char *name, const char *type, const char *interface,
+               int cpu, bool cpu_auto, bool cpu_shared, pid_t tid)
+{
+    return json_pack("{ss ss ss* so sb sb si}",
+                     "name", name,
+                     "type", type,
+                     "interface", interface,
+                     "cpu", cpu >= 0 ? json_integer(cpu) : json_null(),
+                     "cpu-auto", cpu_auto,
+                     "cpu-shared", cpu_shared,
+                     "tid", tid);
+}
+
+/**
+ * Control socket command "threads" listing the main thread and all I/O
+ * threads with the CPU they are pinned to (null if not pinned), which
+ * is available once all threads are started.
+ */
+int
+io_thread_ctrl_threads(int fd, uint32_t session_id __attribute__((unused)),
+                       json_t *arguments __attribute__((unused)))
+{
+    io_thread_s *thread = g_ctx->io_threads;
+    char name[16];
+    json_t *threads;
+    json_t *root;
+    int result;
+
+    threads = json_array();
+    json_array_append_new(threads, io_thread_json("main", "main", NULL, g_io_main_cpu,
+                                                  g_io_main_cpu >= 0, false, getpid()));
+    while(thread) {
+        io_thread_name(thread, name, sizeof(name));
+        json_array_append_new(threads, io_thread_json(
+            name, thread->io->direction == IO_INGRESS ? "rx" : "tx",
+            thread->io->interface->name,
+            thread->set_cpu_affinity ? thread->selected_cpu : -1,
+            thread->cpu_auto, thread->cpu_shared, thread->tid));
+        thread = thread->next;
+    }
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "threads", threads);
+    if(root) {
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(threads);
+    }
+    return result;
 }
 
 void

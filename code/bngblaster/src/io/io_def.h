@@ -133,8 +133,11 @@ typedef struct io_thread_ {
     bool started;
 
     bool set_cpu_affinity;
+    bool cpu_auto; /* CPU selected by automatic CPU placement */
+    bool cpu_shared; /* CPU shared with a thread of this or another instance */
     int selected_cpu;
     cpu_set_t cpuset;
+    volatile pid_t tid; /* Linux thread ID */
 
     io_thread_cb_fn setup_fn;
     io_thread_cb_fn run_fn;

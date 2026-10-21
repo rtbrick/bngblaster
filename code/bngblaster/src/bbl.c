@@ -77,6 +77,69 @@ teardown_handler(int sig)
     }
 }
 
+/* Status and current task of the instance, reported via test-info so
+ * that a controller can follow the startup and shutdown. The task is
+ * changed by the main thread and read by the control socket thread. */
+typedef enum {
+    BBL_STATUS_STARTING = 0,
+    BBL_STATUS_RUNNING,
+    BBL_STATUS_STOPPING,
+} bbl_status_t;
+
+static volatile bbl_status_t g_status = BBL_STATUS_STARTING;
+static const char *volatile g_task = "load-config";
+static volatile int g_startup_lock_pid = 0;
+
+static void
+bbl_task(bbl_status_t status, const char *task)
+{
+    g_status = status;
+    g_task = task;
+}
+
+const char*
+test_status()
+{
+    switch(g_status) {
+        case BBL_STATUS_STARTING: return "starting";
+        case BBL_STATUS_RUNNING: return g_teardown ? "stopping" : "running";
+        default: return "stopping";
+    }
+}
+
+const char*
+test_task()
+{
+    if(g_status == BBL_STATUS_RUNNING) {
+        if(g_teardown) {
+            return "teardown";
+        } else if(g_init_phase) {
+            return "resolve-gateways";
+        }
+        return "running";
+    }
+    return g_task;
+}
+
+/**
+ * @return PID of the instance holding the startup lock
+ * while waiting for it, otherwise 0
+ */
+int
+test_startup_lock_pid()
+{
+    return g_startup_lock_pid;
+}
+
+/**
+ * @return true if the main loop executes commands
+ */
+bool
+test_main_loop()
+{
+    return g_status == BBL_STATUS_RUNNING;
+}
+
 const char*
 test_state()
 {
@@ -94,7 +157,7 @@ test_duration()
 {
     struct timespec now;
     struct timespec time_diff = {0};
-    if(g_ctx) {
+    if(g_ctx && g_ctx->timestamp_start.tv_sec) {
         if(g_ctx->timestamp_stop.tv_sec) {
             timespec_sub(&time_diff, 
                          &g_ctx->timestamp_stop, 
@@ -489,6 +552,12 @@ bbl_mlockall(void)
 #define BBL_STARTUP_LOCK_LOG_INTERVAL_MS 30000
 #define BBL_STARTUP_LOCK_TIMEOUT_MS     1800000
 
+#define BBL_STARTUP_LOCK_STEP_MS        100
+
+/* Exit status if the startup is aborted by a teardown request, which
+ * differs from errors (1) and a failed context allocation (2). */
+#define BBL_EXIT_STARTUP_ABORTED        3
+
 static int
 bbl_startup_lock()
 {
@@ -496,18 +565,40 @@ bbl_startup_lock()
     int fd;
 
     fd = lock_file_wait(BBL_STARTUP_LOCK, 0);
-    while(fd == -1 && errno == EWOULDBLOCK && waited < BBL_STARTUP_LOCK_TIMEOUT_MS) {
-        LOG(INFO, "Waiting for the startup of another BNG Blaster instance (process %d)\n",
-            lock_file_owner(BBL_STARTUP_LOCK));
-        fd = lock_file_wait(BBL_STARTUP_LOCK, BBL_STARTUP_LOCK_LOG_INTERVAL_MS);
-        waited += BBL_STARTUP_LOCK_LOG_INTERVAL_MS;
+    while(fd == -1 && errno == EWOULDBLOCK && waited < BBL_STARTUP_LOCK_TIMEOUT_MS && !g_teardown) {
+        if(waited % BBL_STARTUP_LOCK_LOG_INTERVAL_MS == 0) {
+            g_startup_lock_pid = lock_file_owner(BBL_STARTUP_LOCK);
+            LOG(INFO, "Waiting for the startup of another BNG Blaster instance (process %d)\n",
+                g_startup_lock_pid);
+        }
+        /* Wait in short steps to abort the startup on teardown request. */
+        fd = lock_file_wait(BBL_STARTUP_LOCK, BBL_STARTUP_LOCK_STEP_MS);
+        waited += BBL_STARTUP_LOCK_STEP_MS;
     }
-    if(fd == -1) {
+    g_startup_lock_pid = 0;
+    if(fd == -1 && !g_teardown) {
         LOG(INFO, "Warning: Failed to acquire startup lock %s (%s), "
             "starting without coordination with other instances\n",
             BBL_STARTUP_LOCK, strerror(errno));
     }
     return fd;
+}
+
+/**
+ * A teardown requested during the startup (signal or control socket)
+ * aborts the startup, which restores the interface configuration and
+ * releases all resources as on a regular exit.
+ *
+ * @return true if the startup is aborted
+ */
+static bool
+bbl_startup_aborted()
+{
+    if(g_teardown) {
+        LOG_NOARG(INFO, "Startup aborted by teardown request\n");
+        return true;
+    }
+    return false;
 }
 
 int
@@ -636,6 +727,19 @@ main(int argc, char *argv[])
                     &logfile_fflush_job);
     }
 
+    /* Teardown requests (signals) abort the startup. */
+    signal(SIGINT, teardown_handler);
+    signal(SIGHUP, teardown_handler);
+    signal(SIGTERM, teardown_handler);
+
+    /* Setup control socket and job, as early as possible
+     * to report the startup via test-info. */
+    if(g_ctx->ctrl_socket_path) {
+        if(!bbl_ctrl_socket_init()) {
+            goto CLEANUP;
+        }
+    }
+
     /* Init config. */
     bbl_config_init_defaults();
     if(!bbl_config_load_json(config_file)) {
@@ -677,17 +781,33 @@ main(int argc, char *argv[])
 
     bbl_fragment_init();
 
+    if(bbl_startup_aborted()) {
+        exit_status = BBL_EXIT_STARTUP_ABORTED;
+        goto CLEANUP;
+    }
+    bbl_task(BBL_STATUS_STARTING, "wait-startup-lock");
     startup_lock = bbl_startup_lock();
+    if(bbl_startup_aborted()) {
+        exit_status = BBL_EXIT_STARTUP_ABORTED;
+        goto CLEANUP;
+    }
 
 #ifdef BNGBLASTER_DPDK
     /* Init DPDK. */
+    bbl_task(BBL_STATUS_STARTING, "init-dpdk");
     if(!io_dpdk_init()) {
         fprintf(stderr, "Error: Failed to init DPDK\n");
         goto CLEANUP;
     }
 #endif
 
+    if(bbl_startup_aborted()) {
+        exit_status = BBL_EXIT_STARTUP_ABORTED;
+        goto CLEANUP;
+    }
+
     /* Init IS-IS instances. */
+    bbl_task(BBL_STATUS_STARTING, "init-protocols");
     if(!isis_init()) {
         fprintf(stderr, "Error: Failed to init IS-IS\n");
         goto CLEANUP;
@@ -708,19 +828,37 @@ main(int argc, char *argv[])
     /* Init TCP. */
     bbl_tcp_init();
 
+    if(bbl_startup_aborted()) {
+        exit_status = BBL_EXIT_STARTUP_ABORTED;
+        goto CLEANUP;
+    }
+
     /* Init interfaces. */
+    bbl_task(BBL_STATUS_STARTING, "init-interfaces");
     if(!bbl_interface_init()) {
         fprintf(stderr, "Error: Failed to init interfaces\n");
         goto CLEANUP;
     }
 
+    if(bbl_startup_aborted()) {
+        exit_status = BBL_EXIT_STARTUP_ABORTED;
+        goto CLEANUP;
+    }
+
     /* Init BGP sessions. */
+    bbl_task(BBL_STATUS_STARTING, "init-bgp");
     if(!bgp_init()) {
         fprintf(stderr, "Error: Failed to init BGP\n");
         goto CLEANUP;
     }
 
+    if(bbl_startup_aborted()) {
+        exit_status = BBL_EXIT_STARTUP_ABORTED;
+        goto CLEANUP;
+    }
+
     /* Init streams. */
+    bbl_task(BBL_STATUS_STARTING, "init-streams");
     if(!bbl_stream_init()) {
         fprintf(stderr, "Error: Failed to add RAW stream traffic\n");
         goto CLEANUP;
@@ -729,7 +867,13 @@ main(int argc, char *argv[])
     /* Setup resources in case PCAP dumping is desired. */
     pcapng_init();
 
+    if(bbl_startup_aborted()) {
+        exit_status = BBL_EXIT_STARTUP_ABORTED;
+        goto CLEANUP;
+    }
+
     /* Setup test. */
+    bbl_task(BBL_STATUS_STARTING, "init-sessions");
     if(bbl_access_interface_get(NULL)) {
         if(!bbl_sessions_init()) {
             fprintf(stderr, "Error: Failed to init sessions\n");
@@ -747,13 +891,6 @@ main(int argc, char *argv[])
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->control_timer, "Control Timer", 
                        0, ctrl_job_period_ns, g_ctx, &bbl_ctrl_job);
 
-    /* Setup control socket and job */
-    if(g_ctx->ctrl_socket_path) {
-        if(!bbl_ctrl_socket_init()) {
-            goto CLEANUP;
-        }
-    }
-
     /* Start smear job. Use a crazy nsec bucket '12345678',
      * such that we do not accidentally smear ourselves. */
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->smear_timer, "Timer Smearing", 
@@ -769,7 +906,13 @@ main(int argc, char *argv[])
     /* Smear all stream buckets. */
     io_stream_smear_all();
 
+    if(bbl_startup_aborted()) {
+        exit_status = BBL_EXIT_STARTUP_ABORTED;
+        goto CLEANUP;
+    }
+
     /* Start threads. */
+    bbl_task(BBL_STATUS_STARTING, "start-threads");
     if(!io_thread_start_all()) {
         goto CLEANUP;
     }
@@ -787,12 +930,9 @@ main(int argc, char *argv[])
         bbl_interactive_start();
     }
 
-    signal(SIGINT, teardown_handler);
-    signal(SIGHUP, teardown_handler);
-    signal(SIGTERM, teardown_handler);
-
     /* Start event loop ... */
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_start);
+    bbl_task(BBL_STATUS_RUNNING, "running");
     while(g_teardown_request_count < BBL_TEARDOWN_REQUSTS_MAX) {
         if(g_teardown) {
             /* If teardown has requested, wait for all L2TP 
@@ -817,6 +957,7 @@ main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_stop);
 
     /* Stop threads. */
+    bbl_task(BBL_STATUS_STOPPING, "stop-threads");
     io_thread_stop_all();
 
     /* Stop curses. Do this before the final reports. */
@@ -826,6 +967,7 @@ main(int argc, char *argv[])
     }
 
     /* Generate reports. */
+    bbl_task(BBL_STATUS_STOPPING, "reports");
     bbl_stream_final();
     bbl_stats_generate(&stats);
     bbl_stats_stdout(&stats);
@@ -834,6 +976,7 @@ main(int argc, char *argv[])
 
     /* Cleanup resources. */
 CLEANUP:
+    bbl_task(BBL_STATUS_STOPPING, "cleanup");
     if(startup_lock >= 0) {
         close(startup_lock);
     }

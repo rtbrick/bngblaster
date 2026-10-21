@@ -72,6 +72,18 @@ teardown_request();
 const char*
 test_state();
 
+const char*
+test_status();
+
+const char*
+test_task();
+
+int
+test_startup_lock_pid();
+
+bool
+test_main_loop();
+
 time_t
 test_duration();
 
