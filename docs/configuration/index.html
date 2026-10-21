@@ -266,6 +266,9 @@ with user-defined start values and steps.</p>
 <td><div class="line-block">
 <div class="line">Automatically pin TX threads to CPUs local to the interface.</div>
 <div class="line">Default: false</div>
+<div class="line">Uses only CPUs allowed for the process (e.g. taskset) and avoids</div>
+<div class="line">CPUs used by other instances, see</div>
+<div class="line"><a class="reference internal" href="../performance.html#cpu-pinning"><span class="std std-ref">CPU pinning</span></a>.</div>
 </div>
 </td>
 </tr>
@@ -273,6 +276,9 @@ with user-defined start values and steps.</p>
 <td><div class="line-block">
 <div class="line">Automatically pin RX threads to CPUs local to the interface.</div>
 <div class="line">Default: false</div>
+<div class="line">Uses only CPUs allowed for the process (e.g. taskset) and avoids</div>
+<div class="line">CPUs used by other instances, see</div>
+<div class="line"><a class="reference internal" href="../performance.html#cpu-pinning"><span class="std std-ref">CPU pinning</span></a>.</div>
 </div>
 </td>
 </tr>
@@ -397,6 +403,9 @@ for interface links referenced by interface functions.</p>
 <div class="line">Automatically pin TX threads to CPUs local to the interface.</div>
 <div class="line">BNG Blaster prefers local physical cores before SMT siblings.</div>
 <div class="line">Default: <strong>interfaces-&gt;tx-auto-cpuset</strong> (false)</div>
+<div class="line">Uses only CPUs allowed for the process (e.g. taskset) and avoids</div>
+<div class="line">CPUs used by other instances, see</div>
+<div class="line"><a class="reference internal" href="../performance.html#cpu-pinning"><span class="std std-ref">CPU pinning</span></a>.</div>
 </div>
 </td>
 </tr>
@@ -405,6 +414,9 @@ for interface links referenced by interface functions.</p>
 <div class="line">Automatically pin RX threads to CPUs local to the interface.</div>
 <div class="line">BNG Blaster prefers local physical cores before SMT siblings.</div>
 <div class="line">Default: <strong>interfaces-&gt;rx-auto-cpuset</strong> (false)</div>
+<div class="line">Uses only CPUs allowed for the process (e.g. taskset) and avoids</div>
+<div class="line">CPUs used by other instances, see</div>
+<div class="line"><a class="reference internal" href="../performance.html#cpu-pinning"><span class="std std-ref">CPU pinning</span></a>.</div>
 </div>
 </td>
 </tr>
@@ -435,34 +447,46 @@ for interface links referenced by interface functions.</p>
 <tr class="row-even"><td><p><strong>io-slots-rx</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the RX IO slots (ring size).</div>
+<div class="line">With AF_XDP, the RX frames are sized automatically to at least</div>
+<div class="line">twice the NIC RX ring if not set explicitly.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>qdisc-bypass</strong></p></td>
+<tr class="row-odd"><td><p><strong>af-xdp-mode</strong></p></td>
+<td><div class="line-block">
+<div class="line">AF_XDP socket mode: <code class="docutils literal notranslate"><span class="pre">auto</span></code>, <code class="docutils literal notranslate"><span class="pre">zero-copy</span></code>, <code class="docutils literal notranslate"><span class="pre">copy</span></code></div>
+<div class="line">or <code class="docutils literal notranslate"><span class="pre">generic</span></code>. <code class="docutils literal notranslate"><span class="pre">auto</span></code> prefers native zero-copy mode</div>
+<div class="line">and falls back to copy or generic mode. <code class="docutils literal notranslate"><span class="pre">copy</span></code></div>
+<div class="line">avoids the zero-copy mode of the driver.</div>
+<div class="line">Default: auto</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>qdisc-bypass</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the kernel’s qdisc layer configuration.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>tx-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>tx-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the TX polling interval in milliseconds.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>rx-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>rx-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the RX polling interval in milliseconds.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>tx-threads</strong></p></td>
+<tr class="row-odd"><td><p><strong>tx-threads</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the number of TX threads per interface link.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>rx-threads</strong></p></td>
+<tr class="row-even"><td><p><strong>rx-threads</strong></p></td>
 <td><div class="line-block">
 <div class="line">Overwrite the number of RX threads per interface link.</div>
 </div>
@@ -2577,6 +2601,21 @@ forwarding and header enrichment.</p>
 <tr class="row-even"><td><p><strong>called-number</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optional Called Number string sent in ICRQ (AVP 21).</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>tx-connect-speed</strong></p></td>
+<td><div class="line-block">
+<div class="line">TX Connect Speed in bits per second sent in ICCN (AVP 24).</div>
+<div class="line">Default: 100000000 Range: 1 - 4294967295</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>rx-connect-speed</strong></p></td>
+<td><div class="line-block">
+<div class="line">Optional RX Connect Speed in bits per second sent in ICCN</div>
+<div class="line">(AVP 38), not sent if not configured.</div>
+<div class="line">Range: 1 - 4294967295</div>
 </div>
 </td>
 </tr>

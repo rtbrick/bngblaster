@@ -242,17 +242,26 @@ using each session-id as an argument for the session-restart command.</p>
 <tbody>
 <tr class="row-even"><td><p><strong>test-info</strong></p></td>
 <td><div class="line-block">
-<div class="line">Display information about the running test instance.</div>
+<div class="line">Display information about the test instance, including its</div>
+<div class="line">status (starting, running or stopping) and current task,</div>
+<div class="line">which is available also during the startup (see below).</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>test-stop</strong></p></td>
+<tr class="row-odd"><td><p><strong>threads</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display the main thread and all I/O threads with the CPU</div>
+<div class="line">they are pinned to, available once all threads are started.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>test-stop</strong></p></td>
 <td><div class="line-block">
 <div class="line">Stop/teardown the test (graceful, global).</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>terminate</strong></p></td>
+<tr class="row-odd"><td><p><strong>terminate</strong></p></td>
 <td><div class="line-block">
 <div class="line">Deprecated. Terminate the given <code class="docutils literal notranslate"><span class="pre">session-id</span></code>, or</div>
 <div class="line">stop/teardown the whole test if no <code class="docutils literal notranslate"><span class="pre">session-id</span></code> is</div>
@@ -265,13 +274,13 @@ using each session-id as an argument for the session-restart command.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>monkey-start</strong></p></td>
+<tr class="row-even"><td><p><strong>monkey-start</strong></p></td>
 <td><div class="line-block">
 <div class="line">Start monkey test.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>monkey-stop</strong></p></td>
+<tr class="row-odd"><td><p><strong>monkey-stop</strong></p></td>
 <td><div class="line-block">
 <div class="line">Stop monkey test.</div>
 </div>
@@ -279,6 +288,131 @@ using each session-id as an argument for the session-restart command.</p>
 </tr>
 </tbody>
 </table>
+<p>The control socket is opened right after the log file, before the configuration
+is loaded, so that a controller can follow the startup and shutdown of the
+instance with <code class="docutils literal notranslate"><span class="pre">test-info</span></code>. During the startup and after the test has finished,
+only <code class="docutils literal notranslate"><span class="pre">test-info</span></code>, <code class="docutils literal notranslate"><span class="pre">commands</span></code> and <code class="docutils literal notranslate"><span class="pre">threads</span></code> (once all threads are started)
+are available, while all other commands are answered with status code 503
+(<code class="docutils literal notranslate"><span class="pre">not</span> <span class="pre">available</span> <span class="pre">while</span> <span class="pre">starting</span></code> or <code class="docutils literal notranslate"><span class="pre">not</span> <span class="pre">available</span> <span class="pre">while</span> <span class="pre">stopping</span></code>). A
+controller should therefore wait until the status is <code class="docutils literal notranslate"><span class="pre">running</span></code> before sending
+other commands. During the teardown (task <code class="docutils literal notranslate"><span class="pre">teardown</span></code>), all commands remain
+available.</p>
+<p>The startup can be aborted with <code class="docutils literal notranslate"><span class="pre">test-stop</span></code> or <code class="docutils literal notranslate"><span class="pre">terminate</span></code> (without
+<code class="docutils literal notranslate"><span class="pre">session-id</span></code>) via control socket, or with the signals <code class="docutils literal notranslate"><span class="pre">SIGINT</span></code>,
+<code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code> or <code class="docutils literal notranslate"><span class="pre">SIGHUP</span></code>, also while waiting for the startup of other
+instances. The instance then restores the interface configuration, releases
+all resources and exits with status 3 without generating reports, which
+distinguishes an aborted startup from a test (0) or an error (1).</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">test-info</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;test-info&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;init&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;duration&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;starting&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;task&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;wait-startup-lock&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4712</span><span class="p">,</span><span class="w"></span>
+<span class="w">        </span><span class="nt">&quot;startup-lock-pid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4711</span><span class="w"></span>
+<span class="w">    </span><span class="p">}</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">status</span></code> is <code class="docutils literal notranslate"><span class="pre">starting</span></code>, <code class="docutils literal notranslate"><span class="pre">running</span></code> or <code class="docutils literal notranslate"><span class="pre">stopping</span></code>, and the <code class="docutils literal notranslate"><span class="pre">task</span></code>
+shows what the instance is currently doing:</p>
+<table class="docutils align-default">
+<colgroup>
+<col style="width: 25%" />
+<col style="width: 75%" />
+</colgroup>
+<thead>
+<tr class="row-odd"><th class="head"><p>Task</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>load-config</p></td>
+<td><p>Load the configuration (status starting).</p></td>
+</tr>
+<tr class="row-odd"><td><p>wait-startup-lock</p></td>
+<td><p>Wait for the startup of another instance, which is shown as
+<code class="docutils literal notranslate"><span class="pre">startup-lock-pid</span></code> (status starting).</p></td>
+</tr>
+<tr class="row-even"><td><p>init-dpdk</p></td>
+<td><p>Initialize DPDK (status starting).</p></td>
+</tr>
+<tr class="row-odd"><td><p>init-protocols</p></td>
+<td><p>Initialize IS-IS, OSPF and LDP (status starting).</p></td>
+</tr>
+<tr class="row-even"><td><p>init-interfaces</p></td>
+<td><p>Initialize the interfaces (status starting).</p></td>
+</tr>
+<tr class="row-odd"><td><p>init-bgp</p></td>
+<td><p>Initialize the BGP sessions (status starting).</p></td>
+</tr>
+<tr class="row-even"><td><p>init-streams</p></td>
+<td><p>Initialize the traffic streams (status starting).</p></td>
+</tr>
+<tr class="row-odd"><td><p>init-sessions</p></td>
+<td><p>Initialize the access sessions (status starting).</p></td>
+</tr>
+<tr class="row-even"><td><p>start-threads</p></td>
+<td><p>Select the CPUs and start the I/O threads (status starting).</p></td>
+</tr>
+<tr class="row-odd"><td><p>resolve-gateways</p></td>
+<td><p>Wait for the gateways of the network interfaces to be resolved
+(status running).</p></td>
+</tr>
+<tr class="row-even"><td><p>running</p></td>
+<td><p>Test is running (status running).</p></td>
+</tr>
+<tr class="row-odd"><td><p>teardown</p></td>
+<td><p>Teardown of sessions and protocols (status stopping).</p></td>
+</tr>
+<tr class="row-even"><td><p>stop-threads</p></td>
+<td><p>Stop the I/O threads (status stopping).</p></td>
+</tr>
+<tr class="row-odd"><td><p>reports</p></td>
+<td><p>Generate the final reports (status stopping).</p></td>
+</tr>
+<tr class="row-even"><td><p>cleanup</p></td>
+<td><p>Restore the interface configuration and release all resources
+(status stopping).</p></td>
+</tr>
+</tbody>
+</table>
+<p>The <code class="docutils literal notranslate"><span class="pre">state</span></code> (<code class="docutils literal notranslate"><span class="pre">init</span></code>, <code class="docutils literal notranslate"><span class="pre">active</span></code> or <code class="docutils literal notranslate"><span class="pre">teardown</span></code>) is kept for compatibility,
+where <code class="docutils literal notranslate"><span class="pre">init</span></code> lasts until all gateways are resolved.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">threads</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span><span class="w"></span>
+<span class="w">    </span><span class="nt">&quot;threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;main&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;main&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;cpu&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;cpu-auto&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;cpu-shared&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;tid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4712</span><span class="w"></span>
+<span class="w">        </span><span class="p">},</span><span class="w"></span>
+<span class="w">        </span><span class="p">{</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rx0-eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;rx&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;cpu&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;cpu-auto&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;cpu-shared&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
+<span class="w">            </span><span class="nt">&quot;tid&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4714</span><span class="w"></span>
+<span class="w">        </span><span class="p">}</span><span class="w"></span>
+<span class="w">    </span><span class="p">]</span><span class="w"></span>
+<span class="p">}</span><span class="w"></span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">cpu</span></code> is <code class="docutils literal notranslate"><span class="pre">null</span></code> for threads which are not pinned. <code class="docutils literal notranslate"><span class="pre">cpu-auto</span></code> shows
+whether the CPU was selected by the automatic CPU placement, and <code class="docutils literal notranslate"><span class="pre">cpu-shared</span></code>
+whether the CPU is shared with another thread of this or another instance.
+The <code class="docutils literal notranslate"><span class="pre">tid</span></code> is the Linux thread ID (e.g. for <code class="docutils literal notranslate"><span class="pre">top</span> <span class="pre">-H</span></code> or <code class="docutils literal notranslate"><span class="pre">perf</span></code>).</p>
 </section>
 <section id="interfaces">
 <h2>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline"></a></h2>

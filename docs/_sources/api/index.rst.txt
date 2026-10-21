@@ -158,7 +158,12 @@ Test
 +-----------------------------------+----------------------------------------------------------------------+
 | Command                           | Description                                                          |
 +===================================+======================================================================+
-| **test-info**                     | | Display information about the running test instance.               |
+| **test-info**                     | | Display information about the test instance, including its         |
+|                                   | | status (starting, running or stopping) and current task,           |
+|                                   | | which is available also during the startup (see below).            |
++-----------------------------------+----------------------------------------------------------------------+
+| **threads**                       | | Display the main thread and all I/O threads with the CPU           |
+|                                   | | they are pinned to, available once all threads are started.        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **test-stop**                     | | Stop/teardown the test (graceful, global).                         |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -175,6 +180,116 @@ Test
 +-----------------------------------+----------------------------------------------------------------------+
 | **monkey-stop**                   | | Stop monkey test.                                                  |
 +-----------------------------------+----------------------------------------------------------------------+
+
+The control socket is opened right after the log file, before the configuration
+is loaded, so that a controller can follow the startup and shutdown of the
+instance with ``test-info``. During the startup and after the test has finished,
+only ``test-info``, ``commands`` and ``threads`` (once all threads are started)
+are available, while all other commands are answered with status code 503
+(``not available while starting`` or ``not available while stopping``). A
+controller should therefore wait until the status is ``running`` before sending
+other commands. During the teardown (task ``teardown``), all commands remain
+available.
+
+The startup can be aborted with ``test-stop`` or ``terminate`` (without
+``session-id``) via control socket, or with the signals ``SIGINT``,
+``SIGTERM`` or ``SIGHUP``, also while waiting for the startup of other
+instances. The instance then restores the interface configuration, releases
+all resources and exits with status 3 without generating reports, which
+distinguishes an aborted startup from a test (0) or an error (1).
+
+``$ sudo bngblaster-cli run.sock test-info``
+
+.. code-block:: json
+
+    {
+        "status": "ok",
+        "code": 200,
+        "test-info": {
+            "state": "init",
+            "duration": 0,
+            "status": "starting",
+            "task": "wait-startup-lock",
+            "pid": 4712,
+            "startup-lock-pid": 4711
+        }
+    }
+
+The ``status`` is ``starting``, ``running`` or ``stopping``, and the ``task``
+shows what the instance is currently doing:
+
++-----------------------+----------------------------------------------------------------------+
+| Task                  | Description                                                          |
++=======================+======================================================================+
+| load-config           | Load the configuration (status starting).                            |
++-----------------------+----------------------------------------------------------------------+
+| wait-startup-lock     | Wait for the startup of another instance, which is shown as          |
+|                       | ``startup-lock-pid`` (status starting).                              |
++-----------------------+----------------------------------------------------------------------+
+| init-dpdk             | Initialize DPDK (status starting).                                   |
++-----------------------+----------------------------------------------------------------------+
+| init-protocols        | Initialize IS-IS, OSPF and LDP (status starting).                    |
++-----------------------+----------------------------------------------------------------------+
+| init-interfaces       | Initialize the interfaces (status starting).                         |
++-----------------------+----------------------------------------------------------------------+
+| init-bgp              | Initialize the BGP sessions (status starting).                       |
++-----------------------+----------------------------------------------------------------------+
+| init-streams          | Initialize the traffic streams (status starting).                    |
++-----------------------+----------------------------------------------------------------------+
+| init-sessions         | Initialize the access sessions (status starting).                    |
++-----------------------+----------------------------------------------------------------------+
+| start-threads         | Select the CPUs and start the I/O threads (status starting).         |
++-----------------------+----------------------------------------------------------------------+
+| resolve-gateways      | Wait for the gateways of the network interfaces to be resolved       |
+|                       | (status running).                                                    |
++-----------------------+----------------------------------------------------------------------+
+| running               | Test is running (status running).                                    |
++-----------------------+----------------------------------------------------------------------+
+| teardown              | Teardown of sessions and protocols (status stopping).                |
++-----------------------+----------------------------------------------------------------------+
+| stop-threads          | Stop the I/O threads (status stopping).                              |
++-----------------------+----------------------------------------------------------------------+
+| reports               | Generate the final reports (status stopping).                        |
++-----------------------+----------------------------------------------------------------------+
+| cleanup               | Restore the interface configuration and release all resources        |
+|                       | (status stopping).                                                   |
++-----------------------+----------------------------------------------------------------------+
+
+The ``state`` (``init``, ``active`` or ``teardown``) is kept for compatibility,
+where ``init`` lasts until all gateways are resolved.
+
+``$ sudo bngblaster-cli run.sock threads``
+
+.. code-block:: json
+
+    {
+        "status": "ok",
+        "code": 200,
+        "threads": [
+            {
+                "name": "main",
+                "type": "main",
+                "cpu": 2,
+                "cpu-auto": true,
+                "cpu-shared": false,
+                "tid": 4712
+            },
+            {
+                "name": "rx0-eth1",
+                "type": "rx",
+                "interface": "eth1",
+                "cpu": 0,
+                "cpu-auto": true,
+                "cpu-shared": false,
+                "tid": 4714
+            }
+        ]
+    }
+
+The ``cpu`` is ``null`` for threads which are not pinned. ``cpu-auto`` shows
+whether the CPU was selected by the automatic CPU placement, and ``cpu-shared``
+whether the CPU is shared with another thread of this or another instance.
+The ``tid`` is the Linux thread ID (e.g. for ``top -H`` or ``perf``).
 
 Interfaces
 ----------

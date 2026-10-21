@@ -214,7 +214,8 @@ AF_XDP socket, defined per RX thread by <code class="docutils literal notranslat
 power of two). The NIC RX ring should not exceed half of those frames, otherwise
 the frames still waiting to be processed are missing to refill the ring, which
 results in even more <code class="docutils literal notranslate"><span class="pre">rx_missed_errors</span></code>. For example, a NIC RX ring of 8160
-requires <code class="docutils literal notranslate"><span class="pre">io-slots-rx</span></code> of 16384.</p>
+requires <code class="docutils literal notranslate"><span class="pre">io-slots-rx</span></code> of 16384. BNG Blaster takes care of both automatically
+for AF_XDP, see <a class="reference internal" href="#af-xdp-usage"><span class="std std-ref">AF_XDP</span></a>.</p>
 <section id="pppoe-rss-on-intel-700-series">
 <span id="ddp-pppoe"></span><h2>PPPoE RSS on Intel 700 Series<a class="headerlink" href="#pppoe-rss-on-intel-700-series" title="Permalink to this headline"></a></h2>
 <p>The Intel 700 Series (X710, XXV710, XL710) can’t parse PPPoE with its default
@@ -335,7 +336,7 @@ or recommendations on how to further increase performance are welcome!</p>
 </div>
 </section>
 <section id="numa">
-<h2>NUMA<a class="headerlink" href="#numa" title="Permalink to this headline"></a></h2>
+<span id="cpu-pinning"></span><h2>NUMA<a class="headerlink" href="#numa" title="Permalink to this headline"></a></h2>
 <p>NUMA, which stands for Non-Uniform Memory Access, is a computer memory design used in multi-processor systems.
 In a NUMA system, each processor, or a group of processors, has its own local memory. The processors can access
 their own local memory faster than non-local memory, which is the memory local to another processor or shared
@@ -369,8 +370,59 @@ optimize placement as follows:</p>
 <li><p>Prefer CPUs local to the NIC.</p></li>
 <li><p>Prefer one hardware thread per physical core before using SMT siblings.</p></li>
 <li><p>Avoid reusing the same CPU across interfaces until the local CPU pool is exhausted.</p></li>
-<li><p>Fall back to the NUMA node CPU list and finally to the system online CPU list if no local CPU list is exposed.</p></li>
+<li><p>Avoid CPUs handling NIC interrupts of the used interfaces until no other CPU is free.</p></li>
+<li><p>Avoid CPUs used by other BNG Blaster instances running in parallel until no other CPU is free.</p></li>
+<li><p>Use only CPUs allowed for the process (see below).</p></li>
+<li><p>Fall back to the NUMA node CPU list and finally to all allowed CPUs if no local CPU list is exposed
+or none of the local CPUs is allowed.</p></li>
+<li><p>Pin the main thread to a free CPU as well, after all RX and TX threads got their CPU.</p></li>
 </ul>
+<p>The kernel driver processes the NIC queues (NAPI) on the CPUs handling their interrupts, which is
+also the case for AF_XDP. An RX or TX thread on such a CPU permanently competes with this processing,
+which can significantly limit the throughput (e.g. AF_XDP TX completions). A warning is logged for
+each RX or TX thread running on a CPU which handles NIC interrupts, including manually pinned threads.
+The interrupt CPUs are shown in <code class="docutils literal notranslate"><span class="pre">/proc/interrupts</span></code>. Those may change at runtime if <code class="docutils literal notranslate"><span class="pre">irqbalance</span></code>
+is running, which can be prevented by excluding those CPUs from <code class="docutils literal notranslate"><span class="pre">irqbalance</span></code> or by setting the
+interrupt affinity manually.</p>
+<p>Multiple BNG Blaster instances running in parallel (e.g. one per SR-IOV virtual function) coordinate
+their automatic CPU placement. Each instance locks every CPU used by its threads with the file
+<code class="docutils literal notranslate"><span class="pre">/run/lock/bngblaster_cpu&lt;N&gt;.&lt;PID&gt;.lock</span></code>, so <code class="docutils literal notranslate"><span class="pre">ls</span> <span class="pre">/run/lock/bngblaster_cpu*</span></code> shows which process
+uses which CPU. A CPU locked by another instance is skipped by the automatic CPU placement. If all
+local CPUs are used, a thread shares the CPU used by the fewest other instances and a warning is
+logged.</p>
+<p>Instances started at the same time are initialized one after another, serialized by the file
+<code class="docutils literal notranslate"><span class="pre">/run/lock/bngblaster_startup.lock</span></code>, from the interface initialization until all threads are
+started. This prevents conflicts during the initialization, for example selecting the same free
+CPU, changing the configuration of the same NIC, or attaching AF_XDP sockets at the same time
+(libbpf before version 1.0 fails if two processes attach AF_XDP sockets at the same time). With many
+instances started at once, an instance can wait several minutes for its startup, which is logged
+every 30 seconds. After 30 minutes, it starts without coordination and logs a warning.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Waiting for the startup of another BNG Blaster instance (process 4711)
+</pre></div>
+</div>
+<p>The interfaces are locked with <code class="docutils literal notranslate"><span class="pre">/run/lock/bngblaster_&lt;interface&gt;.lock</span></code>, so that two instances can
+not use the same interface. All those are no simple lock files, which would remain after a crash,
+but locks held by the kernel (<code class="docutils literal notranslate"><span class="pre">flock</span></code>), which are released when the instance exits, also if it is
+killed or crashes. The files are removed on exit. Files left behind by a killed instance are not
+locked anymore: interface lock files are simply reused and CPU lock files are removed by the next
+instance. Do not remove those files while BNG Blaster is running, as this allows other instances to
+use the same interface or CPU. With instances in different containers, <code class="docutils literal notranslate"><span class="pre">/run/lock</span></code> must be shared
+between the containers for this coordination.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Warning: No free CPU for RX thread of interface eth1, sharing CPU 4 with another BNG Blaster instance
+</pre></div>
+</div>
+<p>A warning is also logged for a manually pinned thread running on a CPU used by another instance.</p>
+<p>The CPUs used by an instance can be restricted, for example to separate instances explicitly or to
+keep CPUs free for other applications. The automatic CPU placement uses only CPUs allowed for the
+process, which can be restricted with <code class="docutils literal notranslate"><span class="pre">taskset</span></code>, the systemd property <code class="docutils literal notranslate"><span class="pre">AllowedCPUs</span></code> or the
+cpuset of a container.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>taskset -c 8-15 bngblaster -C test.json
+systemd-run --scope -p AllowedCPUs=8-15 bngblaster -C test.json
+</pre></div>
+</div>
+<p>With <code class="docutils literal notranslate"><span class="pre">taskset</span></code>, manually pinned threads (<code class="docutils literal notranslate"><span class="pre">rx-cpuset</span></code> and <code class="docutils literal notranslate"><span class="pre">tx-cpuset</span></code>) may still use other
+CPUs, while a cgroup cpuset (<code class="docutils literal notranslate"><span class="pre">AllowedCPUs</span></code>, containers) is enforced. A thread which can’t be
+started on its CPU stops BNG Blaster with an error.</p>
 <p>Following an example configuration using automatic CPU placement.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
@@ -614,13 +666,21 @@ extra TX threads.</p>
 </div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>AF_XDP frames are limited to 4096 bytes, so <code class="docutils literal notranslate"><span class="pre">jumbo-frames</span></code> are not
-supported by this I/O mode and the maximum stream packet length is
-reduced accordingly.</p>
+<p>Each packet is stored in a single AF_XDP frame (buffer) of 4096 bytes,
+so <code class="docutils literal notranslate"><span class="pre">jumbo-frames</span></code> are not supported by this I/O mode and the maximum
+stream packet length is reduced accordingly. On receive, the kernel
+reserves 256 bytes of each frame as headroom, so received packets larger
+than 3840 bytes are dropped by the kernel. The interface MTU may be
+larger than this.</p>
 </div>
 <p>Like DPDK, AF_XDP requires the NIC to actually provide as many hardware
 queues as bngblaster needs, i.e. <code class="docutils literal notranslate"><span class="pre">rx-threads</span></code> + <code class="docutils literal notranslate"><span class="pre">tx-threads</span></code> (each
 defaulting to 1 if left unset), since RX and TX never share a queue.
+Some drivers support AF_XDP on fewer queues than the interface provides,
+for example i40e only on as many queues as CPUs are available, which is
+relevant for virtual machines with few CPUs. If a queue can’t be bound
+while the previous queues of the interface were bound, this is logged with
+a hint to reduce the threads.
 BNG Blaster reconfigures the interface to the required number of combined
 queues automatically via <code class="docutils literal notranslate"><span class="pre">ethtool</span></code>-equivalent ioctls (the same effect as
 running <code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-L</span> <span class="pre">&lt;interface&gt;</span> <span class="pre">combined</span> <span class="pre">&lt;n&gt;</span></code> beforehand) - if that fails
@@ -629,7 +689,52 @@ instead of combined ones), it is logged with a hint to configure it
 manually. Native (driver) mode additionally requires a driver with native
 XDP support; BNG Blaster automatically falls back to generic (SKB) mode -
 which works on any interface, including <code class="docutils literal notranslate"><span class="pre">veth</span></code> - if native mode is not
-available.</p>
+available. Some drivers do not support native mode if the interface MTU
+exceeds their maximum linear frame size (e.g. i40e with an MTU larger than
+3046 bytes), so lower the MTU (e.g. <code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">link</span> <span class="pre">set</span> <span class="pre">&lt;interface&gt;</span> <span class="pre">mtu</span> <span class="pre">2048</span></code>)
+to get native zero-copy mode, which performs much better than generic mode.</p>
+<p>The mode is not selected based on the MTU. Native mode is always tried
+first, and BNG Blaster falls back to generic mode only if the driver rejects
+it, which is logged once per interface:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Warning: AF_XDP native mode not available for interface eth1 (Invalid argument), falling back to generic (SKB) mode
+</pre></div>
+</div>
+<p>The selected mode is then used for all queues of this interface. The mode can be
+selected per link with <code class="docutils literal notranslate"><span class="pre">af-xdp-mode</span></code>: <code class="docutils literal notranslate"><span class="pre">auto</span></code> (default) uses native mode with zero-copy if
+supported by the driver, <code class="docutils literal notranslate"><span class="pre">zero-copy</span></code> fails instead of falling back, <code class="docutils literal notranslate"><span class="pre">copy</span></code> uses native mode
+without zero-copy and <code class="docutils literal notranslate"><span class="pre">generic</span></code> uses generic mode.</p>
+<p>Zero-copy mode depends on the driver filling the NIC RX ring from the AF_XDP fill ring. With
+the Intel ice driver (E810) and an IOMMU in translation mode (<code class="docutils literal notranslate"><span class="pre">DMA</span></code> or <code class="docutils literal notranslate"><span class="pre">DMA-FQ</span></code> in
+<code class="docutils literal notranslate"><span class="pre">/sys/bus/pci/devices/&lt;pci&gt;/iommu_group/type</span></code>), some kernels (e.g. 6.8) fill the ring only with
+a few buffers per interrupt, which drops most of the received packets. This is visible as
+<code class="docutils literal notranslate"><span class="pre">Failed</span> <span class="pre">to</span> <span class="pre">allocate</span> <span class="pre">some</span> <span class="pre">buffers</span> <span class="pre">on</span> <span class="pre">XSK</span> <span class="pre">buffer</span> <span class="pre">pool</span> <span class="pre">enabled</span> <span class="pre">Rx</span> <span class="pre">ring</span></code> in the kernel log and
+<code class="docutils literal notranslate"><span class="pre">rx_dropped</span></code> increasing with only few packets per RX queue (<code class="docutils literal notranslate"><span class="pre">rx_queue_&lt;n&gt;_packets</span></code>). Use
+<code class="docutils literal notranslate"><span class="pre">iommu=pt</span></code> if possible, otherwise <code class="docutils literal notranslate"><span class="pre">af-xdp-mode</span></code> <code class="docutils literal notranslate"><span class="pre">copy</span></code> for such interfaces (see
+<a class="reference internal" href="#af-xdp-tuning"><span class="std std-ref">AF_XDP Tuning</span></a>).</p>
+<p>A warning is logged at startup if the interface MTU exceeds 3712
+bytes (MTU plus 128 bytes of worst-case header overhead does not fit into the
+3840 bytes of a received frame). The actual mode of each queue is logged with
+<code class="docutils literal notranslate"><span class="pre">-l</span> <span class="pre">af_xdp</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>AF_XDP: interface eth1 queue 0 bound (native mode, zero-copy, RX only, 4096 RX / 0 TX frames of 4096 byte)
+AF_XDP: interface eth2 queue 0 bound (generic mode, copy, RX only, 4096 RX / 0 TX frames of 4096 byte)
+</pre></div>
+</div>
+<p>Here, <code class="docutils literal notranslate"><span class="pre">4096</span> <span class="pre">RX</span> <span class="pre">/</span> <span class="pre">0</span> <span class="pre">TX</span> <span class="pre">frames</span></code> is the number of frames (<code class="docutils literal notranslate"><span class="pre">io-slots</span></code>, or
+<code class="docutils literal notranslate"><span class="pre">io-slots-rx</span></code> and <code class="docutils literal notranslate"><span class="pre">io-slots-tx</span></code> per link, rounded up to a power of 2) and <code class="docutils literal notranslate"><span class="pre">of</span> <span class="pre">4096</span> <span class="pre">byte</span></code> is the size
+of each frame, not the maximum packet size.</p>
+<p>BNG Blaster increases the NIC RX ring to 4096 descriptors (limited to the NIC
+maximum, a larger ring is kept), as the small default of some drivers (e.g. 512
+on i40e) causes RX loss at high rates (see <a class="reference internal" href="#performance"><span class="std std-ref">NIC RX ring</span></a>).
+The RX frames are sized to at least twice the NIC RX ring, e.g. 8192 RX frames
+for a ring of 4096 or 16384 for a ring of 8160, unless <code class="docutils literal notranslate"><span class="pre">io-slots-rx</span></code> is
+configured explicitly for the link, in which case a too small value is only
+logged as warning. <code class="docutils literal notranslate"><span class="pre">io-slots</span></code> is used as minimum. Each frame uses 4096 bytes
+of memory, so a ring of 4096 requires 32 MB per RX queue (64 MB for a ring of
+8160).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>AF_XDP: interface eth1 NIC RX ring increased to 4096 (was 512)
+AF_XDP: interface eth1 uses 8192 RX frames per queue for NIC RX ring 4096
+</pre></div>
+</div>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>If the NIC has more queues configured than bngblaster binds AF_XDP
@@ -639,8 +744,36 @@ redirected to bngblaster, which looks like silent RX loss for the
 affected flows. This is exactly what the automatic queue
 reconfiguration above avoids.</p>
 </div>
+<p>BNG Blaster changes the number of queues, the RSS indirection table, the NIC
+RX ring and the RX VLAN offload of the interface. This configuration is saved
+before and restored on exit, also if the initialization failed. The queues are
+restored before the RSS indirection table, which might reference queues that
+do not exist before. An RSS indirection table that was the driver default is
+reset to the default (<code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-X</span> <span class="pre">&lt;interface&gt;</span> <span class="pre">default</span></code>), so that the driver
+still adjusts it to later changes of the number of queues. If the
+configuration can’t be restored completely, this is logged as error and BNG
+Blaster exits with a non-zero exit status. The configuration is not restored
+if BNG Blaster is killed (e.g. <code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code>) or crashes, in which case the next
+test restores the configuration it found at startup.</p>
+<p>BNG Blaster removes its AF_XDP sockets on exit, which also detaches the XDP
+program from the interface. An XDP program which is still attached after
+the sockets are removed is detached on exit as well, if the interface had no
+XDP program attached at startup (e.g. attached via netlink by libbpf before
+version 1.0 instead of a BPF link). If BNG Blaster built with libxdp is killed or
+crashes, the XDP program stays attached, as libxdp attaches it via netlink
+and not via a BPF link that is released with the process. Such a program
+does not prevent further tests, but keeps the interface in XDP mode (e.g.
+the MTU can’t be increased beyond the driver limit) and is not removed by
+later tests, as it might also be used by another application. A warning is
+logged at startup if an XDP program is already attached:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Warning: AF_XDP interface eth1 has XDP program 194 already attached (e.g. left behind by a killed BNG Blaster), please remove it if not used by another application (e.g. &#39;xdp-loader unload eth1 --all&#39;)
+</pre></div>
+</div>
+<p>Remove it manually with <code class="docutils literal notranslate"><span class="pre">xdp-loader</span> <span class="pre">unload</span> <span class="pre">&lt;interface&gt;</span> <span class="pre">--all</span></code>, which also
+removes the files pinned by libxdp in <code class="docutils literal notranslate"><span class="pre">/sys/fs/bpf/xdp/</span></code>
+(<code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">link</span> <span class="pre">set</span> <span class="pre">&lt;interface&gt;</span> <span class="pre">xdp</span> <span class="pre">off</span></code> detaches the program only).</p>
 <section id="af-xdp-tuning">
-<h3>AF_XDP Tuning<a class="headerlink" href="#af-xdp-tuning" title="Permalink to this headline"></a></h3>
+<span id="id4"></span><h3>AF_XDP Tuning<a class="headerlink" href="#af-xdp-tuning" title="Permalink to this headline"></a></h3>
 <p>The following recommendations are based on tests with PPPoE traffic between
 two directly connected 10G ports of an Intel X710 adapter (i40e driver),
 using native zero-copy mode.</p>
@@ -665,7 +798,18 @@ looks fine. Ideally, busy threads run on different physical cores, as SMT
 siblings share the resources of one physical core.</p>
 <p><strong>Buffers:</strong> Short delays of RX threads can be absorbed with larger buffers.
 In our tests, a NIC RX ring of 8160 with <code class="docutils literal notranslate"><span class="pre">io-slots-rx</span></code> of 16384 removed the
-remaining loss caused by such delays (see the NIC RX ring requirements above).</p>
+remaining loss caused by such delays (see the NIC RX ring requirements above).
+BNG Blaster increases the NIC RX ring only to 4096, so set the larger ring
+before the test (<code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-G</span> <span class="pre">&lt;interface&gt;</span> <span class="pre">rx</span> <span class="pre">8160</span></code>), the RX frames are then
+sized automatically.</p>
+<p><strong>Zero-copy or copy mode:</strong> Native zero-copy mode is the fastest mode and used by
+default if supported by the driver. Copy mode (<code class="docutils literal notranslate"><span class="pre">&quot;af-xdp-mode&quot;:</span> <span class="pre">&quot;copy&quot;</span></code>) copies each
+packet between the driver and the AF_XDP frames, which limits the packet rate. In our
+tests, a single RX and TX thread reached about 4.4 Mpps in copy mode compared to 11 Mpps
+(10G line rate) in zero-copy mode. Use copy mode only for interfaces where zero-copy
+mode performs badly, e.g. the Intel ice driver with an IOMMU in translation mode (see
+above), where copy mode performed much better than zero-copy mode. Check the actual
+mode of each queue with <code class="docutils literal notranslate"><span class="pre">-l</span> <span class="pre">af_xdp</span></code>.</p>
 <p id="single-queue"><strong>Single queue:</strong> If RSS can’t distribute the received traffic, e.g. PPPoE
 without the <a class="reference internal" href="#ddp-pppoe"><span class="std std-ref">DDP profile</span></a> or
 <a class="reference internal" href="#rss-vlan-mac"><span class="std std-ref">RSS by VLAN and MAC</span></a>, all packets
