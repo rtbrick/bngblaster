@@ -252,7 +252,10 @@ io_interface_irq_cpus(bbl_interface_s *interface, bool *irq_cpus)
     struct dirent *entry;
     DIR *dir;
 
-    if(interface->config->io_mode == IO_MODE_DPDK ||
+    /* LAG interfaces have no link configuration and no interrupts,
+     * which are handled by their member interfaces. */
+    if(!interface->config ||
+       interface->config->io_mode == IO_MODE_DPDK ||
        interface->config->io_mode == IO_MODE_LOOPBACK) {
         return 0;
     }

@@ -134,9 +134,11 @@ for interface links referenced by interface functions.
 Link Aggregation (LAG)
 ~~~~~~~~~~~~~~~~~~~~~~
 
-The BNG Blaster supports link aggregation (LAG) with and without 
-LACP. The created LAG interface can be used as the parent interface link 
-for all kinds of interface functions. 
+The BNG Blaster supports link aggregation (LAG) with and without
+LACP. The created LAG interface can be used as the parent interface link
+for all kinds of interface functions. The member links support RX threads
+(``rx-threads``) but no TX threads, so ``tx-threads`` must not be configured
+for LAG members.
 
 .. include:: configuration/interfaces_lag.rst
 
