@@ -7,13 +7,15 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "io.h"
+#include <dirent.h>
 #include <sys/file.h>
 
 static bool g_io_cpu_reserved[CPU_SETSIZE];
 /* CPU locks of this instance, see io_thread_cpu_lock(). */
 static bool g_io_cpu_locked[CPU_SETSIZE];
 static int g_io_cpu_lock_fd[CPU_SETSIZE];
-static uint16_t g_io_cpu_lock_slot[CPU_SETSIZE];
+/* Number of other instances using a CPU, see io_thread_cpu_scan(). */
+static uint16_t g_io_cpu_users[CPU_SETSIZE];
 
 /* CPUs allowed for this process (e.g. restricted with taskset or a
  * cgroup cpuset), saved at startup before DPDK pins the main thread. */
@@ -365,100 +367,127 @@ io_thread_main(void *thread_data)
     return NULL;
 }
 
-/* Max number of instances sharing a CPU with a lock each. */
-#define IO_CPU_LOCK_SLOTS 32
+/* Each instance locks the file "bngblaster_cpu<N>.<PID>.lock" for every
+ * CPU used by its threads until exit, which is released by the kernel
+ * also if the instance is killed or crashes. The CPUs are selected while
+ * holding the selection lock "bngblaster_cpus.lock", so that instances
+ * started at the same time select their CPUs one after another. */
+#define IO_CPU_LOCK_DIR             "/run/lock"
+#define IO_CPU_SELECT_LOCK          IO_CPU_LOCK_DIR "/bngblaster_cpus.lock"
+#define IO_CPU_SELECT_TIMEOUT_MS    5000
 
-/* Each instance using a CPU locks its own lock file (slot) of this CPU,
- * slot 0 is "bngblaster_cpu<N>.lock" and further slots used for sharing
- * the CPU are "bngblaster_cpu<N>.<slot>.lock". */
 static void
-io_thread_cpu_lock_path(char *path, size_t len, uint16_t cpu, uint16_t slot)
+io_thread_cpu_lock_path(char *path, size_t len, uint16_t cpu)
 {
-    if(slot) {
-        snprintf(path, len, "/run/lock/bngblaster_cpu%u.%u.lock", cpu, slot);
-    } else {
-        snprintf(path, len, "/run/lock/bngblaster_cpu%u.lock", cpu);
-    }
+    snprintf(path, len, IO_CPU_LOCK_DIR "/bngblaster_cpu%u.%d.lock", cpu, getpid());
 }
 
 /**
- * Count other instances using a CPU, which hold a lock of this CPU.
+ * Acquire the CPU selection lock, waiting while another instance
+ * selects its CPUs. The file is never removed.
  *
- * @param cpu CPU
- * @return number of other instances using the CPU
+ * @return file descriptor or -1 if CPUs are selected without coordination
  */
-static uint16_t
-io_thread_cpu_users(uint16_t cpu)
+static int
+io_thread_cpu_select_lock()
 {
-    char path[64];
-    uint16_t users = 0;
-    uint16_t slot;
+    struct timespec delay = {.tv_sec = 0, .tv_nsec = 10000000};
+    int fd;
+    int i;
+
+    fd = open(IO_CPU_SELECT_LOCK, O_RDWR|O_CREAT|O_CLOEXEC, 0666);
+    if(fd == -1) {
+        LOG(DEBUG, "Failed to open CPU selection lock %s (%s)\n", IO_CPU_SELECT_LOCK, strerror(errno));
+        return -1;
+    }
+    /* Allow processes of other users to lock the file, independent of umask. */
+    fchmod(fd, 0666);
+    for(i = 0; i < IO_CPU_SELECT_TIMEOUT_MS / 10; i++) {
+        if(flock(fd, LOCK_EX|LOCK_NB) == 0) {
+            return fd;
+        }
+        if(errno != EWOULDBLOCK) {
+            break;
+        }
+        nanosleep(&delay, NULL);
+    }
+    LOG(INFO, "Warning: Failed to acquire CPU selection lock %s, "
+        "CPUs are selected without coordination with other instances\n", IO_CPU_SELECT_LOCK);
+    close(fd);
+    return -1;
+}
+
+/**
+ * Count the other instances using each CPU, which hold a lock file
+ * of this CPU, and remove lock files left behind by killed instances.
+ * This is done while holding the selection lock, so no other instance
+ * locks a CPU at the same time.
+ */
+static void
+io_thread_cpu_scan()
+{
+    char path[sizeof(IO_CPU_LOCK_DIR) + 256];
+    struct dirent *entry;
+    DIR *dir;
+    unsigned int cpu;
+    int pid;
+    int len;
     int fd;
 
-    for(slot = 0; slot < IO_CPU_LOCK_SLOTS; slot++) {
-        if(g_io_cpu_locked[cpu] && g_io_cpu_lock_slot[cpu] == slot) {
+    memset(g_io_cpu_users, 0x0, sizeof(g_io_cpu_users));
+    dir = opendir(IO_CPU_LOCK_DIR);
+    if(!dir) {
+        return;
+    }
+    while((entry = readdir(dir))) {
+        len = 0;
+        if(sscanf(entry->d_name, "bngblaster_cpu%u.%d.lock%n", &cpu, &pid, &len) != 2 ||
+           !len || entry->d_name[len] != '\0' || cpu >= CPU_SETSIZE) {
             continue;
         }
-        io_thread_cpu_lock_path(path, sizeof(path), cpu, slot);
+        snprintf(path, sizeof(path), IO_CPU_LOCK_DIR "/%s", entry->d_name);
         fd = open(path, O_RDONLY|O_CLOEXEC);
         if(fd == -1) {
             continue;
         }
-        /* A shared lock is refused only if another process holds the
-         * exclusive lock, and is released immediately by close(). */
-        if(flock(fd, LOCK_SH|LOCK_NB) == -1 && errno == EWOULDBLOCK) {
-            users++;
+        /* A shared lock is refused only if the instance
+         * using this CPU still holds its exclusive lock. */
+        if(flock(fd, LOCK_SH|LOCK_NB) == -1) {
+            if(errno == EWOULDBLOCK) {
+                g_io_cpu_users[cpu]++;
+            }
+        } else {
+            unlink(path);
         }
         close(fd);
     }
-    return users;
+    closedir(dir);
 }
 
 /**
  * Lock a CPU for this instance, so that the automatic CPU placement of
- * other instances running in parallel skips it, or shares it evenly if
- * no other CPU is free. The lock is released by the kernel if the
- * process exits for any reason (see lock_file_acquire()).
+ * other instances skips it, or shares it evenly if no other CPU is free.
  *
  * @param cpu CPU
- * @param share lock the CPU also if used by other instances
- * @return false if the CPU is used by another instance and share is false
  */
-static bool
-io_thread_cpu_lock(uint16_t cpu, bool share)
+static void
+io_thread_cpu_lock(uint16_t cpu)
 {
     char path[64];
-    uint16_t slot;
     int fd;
 
     if(g_io_cpu_locked[cpu]) {
-        return true;
+        return;
     }
-    for(slot = 0; slot < (share ? IO_CPU_LOCK_SLOTS : 1); slot++) {
-        io_thread_cpu_lock_path(path, sizeof(path), cpu, slot);
-        fd = lock_file_acquire(path);
-        if(fd == -1) {
-            if(errno == EWOULDBLOCK) {
-                continue;
-            }
-            /* The CPU can't be coordinated with other instances. */
-            LOG(DEBUG, "Failed to lock CPU %u with %s (%s)\n", cpu, path, strerror(errno));
-            return true;
-        }
-        g_io_cpu_locked[cpu] = true;
-        g_io_cpu_lock_fd[cpu] = fd;
-        g_io_cpu_lock_slot[cpu] = slot;
-        /* The first lock of a CPU might be free while another
-         * instance still shares this CPU with a further lock. */
-        if(!share && io_thread_cpu_users(cpu)) {
-            lock_file_release(fd, path);
-            g_io_cpu_locked[cpu] = false;
-            return false;
-        }
-        return true;
+    io_thread_cpu_lock_path(path, sizeof(path), cpu);
+    fd = lock_file_acquire(path);
+    if(fd == -1) {
+        /* The CPU can't be coordinated with other instances. */
+        LOG(DEBUG, "Failed to lock CPU %u with %s (%s)\n", cpu, path, strerror(errno));
+        return;
     }
-    /* Too many instances sharing this CPU to lock it. */
-    return share;
+    g_io_cpu_locked[cpu] = true;
+    g_io_cpu_lock_fd[cpu] = fd;
 }
 
 /**
@@ -472,7 +501,7 @@ io_thread_unlock_cpus()
 
     for(cpu = 0; cpu < CPU_SETSIZE; cpu++) {
         if(g_io_cpu_locked[cpu]) {
-            io_thread_cpu_lock_path(path, sizeof(path), cpu, g_io_cpu_lock_slot[cpu]);
+            io_thread_cpu_lock_path(path, sizeof(path), cpu);
             lock_file_release(g_io_cpu_lock_fd[cpu], path);
             g_io_cpu_locked[cpu] = false;
         }
@@ -500,7 +529,6 @@ io_thread_select_cpu(bbl_interface_s *interface, uint16_t *cursor, bool *irq_cpu
     uint16_t start = *cursor % interface->local_cpuset_count;
     uint16_t index;
     uint16_t selected = 0;
-    uint16_t users;
     uint16_t min_users = UINT16_MAX;
     uint16_t cpu;
     int pass;
@@ -510,15 +538,13 @@ io_thread_select_cpu(bbl_interface_s *interface, uint16_t *cursor, bool *irq_cpu
     for(pass = 0; pass < 2; pass++) {
         for(index = 0; index < interface->local_cpuset_count; index++) {
             cpu = interface->local_cpuset[(start + index) % interface->local_cpuset_count];
-            if(cpu >= CPU_SETSIZE || g_io_cpu_reserved[cpu]) {
+            if(cpu >= CPU_SETSIZE || g_io_cpu_reserved[cpu] || g_io_cpu_users[cpu]) {
                 continue;
             }
             if(pass == 0 && irq_cpus[cpu]) {
                 continue;
             }
-            if(!io_thread_cpu_lock(cpu, false)) {
-                continue;
-            }
+            io_thread_cpu_lock(cpu);
             g_io_cpu_reserved[cpu] = true;
             *cursor = (start + index + 1) % interface->local_cpuset_count;
             return cpu;
@@ -532,9 +558,8 @@ io_thread_select_cpu(bbl_interface_s *interface, uint16_t *cursor, bool *irq_cpu
         if(cpu >= CPU_SETSIZE || g_io_cpu_reserved[cpu]) {
             continue;
         }
-        users = io_thread_cpu_users(cpu);
-        if(users < min_users) {
-            min_users = users;
+        if(g_io_cpu_users[cpu] < min_users) {
+            min_users = g_io_cpu_users[cpu];
             selected = index;
         }
     }
@@ -542,7 +567,7 @@ io_thread_select_cpu(bbl_interface_s *interface, uint16_t *cursor, bool *irq_cpu
         return -1;
     }
     cpu = interface->local_cpuset[(start + selected) % interface->local_cpuset_count];
-    io_thread_cpu_lock(cpu, true);
+    io_thread_cpu_lock(cpu);
     g_io_cpu_reserved[cpu] = true;
     *cursor = (start + selected + 1) % interface->local_cpuset_count;
     *shared = true;
@@ -602,13 +627,17 @@ io_thread_auto_affinity(io_thread_s *thread, io_handle_s *io, bool *irq_cpus)
 }
 
 /**
- * Pin the main thread to a free CPU local to the first interface if the
- * automatic CPU placement is used, so that it does not run on the CPUs of
- * I/O threads of this or other instances. This is done after all I/O
- * threads are started, which would otherwise inherit its CPU affinity.
+ * Select a free CPU local to the first interface for the main thread if
+ * the automatic CPU placement is used, so that it does not run on the CPUs
+ * of I/O threads of this or other instances. The main thread is pinned
+ * after all I/O threads are started, which would otherwise inherit its
+ * CPU affinity.
+ *
+ * @param irq_cpus CPUs handling NIC interrupts
+ * @return selected CPU or -1
  */
-static void
-io_thread_main_affinity(bool *irq_cpus)
+static int
+io_thread_main_select_cpu(bool *irq_cpus)
 {
     bbl_interface_s *interface;
     bbl_interface_s *local = NULL;
@@ -619,7 +648,7 @@ io_thread_main_affinity(bool *irq_cpus)
 
     /* The main thread is already pinned (e.g. by DPDK). */
     if(sched_getaffinity(0, sizeof(cpuset), &cpuset) == 0 && CPU_COUNT(&cpuset) == 1) {
-        return;
+        return -1;
     }
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         if(interface->local_cpuset_count) {
@@ -628,14 +657,20 @@ io_thread_main_affinity(bool *irq_cpus)
         }
     }
     if(!local) {
-        return;
+        return -1;
     }
-    interface = local;
-    cpu = io_thread_select_cpu(interface, &cursor, irq_cpus, false, &shared);
+    cpu = io_thread_select_cpu(local, &cursor, irq_cpus, false, &shared);
     if(cpu < 0) {
         LOG(INFO, "Warning: No free CPU for the main thread\n");
-        return;
     }
+    return cpu;
+}
+
+static void
+io_thread_main_pin(int cpu)
+{
+    cpu_set_t cpuset;
+
     CPU_ZERO(&cpuset);
     CPU_SET(cpu, &cpuset);
     if(pthread_setaffinity_np(pthread_self(), sizeof(cpu_set_t), &cpuset)) {
@@ -747,16 +782,18 @@ io_thread_init(io_handle_s *io)
  * warn about threads running on CPUs handling NIC interrupts
  * or used by other instances.
  *
- * @param irq_cpus CPUs handling NIC interrupts, set
- * @return true if the automatic CPU placement is used
+ * @return CPU selected for the main thread or -1
  */
-static bool
-io_thread_set_affinity_all(bool *irq_cpus)
+static int
+io_thread_set_affinity_all()
 {
     io_thread_s *thread;
     bbl_interface_s *interface;
+    bool irq_cpus[CPU_SETSIZE] = {0};
     uint16_t irqs;
     bool auto_cpuset = false;
+    int main_cpu = -1;
+    int select_fd;
 
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         irqs = io_interface_irq_cpus(interface, irq_cpus);
@@ -765,13 +802,18 @@ io_thread_set_affinity_all(bool *irq_cpus)
         }
     }
 
+    select_fd = io_thread_cpu_select_lock();
+    io_thread_cpu_scan();
+
     /* Lock the CPUs of manually pinned threads first, which are
      * skipped by the automatic CPU placement of other instances. */
     thread = g_ctx->io_threads;
     while(thread) {
+        if(thread->set_cpu_affinity && thread->selected_cpu >= 0 && thread->selected_cpu < CPU_SETSIZE) {
+            io_thread_cpu_lock(thread->selected_cpu);
+        }
         if(thread->set_cpu_affinity && thread->selected_cpu >= 0 &&
-           thread->selected_cpu < CPU_SETSIZE && !io_thread_cpu_lock(thread->selected_cpu, false)) {
-            io_thread_cpu_lock(thread->selected_cpu, true);
+           thread->selected_cpu < CPU_SETSIZE && g_io_cpu_users[thread->selected_cpu]) {
             LOG(INFO, "Warning: %s thread of interface %s runs on CPU %d which is also used "
                 "by another BNG Blaster instance\n",
                 thread->io->direction == IO_INGRESS ? "RX" : "TX",
@@ -794,7 +836,13 @@ io_thread_set_affinity_all(bool *irq_cpus)
         }
         thread = thread->next;
     }
-    return auto_cpuset;
+    if(auto_cpuset) {
+        main_cpu = io_thread_main_select_cpu(irq_cpus);
+    }
+    if(select_fd >= 0) {
+        close(select_fd);
+    }
+    return main_cpu;
 }
 
 /**
@@ -813,8 +861,7 @@ io_thread_start_all()
     struct timespec rem = {0};
     char name[16]; /* thread names are limited to 15 characters */
     pthread_attr_t attr;
-    bool irq_cpus[CPU_SETSIZE] = {0};
-    bool auto_cpuset;
+    int main_cpu;
     int threads = 0;
     int ret;
 
@@ -828,7 +875,7 @@ io_thread_start_all()
         LOG(INFO, "Warning: %d I/O threads plus main thread exceed %d available CPUs\n",
             threads, CPU_COUNT(&g_io_cpu_allowed));
     }
-    auto_cpuset = io_thread_set_affinity_all(irq_cpus);
+    main_cpu = io_thread_set_affinity_all();
     thread = g_ctx->io_threads;
 
     sleep.tv_nsec = 7800179; /* prime number between 7 and 8ms */
@@ -863,8 +910,8 @@ io_thread_start_all()
         nanosleep(&sleep, &rem);
         thread = thread->next;
     }
-    if(auto_cpuset) {
-        io_thread_main_affinity(irq_cpus);
+    if(main_cpu >= 0) {
+        io_thread_main_pin(main_cpu);
     }
     return true;
 }

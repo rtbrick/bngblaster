@@ -15,6 +15,9 @@ Functional tests over veth pairs between network namespaces:
   from BNG Blaster to BIRD) and authentication (`test_ospf_bird.py`)
 * All examples of the quickstart guide: PPPoE, DHCP, ISIS, BGP, LDP
   and network traffic (`test_quickstart.py`)
+* Automatic CPU placement of BNG Blaster instances started in
+  parallel on loopback links, running on the host without namespaces
+  (`test_cpu_placement.py`)
 
 Each test creates two namespaces `bbl-it-<n>-a` and `bbl-it-<n>-b`
 connected by a veth pair. Configs, logs, pcaps and JSON reports of all

@@ -330,17 +330,23 @@ is running, which can be prevented by excluding those CPUs from ``irqbalance`` o
 interrupt affinity manually.
 
 Multiple BNG Blaster instances running in parallel (e.g. one per SR-IOV virtual function) coordinate
-their automatic CPU placement. Each instance locks the CPUs of its threads using the files
-``/run/lock/bngblaster_cpu<N>.lock``, which are skipped by the automatic CPU placement of other
-instances. The same applies to the interfaces, locked with ``/run/lock/bngblaster_<interface>.lock``.
-Those are no simple lock files, which would remain after a crash, but locks held by the kernel
-(``flock``), which are released when the instance exits, also if it is killed or crashes. The files
-are removed on exit, while files left behind by a killed instance are not locked anymore and simply
-reused. Do not remove those files while BNG Blaster is running, as this allows other instances to
-use the same interface or CPU. If all local CPUs are used, a thread shares the CPU used by the
-fewest other instances and a warning is logged. Each instance sharing a CPU holds its own lock
-(``/run/lock/bngblaster_cpu<N>.<slot>.lock``), so that the CPU is still known to be used if the
-first instance exits.
+their automatic CPU placement. Each instance locks every CPU used by its threads with the file
+``/run/lock/bngblaster_cpu<N>.<PID>.lock``, so ``ls /run/lock/bngblaster_cpu*`` shows which process
+uses which CPU. A CPU locked by another instance is skipped by the automatic CPU placement. If all
+local CPUs are used, a thread shares the CPU used by the fewest other instances and a warning is
+logged. Instances started at the same time select their CPUs one after another, serialized by the
+file ``/run/lock/bngblaster_cpus.lock``, so that they never select the same free CPU. An instance
+waits up to 5 seconds for this lock and otherwise selects its CPUs without coordination, which is
+logged as warning.
+
+The interfaces are locked with ``/run/lock/bngblaster_<interface>.lock``, so that two instances can
+not use the same interface. All those are no simple lock files, which would remain after a crash,
+but locks held by the kernel (``flock``), which are released when the instance exits, also if it is
+killed or crashes. The files are removed on exit. Files left behind by a killed instance are not
+locked anymore: interface lock files are simply reused and CPU lock files are removed by the next
+instance. Do not remove those files while BNG Blaster is running, as this allows other instances to
+use the same interface or CPU. With instances in different containers, ``/run/lock`` must be shared
+between the containers for this coordination.
 
 .. code-block:: none
 
