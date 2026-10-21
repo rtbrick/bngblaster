@@ -662,6 +662,11 @@ extra TX threads.
 Like DPDK, AF_XDP requires the NIC to actually provide as many hardware
 queues as bngblaster needs, i.e. ``rx-threads`` + ``tx-threads`` (each
 defaulting to 1 if left unset), since RX and TX never share a queue.
+Some drivers support AF_XDP on fewer queues than the interface provides,
+for example i40e only on as many queues as CPUs are available, which is
+relevant for virtual machines with few CPUs. If a queue can't be bound
+while the previous queues of the interface were bound, this is logged with
+a hint to reduce the threads.
 BNG Blaster reconfigures the interface to the required number of combined
 queues automatically via ``ethtool``-equivalent ioctls (the same effect as
 running ``ethtool -L <interface> combined <n>`` beforehand) - if that fails

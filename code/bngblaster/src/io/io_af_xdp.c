@@ -43,6 +43,7 @@
 #include <bpf/libbpf.h>
 #endif
 #include <linux/if_link.h>
+#include <sys/sysinfo.h>
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
 
@@ -1101,7 +1102,7 @@ io_af_xdp_seed_fill(io_af_xdp_queue_s *q)
 
 static bool
 io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_qmode_t qmode,
-                        uint32_t *xdp_flags, io_af_xdp_queue_s **queue_out)
+                        bool select_mode, uint32_t *xdp_flags, io_af_xdp_queue_s **queue_out)
 {
     bbl_link_config_s *config = interface->config;
     io_af_xdp_queue_s *q;
@@ -1217,7 +1218,10 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
         q->xsk = NULL;
         io_af_xdp_umem_delete(q);
 
-        if(sock_cfg.xdp_flags == XDP_FLAGS_DRV_MODE && config->af_xdp_mode != AF_XDP_MODE_ZERO_COPY) {
+        /* The mode is selected with the first queue and used for all
+         * further queues, which must not fall back to another mode. */
+        if(select_mode && sock_cfg.xdp_flags == XDP_FLAGS_DRV_MODE &&
+           config->af_xdp_mode != AF_XDP_MODE_ZERO_COPY) {
             LOG(INFO, "Warning: AF_XDP native mode not available for interface %s (%s), "
                 "falling back to generic (SKB) mode\n", interface->name, strerror(err));
             sock_cfg.xdp_flags = XDP_FLAGS_SKB_MODE;
@@ -1226,6 +1230,15 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
             LOG(DEBUG, "AF_XDP: interface %s queue %u busy, retry bind (%u/%u)\n",
                 interface->name, queue_id, retries, AF_XDP_BIND_RETRIES);
             nanosleep(&retry_delay, NULL);
+        } else if(!select_mode) {
+            /* Previous queues of this interface are bound. */
+            LOG(ERROR, "AF_XDP: failed to create socket for interface %s queue %u (%s), "
+                "while the previous queues were bound - the driver might support AF_XDP "
+                "on fewer queues than required by rx-threads/tx-threads (e.g. i40e only "
+                "on as many queues as CPUs, which are %d), please reduce the threads\n",
+                interface->name, queue_id, strerror(err), get_nprocs());
+            io_af_xdp_queue_destroy(q);
+            return false;
         } else {
             LOG(ERROR, "AF_XDP: failed to create socket for interface %s queue %u (%s) - "
                 "possible causes: not enough RX/TX queues on the interface, an XDP "
@@ -1753,7 +1766,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
     }
 
     for(queue = 0; queue < rx_queues; queue++) {
-        if(!io_af_xdp_queue_create(interface, queue, AF_XDP_Q_RX_ONLY, &xdp_flags, &q)) {
+        if(!io_af_xdp_queue_create(interface, queue, AF_XDP_Q_RX_ONLY, queue == 0, &xdp_flags, &q)) {
             return false;
         }
 
@@ -1782,7 +1795,7 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
 
     for(queue = 0; queue < tx_queues; queue++) {
         nic_queue_id = rx_queues + queue;
-        if(!io_af_xdp_queue_create(interface, nic_queue_id, AF_XDP_Q_TX_ONLY, &xdp_flags, &q)) {
+        if(!io_af_xdp_queue_create(interface, nic_queue_id, AF_XDP_Q_TX_ONLY, false, &xdp_flags, &q)) {
             return false;
         }
 
