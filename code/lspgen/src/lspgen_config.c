@@ -1402,6 +1402,16 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
         lsdb_reset_attr_template(&attr_template);
         scan_ipv4_address(s, (uint32_t*)attr_template.key.cap.router_id);
 
+        value = json_object_get(obj, "s_flag");
+        if (value && json_is_boolean(value)) {
+            attr_template.key.cap.s_flag = json_boolean_value(value);
+        }
+
+        value = json_object_get(obj, "d_flag");
+        if (value && json_is_boolean(value)) {
+            attr_template.key.cap.d_flag = json_boolean_value(value);
+        }
+
         value = json_object_get(obj, "mpls_ipv4_flag");
         if (value && json_is_boolean(value)) {
             attr_template.key.cap.mpls_ipv4_flag = json_boolean_value(value);
@@ -1437,9 +1447,13 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
                 if(num_arr > sizeof(attr_template.key.cap.sr_algo)) {
                     num_arr = sizeof(attr_template.key.cap.sr_algo);
                 }
-                attr_template.key.cap.sr_algo_len = num_arr;
                 for (idx = 0; idx < num_arr; idx++) {
-                    attr_template.key.cap.sr_algo[idx] = (uint8_t) json_integer_value(json_array_get(arr, idx));
+                    value = json_array_get(arr, idx);
+                    if (!json_is_integer(value)) {
+                        LOG_NOARG(ERROR, "Ignore SR algorithm which is not an integer\n");
+                        continue;
+                    }
+                    attr_template.key.cap.sr_algo[attr_template.key.cap.sr_algo_len++] = json_integer_value(value);
                 }
             }
             lspgen_read_msd_config(obj, attr_template.key.cap.msd);
