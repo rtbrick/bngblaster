@@ -1635,7 +1635,7 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
 
             if (ctx->protocol_id == PROTO_ISIS) {
                 attr_template.key.attr_type = ISIS_TLV_HOSTNAME;
-            } else if (ctx->protocol_id == PROTO_OSPF2) {
+            } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
                 attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
                 attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
                 attr_template.key.attr_cp[2] = OSPF_TLV_HOSTNAME;
