@@ -1594,6 +1594,24 @@ lspgen_sig_handler (int signum)
     }
 }
 
+/*
+ * Parse a numeric option and exit on invalid or out of range values.
+ */
+static long
+lspgen_parse_number(const char *arg, const char *name, int base, long min, long max)
+{
+    char *end;
+    long value;
+
+    errno = 0;
+    value = strtol(arg, &end, base);
+    if (errno || *end || end == arg || value < min || value > max) {
+        LOG(ERROR, "Invalid %s %s (range %ld - %ld)\n", name, arg, min, max);
+        exit(EXIT_FAILURE);
+    }
+    return value;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -1672,7 +1690,7 @@ main(int argc, char *argv[])
                 }
                 break;
             case 'M':
-                ctx->lsp_lifetime = atoi(optarg);
+                ctx->lsp_lifetime = lspgen_parse_number(optarg, "lsp-lifetime", 10, 1, UINT16_MAX);
                 if (ctx->lsp_lifetime < LSP_LIFETIME_MIN) {
                     ctx->lsp_lifetime = LSP_LIFETIME_MIN;
                     LOG(ERROR, "Set lsp-lifetime to min %us\n", ctx->lsp_lifetime);
@@ -1738,14 +1756,14 @@ main(int argc, char *argv[])
                 log_enable(optarg);
                 break;
             case 'u':
-                ctx->link_multiplier = strtol(optarg, NULL, 10);
+                ctx->link_multiplier = lspgen_parse_number(optarg, "link-multiplier", 10, 1, INT_MAX);
                 if (ctx->link_multiplier > 150) {
                     ctx->link_multiplier = 150;
                     LOG(ERROR, "Set link-multiplier to maximum %u\n", ctx->link_multiplier);
                 }
                 break;
             case 'c':
-                ctx->num_nodes = strtol(optarg, NULL, 10);
+                ctx->num_nodes = lspgen_parse_number(optarg, "node-count", 10, 1, INT_MAX);
                 if (ctx->num_nodes < 5) {
                     ctx->num_nodes = 5;
                     LOG(ERROR, "Set node count to minimal %u\n", ctx->num_nodes);
@@ -1784,7 +1802,7 @@ main(int argc, char *argv[])
                 scan_ipv6_prefix(optarg, &ctx->ipv6_ext_prefix);
                 break;
             case 'e':
-                ctx->num_ext = strtol(optarg, NULL, 10);
+                ctx->num_ext = lspgen_parse_number(optarg, "external-count", 10, 0, INT_MAX);
                 break;
             case 'K':
                 /* authentication-key */
@@ -1830,7 +1848,7 @@ main(int argc, char *argv[])
                 break;
             case 'I':
                 /* routing instance-id used by BNG Blaster */
-                ctx->ctrl_instance = strtol(optarg, NULL, 0);
+                ctx->ctrl_instance = lspgen_parse_number(optarg, "control-instance", 0, 0, UINT8_MAX);
                 break;
             case 'V':
                 /* level */
