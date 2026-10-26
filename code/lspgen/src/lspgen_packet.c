@@ -1106,7 +1106,6 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
                 push_be_uint(buf2, 2, 1); /* SID Type Label */
                 push_be_uint(buf2, 2, 3); /* SID Type Length */
                 push_be_uint(buf2, 3, attr->key.cap.srgb_base);
-                push_pad4(buf2);
             }
             break;
 
@@ -1457,7 +1456,6 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
                 push_be_uint(buf2, 2, 7); /* SID Type Label */
                 push_be_uint(buf2, 2, 3); /* SID Type Length */
                 push_be_uint(buf2, 3, attr->key.cap.srgb_base);
-                push_pad4(buf2);
 
                 write_be_uint(buf2->data+2, 2, buf2->idx-4); /* Update length */
                 push_pad4(buf2);
