@@ -332,6 +332,22 @@ bgp_evpn_db_add(bgp_session_s *session, bgp_evpn_route_s *route, bgp_evpn_entry_
             update.vpn_label = update.label1;
         }
     }
+
+    /* E-LAN known unicast traffic uses the MAC label (label1) of MAC/IP
+     * routes and BUM traffic the ingress replication label of IMET routes. */
+    update.elan_label_valid = false;
+    update.elan_label = 0;
+    if(!bgp_evpn_encap_vni(encap)) {
+        if(update.key.route_type == BGP_EVPN_ROUTE_MAC_IP) {
+            update.elan_label_valid = true;
+            update.elan_label = update.label1;
+        } else if(update.key.route_type == BGP_EVPN_ROUTE_IMET &&
+                  update.pmsi.present &&
+                  update.pmsi.tunnel_type == BGP_PMSI_INGRESS_REPLICATION) {
+            update.elan_label_valid = true;
+            update.elan_label = update.pmsi.label;
+        }
+    }
     update.source = session;
     update.active = true;
 
@@ -555,6 +571,85 @@ bgp_evpn_lookup(bgp_evpn_key_s *key)
                 if(entry->active && entry->vpn_label_valid) {
                     return entry;
                 }
+            }
+        }
+        session = session->next;
+    }
+    return NULL;
+}
+
+/* First active IMET route with ingress replication label of the session
+ * for the RD and Ethernet tag of the key, independent of the originator. */
+static bgp_evpn_entry_s *
+bgp_evpn_lookup_imet(bgp_session_s *session, bgp_evpn_key_s *key)
+{
+    bgp_evpn_key_s imet = {0};
+    bgp_evpn_entry_s *entry = NULL;
+    hb_itor *itor;
+    bool next;
+
+    imet.route_type = BGP_EVPN_ROUTE_IMET;
+    memcpy(imet.rd, key->rd, BGP_RD_LEN);
+    imet.ethernet_tag = key->ethernet_tag;
+
+    /* The originator IP is the last part of the key,
+     * so all IMET routes of the EVI are adjacent. */
+    itor = hb_itor_new(session->rib.evpn_db);
+    if(!itor) {
+        return NULL;
+    }
+    next = hb_itor_search_ge(itor, &imet);
+    while(next) {
+        entry = *hb_itor_datum(itor);
+        if(memcmp(&entry->key, &imet, offsetof(bgp_evpn_key_s, mac)) != 0) {
+            entry = NULL;
+            break;
+        }
+        if(entry->active && entry->elan_label_valid) {
+            break;
+        }
+        entry = NULL;
+        next = hb_itor_next(itor);
+    }
+    hb_itor_free(itor);
+    return entry;
+}
+
+/**
+ * bgp_evpn_lookup_elan
+ *
+ * Search all sessions (in configuration order) for an active MAC/IP
+ * route (known unicast) with the key of an EVPN E-LAN stream, or an
+ * IMET route of the same EVI otherwise (unknown unicast).
+ *
+ * @param key EVPN MAC/IP route key (MAC only)
+ * @return EVPN entry with E-LAN label or NULL
+ */
+bgp_evpn_entry_s *
+bgp_evpn_lookup_elan(bgp_evpn_key_s *key)
+{
+    bgp_session_s *session = g_ctx->bgp_sessions;
+    bgp_evpn_entry_s *entry;
+    void **search = NULL;
+
+    while(session) {
+        if(session->rib.evpn) {
+            search = hb_tree_search(session->rib.evpn_db, key);
+            if(search) {
+                entry = *search;
+                if(entry->active && entry->elan_label_valid) {
+                    return entry;
+                }
+            }
+        }
+        session = session->next;
+    }
+    session = g_ctx->bgp_sessions;
+    while(session) {
+        if(session->rib.evpn) {
+            entry = bgp_evpn_lookup_imet(session, key);
+            if(entry) {
+                return entry;
             }
         }
         session = session->next;

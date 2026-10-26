@@ -2769,28 +2769,37 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
     return true;
 }
 
-/* Customer VLAN tags within EVPN VPWS services. */
+/* Customer VLAN tags within EVPN VPWS and E-LAN services. */
 static bool
 json_parse_stream_vpws(json_t *stream, bbl_stream_config_s *stream_config)
 {
     json_t *value = NULL;
-    bool vpws = stream_config->bgp_evpn &&
-                stream_config->bgp_evpn_key.route_type == BGP_EVPN_ROUTE_AD;
+    bool l2 = stream_config->bgp_evpn &&
+              (stream_config->bgp_evpn_elan ||
+               stream_config->bgp_evpn_key.route_type == BGP_EVPN_ROUTE_AD);
 
-    if(!vpws) {
+    if(!l2) {
         if(json_object_get(stream, "vpws-vlan") ||
            json_object_get(stream, "vpws-inner-vlan") ||
            json_object_get(stream, "vpws-vlan-priority") ||
            json_object_get(stream, "vpws-inner-vlan-priority") ||
            json_object_get(stream, "vpws-qinq") ||
            json_object_get(stream, "vpws-arp")) {
-            fprintf(stderr, "JSON config error: stream->vpws-* requires EVPN VPWS (bgp-evpn-rd and bgp-evpn-ethernet-tag)\n");
+            fprintf(stderr, "JSON config error: stream->vpws-* requires EVPN VPWS (bgp-evpn-rd and bgp-evpn-ethernet-tag) or E-LAN (bgp-evpn-elan)\n");
+            return false;
+        }
+        if(json_object_get(stream, "tx-control-word")) {
+            fprintf(stderr, "JSON config error: stream->tx-control-word requires EVPN VPWS or E-LAN\n");
             return false;
         }
         return true;
     }
+    JSON_OBJ_GET_BOOL(stream, value, "stream", "tx-control-word");
+    if(value) {
+        stream_config->tx_control_word = json_boolean_value(value);
+    }
     if(stream_config->stream_group_id) {
-        fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id (EVPN VPWS requires RAW streams)\n");
+        fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id (EVPN VPWS and E-LAN require RAW streams)\n");
         return false;
     }
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "vpws-vlan", 1, 4094);
@@ -2889,7 +2898,8 @@ json_parse_stream_bgp_evpn(json_t *stream, bbl_stream_config_s *stream_config)
            json_object_get(stream, "bgp-evpn-esi") ||
            json_object_get(stream, "bgp-evpn-mac") ||
            json_object_get(stream, "bgp-evpn-ip") ||
-           json_object_get(stream, "bgp-evpn-prefix")) {
+           json_object_get(stream, "bgp-evpn-prefix") ||
+           json_object_get(stream, "bgp-evpn-elan")) {
             fprintf(stderr, "JSON config error: Missing value for stream->bgp-evpn-rd\n");
             return false;
         }
@@ -2963,7 +2973,24 @@ json_parse_stream_bgp_evpn(json_t *stream, bbl_stream_config_s *stream_config)
         fprintf(stderr, "JSON config error: Invalid combination of stream->bgp-evpn-esi and bgp-evpn-mac or bgp-evpn-prefix\n");
         return false;
     }
-    if(has_mac) {
+    JSON_OBJ_GET_BOOL(stream, value, "stream", "bgp-evpn-elan");
+    if(value) {
+        stream_config->bgp_evpn_elan = json_boolean_value(value);
+    }
+    if(stream_config->bgp_evpn_elan) {
+        /* EVPN E-LAN using the MAC/IP route of the destination
+         * MAC address or the IMET route of the EVI. */
+        if(has_mac || has_prefix || has_esi) {
+            fprintf(stderr, "JSON config error: Invalid combination of stream->bgp-evpn-elan and bgp-evpn-mac, bgp-evpn-prefix or bgp-evpn-esi\n");
+            return false;
+        }
+        if(!stream_config->destination_mac_overwrite) {
+            fprintf(stderr, "JSON config error: Missing value for stream->destination-mac (required for stream->bgp-evpn-elan)\n");
+            return false;
+        }
+        memcpy(key->mac, stream_config->destination_mac, ETH_ADDR_LEN);
+        key->route_type = BGP_EVPN_ROUTE_MAC_IP;
+    } else if(has_mac) {
         key->route_type = BGP_EVPN_ROUTE_MAC_IP;
     } else if(has_prefix) {
         key->route_type = BGP_EVPN_ROUTE_IP_PREFIX;
@@ -3014,9 +3041,10 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "tx-label2-exp", "tx-label2-ttl", "rx-label1",
         "rx-label2", "nat", "raw-tcp", "setup-interval",
         "bgp-evpn-rd", "bgp-evpn-ethernet-tag", "bgp-evpn-esi",
-        "bgp-evpn-mac", "bgp-evpn-ip", "bgp-evpn-prefix",
+        "bgp-evpn-mac", "bgp-evpn-ip", "bgp-evpn-prefix", "bgp-evpn-elan",
         "vpws-vlan", "vpws-inner-vlan", "vpws-vlan-priority",
-        "vpws-inner-vlan-priority", "vpws-qinq", "vpws-arp", "rx-control-word"
+        "vpws-inner-vlan-priority", "vpws-qinq", "vpws-arp", "rx-control-word",
+        "tx-control-word"
     };
     if(!schema_validate(stream, "streams", schema, 
     sizeof(schema)/sizeof(schema[0]))) {

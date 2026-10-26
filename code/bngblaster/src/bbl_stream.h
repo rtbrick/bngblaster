@@ -53,14 +53,16 @@ typedef struct bbl_stream_config_
 
     uint32_t ipv4_ldp_lookup_address;
     bool bgp_evpn; /* resolve VPN label from EVPN route */
+    bool bgp_evpn_elan; /* EVPN E-LAN, MAC/IP route of destination MAC or IMET route */
     bgp_evpn_key_s bgp_evpn_key;
-    uint16_t vpws_vlan; /* customer VLAN within EVPN VPWS service */
+    uint16_t vpws_vlan; /* customer VLAN within EVPN VPWS or E-LAN service */
     uint16_t vpws_inner_vlan;
     uint8_t  vpws_vlan_priority;
     uint8_t  vpws_inner_vlan_priority;
     bool     vpws_qinq;
-    bool     vpws_arp; /* reply to ARP, ND and ICMP echo within EVPN VPWS service */
+    bool     vpws_arp; /* reply to ARP, ND and ICMP echo within EVPN VPWS or E-LAN service */
     bool     rx_control_word; /* expect PW control word (Ethernet over MPLS) */
+    bool     tx_control_word; /* send PW control word (EVPN VPWS and E-LAN) */
     uint32_t ipv4_access_src_address; /* overwrite default IPv4 access address */
     ipv6addr_t ipv6_access_src_address; /* overwrite default IPv6 access address */
     uint32_t ipv4_network_address; /* overwrite default IPv4 network address */

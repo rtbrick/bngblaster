@@ -2756,13 +2756,13 @@
                 },
                 "vpws-vlan": {
                     "type": "number",
-                    "description": "Customer VLAN within EVPN VPWS service",
+                    "description": "Customer VLAN within EVPN VPWS or E-LAN service",
                     "minimum": 1,
                     "maximum": 4094
                 },
                 "vpws-inner-vlan": {
                     "type": "number",
-                    "description": "Customer inner VLAN within EVPN VPWS service",
+                    "description": "Customer inner VLAN within EVPN VPWS or E-LAN service",
                     "minimum": 1,
                     "maximum": 4094
                 },
@@ -2787,12 +2787,22 @@
                 },
                 "vpws-arp": {
                     "type": "boolean",
-                    "description": "Reply to ARP, IPv6 neighbor solicitation and ICMP/ICMPv6 echo requests within the EVPN VPWS service",
+                    "description": "Reply to ARP, IPv6 neighbor solicitation and ICMP/ICMPv6 echo requests within the EVPN VPWS or E-LAN service",
                     "default": false
                 },
                 "rx-control-word": {
                     "type": "boolean",
                     "description": "Expect pseudowire control word for received Ethernet over MPLS traffic",
+                    "default": false
+                },
+                "tx-control-word": {
+                    "type": "boolean",
+                    "description": "Send pseudowire control word for EVPN VPWS and E-LAN traffic, EVPN VPWS also adds it if requested by the remote PE",
+                    "default": false
+                },
+                "bgp-evpn-elan": {
+                    "type": "boolean",
+                    "description": "EVPN E-LAN, resolve label1 of BGP EVPN MAC/IP advertisement route (type 2) of destination-mac or ingress replication label of IMET route (type 3)",
                     "default": false
                 },
                 "bgp-evpn-esi": {

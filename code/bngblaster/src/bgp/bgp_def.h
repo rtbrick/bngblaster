@@ -101,6 +101,9 @@
 #define BGP_EVPN_L2_FLAG_PRIMARY    0x0002
 #define BGP_EVPN_L2_FLAG_CW         0x0004
 
+/* PMSI tunnel type ingress replication (RFC 6514) */
+#define BGP_PMSI_INGRESS_REPLICATION 6
+
 #define BGP_RD_LEN                  8
 #define BGP_ESI_LEN                 10
 #define BGP_EVPN_MAX_RT             8
@@ -423,6 +426,11 @@ typedef struct bgp_evpn_entry_ {
     /* Label used for MPLS encapsulated traffic streams (L3 or VPWS). */
     bool     vpn_label_valid;
     uint32_t vpn_label;
+
+    /* Label used for EVPN E-LAN traffic streams, the MAC label of
+     * MAC/IP routes or the ingress replication label of IMET routes. */
+    bool     elan_label_valid;
+    uint32_t elan_label;
 
     uint8_t  esi[BGP_ESI_LEN];
     uint8_t  gateway_af;

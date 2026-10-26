@@ -21,6 +21,9 @@ bgp_evpn_session_down(bgp_session_s *session);
 bgp_evpn_entry_s *
 bgp_evpn_lookup(bgp_evpn_key_s *key);
 
+bgp_evpn_entry_s *
+bgp_evpn_lookup_elan(bgp_evpn_key_s *key);
+
 bool
 bgp_evpn_scan_rd(const char *str, uint8_t *rd);
 

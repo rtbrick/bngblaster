@@ -174,11 +174,11 @@
 |                                | | bgp-evpn-mac or bgp-evpn-prefix.                               |
 |                                | | Default: 00:00:00:00:00:00:00:00:00:00                         |
 +--------------------------------+------------------------------------------------------------------+
-| **vpws-vlan**                  | | Customer VLAN within the EVPN VPWS service. All vpws-*         |
-|                                | | options require EVPN VPWS.                                     |
+| **vpws-vlan**                  | | Customer VLAN within the EVPN VPWS or E-LAN service. All       |
+|                                | | vpws-* options require EVPN VPWS or E-LAN.                     |
 |                                | | Range: 1 - 4094                                                |
 +--------------------------------+------------------------------------------------------------------+
-| **vpws-inner-vlan**            | | Customer inner VLAN within the EVPN VPWS service.              |
+| **vpws-inner-vlan**            | | Customer inner VLAN within the EVPN VPWS or E-LAN service.     |
 |                                | | Requires vpws-vlan.                                            |
 |                                | | Range: 1 - 4094                                                |
 +--------------------------------+------------------------------------------------------------------+
@@ -194,14 +194,29 @@
 +--------------------------------+------------------------------------------------------------------+
 | **vpws-arp**                   | | Reply to ARP, IPv6 neighbor solicitation and ICMP/ICMPv6       |
 |                                | | echo requests for the network-ipv4-address or                  |
-|                                | | network-ipv6-address received within the EVPN VPWS service.    |
-|                                | | Without destination-mac, the stream waits until the customer   |
-|                                | | MAC is learned from those requests. Requires stream type ipv4  |
-|                                | | with network-ipv4-address or ipv6 with network-ipv6-address.   |
+|                                | | network-ipv6-address received within the EVPN VPWS or E-LAN    |
+|                                | | service. Without destination-mac (EVPN VPWS only), the stream  |
+|                                | | waits until the customer MAC is learned from those requests.   |
+|                                | | Requires stream type ipv4 with network-ipv4-address or ipv6    |
+|                                | | with network-ipv6-address.                                     |
 |                                | | Default: false                                                 |
 +--------------------------------+------------------------------------------------------------------+
 | **rx-control-word**            | | Expect pseudowire control word for received Ethernet over      |
-|                                | | MPLS traffic (e.g. EVPN VPWS).                                 |
+|                                | | MPLS traffic (e.g. EVPN VPWS or E-LAN).                        |
+|                                | | Default: false                                                 |
++--------------------------------+------------------------------------------------------------------+
+| **tx-control-word**            | | Send pseudowire control word for EVPN VPWS or E-LAN traffic.   |
+|                                | | EVPN VPWS streams add the control word also if requested by    |
+|                                | | the remote PE, which is not signaled for EVPN E-LAN.           |
+|                                | | Default: false                                                 |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-evpn-elan**              | | EVPN E-LAN where stream packets are sent as Ethernet over MPLS |
+|                                | | to the destination-mac (required) using label1 of the MAC/IP   |
+|                                | | advertisement route (type 2) of this MAC address (known        |
+|                                | | unicast) or the ingress replication label of the IMET route    |
+|                                | | (type 3) with the same route distinguisher and Ethernet tag    |
+|                                | | (unknown unicast). Requires RAW streams. Not supported with    |
+|                                | | bgp-evpn-mac, bgp-evpn-prefix or bgp-evpn-esi.                 |
 |                                | | Default: false                                                 |
 +--------------------------------+------------------------------------------------------------------+
 | **bgp-evpn-mac**               | | Use label2 of the MAC/IP advertisement route (type 2).         |

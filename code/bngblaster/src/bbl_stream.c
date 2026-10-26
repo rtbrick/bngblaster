@@ -684,6 +684,47 @@ bbl_stream_build_access_ipoe_packet(bbl_stream_s *stream)
     return true;
 }
 
+static inline bool
+bbl_stream_evpn_usable(bbl_stream_config_s *config, bgp_evpn_entry_s *entry)
+{
+    if(config->bgp_evpn_elan) {
+        return entry->active && entry->elan_label_valid;
+    }
+    return entry->active && entry->vpn_label_valid;
+}
+
+static inline uint32_t
+bbl_stream_evpn_label(bbl_stream_config_s *config, bgp_evpn_entry_s *entry)
+{
+    return config->bgp_evpn_elan ? entry->elan_label : entry->vpn_label;
+}
+
+static inline bgp_evpn_entry_s *
+bbl_stream_evpn_resolve(bbl_stream_config_s *config)
+{
+    if(config->bgp_evpn_elan) {
+        return bgp_evpn_lookup_elan(&config->bgp_evpn_key);
+    }
+    return bgp_evpn_lookup(&config->bgp_evpn_key);
+}
+
+/* Ethernet over MPLS streams (EVPN VPWS and E-LAN). */
+static inline bool
+bbl_stream_evpn_l2(bbl_stream_config_s *config, bgp_evpn_entry_s *entry)
+{
+    return config->bgp_evpn_elan || entry->key.route_type == BGP_EVPN_ROUTE_AD;
+}
+
+/* Control word if configured or requested by the remote PE (RFC 8214),
+ * which is only signaled for EVPN VPWS. */
+static inline bool
+bbl_stream_evpn_cw(bbl_stream_config_s *config, bgp_evpn_entry_s *entry)
+{
+    return config->tx_control_word ||
+           (entry->key.route_type == BGP_EVPN_ROUTE_AD &&
+            entry->l2_attr_present && (entry->l2_flags & BGP_EVPN_L2_FLAG_CW));
+}
+
 /* Add transport and VPN (e.g. EVPN) labels of network streams. */
 static void
 bbl_stream_network_labels(bbl_stream_s *stream, bgp_evpn_entry_s *evpn_entry,
@@ -704,7 +745,7 @@ bbl_stream_network_labels(bbl_stream_s *stream, bgp_evpn_entry_s *evpn_entry,
         if(config->tx_mpls2 || evpn_entry) {
             mpls1->next = mpls2;
             if(evpn_entry) {
-                mpls2->label = evpn_entry->vpn_label;
+                mpls2->label = bbl_stream_evpn_label(config, evpn_entry);
             } else {
                 mpls2->label = config->tx_mpls2_label;
             }
@@ -714,7 +755,7 @@ bbl_stream_network_labels(bbl_stream_s *stream, bgp_evpn_entry_s *evpn_entry,
     } else if(evpn_entry) {
         /* No transport label (e.g. directly connected PE). */
         eth->mpls = mpls1;
-        mpls1->label = evpn_entry->vpn_label;
+        mpls1->label = bbl_stream_evpn_label(config, evpn_entry);
         mpls1->exp = config->tx_mpls2_exp;
         mpls1->ttl = config->tx_mpls2_ttl;
     }
@@ -861,14 +902,13 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             return false;
     }
 
-    if(stream->evpn_entry && stream->evpn_entry->key.route_type == BGP_EVPN_ROUTE_AD) {
-        /* EVPN VPWS (E-LINE): customer frame over MPLS with optional
-         * control word if requested by the remote PE (RFC 8214). */
+    if(stream->evpn_entry && bbl_stream_evpn_l2(config, stream->evpn_entry)) {
+        /* EVPN VPWS (E-LINE) and E-LAN: customer frame over MPLS with
+         * optional control word (configured or requested by the remote PE). */
         eth_vpws = eth;
         eth_vpws.type = ETH_TYPE_ETH;
         eth_vpws.next = &eth;
-        eth_vpws.mpls_cw = stream->evpn_entry->l2_attr_present &&
-                           (stream->evpn_entry->l2_flags & BGP_EVPN_L2_FLAG_CW);
+        eth_vpws.mpls_cw = bbl_stream_evpn_cw(config, stream->evpn_entry);
         if(config->destination_mac_overwrite) {
             eth.dst = config->destination_mac;
         } else {
@@ -1610,19 +1650,22 @@ bbl_stream_ldp_lookup(bbl_stream_s *stream)
 /*
  * Keep using the current EVPN entry while usable, otherwise search
  * all sessions again, but only if any EVPN route has changed since
- * the last search.
+ * the last search. E-LAN streams flooded with the IMET label (unknown
+ * unicast) search again for the MAC/IP route of the destination.
  */
 static bool
 bbl_stream_evpn_lookup(bbl_stream_s *stream)
 {
+    bbl_stream_config_s *config = stream->config;
     bgp_evpn_entry_s *entry = stream->evpn_entry;
 
-    if(!(entry && entry->active && entry->vpn_label_valid)) {
+    if(!(entry && bbl_stream_evpn_usable(config, entry) &&
+         entry->key.route_type != BGP_EVPN_ROUTE_IMET)) {
         if(stream->evpn_lookup_version == g_ctx->bgp_evpn_version) {
-            return false;
+            return entry && bbl_stream_evpn_usable(config, entry);
         }
         stream->evpn_lookup_version = g_ctx->bgp_evpn_version;
-        entry = bgp_evpn_lookup(&stream->config->bgp_evpn_key);
+        entry = bbl_stream_evpn_resolve(config);
         if(!entry) {
             return false;
         }
@@ -2738,7 +2781,7 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
     bbl_mpls_s mpls1 = {0};
     bbl_mpls_s mpls2 = {0};
 
-    entry = bgp_evpn_lookup(&config->bgp_evpn_key);
+    entry = bbl_stream_evpn_resolve(config);
     if(!(network_interface && entry)) {
         return false;
     }
@@ -2760,7 +2803,7 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
     eth.qinq = network_interface->qinq;
     eth.type = ETH_TYPE_ETH;
     eth.next = inner;
-    eth.mpls_cw = entry->l2_attr_present && (entry->l2_flags & BGP_EVPN_L2_FLAG_CW);
+    eth.mpls_cw = bbl_stream_evpn_cw(config, entry);
     bbl_stream_network_labels(stream, entry, &eth, &mpls1, &mpls2);
 
     inner->src = network_interface->mac;
@@ -3107,10 +3150,12 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         }
         if(stream->tx_flags & STREAM_FLAG_EVPN) {
             bgp_evpn_entry_s *entry = stream->evpn_entry;
-            bool resolved = entry && entry->active && entry->vpn_label_valid;
+            bool resolved = entry && bbl_stream_evpn_usable(stream->config, entry);
             json_object_set_new(root, "evpn-resolved", json_boolean(resolved));
             if(resolved) {
-                json_object_set_new(root, "evpn-label", json_integer(entry->vpn_label));
+                json_object_set_new(root, "evpn-label", json_integer(bbl_stream_evpn_label(stream->config, entry)));
+                /* E-LAN: 2 = known unicast (MAC/IP), 3 = unknown unicast (IMET) */
+                json_object_set_new(root, "evpn-route-type", json_integer(entry->key.route_type));
             }
             if(stream->config->vpws_arp && !stream->config->destination_mac_overwrite) {
                 json_object_set_new(root, "vpws-mac", stream->vpws_mac_version ?
