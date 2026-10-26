@@ -87,6 +87,7 @@ typedef struct bbl_tcp_ao_ctx_ {
     uint16_t master_key_len;
     uint8_t  key_id;
     uint8_t  rnext_key_id;
+    bool     exclude_options; /* RFC 5925 section 3.1 TCPOptions flag */
 
     bool     have_local_isn;
     uint32_t local_isn;
@@ -570,6 +571,41 @@ tcp_ao_sne_peek(const bbl_tcp_ao_sne_s *st, uint32_t seq, bbl_tcp_ao_sne_s *next
 /* --------------------------------------------------------------------- */
 /* TCP-AO (RFC 5925): TX MAC compute / RX MAC verify */
 
+/* Copy the options covered by the MAC, which are all options or only
+ * the TCP-AO option if other options are excluded (RFC 5925 section 5.1).
+ * The TCP length of the pseudo-header always covers all options. */
+static uint16_t
+tcp_ao_mac_options(bbl_tcp_ao_ctx_s *ctx, const uint8_t *opts, uint16_t optlen, uint8_t *out)
+{
+    uint16_t o = 0;
+    uint8_t kind, len;
+
+    if(!ctx->exclude_options) {
+        memcpy(out, opts, optlen);
+        return optlen;
+    }
+    while((uint16_t)(o + 2u) <= optlen) {
+        kind = opts[o];
+        if(kind == 0) {
+            break;
+        }
+        if(kind == 1) {
+            o += 1;
+            continue;
+        }
+        len = opts[o + 1];
+        if(len < 2 || (uint16_t)(o + len) > optlen) {
+            break;
+        }
+        if(kind == TCP_AO_KIND) {
+            memcpy(out, &opts[o], len);
+            return len;
+        }
+        o += len;
+    }
+    return 0;
+}
+
 static bool
 tcp_ao_tx_mac(bbl_tcp_ao_ctx_s *ctx, const struct tcp_pcb *pcb,
               struct tcp_hdr *hdr, struct pbuf *p, uint8_t *mac_out)
@@ -607,8 +643,10 @@ tcp_ao_tx_mac(bbl_tcp_ao_ctx_s *ctx, const struct tcp_pcb *pcb,
                                tcp_len, m);
     /* hdr+options as currently built: chksum already 0, our MAC placeholder
      * already 0 (written by the caller before this function runs). */
-    memcpy(m, (uint8_t*)hdr, hdr_len);
-    m += hdr_len;
+    memcpy(m, (uint8_t*)hdr, sizeof(struct tcp_hdr));
+    m += sizeof(struct tcp_hdr);
+    m += tcp_ao_mac_options(ctx, (uint8_t*)hdr + sizeof(struct tcp_hdr),
+                            (uint16_t)(hdr_len - sizeof(struct tcp_hdr)), m);
     if(payload_len) {
         pbuf_copy_partial(p, m, payload_len, hdr_len);
         m += payload_len;
@@ -668,8 +706,7 @@ tcp_ao_rx_verify(bbl_tcp_ao_ctx_s *ctx, struct tcp_pcb *pcb, struct tcp_hdr *hdr
                                tcp_len, m);
     memcpy(m, &hdr_copy, sizeof(hdr_copy));
     m += sizeof(hdr_copy);
-    memcpy(m, opts, optlen);
-    m += optlen;
+    m += tcp_ao_mac_options(ctx, opts, optlen, m);
     if(payload_len) {
         pbuf_copy_partial(p, m, payload_len, 0);
         m += payload_len;
@@ -935,6 +972,7 @@ tcp_ao_verify_listen(bbl_tcp_ao_ctx_s *listen_ctx, struct tcp_hdr *hdr,
     ctx.master_key_len = ao.key_len;
     ctx.key_id = ao.key_id;
     ctx.rnext_key_id = ao.rnext_key_id;
+    ctx.exclude_options = ao.exclude_options;
 
     if(ctx.algo == TCP_AO_ALGO_MD5) {
         return tcp_md5_verify_segment(&ctx, &pcb, hdr, opts, optlen, p);
@@ -1084,6 +1122,7 @@ bbl_tcp_ao_enable(struct tcp_pcb *pcb, bbl_tcp_ao_key_s *ao)
     ctx->mac_len = tcp_ao_mac_len(ao->algo);
     ctx->key_id = ao->key_id;
     ctx->rnext_key_id = ao->rnext_key_id;
+    ctx->exclude_options = ao->exclude_options;
 
     tcp_ext_arg_set_callbacks(pcb, g_tcp_ao_ext_id, &bbl_tcp_ao_ext_callbacks);
     tcp_ext_arg_set(pcb, g_tcp_ao_ext_id, ctx);

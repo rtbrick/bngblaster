@@ -85,6 +85,11 @@ Both are equal by default. Authentication applies to connections initiated by
 the BNG Blaster and to connections accepted from the peer, including the
 initial SYN. Only a single static key per session is supported (no key rollover).
 
+TCP options other than TCP-AO are included in the MAC by default. Some
+implementations exclude them by default (e.g. Junos without ``tcp-ao-option``
+enabled), which requires ``tcp-ao-exclude-options`` to be enabled. Otherwise,
+both sides reject the segments of the other side (MAC verification failed).
+
 Route Learning
 ~~~~~~~~~~~~~~
 

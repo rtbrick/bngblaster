@@ -3449,6 +3449,11 @@
                     "minimum": 0,
                     "maximum": 255
                 },
+                "tcp-ao-exclude-options": {
+                    "type": "boolean",
+                    "description": "Exclude TCP options other than TCP-AO from the TCP-AO MAC (RFC 5925 section 3.1, not supported for tcp-ao-algorithm md5)",
+                    "default": false
+                },
                 "reconnect": {
                     "type": "boolean",
                     "description": "Reconnect BGP session automatically",

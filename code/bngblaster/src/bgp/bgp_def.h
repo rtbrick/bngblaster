@@ -182,6 +182,7 @@ typedef struct bgp_config_ {
     char     *tcp_ao_key;
     uint8_t  tcp_ao_key_id;
     uint8_t  tcp_ao_rnext_key_id;
+    bool     tcp_ao_exclude_options;
     bbl_tcp_ao_algo_t tcp_ao_algo;
 
     /* Pointer to next instance */

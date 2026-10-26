@@ -63,6 +63,11 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | received segments. Not supported for md5.                          |
 |                                   | | Default: tcp-ao-key-id Range: 0 - 255                              |
 +-----------------------------------+----------------------------------------------------------------------+
+| **tcp-ao-exclude-options**        | | Exclude TCP options other than TCP-AO from the TCP-AO MAC          |
+|                                   | | (RFC 5925 section 3.1), which must match the peer configuration.   |
+|                                   | | Not supported for md5.                                             |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
 | **reconnect**                     | | Reconnect BGP session automatically.                               |
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+

@@ -1679,7 +1679,8 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         "id", "reconnect", "start-traffic", "learn-routes",
         "teardown-time", "raw-update-file",
         "family", "extended-nexthop",
-        "tcp-ao-key", "tcp-ao-key-id", "tcp-ao-rnext-key-id", "tcp-ao-algorithm"
+        "tcp-ao-key", "tcp-ao-key-id", "tcp-ao-rnext-key-id", "tcp-ao-algorithm",
+        "tcp-ao-exclude-options"
     };
     if(!schema_validate(bgp, "bgp", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1800,11 +1801,16 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
 
         if(bgp_config->tcp_ao_algo == TCP_AO_ALGO_MD5) {
             /* RFC 2385 TCP MD5 signatures have no KeyID/RNextKeyID. */
-            if(json_object_get(bgp, "tcp-ao-key-id") || json_object_get(bgp, "tcp-ao-rnext-key-id")) {
-                fprintf(stderr, "JSON config error: bgp->tcp-ao-key-id and tcp-ao-rnext-key-id are not supported for algorithm md5\n");
+            if(json_object_get(bgp, "tcp-ao-key-id") || json_object_get(bgp, "tcp-ao-rnext-key-id") ||
+               json_object_get(bgp, "tcp-ao-exclude-options")) {
+                fprintf(stderr, "JSON config error: bgp->tcp-ao-key-id, tcp-ao-rnext-key-id and tcp-ao-exclude-options are not supported for algorithm md5\n");
                 return false;
             }
         } else {
+            JSON_OBJ_GET_BOOL(bgp, value, "bgp", "tcp-ao-exclude-options");
+            if(value) {
+                bgp_config->tcp_ao_exclude_options = json_boolean_value(value);
+            }
             JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "tcp-ao-key-id", 0, 255);
             if(!value) {
                 fprintf(stderr, "JSON config error: bgp->tcp-ao-key-id is mandatory for TCP-AO\n");

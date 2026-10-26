@@ -49,6 +49,7 @@ typedef struct bbl_tcp_ao_key_ {
     uint16_t key_len;
     uint8_t  key_id;
     uint8_t  rnext_key_id;
+    bool     exclude_options; /* TCP options other than TCP-AO excluded from MAC */
     bbl_tcp_ao_algo_t algo;
 } bbl_tcp_ao_key_s;
 

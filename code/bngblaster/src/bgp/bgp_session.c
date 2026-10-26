@@ -90,6 +90,7 @@ bgp_session_tcp_ao_key(bgp_session_s *session, bbl_tcp_ao_key_s *ao)
     ao->key_len = (uint16_t)strlen(session->config->tcp_ao_key);
     ao->key_id = session->config->tcp_ao_key_id;
     ao->rnext_key_id = session->config->tcp_ao_rnext_key_id;
+    ao->exclude_options = session->config->tcp_ao_exclude_options;
     ao->algo = session->config->tcp_ao_algo;
     return true;
 }
