@@ -608,10 +608,8 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
             push_be_uint(buf, 1, 0x80); /* expense metric */
             push_be_uint(buf, 1, 0x80); /* error metric */
             push_data(buf, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4);
-            mask = 0xffffffff;
-            /* convert prefix length to mask */
-            mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
-            push_be_uint(buf, 4, mask);
+            mask = ipv4_len_to_mask(attr->key.prefix.ipv4_prefix.len);
+            push_data(buf, (uint8_t*)&mask, 4);
             break;
         case ISIS_TLV_EXTD_IPV4_REACH:
             push_be_uint(buf, 4, attr->key.prefix.metric); /* Metric */
@@ -1012,10 +1010,8 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
             push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
             push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
-            mask = 0xffffffff;
-            /* convert prefix length to mask */
-            mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
-            push_be_uint(buf1, 4, mask); /* Network Mask */
+            mask = ipv4_len_to_mask(attr->key.prefix.ipv4_prefix.len);
+            push_data(buf1, (uint8_t*)&mask, 4); /* Network Mask */
 
             push_be_uint(buf1, 1, 0x80); /* E2 */
             push_be_uint(buf1, 3, attr->key.prefix.metric); /* Metric */
@@ -1080,10 +1076,8 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
         case OSPF_ROUTER_LSA_LINK_STUB:
             push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Link ID */
-            mask = 0xffffffff;
-            /* convert prefix length to mask */
-            mask &= ~((1 << ((32 - attr->key.prefix.ipv4_prefix.len)))-1);
-            push_be_uint(buf2, 4, mask); /* Link Data */
+            mask = ipv4_len_to_mask(attr->key.prefix.ipv4_prefix.len);
+            push_data(buf2, (uint8_t*)&mask, 4); /* Link Data */
             push_be_uint(buf2, 1, 3); /* Type stub */
             push_be_uint(buf2, 1, 0); /* #TOS */
             push_be_uint(buf2, 2, attr->key.prefix.metric); /* metric */
