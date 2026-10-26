@@ -433,10 +433,11 @@ lspgen_write_node_ospf2_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
     json_t *nbr_arr = NULL;
     json_t *cap_arr = NULL;
 
-    node_obj = json_object();
-    lspgen_write_node_common_config(ctx, node, node_obj);
-
     /* Walk the node attributes. */
+    if (!node->attr_dict) {
+        LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
+        return;
+    }
     itor = dict_itor_new(node->attr_dict);
     if (!itor) {
         return;
@@ -448,6 +449,9 @@ lspgen_write_node_ospf2_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
         LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
         return;
     }
+
+    node_obj = json_object();
+    lspgen_write_node_common_config(ctx, node, node_obj);
 
     do {
         attr = *dict_itor_datum(itor);
@@ -560,10 +564,11 @@ lspgen_write_node_ospf3_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
     json_t *nbr_arr = NULL;
     json_t *cap_arr = NULL;
 
-    node_obj = json_object();
-    lspgen_write_node_common_config(ctx, node, node_obj);
-
     /* Walk the node attributes. */
+    if (!node->attr_dict) {
+        LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
+        return;
+    }
     itor = dict_itor_new(node->attr_dict);
     if (!itor) {
         return;
@@ -575,6 +580,9 @@ lspgen_write_node_ospf3_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
         LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
         return;
     }
+
+    node_obj = json_object();
+    lspgen_write_node_common_config(ctx, node, node_obj);
 
     do {
         attr = *dict_itor_datum(itor);
@@ -695,10 +703,11 @@ lspgen_write_node_isis_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_
     json_t *fad_arr = NULL;
     json_t *binding_arr = NULL;
 
-    node_obj = json_object();
-    lspgen_write_node_common_config(ctx, node, node_obj);
-
     /* Walk the node attributes. */
+    if (!node->attr_dict) {
+        LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
+        return;
+    }
     itor = dict_itor_new(node->attr_dict);
     if (!itor) {
         return;
@@ -710,6 +719,9 @@ lspgen_write_node_isis_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level_
         LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
         return;
     }
+
+    node_obj = json_object();
+    lspgen_write_node_common_config(ctx, node, node_obj);
 
     do {
         attr = *dict_itor_datum(itor);

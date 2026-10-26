@@ -46,6 +46,10 @@ lspgen_gen_stream_node(lsdb_ctx_t *ctx,
     /*
      * Walk the node attributes.
      */
+    if (!node->attr_dict) {
+        LOG(ERROR, "No Attributes for node %s\n", lsdb_format_node(node));
+        return;
+    }
     itor = dict_itor_new(node->attr_dict);
     if (!itor) {
         return;
