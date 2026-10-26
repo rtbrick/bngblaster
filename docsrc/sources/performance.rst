@@ -46,18 +46,22 @@ This allows to monitor the CPU usage and placement of each thread.
 
     top -H -p $(pgrep -x bngblaster)
 
-With multithreading, you should be able to scale up to 8 million PPS bidirectional, depending on
-the actual configuration and setup. This allows starting 1 million flows with 1 PPS per flow over
-at least 4 TX threads to verify all prefixes of a BGP full table for example.
+With multithreading and the default I/O mode ``packet_mmap_raw``, you should be able to scale up
+to 8 million PPS bidirectional, depending on the actual configuration and setup. This allows
+starting 1 million flows with 1 PPS per flow over at least 4 TX threads to verify all prefixes of
+a BGP full table for example. With :ref:`AF_XDP <af-xdp-usage>` or :ref:`DPDK <dpdk-usage>`,
+a single RX and TX thread can already handle 10G line rate (see :ref:`AF_XDP Tuning <af-xdp-tuning>`).
 
 The configured traffic streams are automatically balanced over all TX threads of the corresponding
 interfaces but a single stream can't be split over multiple threads to prevent re-ordering issues.
 
 Enabling multithreaded I/O causes some limitations. First of all, it works only on systems with
 CPU cache coherence, which should apply to all modern CPU architectures. TX threads are not allowed
-for LAG (Link Aggregation) interfaces but RX threads are supported. It is also not possible to capture
-traffic streams send or received on threaded interfaces. All other traffic is still captured on threaded
-interfaces.
+for LAG (Link Aggregation) interfaces but RX threads are supported. Traffic streams sent or received
+by I/O threads are captured with ``capture-include-streams``, which copies each stream packet to the
+main thread writing the capture. This limits the capture rate (e.g. about 2 million packets per
+second to disk in our tests) and packets exceeding it are missing in the capture, which is logged
+as ``Incomplete stream capture``.
 
 RX threads handle received traffic streams directly and redirect all other packets to the main
 thread. Packets longer than 4074 bytes can't be redirected and are counted as ``rx-to-long``.
@@ -67,9 +71,10 @@ wait for the main thread instead.
 
 .. note::
 
-    The BNG Blaster is currently tested for 8 million PPS with 10 million flows, which is not a
-    hard limitation but everything above should be considered with caution. It is also possible to
-    scale far beyond using DPDK-enabled interfaces.
+    The BNG Blaster is currently tested for 8 million PPS with 10 million flows using the
+    ``packet_mmap_raw`` I/O mode, which is not a hard limitation but everything above should
+    be considered with caution. It is also possible to scale far beyond using AF_XDP or
+    DPDK-enabled interfaces.
 
 It is also recommended to increase the hardware and software queue size of your
 network interface links to the maximum for higher throughput as explained
@@ -254,7 +259,7 @@ The MAC addresses are always at the same position, and each BNG Blaster session
 uses its own client MAC address (destination MAC address in downstream and
 source MAC address in upstream direction).
 
-In our tests with 650 PPPoE sessions (6.3 Mpps per interface and direction,
+In our tests with 650 PPPoE sessions (6.35 Mpps per interface and direction,
 128-byte packets, 4 RX threads per interface, :ref:`AF_XDP <af-xdp-usage>`),
 the traffic was distributed evenly over all 4 queues without loss for
 single-tagged, double-tagged and QinQ PPPoE. With the default hash, all
@@ -781,9 +786,11 @@ The following recommendations are based on tests with PPPoE traffic between
 two directly connected 10G ports of an Intel X710 adapter (i40e driver),
 using native zero-copy mode.
 
-**RX threads:** The RX performance per thread depends on the CPU and packet
-size. In our tests, a single RX thread received up to 2.4 Mpps per queue
-without loss and processed more than 6 Mpps with 0.1% to 0.5% loss. The loss is
+**RX threads:** The RX performance per thread depends on the CPU, packet
+size and traffic type. In our tests with PPPoE, a single RX thread received up
+to 2.4 Mpps per queue without loss and processed more than 6 Mpps with 0.1% to
+0.5% loss. With IPv4 network traffic (76-byte packets), a single RX thread
+received 10.9 Mpps (10G line rate) with 0.2% to 0.4% loss. The loss is
 caused by short delays of the RX thread, not by its CPU capacity, so
 distributing the traffic over more queues reduces loss even if a single thread
 could process the full rate. RSS does not distribute traffic perfectly evenly,
@@ -792,7 +799,7 @@ Typically, more RX than TX threads are required.
 
 **TX threads:** TX threads permanently poll and therefore use a full CPU core
 each, even if not sending at their limit. In our tests, a single TX thread
-sent at least 5.8 Mpps (the actual limit was not reached), so one TX thread
+sent 10.9 Mpps (10G line rate with 76-byte packets), so one TX thread
 per 10G interface was sufficient. Using fewer TX threads leaves more CPU
 cores for RX threads.
 
@@ -814,7 +821,7 @@ sized automatically.
 default if supported by the driver. Copy mode (``"af-xdp-mode": "copy"``) copies each
 packet between the driver and the AF_XDP frames, which limits the packet rate. In our
 tests, a single RX and TX thread reached about 4.4 Mpps in copy mode compared to 11 Mpps
-(10G line rate) in zero-copy mode. Use copy mode only for interfaces where zero-copy
+(10G line rate with 76-byte packets) in zero-copy mode. Use copy mode only for interfaces where zero-copy
 mode performs badly, e.g. the Intel ice driver with an IOMMU in translation mode (see
 above), where copy mode performed much better than zero-copy mode. Check the actual
 mode of each queue with ``-l af_xdp``.
