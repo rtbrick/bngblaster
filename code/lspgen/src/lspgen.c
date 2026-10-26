@@ -1521,13 +1521,18 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
         remote_id = 0;
         local_ip = 0;
         tok = strtok(conn_src, ":");
-        if (tok && scan_ipv4_address(conn_src, &remote_id)) {
-            tok = strtok(NULL, ":");
-            if (tok && scan_ipv4_address(tok, &local_ip)) {
-                write_le_uint(ctx->connector[ctx->num_connector].remote_node_id, 4, remote_id);
-                write_le_uint(ctx->connector[ctx->num_connector].local_link_id, 4, local_ip);
-            }
+        if (!(tok && scan_ipv4_address(tok, &remote_id))) {
+            LOG(ERROR, "Invalid connector remote_id %s\n", conn_src);
+            return;
         }
+        tok = strtok(NULL, ":");
+        if (!(tok && scan_ipv4_address(tok, &local_ip))) {
+            LOG(ERROR, "Invalid connector local_ip %s\n", tok ? tok : "");
+            return;
+        }
+        /* Addresses are in network byte order. */
+        memcpy(ctx->connector[ctx->num_connector].remote_node_id, &remote_id, sizeof(remote_id));
+        memcpy(ctx->connector[ctx->num_connector].local_link_id, &local_ip, sizeof(local_ip));
 
         LOG(NORMAL, "Add connector to %s:%s\n",
             format_ipv4_address(&remote_id),
