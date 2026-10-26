@@ -1126,7 +1126,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
             push_be_uint(buf2, 1, 1); /* Route Type: Intra Area */
             push_be_uint(buf2, 1, attr->key.prefix.ipv4_prefix.len);
             push_be_uint(buf2, 1, 0); /* AF ipv4 */
-            push_be_uint(buf2, 1, 0); /* Flags */
+            push_be_uint(buf2, 1, attr->key.prefix.node_flag ? OSPF_EXT_PREFIX_FLAG_N : 0); /* Flags */
             push_data(buf2, (uint8_t*)&attr->key.prefix.ipv4_prefix.address, 4); /* Prefix */
             break;
 
@@ -1414,7 +1414,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
         case OSPF_IA_PREFIX_LSA_PREFIX:
             push_be_uint(buf2, 1, attr->key.prefix.ipv6_prefix.len); /* Prefix Length */
-            push_be_uint(buf2, 1, 0x00); /* Prefix Options */
+            push_be_uint(buf2, 1, attr->key.prefix.node_flag ? OSPF3_PREFIX_OPTION_N : 0); /* Prefix Options */
             push_be_uint(buf2, 2, attr->key.prefix.metric); /* Metric */
             attr_len = (attr->key.prefix.ipv6_prefix.len+7)/8;
             push_data(buf2, attr->key.prefix.ipv6_prefix.address, attr_len); /* Prefix */
@@ -1429,7 +1429,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
             push_be_uint(buf2, 1, 0);
             push_be_uint(buf2, 3, attr->key.prefix.metric); /* Metric */
             push_be_uint(buf2, 1, attr->key.prefix.ipv6_prefix.len); /* Prefix Length */
-            push_be_uint(buf2, 1, 0x00); /* Prefix Options */
+            push_be_uint(buf2, 1, attr->key.prefix.node_flag ? OSPF3_PREFIX_OPTION_N : 0); /* Prefix Options */
             push_be_uint(buf2, 2, 0);
             attr_len = (attr->key.prefix.ipv6_prefix.len+7)/8;
             push_data(buf2, attr->key.prefix.ipv6_prefix.address, attr_len); /* Prefix */

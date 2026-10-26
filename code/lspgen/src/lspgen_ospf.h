@@ -49,4 +49,9 @@ enum {
     OSPF_IA_PREFIX_LSA_PREFIX,
 };
 
+/* Node flag of the OSPFv2 Extended Prefix TLV (RFC 7684) */
+#define OSPF_EXT_PREFIX_FLAG_N      0x40
+/* Node bit of the OSPFv3 prefix options (RFC 8362) */
+#define OSPF3_PREFIX_OPTION_N       0x20
+
 extern struct keyval_ ospf_attr_names[];
