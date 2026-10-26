@@ -27,6 +27,131 @@ static int g_io_main_cpu = -1;
 static cpu_set_t g_io_cpu_allowed;
 static bool g_io_cpu_allowed_saved;
 
+typedef struct io_capture_slot_ {
+    struct timespec timestamp;
+    uint8_t *packet;
+    uint16_t length;
+    uint16_t capacity;
+} io_capture_slot_s;
+
+typedef struct io_capture_ {
+    io_capture_slot_s *slots;
+    uint16_t size;
+    atomic_uint_least16_t read;
+    atomic_uint_least16_t write;
+    atomic_uint_least64_t dropped;
+    atomic_uint_least64_t allocation_failed;
+} io_capture_s;
+
+static bool
+io_thread_capture_init(io_thread_s *thread, uint16_t size)
+{
+    io_capture_s *capture = calloc(1, sizeof(io_capture_s));
+    if(!capture) return false;
+    capture->size = size < 2 ? 2 : size;
+    capture->slots = calloc(capture->size, sizeof(io_capture_slot_s));
+    if(!capture->slots) {
+        free(capture);
+        return false;
+    }
+    atomic_init(&capture->read, 0);
+    atomic_init(&capture->write, 0);
+    atomic_init(&capture->dropped, 0);
+    atomic_init(&capture->allocation_failed, 0);
+    thread->capture = capture;
+    return true;
+}
+
+/* Each I/O thread publishes packet copies to its own SPSC queue.
+ * Only the main thread may access the shared PCAP writer. */
+void
+io_thread_capture(io_handle_s *io, const uint8_t *packet, uint16_t length)
+{
+    io_capture_s *capture = io->thread->capture;
+    io_capture_slot_s *slot;
+    uint8_t *buffer;
+    uint16_t write, next, captured_length, value;
+    bool restore_vlan = io->direction == IO_INGRESS && io->vlan_tci;
+
+    if(!capture) return;
+    if(restore_vlan && (length < ETH_SRC_DST_ADDR_LEN ||
+                       length > UINT16_MAX - BBL_ETH_VLAN_LEN)) {
+        atomic_fetch_add_explicit(&capture->dropped, 1, memory_order_relaxed);
+        return;
+    }
+    captured_length = length + (restore_vlan ? BBL_ETH_VLAN_LEN : 0);
+    write = atomic_load_explicit(&capture->write, memory_order_relaxed);
+    next = (write + 1) % capture->size;
+    if(next == atomic_load_explicit(&capture->read, memory_order_acquire)) {
+        atomic_fetch_add_explicit(&capture->dropped, 1, memory_order_relaxed);
+        return;
+    }
+    slot = &capture->slots[write];
+    if(captured_length > slot->capacity) {
+        buffer = realloc(slot->packet, captured_length);
+        if(!buffer) {
+            atomic_fetch_add_explicit(&capture->allocation_failed, 1, memory_order_relaxed);
+            return;
+        }
+        slot->packet = buffer;
+        slot->capacity = captured_length;
+    }
+    if(restore_vlan) {
+        memcpy(slot->packet, packet, ETH_SRC_DST_ADDR_LEN);
+        value = htobe16(io->vlan_tpid ? io->vlan_tpid : ETH_TYPE_VLAN);
+        memcpy(slot->packet + ETH_SRC_DST_ADDR_LEN, &value, sizeof(value));
+        value = htobe16(io->vlan_tci);
+        memcpy(slot->packet + ETH_SRC_DST_ADDR_LEN + sizeof(value), &value, sizeof(value));
+        memcpy(slot->packet + ETH_SRC_DST_ADDR_LEN + BBL_ETH_VLAN_LEN,
+               packet + ETH_SRC_DST_ADDR_LEN, length - ETH_SRC_DST_ADDR_LEN);
+    } else {
+        memcpy(slot->packet, packet, length);
+    }
+    slot->length = captured_length;
+    slot->timestamp = io->timestamp;
+    atomic_store_explicit(&capture->write, next, memory_order_release);
+}
+
+static void
+io_thread_capture_drain(io_thread_s *thread)
+{
+    io_capture_s *capture = thread->capture;
+    io_capture_slot_s *slot;
+    uint16_t read, write, flags;
+    uint64_t dropped, failed;
+    bool written = false;
+
+    if(!capture) return;
+    flags = thread->io->direction == IO_INGRESS ?
+        PCAPNG_EPB_FLAGS_INBOUND : PCAPNG_EPB_FLAGS_OUTBOUND;
+    read = atomic_load_explicit(&capture->read, memory_order_relaxed);
+    write = atomic_load_explicit(&capture->write, memory_order_acquire);
+    while(read != write) {
+        slot = &capture->slots[read];
+        pcapng_push_packet_header(&slot->timestamp, slot->packet, slot->length,
+                                  thread->io->interface->ifindex, flags);
+        written = true;
+        read = (read + 1) % capture->size;
+        atomic_store_explicit(&capture->read, read, memory_order_release);
+    }
+    if(written) pcapng_fflush();
+    dropped = atomic_exchange_explicit(&capture->dropped, 0, memory_order_relaxed);
+    failed = atomic_exchange_explicit(&capture->allocation_failed, 0, memory_order_relaxed);
+    if(dropped || failed) {
+        LOG(ERROR, "Incomplete stream capture on %s (%s thread %u): "
+            "%" PRIu64 " queue drops, %" PRIu64 " allocation failures\n",
+            thread->io->interface->name,
+            thread->io->direction == IO_INGRESS ? "RX" : "TX",
+            thread->io->id, dropped, failed);
+    }
+}
+
+static void
+io_thread_capture_job(timer_s *timer)
+{
+    io_thread_capture_drain(timer->data);
+}
+
 void
 io_thread_save_allowed_cpus()
 {
@@ -117,6 +242,7 @@ rx_handler(io_thread_s *thread, io_handle_s *io)
             eth->timestamp.tv_sec = io->timestamp.tv_sec;
             eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
             if(bbl_rx_thread(io->interface, eth)) {
+                if(unlikely(thread->capture != NULL)) io_thread_capture(io, io->buf, io->buf_len);
                 return IO_SUCCESS;
             }
         } else if(decode_result == UNKNOWN_PROTOCOL) {
@@ -846,6 +972,19 @@ io_thread_start_all()
     /* Each I/O thread and the main thread should have its own CPU,
      * otherwise threads are delayed, which causes packet loss. */
     while(thread) {
+        if(g_ctx->pcap.write_buf && g_ctx->pcap.include_streams) {
+            io_handle_s *io = thread->io;
+            uint16_t slots = io->direction == IO_INGRESS ?
+                io->interface->config->io_slots_rx : io->interface->config->io_slots_tx;
+            if(!io_thread_capture_init(thread, slots)) {
+                LOG_NOARG(ERROR, "Failed to allocate I/O stream capture queue\n");
+                io_thread_stop_all();
+                return false;
+            }
+            timer_add_periodic(&g_ctx->timer_root, &thread->capture_job, "IO capture",
+                               0, io->interface->config->rx_interval,
+                               thread, &io_thread_capture_job);
+        }
         threads++;
         thread = thread->next;
     }
@@ -966,6 +1105,15 @@ io_thread_stop_all()
         if(thread->started) {
             pthread_join(thread->thread, NULL);
             thread->started = false;
+        }
+        if(thread->capture) {
+            io_thread_capture_drain(thread);
+            for(uint16_t i = 0; i < thread->capture->size; i++) {
+                free(thread->capture->slots[i].packet);
+            }
+            free(thread->capture->slots);
+            free(thread->capture);
+            thread->capture = NULL;
         }
         thread = thread->next;
     }

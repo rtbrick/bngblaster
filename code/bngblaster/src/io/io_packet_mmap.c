@@ -386,6 +386,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
                 stream->flow_seq++;
             }
 
+            if(unlikely(thread->capture != NULL) && !ctrl) io_thread_capture(io, io->buf, io->buf_len);
             tphdr->tp_len = io->buf_len;
             tphdr->tp_status = TP_STATUS_SEND_REQUEST;
 

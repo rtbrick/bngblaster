@@ -1674,6 +1674,7 @@ io_af_xdp_thread_tx_run_fn(io_thread_s *thread)
                 desc->options = 0;
                 used++;
 
+                if(unlikely(thread->capture != NULL)) io_thread_capture(io, io->buf, stream->tx_len);
                 stream->tx_packets++;
                 stream->flow_seq++;
                 io->stats.packets++;

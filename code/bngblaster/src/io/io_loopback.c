@@ -442,6 +442,7 @@ io_loopback_thread_tx_run_fn(io_thread_s *thread)
                 memcpy(slot->packet, stream->tx_buf, stream->tx_len);
                 slot->len = stream->tx_len;
                 used++;
+                if(unlikely(thread->capture != NULL)) io_thread_capture(io, slot->packet, slot->len);
                 stream->tx_packets++;
                 stream->flow_seq++;
                 io->stats.packets++;

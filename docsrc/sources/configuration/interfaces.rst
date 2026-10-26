@@ -1,3 +1,14 @@
+With ``capture-include-streams`` enabled, I/O threads copy stream packets to
+bounded per-thread queues. The main thread writes these packets to the capture,
+including draining the queues when the threads stop. Capture queues use the
+corresponding RX/TX slot count and allocate packet buffers on demand. Capturing
+streams adds copying, memory and disk overhead and can limit throughput.
+Queue overflow or allocation failures are reported as
+``Incomplete stream capture`` errors; such captures must not be used as
+complete traffic evidence. Transmit captures show submission, not proof of
+delivery by the NIC. For received streams, kernel-provided VLAN metadata is
+used to restore stripped outer tags in the capture, preserving TPID and TCI.
+
 .. code-block:: json
 
     { "interfaces": {} }

@@ -147,6 +147,8 @@ typedef struct io_thread_ {
 
     io_handle_s *io;
     bbl_txq_s *txq;
+    struct io_capture_ *capture;
+    timer_s *capture_job;
 
     struct io_thread_ *next;
 } io_thread_s;

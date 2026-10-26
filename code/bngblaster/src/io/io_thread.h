@@ -33,6 +33,9 @@ io_thread_ctrl_threads(int fd, uint32_t session_id, json_t *arguments);
 void
 io_thread_stop_all();
 
+void
+io_thread_capture(io_handle_s *io, const uint8_t *packet, uint16_t length);
+
 #define IO_RX_BURST_MAX 256
 
 io_result_t
