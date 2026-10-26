@@ -247,7 +247,8 @@ lspgen_buffer_is_empty (lsdb_ctx_t *ctx) {
 void
 lspgen_ctrl_write_cb(timer_s *timer)
 {
-    char *json_header, *json_footer, *json_command;
+    char json_header[128];
+    char *json_footer, *json_command;
     struct lsdb_ctx_ *ctx;
     struct lsdb_packet_ *packet;
     uint32_t buffer_left;
@@ -276,12 +277,10 @@ lspgen_ctrl_write_cb(timer_s *timer)
             LOG_NOARG(ERROR, "Unknown protocol\n");
             return;
         }
-        json_header = malloc(128);
-        snprintf(json_header, 128-1,
+        snprintf(json_header, sizeof(json_header),
                  "{\n\"command\": \"%s\",\n\"arguments\": {\n\"instance\": %u,\n\"pdu\": [",
                  json_command, ctx->ctrl_instance);
         push_data(&ctx->ctrl_io_buf, (uint8_t *)json_header, strlen(json_header));
-        free(json_header);
     }
 
     json_footer = "]\n}\n}\n";
@@ -369,6 +368,11 @@ lspgen_ctrl_connect_cb(timer_s *timer)
         LOG(CTRL, "CTRL socket to %s still unfreed\n", ctx->ctrl_socket_path);
     }
     ctx->ctrl_socket_sockfd = socket(AF_UNIX, SOCK_STREAM, 0);
+    if (ctx->ctrl_socket_sockfd < 0) {
+        ctx->ctrl_socket_sockfd = 0;
+        LOG(ERROR, "Error creating socket for %s, %s\n", ctx->ctrl_socket_path, strerror(errno));
+        return;
+    }
     res = connect(ctx->ctrl_socket_sockfd, (struct sockaddr *)&addr, SUN_LEN(&addr));
 
     if (res == 0) {

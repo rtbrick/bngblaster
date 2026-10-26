@@ -1890,6 +1890,10 @@ main(int argc, char *argv[])
                 break;
             case 'S':
                 /* open control socket to BNG Blaster */
+                if (strlen(optarg) >= sizeof(((struct sockaddr_un *)0)->sun_path)) {
+                    LOG(ERROR, "Control socket path %s too long\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
                 free(ctx->ctrl_socket_path);
                 ctx->ctrl_socket_path = strdup(optarg);
                 break;
