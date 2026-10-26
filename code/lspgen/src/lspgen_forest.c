@@ -340,15 +340,15 @@ lsdb_init_graph(lsdb_ctx_t *ctx)
         lsdb_random_connected_graph(ctx, tree, adj_matrix, base, v, e, max_wgt, 1);
 
         /*
-         * Connect the first node of this subgraph
-         * with the last node of the previous subgraph
+         * Connect the first node of this subgraph (index 1)
+         * with the last node of the previous subgraph (index 0)
          */
-        connect_node(ctx, base, -1, 0, 99);
+        connect_node(ctx, base, 0, 1, 99);
         /*
          * Connect the second node of this subgraph
-         * with the penultimatenode of the previous subgraph
+         * with the penultimate node of the previous subgraph
          */
-        connect_node(ctx, base, -2, 1, 99);
+        connect_node(ctx, base, -1, 2, 99);
 
         remaining_nodes -= v;
         base += v;
