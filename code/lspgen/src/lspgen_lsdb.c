@@ -134,7 +134,7 @@ lsdb_format_link(lsdb_link_t *link)
             idx += snprintf(buffer + idx, sizeof(buffer) - idx, " -> %s",
             lsdb_format_node_id(link->key.remote_node_id));
         }
-    } else if (ctx->protocol_id == PROTO_OSPF2) {
+    } else if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
         if (node->node_name) {
             idx = snprintf(buffer, sizeof(buffer), "%s", node->node_name);
         } else {
@@ -143,9 +143,9 @@ lsdb_format_link(lsdb_link_t *link)
         }
 
         if (remote_node && remote_node->node_name) {
-            idx = snprintf(buffer + idx, sizeof(buffer) - idx, " -> %s", node->node_name);
+            idx += snprintf(buffer + idx, sizeof(buffer) - idx, " -> %s", remote_node->node_name);
         } else {
-            idx = snprintf(buffer + idx, sizeof(buffer) - idx, " -> %u.%u.%u.%u",
+            idx += snprintf(buffer + idx, sizeof(buffer) - idx, " -> %u.%u.%u.%u",
             link->key.remote_node_id[0], link->key.remote_node_id[1],
             link->key.remote_node_id[2], link->key.remote_node_id[3]);
         }
