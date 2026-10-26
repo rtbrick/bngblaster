@@ -1529,6 +1529,8 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, ui
         } else if (ctx->protocol_id == PROTO_OSPF2) {
 
             memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 4);
+            memcpy(attr_template.key.link.local_link_id, link_template.key.local_link_id, 4);
+            memcpy(attr_template.key.link.remote_link_id, link_template.key.remote_link_id, 4);
 
             attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
             attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
@@ -1546,6 +1548,8 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, ui
         } else if (ctx->protocol_id == PROTO_OSPF3) {
 
             memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 4);
+            memcpy(attr_template.key.link.local_link_id, link_template.key.local_link_id, 4);
+            memcpy(attr_template.key.link.remote_link_id, link_template.key.remote_link_id, 4);
 
             attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
             attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
