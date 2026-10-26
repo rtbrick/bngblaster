@@ -304,8 +304,10 @@ lspgen_drain_nibble_stack(uint8_t *stack, uint32_t *stack_idx, uint8_t **end_buf
     /*
      * Rebase Stack.
      */
-    stack[0] = stack[idx];
     *stack_idx -= idx;
+    if (*stack_idx) {
+        stack[0] = stack[idx];
+    }
 }
 
 void
