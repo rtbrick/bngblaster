@@ -2053,12 +2053,9 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
 
     if (!node->attr_dict) {
         /*
-         * No attributes. This is a purge.
+         * No attributes, nothing to send. An empty
+         * OSPF packet would not contain any LSA.
          */
-        packet = lspgen_add_packet(ctx, node, id);
-        if (packet) {
-            lspgen_finalize_packet(ctx, node, packet);
-        }
         return;
     }
 

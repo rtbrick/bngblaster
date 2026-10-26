@@ -261,7 +261,12 @@ lspgen_ctrl_write_cb(timer_s *timer)
     lspgen_write_ctrl_buffer(ctx);
 
     if (CIRCLEQ_EMPTY(&ctx->packet_change_qhead)) {
-        /* nothing to do */
+        if (ctx->ctrl_packet_first && lspgen_buffer_is_empty(ctx)) {
+            /* Nothing to send on this connection, close it. */
+            timer_del(ctx->ctrl_socket_write_timer);
+            timer_add(&ctx->timer_root, &ctx->ctrl_socket_close_timer, "close",
+                      0, 0, ctx, &lspgen_ctrl_close_cb);
+        }
         return;
     }
 
