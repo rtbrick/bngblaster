@@ -82,6 +82,10 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **teardown-time**                 | | BGP teardown time in seconds.                                      |
+|                                   | | The session is closed after the notification at the                |
+|                                   | | latest after this time or after 3 seconds. A session               |
+|                                   | | with pending data (e.g. RAW update not read by the peer)           |
+|                                   | | is reset (TCP RST) instead of closed (TCP FIN).                    |
 |                                   | | Default: 5 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **raw-update-file**               | | BGP RAW update file.                                               |

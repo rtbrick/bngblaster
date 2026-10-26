@@ -98,6 +98,63 @@ bbl_tcp_close(bbl_tcp_ctx_s *tcpc)
 }
 
 /**
+ * bbl_tcp_pending
+ *
+ * @param tcpc TCP context
+ * @return true if data is not yet sent or acknowledged
+ */
+bool
+bbl_tcp_pending(bbl_tcp_ctx_s *tcpc)
+{
+    if(!(tcpc && tcpc->pcb) || tcpc->listen) {
+        return false;
+    }
+    return tcpc->state == BBL_TCP_STATE_SENDING || tcpc->pcb->unsent || tcpc->pcb->unacked;
+}
+
+/**
+ * bbl_tcp_reset
+ *
+ * This function resets the TCP session (RST) instead of closing
+ * it gracefully (FIN), which would be sent only after all pending
+ * data, e.g. never if the peer stopped reading.
+ *
+ * @param tcpc TCP context
+ */
+void
+bbl_tcp_reset(bbl_tcp_ctx_s *tcpc)
+{
+    struct tcp_pcb *pcb;
+
+    if(!(tcpc && tcpc->pcb) || tcpc->listen) {
+        bbl_tcp_close(tcpc);
+        return;
+    }
+    pcb = tcpc->pcb;
+    tcp_arg(pcb, NULL);
+    tcp_sent(pcb, NULL);
+    tcp_recv(pcb, NULL);
+    tcp_err(pcb, NULL);
+    tcp_poll(pcb, NULL, 0);
+    /* The RST sent by tcp_abort() uses the next sequence number, which
+     * is not accepted by a peer with full receive window (RFC 5961) if
+     * data was sent beyond. The sequence number acknowledged by the peer
+     * is its next expected one and accepted in any case. */
+    if(pcb->state >= ESTABLISHED && pcb->lastack != pcb->snd_nxt) {
+        tcp_rst(pcb, pcb->lastack, pcb->rcv_nxt, &pcb->local_ip, &pcb->remote_ip,
+                pcb->local_port, pcb->remote_port);
+    }
+    tcp_abort(pcb);
+    if(tcpc->sp) {
+        free(tcpc->sp);
+        tcpc->sp = NULL;
+        tcpc->sp_len = 0;
+    }
+    tcpc->state = BBL_TCP_STATE_CLOSED;
+    tcpc->pcb = NULL;
+}
+
+/**
  * bbl_tcp_ctx_free 
  * 
  * This function closes the TCP session (if active)

@@ -102,7 +102,18 @@ bgp_init()
 void
 bgp_teardown_job(timer_s *timer)
 {
-    UNUSED(timer);
+    bgp_session_s *session = timer->data;
+
+    if(session->state > BGP_IDLE) {
+        /* The teardown-time is shorter than the close delay. Close the
+         * TCP session now and wait one more second for the FIN or RST
+         * to be sent, otherwise the peer keeps the session open. */
+        timer_del(session->close_timer);
+        bgp_session_close_now(session);
+        timer_add(&g_ctx->timer_root, &session->teardown_timer,
+                  "BGP TEARDOWN", 1, 0, session, &bgp_teardown_job);
+        return;
+    }
     if(g_ctx->routing_sessions) {
         g_ctx->routing_sessions--;
     }

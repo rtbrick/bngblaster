@@ -661,13 +661,28 @@ bgp_session_connect(bgp_session_s *session, time_t delay)
     }
 }
 
+/**
+ * bgp_session_close_now
+ * 
+ * Close the TCP session without further delay.
+ * 
+ * @param session BGP session
+ */
 void
-bgp_session_close_job(timer_s *timer)
+bgp_session_close_now(bgp_session_s *session)
 {
-    bgp_session_s *session = timer->data;
     if(session->state > BGP_IDLE) {
-        /* Close TCP session */
-        bbl_tcp_close(session->tcpc);
+        if(bbl_tcp_pending(session->tcpc)) {
+            /* The FIN would be sent only after the pending data,
+             * which might never happen if the peer stopped reading. */
+            LOG(BGP, "BGP (%s %s - %s) reset TCP session with pending data\n",
+                session->interface->name,
+                session->local_address_str,
+                session->peer_address_str);
+            bbl_tcp_reset(session->tcpc);
+        } else {
+            bbl_tcp_close(session->tcpc);
+        }
     }
     if(session->connecting_tcpc) {
         bbl_tcp_ctx_free(session->connecting_tcpc);
@@ -680,6 +695,12 @@ bgp_session_close_job(timer_s *timer)
     if(!session->teardown && session->config->reconnect) {
         bgp_session_connect(session, 5);
     }
+}
+
+void
+bgp_session_close_job(timer_s *timer)
+{
+    bgp_session_close_now(timer->data);
 }
 
 /**
@@ -701,18 +722,29 @@ bgp_session_close(bgp_session_s *session)
     if(session->state > BGP_CONNECT && 
        session->state < BGP_CLOSING &&
        session->error_code > 0) {
-        /* Send notification messages */
-        LOG(BGP, "BGP (%s %s - %s) send notification message (error code %u sub-code %u)\n",
-            session->interface->name,
-            session->local_address_str,
-            session->peer_address_str,
-            session->error_code, session->error_subcode);
-        bgp_session_reset_write_buffer(session);
-        bgp_push_notification_message(session);
-        bgp_session_send(session);
-        session->stats.message_tx++;
+        if(session->tcpc && session->tcpc->state == BBL_TCP_STATE_IDLE) {
+            /* Send notification messages */
+            LOG(BGP, "BGP (%s %s - %s) send notification message (error code %u sub-code %u)\n",
+                session->interface->name,
+                session->local_address_str,
+                session->peer_address_str,
+                session->error_code, session->error_subcode);
+            bgp_session_reset_write_buffer(session);
+            bgp_push_notification_message(session);
+            bgp_session_send(session);
+            session->stats.message_tx++;
+            delay = 3;
+        } else {
+            /* The notification can't be sent behind a partially sent
+             * message (e.g. RAW update) and the write buffer may still
+             * be referenced by the TCP session, so reset it instead. */
+            LOG(BGP, "BGP (%s %s - %s) can't send notification message (error code %u sub-code %u) while sending\n",
+                session->interface->name,
+                session->local_address_str,
+                session->peer_address_str,
+                session->error_code, session->error_subcode);
+        }
         bgp_session_state_change(session, BGP_CLOSING);
-        delay = 3;
     }
 
     timer_add(&g_ctx->timer_root, &session->close_timer, 

@@ -43,6 +43,9 @@ void
 bgp_session_close(bgp_session_s *session);
 
 void
+bgp_session_close_now(bgp_session_s *session);
+
+void
 bgp_restart_hold_timer(bgp_session_s *session, time_t timeout);
 
 void

@@ -101,6 +101,12 @@ tcp_err_string(err_t err);
 void
 bbl_tcp_close(bbl_tcp_ctx_s *tcpc);
 
+bool
+bbl_tcp_pending(bbl_tcp_ctx_s *tcpc);
+
+void
+bbl_tcp_reset(bbl_tcp_ctx_s *tcpc);
+
 void
 bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc);
 
