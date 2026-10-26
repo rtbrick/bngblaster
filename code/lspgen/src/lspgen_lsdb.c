@@ -127,6 +127,9 @@ lsdb_format_link(lsdb_link_t *link)
         } else {
             idx = snprintf(buffer, sizeof(buffer), "%s", lsdb_format_node_id(node->key.node_id));
         }
+        if (idx >= (int)sizeof(buffer)) {
+            return buffer; /* truncated */
+        }
 
         if (remote_node && remote_node->node_name) {
             idx += snprintf(buffer + idx, sizeof(buffer) - idx, " -> %s", remote_node->node_name);
@@ -140,6 +143,9 @@ lsdb_format_link(lsdb_link_t *link)
         } else {
             idx = snprintf(buffer, sizeof(buffer), "%u.%u.%u.%u",
             node->key.node_id[0], node->key.node_id[1], node->key.node_id[2], node->key.node_id[3]);
+        }
+        if (idx >= (int)sizeof(buffer)) {
+            return buffer; /* truncated */
         }
 
         if (remote_node && remote_node->node_name) {
@@ -157,6 +163,9 @@ lsdb_format_link(lsdb_link_t *link)
      * Optionally print the local & remote IDs.
      */
     memset(zero_link_id, 0, sizeof(zero_link_id));
+    if (idx >= (int)sizeof(buffer)) {
+        return buffer; /* truncated */
+    }
     if (memcmp(link->key.local_link_id, zero_link_id, LSDB_MAX_LINK_ID_SIZE) != 0) {
         idx += snprintf(buffer + idx, sizeof(buffer) - idx,
         ", local-id 0x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
@@ -170,6 +179,9 @@ lsdb_format_link(lsdb_link_t *link)
         link->key.local_link_id[14], link->key.local_link_id[15]);
     }
 
+    if (idx >= (int)sizeof(buffer)) {
+        return buffer; /* truncated */
+    }
     if (memcmp(link->key.remote_link_id, zero_link_id, LSDB_MAX_LINK_ID_SIZE) != 0) {
         idx += snprintf(buffer + idx, sizeof(buffer) - idx,
         ", remote-id 0x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x%02x",
