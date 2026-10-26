@@ -29,4 +29,7 @@ ldp_init();
 void
 ldp_teardown();
 
+bool
+ldp_teardown_pending();
+
 #endif

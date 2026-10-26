@@ -3068,6 +3068,13 @@
                     "minimum": 0,
                     "maximum": 65535
                 },
+                "teardown-delay": {
+                    "type": "integer",
+                    "description": "ISIS teardown delay in seconds before the withdraw, which waits also for BGP and LDP sessions to be closed",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
                 "external": {
                     "type": "object",
                     "properties": {
@@ -3215,6 +3222,13 @@
                     "type": "integer",
                     "description": "OSPF teardown time in seconds",
                     "default": 5,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "teardown-delay": {
+                    "type": "integer",
+                    "description": "OSPF teardown delay in seconds before the withdraw, which waits also for BGP and LDP sessions to be closed",
+                    "default": 0,
                     "minimum": 0,
                     "maximum": 65535
                 },

@@ -120,6 +120,24 @@ bgp_teardown_job(timer_s *timer)
 }
 
 /**
+ * bgp_teardown_pending
+ *
+ * @return true while BGP sessions are closing after teardown
+ */
+bool
+bgp_teardown_pending()
+{
+    bgp_session_s *session = g_ctx->bgp_sessions;
+    while(session) {
+        if(session->teardown && session->state > BGP_IDLE) {
+            return true;
+        }
+        session = session->next;
+    }
+    return false;
+}
+
+/**
  * bgp_teardown
  * 
  * This function stops all BGP sessions. 

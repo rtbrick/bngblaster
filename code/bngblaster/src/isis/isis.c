@@ -173,6 +173,61 @@ isis_teardown_job(timer_s *timer) {
     }
 }
 
+static void
+isis_teardown_withdraw(isis_instance_s *instance)
+{
+    LOG(ISIS, "Withdraw IS-IS instance %u\n", instance->config->id);
+    instance->teardown = true;
+    for(int i=0; i<ISIS_LEVELS; i++) {
+        if(instance->level[i].adjacency) {
+            isis_lsp_self_update(instance, i+1);
+            if(instance->config->external_purge) {
+                isis_lsp_purge_all_external(instance, i+1);
+            }
+        }
+    }
+    timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
+              "ISIS TEARDOWN", instance->config->teardown_time, 0, instance,
+              &isis_teardown_job);
+}
+
+/**
+ * The withdraw is delayed by teardown-delay and until BGP and LDP
+ * sessions are closed, which might be routed via IS-IS. Otherwise
+ * the peers can't close those sessions properly.
+ */
+static void
+isis_teardown_wait_job(timer_s *timer)
+{
+    isis_instance_s *instance = timer->data;
+    struct timespec now;
+    uint64_t now_nsec;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    now_nsec = timespec_to_nsec(&now);
+    if(bgp_teardown_pending() || ldp_teardown_pending()) {
+        instance->teardown_sessions = true;
+        timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
+                  "ISIS TEARDOWN WAIT", 0, 100 * MSEC, instance,
+                  &isis_teardown_wait_job);
+        return;
+    }
+    if(instance->teardown_sessions) {
+        /* Sessions closed since the last check. */
+        instance->teardown_sessions = false;
+        if(instance->teardown_withdraw < now_nsec + ISIS_TEARDOWN_SESSION_DELAY * SEC) {
+            instance->teardown_withdraw = now_nsec + ISIS_TEARDOWN_SESSION_DELAY * SEC;
+        }
+    }
+    if(now_nsec >= instance->teardown_withdraw) {
+        isis_teardown_withdraw(instance);
+    } else {
+        timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
+                  "ISIS TEARDOWN WAIT", 0, 100 * MSEC, instance,
+                  &isis_teardown_wait_job);
+    }
+}
+
 /**
  * isis_teardown
  * 
@@ -182,22 +237,18 @@ void
 isis_teardown()
 {
     isis_instance_s *instance = g_ctx->isis_instances;
-    while(instance) {
-        if(!instance->teardown) {
-            LOG(ISIS, "Teardown IS-IS instance %u\n", instance->config->id);
-            instance->teardown = true;
-            for(int i=0; i<ISIS_LEVELS; i++) {
-                if(instance->level[i].adjacency) {
-                    isis_lsp_self_update(instance, i+1);
-                    if(instance->config->external_purge) {
-                        isis_lsp_purge_all_external(instance, i+1);
-                    }
-                }
-            }
+    struct timespec now;
 
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    while(instance) {
+        if(!(instance->teardown || instance->teardown_wait)) {
+            LOG(ISIS, "Teardown IS-IS instance %u\n", instance->config->id);
+            instance->teardown_wait = true;
+            instance->teardown_withdraw = timespec_to_nsec(&now) + 
+                                          instance->config->teardown_delay * SEC;
             timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
-                      "ISIS TEARDOWN", instance->config->teardown_time, 0, instance,
-                      &isis_teardown_job);
+                      "ISIS TEARDOWN WAIT", 0, 0, instance,
+                      &isis_teardown_wait_job);
         }
         instance = instance->next;
     }

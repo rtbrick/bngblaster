@@ -327,6 +327,57 @@ ospf_teardown_job(timer_s *timer) {
               &ospf_final_teardown);
 }
 
+static void
+ospf_teardown_withdraw(ospf_instance_s *instance)
+{
+    LOG(OSPF, "Withdraw OSPFv%u instance %u\n", instance->config->version, instance->config->id);
+    instance->teardown = true;
+    ospf_lsa_self_update(instance);
+    if(instance->config->external_purge) {
+        ospf_lsa_purge_all_external(instance);
+    }
+    timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
+              "OSPF TEARDOWN", instance->config->teardown_time, 0, instance,
+              &ospf_teardown_job);
+}
+
+/**
+ * The withdraw is delayed by teardown-delay and until BGP and LDP
+ * sessions are closed, which might be routed via OSPF. Otherwise
+ * the peers can't close those sessions properly.
+ */
+static void
+ospf_teardown_wait_job(timer_s *timer)
+{
+    ospf_instance_s *instance = timer->data;
+    struct timespec now;
+    uint64_t now_nsec;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    now_nsec = timespec_to_nsec(&now);
+    if(bgp_teardown_pending() || ldp_teardown_pending()) {
+        instance->teardown_sessions = true;
+        timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
+                  "OSPF TEARDOWN WAIT", 0, 100 * MSEC, instance,
+                  &ospf_teardown_wait_job);
+        return;
+    }
+    if(instance->teardown_sessions) {
+        /* Sessions closed since the last check. */
+        instance->teardown_sessions = false;
+        if(instance->teardown_withdraw < now_nsec + OSPF_TEARDOWN_SESSION_DELAY * SEC) {
+            instance->teardown_withdraw = now_nsec + OSPF_TEARDOWN_SESSION_DELAY * SEC;
+        }
+    }
+    if(now_nsec >= instance->teardown_withdraw) {
+        ospf_teardown_withdraw(instance);
+    } else {
+        timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
+                  "OSPF TEARDOWN WAIT", 0, 100 * MSEC, instance,
+                  &ospf_teardown_wait_job);
+    }
+}
+
 /**
  * ospf_teardown
  * 
@@ -336,18 +387,19 @@ void
 ospf_teardown()
 {
     ospf_instance_s *instance = g_ctx->ospf_instances;
+    struct timespec now;
+
+    clock_gettime(CLOCK_MONOTONIC, &now);
     while(instance) {
-        if(!instance->teardown) {
+        if(!(instance->teardown || instance->teardown_wait)) {
             g_ctx->routing_sessions++;
             LOG(OSPF, "Teardown OSPFv%u instance %u\n", instance->config->version, instance->config->id);
-            instance->teardown = true;
-            ospf_lsa_self_update(instance);
-            if(instance->config->external_purge) {
-                ospf_lsa_purge_all_external(instance);
-            }
+            instance->teardown_wait = true;
+            instance->teardown_withdraw = timespec_to_nsec(&now) + 
+                                          instance->config->teardown_delay * SEC;
             timer_add(&g_ctx->timer_root, &instance->timer_teardown, 
-                      "OSPF TEARDOWN", instance->config->teardown_time, 0, instance,
-                      &ospf_teardown_job);
+                      "OSPF TEARDOWN WAIT", 0, 0, instance,
+                      &ospf_teardown_wait_job);
         }
         instance = instance->next;
     }

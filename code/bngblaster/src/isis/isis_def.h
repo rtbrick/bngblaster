@@ -76,6 +76,9 @@
 #define ISIS_DEFAULT_LSP_WINDOWS_SIZE   1
 
 #define ISIS_DEFAULT_TEARDOWN_TIME      5
+/* Delay of the withdraw after BGP and LDP sessions are closed,
+ * so that their last packets (e.g. TCP FIN) are still routed. */
+#define ISIS_TEARDOWN_SESSION_DELAY     1
 #define ISIS_DEFAULT_LSP_BUFFER_SIZE	1492
 
 #define ISIS_LSP_GC_INTERVAL            30
@@ -277,6 +280,7 @@ typedef struct isis_config_ {
     uint16_t            hello_interval;
     uint16_t            hold_time;
     uint16_t            teardown_time;
+    uint16_t            teardown_delay;
 
     const char         *hostname;
     const char         *router_id_str;
@@ -410,7 +414,10 @@ typedef struct isis_instance_ {
     bool            overload;
     uint8_t         next_pseudo_node_id;
 
-    bool            teardown;
+    bool            teardown; /* withdrawn */
+    bool            teardown_wait;
+    bool            teardown_sessions; /* waiting for BGP/LDP */
+    uint64_t        teardown_withdraw; /* earliest withdraw (nsec) */
     struct timer_  *timer_teardown;
     struct timer_  *timer_lsp_gc;
 

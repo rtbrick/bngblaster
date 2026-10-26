@@ -67,6 +67,29 @@ ldp_teardown_job(timer_s *timer) {
 }
 
 /**
+ * ldp_teardown_pending
+ *
+ * @return true while LDP sessions are closing after teardown
+ */
+bool
+ldp_teardown_pending()
+{
+    ldp_instance_s *instance = g_ctx->ldp_instances;
+    ldp_session_s *session;
+    while(instance) {
+        session = instance->sessions;
+        while(session) {
+            if(session->teardown && session->state > LDP_IDLE) {
+                return true;
+            }
+            session = session->next;
+        }
+        instance = instance->next;
+    }
+    return false;
+}
+
+/**
  * ldp_teardown
  * 
  * This function stops all LDP sessions. 

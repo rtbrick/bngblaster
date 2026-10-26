@@ -2059,7 +2059,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         "lsp-tx-interval", "lsp-tx-window-size", "csnp-interval",
         "hostname", "router-id", "system-id",
         "area", "sr-base", "sr-range",
-        "sr-node-sid", "teardown-time", "external",
+        "sr-node-sid", "teardown-time", "teardown-delay", "external",
         "external-auto-refresh", "lsp-buffer-size", "sr-algo",
         "adjacency-sid-base", "sr-node-sids", "node-msd", "flex-algo"
     };
@@ -2344,6 +2344,12 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->teardown_time = ISIS_DEFAULT_TEARDOWN_TIME;
     }
 
+    value = json_object_get(isis, "teardown-delay");
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "teardown-delay", 0, 65535);
+    if(value) {
+        isis_config->teardown_delay = json_number_value(value);
+    }
+
     isis_config->external_purge = true;
     sub = json_object_get(isis, "external");
     if(json_is_object(sub)) {
@@ -2454,7 +2460,7 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         "hello-interval", "dead-interval", "lsa-retry-interval",
         "hostname", "area", "sr-base", "sr-range",
         "sr-node-sid", "router-id", "router-priority",
-        "teardown-time", "external"
+        "teardown-time", "teardown-delay", "external"
     };
     if(!schema_validate(ospf, "ospf", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -2574,6 +2580,11 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
         ospf_config->teardown_time = json_number_value(value);
     } else {
         ospf_config->teardown_time = OSPF_DEFAULT_TEARDOWN_TIME;
+    }
+
+    JSON_OBJ_GET_NUMBER(ospf, value, "ospf", "teardown-delay", 0, 65535);
+    if(value) {
+        ospf_config->teardown_delay = json_number_value(value);
     }
 
     ospf_config->external_purge = true;

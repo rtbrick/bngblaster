@@ -27,4 +27,7 @@ bgp_init();
 void
 bgp_teardown();
 
+bool
+bgp_teardown_pending();
+
 #endif

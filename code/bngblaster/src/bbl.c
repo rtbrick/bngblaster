@@ -367,11 +367,12 @@ bbl_ctrl_job(timer_s *timer)
                     }
                 }
             }
-            /* Teardown routing protocols. */
+            /* Teardown routing protocols. The IGP withdraw
+             * waits for BGP and LDP sessions to be closed. */
+            bgp_teardown();
+            ldp_teardown();
             isis_teardown();
             ospf_teardown();
-            ldp_teardown();
-            bgp_teardown();
             g_teardown_request = false;
         } else {
             /* Process teardown list in chunks. */

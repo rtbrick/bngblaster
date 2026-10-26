@@ -60,6 +60,9 @@
 #define OSPF_OPTION_LLS_BIT                 0x10
 
 #define OSPF_DEFAULT_TEARDOWN_TIME          5
+/* Delay of the withdraw after BGP and LDP sessions are closed,
+ * so that their last packets (e.g. TCP FIN) are still routed. */
+#define OSPF_TEARDOWN_SESSION_DELAY         1
 
 #define OSPF_LSA_GC_INTERVAL                30
 #define OSPF_LSA_GC_DELETE_MAX              256
@@ -403,6 +406,7 @@ typedef struct ospf_config_ {
     uint16_t     dead_interval;
     uint16_t     lsa_retry_interval;
     uint16_t     teardown_time;
+    uint16_t     teardown_delay;
 
     const char  *hostname;
 
@@ -518,7 +522,10 @@ typedef struct ospf_interface_ {
 typedef struct ospf_instance_ {
     ospf_config_s  *config;
     bool            overload;
-    bool            teardown;
+    bool            teardown; /* withdrawn */
+    bool            teardown_wait;
+    bool            teardown_sessions; /* waiting for BGP/LDP */
+    uint64_t        teardown_withdraw; /* earliest withdraw (nsec) */
 
     struct timer_  *timer_teardown;
     struct timer_  *timer_lsa_gc;

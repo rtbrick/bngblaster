@@ -145,6 +145,15 @@ The BNG Blaster automatically purges all LSAs of type
 ``self`` and ``external`` during teardown. This is done by
 generating LSAs with newer sequence numbers and max age. 
 
+On teardown, the purge waits until all BGP and LDP sessions are
+closed plus one second, at the latest until their **teardown-time**
+expired, and additionally for the configured **teardown-delay**.
+BGP and LDP sessions are often established between loopback
+addresses, which are reachable only via the IGP of the BNG Blaster.
+Withdrawing those addresses first would prevent the peers from
+closing the sessions properly (e.g. TCP FIN not routed), which might
+leave the sessions pending on the peer for a long time.
+
 Flooding
 ~~~~~~~~
 
