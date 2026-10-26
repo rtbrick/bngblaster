@@ -6,6 +6,8 @@
  * Copyright (C) 2015-2022, RtBrick, Inc.
  */
 #include <signal.h>
+#include <spawn.h>
+#include <sys/wait.h>
 
 #include "libdict/dict.h"
 
@@ -1604,6 +1606,33 @@ lspgen_sig_handler (int signum)
 }
 
 /*
+ * Convert the graphviz file into a SVG file. The dot command is executed
+ * without shell, so that the file names don't need to be quoted.
+ */
+static void
+lspgen_render_graphviz(struct lsdb_ctx_ *ctx)
+{
+    char dot_filename[PATH_MAX], svg_filename[PATH_MAX];
+    char *dot_argv[] = { "dot", "-Tsvg", dot_filename, "-o", svg_filename, NULL };
+    pid_t pid;
+    int status;
+
+    if (snprintf(dot_filename, sizeof(dot_filename), "%s.dot", ctx->graphviz_filename) >= (int)sizeof(dot_filename) ||
+        snprintf(svg_filename, sizeof(svg_filename), "%s.svg", ctx->graphviz_filename) >= (int)sizeof(svg_filename)) {
+        LOG(ERROR, "Graphviz file name %s too long\n", ctx->graphviz_filename);
+        return;
+    }
+
+    if (posix_spawnp(&pid, "dot", NULL, NULL, dot_argv, environ) == 0 &&
+        waitpid(pid, &status, 0) == pid &&
+        WIFEXITED(status) && WEXITSTATUS(status) == 0) {
+        LOG(NORMAL, "Converted graphviz file %s into %s\n", dot_filename, svg_filename);
+    } else {
+        LOG(ERROR, "Could not convert graphviz file %s into %s\n", dot_filename, svg_filename);
+    }
+}
+
+/*
  * Parse a numeric option and exit on invalid or out of range values.
  */
 static long
@@ -1624,7 +1653,7 @@ lspgen_parse_number(const char *arg, const char *name, int base, long min, long 
 int
 main(int argc, char *argv[])
 {
-    int opt, idx, res;
+    int opt, idx;
     char *end;
     long value;
     struct lsdb_ctx_ *ctx;
@@ -1956,17 +1985,8 @@ main(int argc, char *argv[])
      * Dump the lsdb into a graphviz file.
      */
     if (ctx->graphviz_filename) {
-        char cmd[256];
         lsdb_dump_graphviz(ctx);
-        snprintf(cmd, sizeof(cmd), "dot -Tsvg %s.dot -o %s.svg", ctx->graphviz_filename, ctx->graphviz_filename);
-        res = system(cmd); /* convert to svg */
-        if (!res) {
-            LOG(NORMAL, "Converted graphviz file %s.dot into %s.svg\n",
-            ctx->graphviz_filename, ctx->graphviz_filename);
-        } else {
-            LOG(ERROR, "Could not convert graphviz file %s.dot into %s.svg\n",
-            ctx->graphviz_filename, ctx->graphviz_filename);
-        }
+        lspgen_render_graphviz(ctx);
     }
 
     /*

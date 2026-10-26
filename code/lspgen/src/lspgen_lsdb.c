@@ -1136,7 +1136,7 @@ void
 lsdb_dump_graphviz(lsdb_ctx_t *ctx)
 {
     FILE *graphviz;
-    char filename[256];
+    char filename[PATH_MAX];
     struct lsdb_node_ *node, *root;
     struct lsdb_link_ *link;
     dict_itor *itor;
@@ -1148,7 +1148,10 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
         return;
     }
 
-    snprintf(filename, sizeof(filename), "%s.dot", ctx->graphviz_filename);
+    if (snprintf(filename, sizeof(filename), "%s.dot", ctx->graphviz_filename) >= (int)sizeof(filename)) {
+        LOG(ERROR, "Graphviz file name %s too long\n", ctx->graphviz_filename);
+        return;
+    }
 
     /*
      * Walk the node DB.
