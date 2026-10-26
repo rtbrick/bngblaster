@@ -172,6 +172,12 @@ BGP_EVPN_L2_FLAG_PRIMARY = 0x0002
 BGP_EVPN_L2_FLAG_CW = 0x0004
 BGP_ENCAP_MPLS = 10
 BGP_PMSI_INGRESS_REPLICATION = 6
+BGP_AFI_L2VPN = 25
+BGP_SAFI_VPLS = 65
+BGP_SAFI_EVPN = 70
+BGP_L2VPN_FLAG_CW = 0x02
+BGP_L2VPN_TLV_CSV = 1
+BGP_L2VPN_ENCAPS = {"ethernet-vlan": 4, "ethernet": 5}
 
 
 def admin_value(value: str, index: int, rt: bool) -> bytes:
@@ -235,6 +241,13 @@ def mac_type(value: str) -> bytes:
     if len(mac) != 6:
         raise argparse.ArgumentTypeError("invalid MAC address %s" % value)
     return mac
+
+
+def encap_type(value: str) -> int:
+    """Argument parser type for L2VPN encapsulation types."""
+    if value not in BGP_L2VPN_ENCAPS:
+        raise argparse.ArgumentTypeError("invalid encapsulation %s" % value)
+    return BGP_L2VPN_ENCAPS[value]
 
 
 def esi_type(value: str) -> bytes:
@@ -535,6 +548,141 @@ def evpn_elan(args, log):
     log.info("finished (%s services, %s routes in %s updates)" % (args.service_num, len(routes), updates))
 
 
+def l2vpn(args, log):
+    """Generate BGP L2VPN label blocks (RFC 6624) of a local CE per
+    L2VPN instance, where the label block of instance n starts with
+    label base + n * label block size."""
+    if args.withdraw:
+        if not args.rd:
+            log.error("L2VPN requires --rd")
+            exit(1)
+        if args.label_base is None:
+            args.label_base = 0
+    elif not args.rd or not args.rt or args.label_base is None:
+        log.error("L2VPN requires --rd, --rt and --label-base")
+        exit(1)
+    if args.stream_group_id or args.stream_tx_inner_label or args.stream_rx_label_num != 1:
+        log.error("--stream-group-id, --stream-tx-inner-label and --stream-rx-label-num are not supported for L2VPN")
+        exit(1)
+    if args.label_block_offset + args.label_block_size - 1 > 0xffff:
+        log.error("label block offset and size out of range")
+        exit(1)
+    if args.label_base + args.service_num * args.label_block_size - 1 > MPLS_LABEL_MAX:
+        log.error("label base and label block size out of range for %s instances" % args.service_num)
+        exit(1)
+    last = args.service_num - 1
+    try:
+        admin_value(args.rd, last if args.rd_increment else 0, False)
+        for rt in args.rt:
+            admin_value(rt, last if args.rt_increment else 0, True)
+        if args.stream_l2vpn_rd:
+            admin_value(args.stream_l2vpn_rd, last if args.rd_increment else 0, False)
+    except argparse.ArgumentTypeError:
+        log.error("route distinguisher or target out of range for %s instances" % args.service_num)
+        exit(1)
+    if args.stream_ce_vlan is not None and args.stream_ce_vlan + args.service_num - 1 > 4094:
+        log.error("CE VLAN out of range")
+        exit(1)
+    if args.stream_vpws_vlan is not None and not (1 <= args.stream_vpws_vlan and args.stream_vpws_vlan + args.service_num - 1 <= 4094):
+        log.error("customer VLAN out of range")
+        exit(1)
+    if args.stream_vpws_inner_vlan is not None and (args.stream_vpws_vlan is None or not 1 <= args.stream_vpws_inner_vlan <= 4094):
+        log.error("customer inner VLAN requires --stream-vpws-vlan and must be in range 1 - 4094")
+        exit(1)
+
+    next_hops = [args.next_hop_base + i for i in range(args.next_hop_num)]
+    flags = BGP_L2VPN_FLAG_CW if args.control_word else 0
+    routes = []
+    streams = evpn_streams_load(args)
+
+    for index in range(args.service_num):
+        label_base = args.label_base + index * args.label_block_size
+        rd = admin_value(args.rd, index if args.rd_increment else 0, False)
+        rt_index = index if args.rt_increment else 0
+        next_hop = next_hops[index % len(next_hops)]
+
+        ext_communities = b"".join(admin_value(rt, rt_index, True) for rt in args.rt)
+        # Layer2 Info: type (2), encaps type (1), control flags (1), MTU (2), reserved (2)
+        ext_communities += struct.pack("!BBBBHH", 0x80, 0x0a, args.encapsulation, flags, args.mtu, 0)
+
+        # RD (8), CE ID (2), label block offset (2), label block size (2), label base (3)
+        nlri = rd + struct.pack("!HHH", args.ce_id, args.label_block_offset, args.label_block_size)
+        nlri += struct.pack("!I", (label_base << 4) | 1)[1:]
+        # Circuit status vector TLV (RFC 6624), all circuits up
+        nlri += struct.pack("!BH", BGP_L2VPN_TLV_CSV, args.label_block_size) + bytes((args.label_block_size + 7) // 8)
+        nlri = struct.pack("!H", len(nlri)) + nlri
+        routes.append((next_hop, bgp_attr(0xc0, 16, ext_communities), nlri))
+        log.debug("add L2VPN %s CE %s via %s label base %s" % (format_rd(rd), args.ce_id, next_hop, label_base))
+
+        if args.streams:
+            stream_name = "l2vpn-%s" % (index + 1)
+            if args.stream_l2vpn_ce_id is None:
+                log.error("L2VPN streams require --stream-l2vpn-ce-id")
+                exit(1)
+            remote = args.stream_l2vpn_ce_id
+            if args.stream_direction in ("downstream", "both") and args.stream_interface:
+                # BNG Blaster (PE) -> DUT -> CE using the label block of the DUT
+                if not args.stream_l2vpn_rd or not (args.stream_destination_mac or args.stream_vpws_arp):
+                    log.error("PE to CE streams require --stream-l2vpn-rd and --stream-destination-mac or --stream-vpws-arp")
+                    exit(1)
+                stream = {
+                    "name": "%s-pe-ce" % stream_name,
+                    "type": "ipv4",
+                    "direction": "downstream",
+                    "pps": args.stream_pps,
+                    "network-interface": args.stream_interface,
+                    "destination-ipv4-address": args.stream_ce_address,
+                    "network-ipv4-address": args.stream_pe_address,
+                    "bgp-l2vpn-rd": format_rd(admin_value(args.stream_l2vpn_rd, index if args.rd_increment else 0, False)),
+                    "bgp-l2vpn-ce-id": remote,
+                    "bgp-l2vpn-local-ce-id": args.ce_id
+                }
+                if args.stream_destination_mac:
+                    stream["destination-mac"] = args.stream_destination_mac
+                if args.stream_vpws_arp:
+                    stream["vpws-arp"] = True
+                if args.stream_vpws_vlan is not None:
+                    stream["vpws-vlan"] = args.stream_vpws_vlan + index
+                    if args.stream_vpws_inner_vlan is not None:
+                        stream["vpws-inner-vlan"] = args.stream_vpws_inner_vlan
+                    if args.stream_vpws_qinq:
+                        stream["vpws-qinq"] = True
+                if args.stream_tx_label:
+                    stream["tx-label1"] = args.stream_tx_label
+                streams.append(stream)
+            if args.stream_direction in ("upstream", "both") and args.stream_ce_interface:
+                # CE -> DUT -> BNG Blaster (PE) using the label of the remote CE
+                # within the label block advertised here (RFC 4761 section 3.2.3)
+                if not args.label_block_offset <= remote < args.label_block_offset + args.label_block_size:
+                    log.error("--stream-l2vpn-ce-id not covered by the label block")
+                    exit(1)
+                label = label_base + remote - args.label_block_offset
+                interface = args.stream_ce_interface
+                if args.stream_ce_vlan is not None:
+                    interface = "%s:%s" % (interface, args.stream_ce_vlan + index)
+                stream = {
+                    "name": "%s-ce-pe" % stream_name,
+                    "type": "ipv4",
+                    "direction": "downstream",
+                    "pps": args.stream_pps,
+                    "network-interface": interface,
+                    "destination-ipv4-address": args.stream_pe_address,
+                    "network-ipv4-address": args.stream_ce_address
+                }
+                if args.stream_rx_label:
+                    stream["rx-label1"] = args.stream_rx_label
+                    stream["rx-label2"] = label
+                else:
+                    stream["rx-label1"] = label
+                if args.control_word:
+                    stream["rx-control-word"] = True
+                streams.append(stream)
+
+    evpn_streams_write(args, log, streams)
+    updates = evpn_write(args, log, routes, BGP_SAFI_VPLS)
+    log.info("finished (%s instances in %s updates)" % (args.service_num, updates))
+
+
 def evpn_streams_load(args) -> list:
     """Load existing streams if appending to the stream file."""
     if args.streams and args.stream_append:
@@ -553,8 +701,8 @@ def evpn_streams_write(args, log, streams: list):
             json.dump({"streams": streams}, f, indent=4)
 
 
-def evpn_write(args, log, routes: list):
-    """Write EVPN routes given as (next-hop, path attributes, NLRI)
+def evpn_write(args, log, routes: list, safi: int = BGP_SAFI_EVPN):
+    """Write EVPN or L2VPN routes given as (next-hop, path attributes, NLRI)
     to the RAW update file, with common path attributes added."""
     common_attr = bgp_attr(0x40, 1, b"\x00")  # ORIGIN IGP
     if args.asn:
@@ -587,15 +735,15 @@ def evpn_write(args, log, routes: list):
             nlri += s_nlri
             index += 1
         if args.withdraw:
-            path_attr = bgp_attr(0x80, 15, struct.pack("!HB", 25, 70) + nlri)
+            path_attr = bgp_attr(0x80, 15, struct.pack("!HB", BGP_AFI_L2VPN, safi) + nlri)
         else:
-            mp_reach = struct.pack("!HBB", 25, 70, len(nh)) + nh + b"\x00" + nlri
+            mp_reach = struct.pack("!HBB", BGP_AFI_L2VPN, safi, len(nh)) + nh + b"\x00" + nlri
             path_attr = attr + bgp_attr(0x80, 14, mp_reach)
         messages.append(bgp_update(path_attr))
 
     if args.end_of_rib:
-        # EVPN end-of-rib is an empty MP_UNREACH_NLRI (RFC 4724)
-        messages.append(bgp_update(bgp_attr(0x80, 15, struct.pack("!HB", 25, 70))))
+        # End-of-rib is an empty MP_UNREACH_NLRI (RFC 4724)
+        messages.append(bgp_update(bgp_attr(0x80, 15, struct.pack("!HB", BGP_AFI_L2VPN, safi))))
 
     file_flags = "ab" if args.append else "wb"
     log.info("open file %s (%s)" % (args.file, "append" if args.append else "replace"))
@@ -687,14 +835,28 @@ def main():
     elan.add_argument('--evpn-elan', action="store_true", help="generate EVPN E-LAN IMET (route type 3) and MAC/IP routes (route type 2)")
     elan.add_argument('--ethernet-tag', metavar='TAG', type=int_range(0, 0xfffffffe), default=0, help="ethernet tag (default 0)")
     elan.add_argument('--mac', metavar='MAC', type=mac_type, default=[], action='append', help="MAC address advertised per EVI (e.g. PE interface MAC)")
+    l2vpn_group = parser.add_argument_group('BGP L2VPN (RFC 6624)', 'BGP L2VPN routes use the --rd, --rt, --rd-increment, --rt-increment, '
+                                            '--service-num (instances), --mtu, --control-word and --stream-* options of EVPN VPWS, '
+                                            'where --stream-vpws-* sets the customer VLAN')
+    l2vpn_group.add_argument('--l2vpn', action="store_true", help="generate BGP L2VPN label blocks (RFC 6624)")
+    l2vpn_group.add_argument('--ce-id', metavar='ID', type=int_range(0, 0xffff), default=1, help="local CE ID (default 1)")
+    l2vpn_group.add_argument('--label-block-offset', metavar='N', type=int_range(0, 0xffff), default=1, help="label block offset, first remote CE ID (default 1)")
+    l2vpn_group.add_argument('--label-block-size', metavar='N', type=int_range(1, 0xffff), default=8, help="label block size (default 8)")
+    l2vpn_group.add_argument('--encapsulation', type=encap_type, default="ethernet-vlan",
+                             metavar='{ethernet-vlan,ethernet}', help="encapsulation type (default ethernet-vlan)")
+    l2vpn_group.add_argument('--stream-l2vpn-rd', metavar='RD', type=rd_type, help="route distinguisher of DUT routes (PE to CE streams)")
+    l2vpn_group.add_argument('--stream-l2vpn-ce-id', metavar='ID', type=int_range(0, 0xffff), help="DUT CE ID")
     args = parser.parse_args()
 
     # init logging
     log = init_logging(args.log_level)
 
-    if args.evpn_vpws and args.evpn_elan:
-        log.error("--evpn-vpws and --evpn-elan are mutually exclusive")
+    if sum((args.evpn_vpws, args.evpn_elan, args.l2vpn)) > 1:
+        log.error("--evpn-vpws, --evpn-elan and --l2vpn are mutually exclusive")
         exit(1)
+    if args.l2vpn:
+        l2vpn(args, log)
+        return
     if args.evpn_vpws:
         evpn_vpws(args, log)
         return

@@ -450,6 +450,7 @@ bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state)
     }
     if(session->state == BGP_ESTABLISHED) {
         bgp_evpn_session_down(session);
+        bgp_l2vpn_session_down(session);
         bgp_rib_flush(session);
     }
 

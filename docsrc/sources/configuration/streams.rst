@@ -174,11 +174,12 @@
 |                                | | bgp-evpn-mac or bgp-evpn-prefix.                               |
 |                                | | Default: 00:00:00:00:00:00:00:00:00:00                         |
 +--------------------------------+------------------------------------------------------------------+
-| **vpws-vlan**                  | | Customer VLAN within the EVPN VPWS or E-LAN service. All       |
-|                                | | vpws-* options require EVPN VPWS or E-LAN.                     |
+| **vpws-vlan**                  | | Customer VLAN within the EVPN VPWS, E-LAN or L2VPN service.    |
+|                                | | All vpws-* options require EVPN VPWS, E-LAN or L2VPN.          |
 |                                | | Range: 1 - 4094                                                |
 +--------------------------------+------------------------------------------------------------------+
-| **vpws-inner-vlan**            | | Customer inner VLAN within the EVPN VPWS or E-LAN service.     |
+| **vpws-inner-vlan**            | | Customer inner VLAN within the EVPN VPWS, E-LAN or L2VPN       |
+|                                | | service.                                                       |
 |                                | | Requires vpws-vlan.                                            |
 |                                | | Range: 1 - 4094                                                |
 +--------------------------------+------------------------------------------------------------------+
@@ -194,8 +195,8 @@
 +--------------------------------+------------------------------------------------------------------+
 | **vpws-arp**                   | | Reply to ARP, IPv6 neighbor solicitation and ICMP/ICMPv6       |
 |                                | | echo requests for the network-ipv4-address or                  |
-|                                | | network-ipv6-address received within the EVPN VPWS or E-LAN    |
-|                                | | service. Without destination-mac (EVPN VPWS only), the stream  |
+|                                | | network-ipv6-address received within the EVPN VPWS, E-LAN or   |
+|                                | | L2VPN service. Without destination-mac (not E-LAN), the stream |
 |                                | | waits until the customer MAC is learned from those requests.   |
 |                                | | Requires stream type ipv4 with network-ipv4-address or ipv6    |
 |                                | | with network-ipv6-address.                                     |
@@ -205,9 +206,10 @@
 |                                | | MPLS traffic (e.g. EVPN VPWS or E-LAN).                        |
 |                                | | Default: false                                                 |
 +--------------------------------+------------------------------------------------------------------+
-| **tx-control-word**            | | Send pseudowire control word for EVPN VPWS or E-LAN traffic.   |
-|                                | | EVPN VPWS streams add the control word also if requested by    |
-|                                | | the remote PE, which is not signaled for EVPN E-LAN.           |
+| **tx-control-word**            | | Send pseudowire control word for EVPN VPWS, E-LAN or L2VPN     |
+|                                | | traffic. EVPN VPWS and L2VPN streams add the control word also |
+|                                | | if requested by the remote PE, which is not signaled for EVPN  |
+|                                | | E-LAN.                                                         |
 |                                | | Default: false                                                 |
 +--------------------------------+------------------------------------------------------------------+
 | **bgp-evpn-elan**              | | EVPN E-LAN where stream packets are sent as Ethernet over MPLS |
@@ -218,6 +220,22 @@
 |                                | | (unknown unicast). Requires RAW streams. Not supported with    |
 |                                | | bgp-evpn-mac, bgp-evpn-prefix or bgp-evpn-esi.                 |
 |                                | | Default: false                                                 |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-l2vpn-rd**               | | Dynamically resolve the pseudowire label from the BGP L2VPN    |
+|                                | | label block (RFC 6624) of the remote CE with this route        |
+|                                | | distinguisher. Stream packets are sent as Ethernet over MPLS   |
+|                                | | to the destination-mac (unless vpws-arp is enabled). Requires  |
+|                                | | a BGP session with learn-routes and family l2vpn, RAW streams, |
+|                                | | bgp-l2vpn-ce-id and bgp-l2vpn-local-ce-id. Not supported with  |
+|                                | | bgp-evpn-rd or tx-label2.                                      |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-l2vpn-ce-id**            | | CE ID of the remote CE (L2VPN site identifier of the DUT).     |
+|                                | | Range: 0 - 65535                                               |
++--------------------------------+------------------------------------------------------------------+
+| **bgp-l2vpn-local-ce-id**      | | CE ID of the local CE emulated by the BNG Blaster, which must  |
+|                                | | be covered by the label block of the remote CE. The label is   |
+|                                | | label base + local CE ID - label block offset.                 |
+|                                | | Range: 0 - 65535                                               |
 +--------------------------------+------------------------------------------------------------------+
 | **bgp-evpn-mac**               | | Use label2 of the MAC/IP advertisement route (type 2).         |
 +--------------------------------+------------------------------------------------------------------+

@@ -28,6 +28,9 @@ int
 bgp_ctrl_evpn_routes(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 int
+bgp_ctrl_l2vpn_routes(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
+
+int
 bgp_ctrl_routes(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 int

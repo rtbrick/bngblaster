@@ -71,7 +71,8 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | executed as soon as the BGP RAW update has finished.               |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-| **learn-routes**                  | | Store received IPv4/IPv6 unicast, labeled unicast and EVPN routes. |
+| **learn-routes**                  | | Store received IPv4/IPv6 unicast, labeled unicast, EVPN and        |
+|                                   | | L2VPN routes.                                                      |
 |                                   | | If disabled, received updates are not parsed.                      |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -88,7 +89,7 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | ipv4-labeled-unicast, ipv6-labeled-unicast,                        |
 |                                   | | ipv4-vpn-unicast, ipv6-vpn-unicast,                                |
 |                                   | | ipv4-vpn-multicast, ipv6-vpn-multicast,                            |
-|                                   | | ipv4-flow, ipv6-flow, evpn                                         |
+|                                   | | ipv4-flow, ipv6-flow, evpn, l2vpn                                  |
 +-----------------------------------+----------------------------------------------------------------------+
 | **extended-nexthop**              | | BGP extended-nexthop families to be send in open message.          |
 |                                   | | Default: None                                                      |

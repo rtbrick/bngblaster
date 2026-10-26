@@ -138,6 +138,16 @@ of an emulated PE are generated with ``bgpupdate --evpn-vpws`` or
 ``bgpupdate --evpn-elan``. See :ref:`EVPN <evpn>` for details and how
 to test EVPN services.
 
+BGP L2VPN
+~~~~~~~~~
+
+With ``learn-routes`` enabled and the family ``l2vpn``, the BNG Blaster learns
+the BGP L2VPN label blocks (:rfc:`6624`) received from the peer, which can be
+displayed with the ``bgp-l2vpn-routes`` :ref:`command <api>` and used to resolve
+the pseudowire labels of traffic streams. The label blocks of an emulated PE are
+generated with ``bgpupdate --l2vpn``. See :ref:`BGP L2VPN <l2vpn>` for details
+and how to test BGP L2VPN services.
+
 RAW Update Files
 ~~~~~~~~~~~~~~~~
 
@@ -249,7 +259,10 @@ streams for use with the BNG Blaster.
                      [--stream-evpn-rd RD] [--stream-evpn-service-id ID]
                      [--stream-destination-mac MAC] [--stream-pe-address ADDRESS]
                      [--stream-ce-address ADDRESS] [--evpn-elan]
-                     [--ethernet-tag TAG] [--mac MAC]
+                     [--ethernet-tag TAG] [--mac MAC] [--l2vpn] [--ce-id ID]
+                     [--label-block-offset N] [--label-block-size N]
+                     [--encapsulation {ethernet-vlan,ethernet}]
+                     [--stream-l2vpn-rd RD] [--stream-l2vpn-ce-id ID]
 
     The BGP RAW update generator is a simple tool to generate BGP RAW update
     streams for use with the BNG Blaster.
@@ -345,6 +358,22 @@ streams for use with the BNG Blaster.
                             routes (route type 2)
       --ethernet-tag TAG    ethernet tag (default 0)
       --mac MAC             MAC address advertised per EVI (e.g. PE interface MAC)
+
+    BGP L2VPN (RFC 6624):
+      BGP L2VPN routes use the --rd, --rt, --rd-increment, --rt-increment,
+      --service-num (instances), --mtu, --control-word and --stream-* options of
+      EVPN VPWS, where --stream-vpws-* sets the customer VLAN
+
+      --l2vpn               generate BGP L2VPN label blocks (RFC 6624)
+      --ce-id ID            local CE ID (default 1)
+      --label-block-offset N
+                            label block offset, first remote CE ID (default 1)
+      --label-block-size N  label block size (default 8)
+      --encapsulation {ethernet-vlan,ethernet}
+                            encapsulation type (default ethernet-vlan)
+      --stream-l2vpn-rd RD  route distinguisher of DUT routes (PE to CE streams)
+      --stream-l2vpn-ce-id ID
+                            DUT CE ID
 
 The Python BGP RAW update generator is a Python script that uses
 scapy to build BGP messages. Therefore this tool can be easily

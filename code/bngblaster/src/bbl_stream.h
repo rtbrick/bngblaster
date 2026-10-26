@@ -55,7 +55,11 @@ typedef struct bbl_stream_config_
     bool bgp_evpn; /* resolve VPN label from EVPN route */
     bool bgp_evpn_elan; /* EVPN E-LAN, MAC/IP route of destination MAC or IMET route */
     bgp_evpn_key_s bgp_evpn_key;
-    uint16_t vpws_vlan; /* customer VLAN within EVPN VPWS or E-LAN service */
+    bool bgp_l2vpn; /* resolve PW label from BGP L2VPN label block (RFC 6624) */
+    uint8_t  bgp_l2vpn_rd[BGP_RD_LEN]; /* route distinguisher of the remote CE */
+    uint16_t bgp_l2vpn_ce_id; /* remote CE ID */
+    uint16_t bgp_l2vpn_local_ce_id;
+    uint16_t vpws_vlan; /* customer VLAN within EVPN VPWS, E-LAN or L2VPN service */
     uint16_t vpws_inner_vlan;
     uint8_t  vpws_vlan_priority;
     uint8_t  vpws_inner_vlan_priority;
@@ -144,7 +148,7 @@ typedef struct bbl_stream_args_
 #define STREAM_FLAG_ACCESS          (1 << 12)
 #define STREAM_FLAG_NETWORK         (1 << 13)
 #define STREAM_FLAG_A10NSP          (1 << 14)
-#define STREAM_FLAG_EVPN            (1 << 15)
+#define STREAM_FLAG_EVPN            (1 << 15) /* label resolved from BGP EVPN or L2VPN routes */
 
 /* RX interface type flags (rx_flags), exactly one is set if
  * the RX interface union below is valid. The type never changes
@@ -257,7 +261,7 @@ typedef struct bbl_stream_
     uint32_t last_sync_wrong_session;
 
     uint32_t ldp_entry_version;
-    uint32_t evpn_entry_version;
+    uint32_t evpn_entry_version; /* version of the EVPN or L2VPN entry */
     uint32_t evpn_lookup_version;
 
     uint64_t reset_packets_tx;
@@ -291,6 +295,7 @@ typedef struct bbl_stream_
 
     ldp_db_entry_s *ldp_entry;
     bgp_evpn_entry_s *evpn_entry;
+    bgp_l2vpn_entry_s *l2vpn_entry;
 
     /* EVPN VPWS customer MAC learned from ARP, ND or ICMP echo requests
      * (vpws-arp), used if destination-mac is not configured. The version

@@ -378,6 +378,9 @@ bgp_update(bgp_session_s *session, uint8_t *start, uint16_t length)
     if(!bgp_evpn_update(session, &update)) {
         return bgp_update_error(session, 9); /* Optional Attribute Error */
     }
+    if(!bgp_l2vpn_update(session, &update)) {
+        return bgp_update_error(session, 9); /* Optional Attribute Error */
+    }
     return true;
 }
 

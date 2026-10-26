@@ -139,6 +139,9 @@ bgp_push_open_message_buf(io_buffer_t *buffer, bgp_config_s *config)
     if(config->family & BGP_EVPN) {
         push_mp_capability(buffer, 25, 70); /* EVPN */
     }
+    if(config->family & BGP_L2VPN) {
+        push_mp_capability(buffer, 25, 65); /* L2VPN and VPLS */
+    }
 
     if(config->extended_nexthop & BGP_IPV4_UC) {
         push_en_capability(buffer, 1, 1, 2);

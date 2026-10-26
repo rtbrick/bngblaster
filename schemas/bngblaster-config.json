@@ -2756,13 +2756,13 @@
                 },
                 "vpws-vlan": {
                     "type": "number",
-                    "description": "Customer VLAN within EVPN VPWS or E-LAN service",
+                    "description": "Customer VLAN within EVPN VPWS, E-LAN or L2VPN service",
                     "minimum": 1,
                     "maximum": 4094
                 },
                 "vpws-inner-vlan": {
                     "type": "number",
-                    "description": "Customer inner VLAN within EVPN VPWS or E-LAN service",
+                    "description": "Customer inner VLAN within EVPN VPWS, E-LAN or L2VPN service",
                     "minimum": 1,
                     "maximum": 4094
                 },
@@ -2787,7 +2787,7 @@
                 },
                 "vpws-arp": {
                     "type": "boolean",
-                    "description": "Reply to ARP, IPv6 neighbor solicitation and ICMP/ICMPv6 echo requests within the EVPN VPWS or E-LAN service",
+                    "description": "Reply to ARP, IPv6 neighbor solicitation and ICMP/ICMPv6 echo requests within the EVPN VPWS, E-LAN or L2VPN service",
                     "default": false
                 },
                 "rx-control-word": {
@@ -2797,8 +2797,24 @@
                 },
                 "tx-control-word": {
                     "type": "boolean",
-                    "description": "Send pseudowire control word for EVPN VPWS and E-LAN traffic, EVPN VPWS also adds it if requested by the remote PE",
+                    "description": "Send pseudowire control word for EVPN VPWS, E-LAN and L2VPN traffic, EVPN VPWS and L2VPN also add it if requested by the remote PE",
                     "default": false
+                },
+                "bgp-l2vpn-rd": {
+                    "type": "string",
+                    "description": "Dynamically resolve pseudowire label from BGP L2VPN label block (RFC 6624) of the remote CE with this route distinguisher"
+                },
+                "bgp-l2vpn-ce-id": {
+                    "type": "number",
+                    "description": "CE ID of the remote CE",
+                    "minimum": 0,
+                    "maximum": 65535
+                },
+                "bgp-l2vpn-local-ce-id": {
+                    "type": "number",
+                    "description": "CE ID of the local CE emulated by the BNG Blaster",
+                    "minimum": 0,
+                    "maximum": 65535
                 },
                 "bgp-evpn-elan": {
                     "type": "boolean",
@@ -3477,7 +3493,8 @@
                             "ipv6-vpn-multicast",
                             "ipv4-flow",
                             "ipv6-flow",
-                            "evpn"
+                            "evpn",
+                            "l2vpn"
                         ]
                     }
                 },

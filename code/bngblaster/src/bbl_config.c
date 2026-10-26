@@ -1652,6 +1652,8 @@ bgp_afi_safi(const char *s)
         return BGP_IPv6_FLOW;
     } else if(strcmp(s, "evpn") == 0) {
         return BGP_EVPN;
+    } else if(strcmp(s, "l2vpn") == 0) {
+        return BGP_L2VPN;
     } else {
         return 0;
     }
@@ -2769,14 +2771,15 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
     return true;
 }
 
-/* Customer VLAN tags within EVPN VPWS and E-LAN services. */
+/* Customer VLAN tags within EVPN VPWS, E-LAN and L2VPN services. */
 static bool
 json_parse_stream_vpws(json_t *stream, bbl_stream_config_s *stream_config)
 {
     json_t *value = NULL;
-    bool l2 = stream_config->bgp_evpn &&
-              (stream_config->bgp_evpn_elan ||
-               stream_config->bgp_evpn_key.route_type == BGP_EVPN_ROUTE_AD);
+    bool l2 = stream_config->bgp_l2vpn ||
+              (stream_config->bgp_evpn &&
+               (stream_config->bgp_evpn_elan ||
+                stream_config->bgp_evpn_key.route_type == BGP_EVPN_ROUTE_AD));
 
     if(!l2) {
         if(json_object_get(stream, "vpws-vlan") ||
@@ -2785,11 +2788,11 @@ json_parse_stream_vpws(json_t *stream, bbl_stream_config_s *stream_config)
            json_object_get(stream, "vpws-inner-vlan-priority") ||
            json_object_get(stream, "vpws-qinq") ||
            json_object_get(stream, "vpws-arp")) {
-            fprintf(stderr, "JSON config error: stream->vpws-* requires EVPN VPWS (bgp-evpn-rd and bgp-evpn-ethernet-tag) or E-LAN (bgp-evpn-elan)\n");
+            fprintf(stderr, "JSON config error: stream->vpws-* requires EVPN VPWS (bgp-evpn-rd and bgp-evpn-ethernet-tag), E-LAN (bgp-evpn-elan) or L2VPN (bgp-l2vpn-rd)\n");
             return false;
         }
         if(json_object_get(stream, "tx-control-word")) {
-            fprintf(stderr, "JSON config error: stream->tx-control-word requires EVPN VPWS or E-LAN\n");
+            fprintf(stderr, "JSON config error: stream->tx-control-word requires EVPN VPWS, E-LAN or L2VPN\n");
             return false;
         }
         return true;
@@ -2799,7 +2802,7 @@ json_parse_stream_vpws(json_t *stream, bbl_stream_config_s *stream_config)
         stream_config->tx_control_word = json_boolean_value(value);
     }
     if(stream_config->stream_group_id) {
-        fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id (EVPN VPWS and E-LAN require RAW streams)\n");
+        fprintf(stderr, "JSON config error: Invalid value for stream->stream-group-id (EVPN VPWS, E-LAN and L2VPN require RAW streams)\n");
         return false;
     }
     JSON_OBJ_GET_NUMBER(stream, value, "stream", "vpws-vlan", 1, 4094);
@@ -2856,7 +2859,7 @@ json_parse_stream_vpws(json_t *stream, bbl_stream_config_s *stream_config)
         }
     } else if(!stream_config->destination_mac_overwrite) {
         /* The customer MAC is learned with vpws-arp enabled. */
-        fprintf(stderr, "JSON config error: Missing value for stream->destination-mac (required for EVPN VPWS without vpws-arp)\n");
+        fprintf(stderr, "JSON config error: Missing value for stream->destination-mac (required for EVPN VPWS and L2VPN without vpws-arp)\n");
         return false;
     }
     return true;
@@ -2875,6 +2878,64 @@ json_bgp_evpn_learning()
         bgp_config = bgp_config->next;
     }
     return false;
+}
+
+/* BGP L2VPN (RFC 6624) label blocks are only learned by
+ * BGP sessions with learn-routes and family l2vpn enabled. */
+static bool
+json_bgp_l2vpn_learning()
+{
+    bgp_config_s *bgp_config = g_ctx->config.bgp_config;
+    while(bgp_config) {
+        if(bgp_config->learn_routes && (bgp_config->family & BGP_L2VPN)) {
+            return true;
+        }
+        bgp_config = bgp_config->next;
+    }
+    return false;
+}
+
+/* Remote and local CE IDs used to resolve the L2VPN PW label. */
+static bool
+json_parse_stream_bgp_l2vpn(json_t *stream, bbl_stream_config_s *stream_config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+
+    if(json_unpack(stream, "{s:s}", "bgp-l2vpn-rd", &s) != 0) {
+        if(json_object_get(stream, "bgp-l2vpn-ce-id") ||
+           json_object_get(stream, "bgp-l2vpn-local-ce-id")) {
+            fprintf(stderr, "JSON config error: Missing value for stream->bgp-l2vpn-rd\n");
+            return false;
+        }
+        return json_parse_stream_vpws(stream, stream_config);
+    }
+    if(!bgp_evpn_scan_rd(s, stream_config->bgp_l2vpn_rd)) {
+        fprintf(stderr, "JSON config error: Invalid value for stream->bgp-l2vpn-rd\n");
+        return false;
+    }
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "bgp-l2vpn-ce-id", 0, 65535);
+    if(!value) {
+        fprintf(stderr, "JSON config error: Missing value for stream->bgp-l2vpn-ce-id\n");
+        return false;
+    }
+    stream_config->bgp_l2vpn_ce_id = json_number_value(value);
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "bgp-l2vpn-local-ce-id", 0, 65535);
+    if(!value) {
+        fprintf(stderr, "JSON config error: Missing value for stream->bgp-l2vpn-local-ce-id\n");
+        return false;
+    }
+    stream_config->bgp_l2vpn_local_ce_id = json_number_value(value);
+    if(stream_config->tx_mpls2) {
+        fprintf(stderr, "JSON config error: Invalid combination of stream->bgp-l2vpn-rd and tx-label2\n");
+        return false;
+    }
+    if(!json_bgp_l2vpn_learning()) {
+        fprintf(stderr, "JSON config error: Invalid value for stream->bgp-l2vpn-rd (requires BGP session with learn-routes and family l2vpn)\n");
+        return false;
+    }
+    stream_config->bgp_l2vpn = true;
+    return json_parse_stream_vpws(stream, stream_config);
 }
 
 /* Build the EVPN route key used to resolve the VPN label. */
@@ -2903,7 +2964,11 @@ json_parse_stream_bgp_evpn(json_t *stream, bbl_stream_config_s *stream_config)
             fprintf(stderr, "JSON config error: Missing value for stream->bgp-evpn-rd\n");
             return false;
         }
-        return json_parse_stream_vpws(stream, stream_config);
+        return json_parse_stream_bgp_l2vpn(stream, stream_config);
+    }
+    if(json_object_get(stream, "bgp-l2vpn-rd")) {
+        fprintf(stderr, "JSON config error: Invalid combination of stream->bgp-evpn-rd and bgp-l2vpn-rd\n");
+        return false;
     }
     if(!bgp_evpn_scan_rd(s, key->rd)) {
         fprintf(stderr, "JSON config error: Invalid value for stream->bgp-evpn-rd\n");
@@ -3042,6 +3107,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "rx-label2", "nat", "raw-tcp", "setup-interval",
         "bgp-evpn-rd", "bgp-evpn-ethernet-tag", "bgp-evpn-esi",
         "bgp-evpn-mac", "bgp-evpn-ip", "bgp-evpn-prefix", "bgp-evpn-elan",
+        "bgp-l2vpn-rd", "bgp-l2vpn-ce-id", "bgp-l2vpn-local-ce-id",
         "vpws-vlan", "vpws-inner-vlan", "vpws-vlan-priority",
         "vpws-inner-vlan-priority", "vpws-qinq", "vpws-arp", "rx-control-word",
         "tx-control-word"

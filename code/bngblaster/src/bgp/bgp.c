@@ -43,7 +43,7 @@ bgp_init()
         session->af = config->af;
 
         if(config->learn_routes) {
-            if(!(bgp_rib_init(session) && bgp_evpn_init(session))) {
+            if(!(bgp_rib_init(session) && bgp_evpn_init(session) && bgp_l2vpn_init(session))) {
                 return false;
             }
         }

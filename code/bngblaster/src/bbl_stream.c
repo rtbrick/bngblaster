@@ -708,26 +708,60 @@ bbl_stream_evpn_resolve(bbl_stream_config_s *config)
     return bgp_evpn_lookup(&config->bgp_evpn_key);
 }
 
-/* Ethernet over MPLS streams (EVPN VPWS and E-LAN). */
-static inline bool
-bbl_stream_evpn_l2(bbl_stream_config_s *config, bgp_evpn_entry_s *entry)
+static inline bgp_l2vpn_entry_s *
+bbl_stream_l2vpn_resolve(bbl_stream_config_s *config)
 {
-    return config->bgp_evpn_elan || entry->key.route_type == BGP_EVPN_ROUTE_AD;
+    return bgp_l2vpn_lookup(config->bgp_l2vpn_rd, config->bgp_l2vpn_ce_id,
+                            config->bgp_l2vpn_local_ce_id);
 }
 
-/* Control word if configured or requested by the remote PE (RFC 8214),
- * which is only signaled for EVPN VPWS. */
-static inline bool
-bbl_stream_evpn_cw(bbl_stream_config_s *config, bgp_evpn_entry_s *entry)
+/*
+ * VPN label resolved from BGP EVPN or L2VPN routes and the
+ * encapsulation of the stream packets (IP or Ethernet over MPLS).
+ */
+typedef struct bbl_stream_vpn_ {
+    bool valid;
+    bool l2; /* Ethernet over MPLS (EVPN VPWS, E-LAN or L2VPN) */
+    bool cw; /* PW control word */
+    uint32_t label;
+} bbl_stream_vpn_s;
+
+static void
+bbl_stream_vpn_evpn(bbl_stream_config_s *config, bgp_evpn_entry_s *entry, bbl_stream_vpn_s *vpn)
 {
-    return config->tx_control_word ||
-           (entry->key.route_type == BGP_EVPN_ROUTE_AD &&
-            entry->l2_attr_present && (entry->l2_flags & BGP_EVPN_L2_FLAG_CW));
+    vpn->valid = true;
+    vpn->label = bbl_stream_evpn_label(config, entry);
+    vpn->l2 = config->bgp_evpn_elan || entry->key.route_type == BGP_EVPN_ROUTE_AD;
+    /* The control word is only signaled for EVPN VPWS (RFC 8214). */
+    vpn->cw = config->tx_control_word ||
+              (entry->key.route_type == BGP_EVPN_ROUTE_AD &&
+               entry->l2_attr_present && (entry->l2_flags & BGP_EVPN_L2_FLAG_CW));
+}
+
+static void
+bbl_stream_vpn_l2vpn(bbl_stream_config_s *config, bgp_l2vpn_entry_s *entry, bbl_stream_vpn_s *vpn)
+{
+    vpn->valid = true;
+    vpn->label = bgp_l2vpn_label(entry, config->bgp_l2vpn_local_ce_id);
+    vpn->l2 = true;
+    vpn->cw = config->tx_control_word || (entry->flags & BGP_L2VPN_FLAG_CW);
+}
+
+/* VPN of the current stream entry (TX thread). */
+static void
+bbl_stream_vpn(bbl_stream_s *stream, bbl_stream_vpn_s *vpn)
+{
+    memset(vpn, 0x0, sizeof(bbl_stream_vpn_s));
+    if(stream->l2vpn_entry) {
+        bbl_stream_vpn_l2vpn(stream->config, stream->l2vpn_entry, vpn);
+    } else if(stream->evpn_entry) {
+        bbl_stream_vpn_evpn(stream->config, stream->evpn_entry, vpn);
+    }
 }
 
 /* Add transport and VPN (e.g. EVPN) labels of network streams. */
 static void
-bbl_stream_network_labels(bbl_stream_s *stream, bgp_evpn_entry_s *evpn_entry,
+bbl_stream_network_labels(bbl_stream_s *stream, bbl_stream_vpn_s *vpn,
                           bbl_ethernet_header_s *eth,
                           bbl_mpls_s *mpls1, bbl_mpls_s *mpls2)
 {
@@ -742,20 +776,20 @@ bbl_stream_network_labels(bbl_stream_s *stream, bgp_evpn_entry_s *evpn_entry,
         }
         mpls1->exp = config->tx_mpls1_exp;
         mpls1->ttl = config->tx_mpls1_ttl;
-        if(config->tx_mpls2 || evpn_entry) {
+        if(config->tx_mpls2 || vpn->valid) {
             mpls1->next = mpls2;
-            if(evpn_entry) {
-                mpls2->label = bbl_stream_evpn_label(config, evpn_entry);
+            if(vpn->valid) {
+                mpls2->label = vpn->label;
             } else {
                 mpls2->label = config->tx_mpls2_label;
             }
             mpls2->exp = config->tx_mpls2_exp;
             mpls2->ttl = config->tx_mpls2_ttl;
         }
-    } else if(evpn_entry) {
+    } else if(vpn->valid) {
         /* No transport label (e.g. directly connected PE). */
         eth->mpls = mpls1;
-        mpls1->label = bbl_stream_evpn_label(config, evpn_entry);
+        mpls1->label = vpn->label;
         mpls1->exp = config->tx_mpls2_exp;
         mpls1->ttl = config->tx_mpls2_ttl;
     }
@@ -779,6 +813,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     bbl_ipv6_s ipv6 = {0};
     bbl_udp_s udp = {0};
     bbl_bbl_s bbl = {0};
+    bbl_stream_vpn_s vpn;
 
     uint8_t mac[ETH_ADDR_LEN] = {0};
 
@@ -794,7 +829,8 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     eth.vlan_inner = network_interface->inner_vlan;
     eth.qinq = network_interface->qinq;
 
-    bbl_stream_network_labels(stream, stream->evpn_entry, &eth, &mpls1, &mpls2);
+    bbl_stream_vpn(stream, &vpn);
+    bbl_stream_network_labels(stream, &vpn, &eth, &mpls1, &mpls2);
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.src = stream->src_port;
     udp.dst = stream->dst_port;
@@ -902,13 +938,13 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
             return false;
     }
 
-    if(stream->evpn_entry && bbl_stream_evpn_l2(config, stream->evpn_entry)) {
-        /* EVPN VPWS (E-LINE) and E-LAN: customer frame over MPLS with
+    if(vpn.l2) {
+        /* EVPN VPWS (E-LINE), E-LAN and L2VPN: customer frame over MPLS with
          * optional control word (configured or requested by the remote PE). */
         eth_vpws = eth;
         eth_vpws.type = ETH_TYPE_ETH;
         eth_vpws.next = &eth;
-        eth_vpws.mpls_cw = bbl_stream_evpn_cw(config, stream->evpn_entry);
+        eth_vpws.mpls_cw = vpn.cw;
         if(config->destination_mac_overwrite) {
             eth.dst = config->destination_mac;
         } else {
@@ -1647,6 +1683,37 @@ bbl_stream_ldp_lookup(bbl_stream_s *stream)
     return true;
 }
 
+/* Rebuild the stream packet if the resolved BGP route has changed. */
+static void
+bbl_stream_vpn_version(bbl_stream_s *stream, uint32_t version)
+{
+    if(version != stream->evpn_entry_version) {
+        stream->evpn_entry_version = version;
+        if(stream->tx_buf) {
+            free(stream->tx_buf);
+            stream->tx_buf = NULL;
+        }
+    }
+}
+
+/* Wait for the customer MAC learned from ARP, ND or ICMP echo (vpws-arp). */
+static bool
+bbl_stream_vpws_mac_ready(bbl_stream_s *stream)
+{
+    if(unlikely(stream->config->vpws_arp && !stream->config->destination_mac_overwrite)) {
+        uint32_t version = __atomic_load_n(&stream->vpws_mac_version, __ATOMIC_ACQUIRE);
+        if(version != stream->vpws_mac_tx_version) {
+            stream->vpws_mac_tx_version = version;
+            if(stream->tx_buf) {
+                free(stream->tx_buf);
+                stream->tx_buf = NULL;
+            }
+        }
+        return version != 0;
+    }
+    return true;
+}
+
 /*
  * Keep using the current EVPN entry while usable, otherwise search
  * all sessions again, but only if any EVPN route has changed since
@@ -1674,27 +1741,33 @@ bbl_stream_evpn_lookup(bbl_stream_s *stream)
             stream->evpn_entry_version = entry->version - 1;
         }
     }
-    if(entry->version != stream->evpn_entry_version) {
-        stream->evpn_entry_version = entry->version;
-        /* Free packet if EVPN entry has changed. */
-        if(stream->tx_buf) {
-            free(stream->tx_buf);
-            stream->tx_buf = NULL;
+    bbl_stream_vpn_version(stream, entry->version);
+    return bbl_stream_vpws_mac_ready(stream);
+}
+
+/* Like bbl_stream_evpn_lookup for the label block of the remote CE. */
+static bool
+bbl_stream_l2vpn_lookup(bbl_stream_s *stream)
+{
+    bbl_stream_config_s *config = stream->config;
+    bgp_l2vpn_entry_s *entry = stream->l2vpn_entry;
+
+    if(!(entry && bgp_l2vpn_usable(entry, config->bgp_l2vpn_local_ce_id))) {
+        if(stream->evpn_lookup_version == g_ctx->bgp_evpn_version) {
+            return false;
+        }
+        stream->evpn_lookup_version = g_ctx->bgp_evpn_version;
+        entry = bbl_stream_l2vpn_resolve(config);
+        if(!entry) {
+            return false;
+        }
+        if(entry != stream->l2vpn_entry) {
+            stream->l2vpn_entry = entry;
+            stream->evpn_entry_version = entry->version - 1;
         }
     }
-    if(unlikely(stream->config->vpws_arp && !stream->config->destination_mac_overwrite)) {
-        /* Wait for the customer MAC learned from ARP, ND or ICMP echo. */
-        uint32_t version = __atomic_load_n(&stream->vpws_mac_version, __ATOMIC_ACQUIRE);
-        if(version != stream->vpws_mac_tx_version) {
-            stream->vpws_mac_tx_version = version;
-            if(stream->tx_buf) {
-                free(stream->tx_buf);
-                stream->tx_buf = NULL;
-            }
-        }
-        return version != 0;
-    }
-    return true;
+    bbl_stream_vpn_version(stream, entry->version);
+    return bbl_stream_vpws_mac_ready(stream);
 }
 
 static bool
@@ -1703,7 +1776,11 @@ bbl_stream_can_send(bbl_stream_s *stream)
     if(likely(*(stream->endpoint) == ENDPOINT_ACTIVE)) {
         if(unlikely(stream->tx_flags & (STREAM_FLAG_LDP|STREAM_FLAG_EVPN))) {
             if(stream->tx_flags & STREAM_FLAG_EVPN) {
-                if(!bbl_stream_evpn_lookup(stream)) {
+                if(stream->config->bgp_l2vpn) {
+                    if(!bbl_stream_l2vpn_lookup(stream)) {
+                        goto FREE;
+                    }
+                } else if(!bbl_stream_evpn_lookup(stream)) {
                     goto FREE;
                 }
             }
@@ -2309,7 +2386,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
                 *(uint64_t*)stream_down->config->ipv6_ldp_lookup_address)) {
                 stream_down->tx_flags |= STREAM_FLAG_LDP;
             }
-            if(config->bgp_evpn) {
+            if(config->bgp_evpn || config->bgp_l2vpn) {
                 stream_down->tx_flags |= STREAM_FLAG_EVPN;
             }
             bbl_stream_add(stream_down);
@@ -2475,7 +2552,7 @@ bbl_stream_init() {
                         *(uint64_t*)stream->config->ipv6_ldp_lookup_address)) {
                         stream->tx_flags |= STREAM_FLAG_LDP;
                     }
-                    if(config->bgp_evpn) {
+                    if(config->bgp_evpn || config->bgp_l2vpn) {
                         stream->tx_flags |= STREAM_FLAG_EVPN;
                     }
                     if(config->raw_tcp) {
@@ -2762,11 +2839,11 @@ bbl_stream_rx_nat(bbl_ethernet_header_s *eth, bbl_stream_s *stream)
 /**
  * bbl_stream_vpws_send
  *
- * Send a customer frame (e.g. ARP reply) within the EVPN VPWS
- * service of the given network stream, using the same labels,
- * control word and customer VLAN tags as the stream.
+ * Send a customer frame (e.g. ARP reply) within the EVPN VPWS,
+ * E-LAN or L2VPN service of the given network stream, using the
+ * same labels, control word and customer VLAN tags as the stream.
  *
- * @param stream EVPN VPWS network stream
+ * @param stream EVPN VPWS, E-LAN or L2VPN network stream
  * @param inner customer ethernet frame
  * @return true if queued
  */
@@ -2776,14 +2853,28 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
     bbl_stream_config_s *config = stream->config;
     bbl_network_interface_s *network_interface = stream->tx_network_interface;
     bgp_evpn_entry_s *entry;
+    bgp_l2vpn_entry_s *l2vpn_entry;
+    bbl_stream_vpn_s vpn = {0};
 
     bbl_ethernet_header_s eth = {0};
     bbl_mpls_s mpls1 = {0};
     bbl_mpls_s mpls2 = {0};
 
-    entry = bbl_stream_evpn_resolve(config);
-    if(!(network_interface && entry)) {
+    if(!network_interface) {
         return false;
+    }
+    if(config->bgp_l2vpn) {
+        l2vpn_entry = bbl_stream_l2vpn_resolve(config);
+        if(!l2vpn_entry) {
+            return false;
+        }
+        bbl_stream_vpn_l2vpn(config, l2vpn_entry, &vpn);
+    } else {
+        entry = bbl_stream_evpn_resolve(config);
+        if(!entry) {
+            return false;
+        }
+        bbl_stream_vpn_evpn(config, entry, &vpn);
     }
     if((stream->tx_flags & STREAM_FLAG_LDP) &&
        !(stream->ldp_entry && stream->ldp_entry->active)) {
@@ -2803,8 +2894,8 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
     eth.qinq = network_interface->qinq;
     eth.type = ETH_TYPE_ETH;
     eth.next = inner;
-    eth.mpls_cw = bbl_stream_evpn_cw(config, entry);
-    bbl_stream_network_labels(stream, entry, &eth, &mpls1, &mpls2);
+    eth.mpls_cw = vpn.cw;
+    bbl_stream_network_labels(stream, &vpn, &eth, &mpls1, &mpls2);
 
     inner->src = network_interface->mac;
     inner->mpls = NULL;
@@ -3148,7 +3239,21 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         if(stream->reverse) {
             json_object_set_new(root, "reverse-flow-id", json_integer(stream->reverse->flow_id));
         }
-        if(stream->tx_flags & STREAM_FLAG_EVPN) {
+        if((stream->tx_flags & STREAM_FLAG_EVPN) && stream->config->bgp_l2vpn) {
+            bgp_l2vpn_entry_s *entry = stream->l2vpn_entry;
+            uint16_t local_ce_id = stream->config->bgp_l2vpn_local_ce_id;
+            bool resolved = entry && bgp_l2vpn_usable(entry, local_ce_id);
+            json_object_set_new(root, "l2vpn-resolved", json_boolean(resolved));
+            if(resolved) {
+                json_object_set_new(root, "l2vpn-label", json_integer(bgp_l2vpn_label(entry, local_ce_id)));
+                /* Circuit status signaled by the remote PE (RFC 6624). */
+                json_object_set_new(root, "l2vpn-circuit-up", json_boolean(bgp_l2vpn_status_up(entry, local_ce_id)));
+            }
+            if(stream->config->vpws_arp && !stream->config->destination_mac_overwrite) {
+                json_object_set_new(root, "vpws-mac", stream->vpws_mac_version ?
+                                    json_string(format_mac_address(stream->vpws_mac)) : json_null());
+            }
+        } else if(stream->tx_flags & STREAM_FLAG_EVPN) {
             bgp_evpn_entry_s *entry = stream->evpn_entry;
             bool resolved = entry && bbl_stream_evpn_usable(stream->config, entry);
             json_object_set_new(root, "evpn-resolved", json_boolean(resolved));

@@ -52,12 +52,14 @@
 #define BGP_IPv4_FLOW               0x00000400
 #define BGP_IPv6_FLOW               0x00000800
 #define BGP_EVPN                    0x00001000
+#define BGP_L2VPN                   0x00002000
 
 #define BGP_AFI_IPV4                1
 #define BGP_AFI_IPV6                2
 #define BGP_AFI_L2VPN               25
 #define BGP_SAFI_UNICAST            1
 #define BGP_SAFI_LABELED_UNICAST    4
+#define BGP_SAFI_VPLS               65
 #define BGP_SAFI_EVPN               70
 
 /* Path attributes */
@@ -103,6 +105,12 @@
 
 /* PMSI tunnel type ingress replication (RFC 6514) */
 #define BGP_PMSI_INGRESS_REPLICATION 6
+
+/* BGP L2VPN (RFC 6624) and VPLS (RFC 4761) */
+#define BGP_L2VPN_FLAG_SEQ          0x01 /* sequenced delivery (S) */
+#define BGP_L2VPN_FLAG_CW           0x02 /* control word (C) */
+#define BGP_L2VPN_TLV_CSV           1 /* circuit status vector */
+#define BGP_L2VPN_MAX_CSV           64 /* stored status vector bytes */
 
 #define BGP_RD_LEN                  8
 #define BGP_ESI_LEN                 10
@@ -268,6 +276,8 @@ typedef struct bgp_session_ {
         uint32_t update_tx;
         uint32_t evpn_reach_rx;
         uint32_t evpn_withdraw_rx;
+        uint32_t l2vpn_reach_rx;
+        uint32_t l2vpn_withdraw_rx;
         uint32_t route_reach_rx;
         uint32_t route_withdraw_rx;
     } stats;
@@ -278,11 +288,13 @@ typedef struct bgp_session_ {
         hb_tree *ipv6;
         hashtable2 *attr; /* shared path attribute sets */
         hb_tree *evpn_db; /* EVPN routes */
+        hb_tree *l2vpn_db; /* L2VPN and VPLS label blocks */
         uint32_t ipv4_unicast;
         uint32_t ipv4_labeled_unicast;
         uint32_t ipv6_unicast;
         uint32_t ipv6_labeled_unicast;
         uint32_t evpn;
+        uint32_t l2vpn;
     } rib;
 
     bgp_raw_update_s *raw_update_start;
@@ -468,5 +480,52 @@ typedef struct bgp_evpn_entry_ {
 
     bgp_session_s *source;
 } bgp_evpn_entry_s;
+
+/*
+ * BGP L2VPN Route Key (RFC 6624, RFC 4761)
+ *
+ * A label block of a CE (VE) is identified by the route
+ * distinguisher, CE ID and label block offset.
+ */
+typedef struct bgp_l2vpn_key_ {
+    uint8_t  rd[BGP_RD_LEN];
+    uint16_t ce_id;
+    uint16_t offset;
+} __attribute__ ((__packed__)) bgp_l2vpn_key_s;
+
+/*
+ * BGP L2VPN Database Entry
+ *
+ * Entries are never freed while BNG Blaster is running because
+ * traffic streams keep references. Withdrawn entries are marked
+ * inactive and every change increments the version.
+ */
+typedef struct bgp_l2vpn_entry_ {
+    bgp_l2vpn_key_s key;
+
+    bool active;
+    uint32_t version;
+
+    /* Label block covering the remote CE IDs offset to offset + size - 1
+     * with labels label_base to label_base + size - 1. */
+    uint16_t size;
+    uint32_t label_base;
+
+    bool     l2_info_present; /* Layer2 Info extended community */
+    uint8_t  encap; /* encapsulation type (e.g. 4 Ethernet VLAN, 5 Ethernet) */
+    uint8_t  flags; /* control flags (C and S) */
+    uint16_t mtu;
+
+    uint16_t csv_bits; /* circuit status vector length in bits, 0 if not present */
+    uint8_t  csv[BGP_L2VPN_MAX_CSV];
+
+    uint8_t  nexthop_af;
+    uint8_t  nexthop[IPV6_ADDR_LEN];
+
+    uint8_t  rt_count;
+    uint8_t  rt[BGP_EVPN_MAX_RT][8];
+
+    bgp_session_s *source;
+} bgp_l2vpn_entry_s;
 
 #endif

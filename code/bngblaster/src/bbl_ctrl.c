@@ -104,7 +104,7 @@ const schema_arg_s schema_stream_update[] = {
 const schema_arg_s schema_bgp[] = {
     ARG_STR("local-ipv4-address"), ARG_STR("peer-ipv4-address"),
     ARG_STR("local-ipv6-address"), ARG_STR("peer-ipv6-address"), ARG_STR("ipv6-link-local"),
-    ARG_STR("file"), ARG_NUM("route-type"), ARG_STR("rd"),
+    ARG_STR("file"), ARG_NUM("route-type"), ARG_STR("rd"), ARG_NUM("ce-id"),
     ARG_STR("family"), ARG_STR("prefix"), ARG_STR("match"),
     ARG_END
 };
@@ -394,6 +394,7 @@ static const struct action actions[] = {
     {"bgp-raw-update-list", bgp_ctrl_raw_update_list, schema_bgp, true},
     {"bgp-raw-update", bgp_ctrl_raw_update, schema_bgp, false},
     {"bgp-evpn-routes", bgp_ctrl_evpn_routes, schema_bgp, false},
+    {"bgp-l2vpn-routes", bgp_ctrl_l2vpn_routes, schema_bgp, false},
     {"bgp-routes", bgp_ctrl_routes, schema_bgp, false},
     {"bgp-routes-stats", bgp_ctrl_routes_stats, schema_bgp, false},
     {"ldp-adjacencies", ldp_ctrl_adjacencies, schema_ldp, true},

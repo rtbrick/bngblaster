@@ -44,7 +44,7 @@ bgp_ctrl_session_json(bgp_session_s *session)
         raw_update_file = session->raw_update->file;
     }
 
-    stats = json_pack("{si si si si si si si si si si}",
+    stats = json_pack("{si si si si si si si si si si si si}",
                       "messages-rx", session->stats.message_rx,
                       "messages-tx", session->stats.message_tx,
                       "keepalive-rx", session->stats.keepalive_rx,
@@ -53,6 +53,8 @@ bgp_ctrl_session_json(bgp_session_s *session)
                       "update-tx", session->stats.update_tx,
                       "evpn-reach-rx", session->stats.evpn_reach_rx,
                       "evpn-withdraw-rx", session->stats.evpn_withdraw_rx,
+                      "l2vpn-reach-rx", session->stats.l2vpn_reach_rx,
+                      "l2vpn-withdraw-rx", session->stats.l2vpn_withdraw_rx,
                       "route-reach-rx", session->stats.route_reach_rx,
                       "route-withdraw-rx", session->stats.route_withdraw_rx);
 
@@ -645,6 +647,138 @@ bgp_ctrl_evpn_routes(int fd, uint32_t session_id __attribute__((unused)), json_t
     return result;
 }
 
+static json_t *
+bgp_ctrl_l2vpn_entry_json(bgp_l2vpn_entry_s *entry)
+{
+    json_t *root, *rts, *l2, *csv;
+    uint16_t i;
+
+    root = json_object();
+    if(!root) {
+        return NULL;
+    }
+    json_object_set_new(root, "rd", json_string(bgp_evpn_format_rd(entry->key.rd)));
+    json_object_set_new(root, "ce-id", json_integer(entry->key.ce_id));
+    json_object_set_new(root, "active", json_boolean(entry->active));
+    json_object_set_new(root, "version", json_integer(entry->version));
+    json_object_set_new(root, "label-block-offset", json_integer(entry->key.offset));
+    json_object_set_new(root, "label-block-size", json_integer(entry->size));
+    json_object_set_new(root, "label-base", json_integer(entry->label_base));
+    if(entry->nexthop_af) {
+        json_object_set_new(root, "nexthop", json_string(bgp_ctrl_evpn_ip_string(entry->nexthop_af, entry->nexthop)));
+    }
+    if(entry->rt_count) {
+        rts = json_array();
+        for(i = 0; i < entry->rt_count; i++) {
+            json_array_append_new(rts, json_string(bgp_evpn_format_rt(entry->rt[i])));
+        }
+        json_object_set_new(root, "route-targets", rts);
+    }
+    if(entry->l2_info_present) {
+        l2 = json_pack("{si ss si sb sb si}",
+                       "encapsulation-type", entry->encap,
+                       "encapsulation", bgp_l2vpn_encap_string(entry->encap),
+                       "flags", entry->flags,
+                       "control-word", (entry->flags & BGP_L2VPN_FLAG_CW) != 0,
+                       "sequencing", (entry->flags & BGP_L2VPN_FLAG_SEQ) != 0,
+                       "mtu", entry->mtu);
+        if(l2) {
+            json_object_set_new(root, "layer2-info", l2);
+        }
+    }
+    if(entry->csv_bits) {
+        /* Status per remote CE ID of the label block (true = up). */
+        csv = json_array();
+        for(i = 0; i < entry->csv_bits && i / 8 < BGP_L2VPN_MAX_CSV; i++) {
+            json_array_append_new(csv, json_boolean(bgp_l2vpn_status_up(entry, entry->key.offset + i)));
+        }
+        json_object_set_new(root, "circuit-status", csv);
+    }
+    return root;
+}
+
+int
+bgp_ctrl_l2vpn_routes(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    int result = 0;
+    json_t *root, *sessions, *session, *routes, *route;
+    bgp_session_s *bgp_session = g_ctx->bgp_sessions;
+    bgp_ctrl_filter_s filter;
+    bgp_l2vpn_entry_s *entry;
+    hb_itor *itor;
+    bool next;
+
+    const char *error;
+    const char *s;
+    int ce_id = -1;
+    uint8_t rd[BGP_RD_LEN];
+    bool rd_filter = false;
+
+    error = bgp_ctrl_filter_parse(arguments, &filter);
+    if(error) {
+        return bbl_ctrl_status(fd, "error", 400, error);
+    }
+    if(json_unpack(arguments, "{s:i}", "ce-id", &ce_id) == 0) {
+        if(ce_id < 0 || ce_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid ce-id");
+        }
+    }
+    if(json_unpack(arguments, "{s:s}", "rd", &s) == 0) {
+        if(!bgp_evpn_scan_rd(s, rd)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid rd");
+        }
+        rd_filter = true;
+    }
+
+    sessions = json_array();
+    while(bgp_session) {
+        if(bgp_session->rib.l2vpn_db && bgp_ctrl_filter_match(&filter, bgp_session)) {
+            routes = json_array();
+            itor = hb_itor_new(bgp_session->rib.l2vpn_db);
+            next = hb_itor_first(itor);
+            while(next) {
+                entry = *hb_itor_datum(itor);
+                next = hb_itor_next(itor);
+                if(ce_id >= 0 && entry->key.ce_id != ce_id) {
+                    continue;
+                }
+                if(rd_filter && memcmp(entry->key.rd, rd, BGP_RD_LEN) != 0) {
+                    continue;
+                }
+                route = bgp_ctrl_l2vpn_entry_json(entry);
+                if(route) {
+                    json_array_append_new(routes, route);
+                }
+            }
+            hb_itor_free(itor);
+            session = json_pack("{ss ss ss so}",
+                                "interface", bgp_session->interface->name,
+                                "local-address", bgp_session->local_address_str,
+                                "peer-address", bgp_session->peer_address_str,
+                                "routes", routes);
+            if(session) {
+                json_array_append_new(sessions, session);
+            } else {
+                json_decref(routes);
+            }
+        }
+        bgp_session = bgp_session->next;
+    }
+
+    root = json_pack("{ss si so}",
+                     "status", "ok",
+                     "code", 200,
+                     "bgp-l2vpn-routes", sessions);
+    if(root) {
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
+        json_decref(root);
+    } else {
+        result = bbl_ctrl_status(fd, "error", 500, "internal error");
+        json_decref(sessions);
+    }
+    return result;
+}
+
 static const char *
 bgp_ctrl_family_string(uint16_t afi, uint8_t safi)
 {
@@ -956,7 +1090,7 @@ bgp_ctrl_routes_stats(int fd, uint32_t session_id __attribute__((unused)), json_
     sessions = json_array();
     while(bgp_session) {
         if(bgp_ctrl_filter_match(&filter, bgp_session)) {
-            session = json_pack("{ss ss ss ss sb si si si si si si si si si si}",
+            session = json_pack("{ss ss ss ss sb si si si si si si si si si si si si si}",
                                 "interface", bgp_session->interface->name,
                                 "local-address", bgp_session->local_address_str,
                                 "peer-address", bgp_session->peer_address_str,
@@ -967,11 +1101,14 @@ bgp_ctrl_routes_stats(int fd, uint32_t session_id __attribute__((unused)), json_
                                 "ipv6-unicast", bgp_session->rib.ipv6_unicast,
                                 "ipv6-labeled-unicast", bgp_session->rib.ipv6_labeled_unicast,
                                 "evpn", bgp_session->rib.evpn,
+                                "l2vpn", bgp_session->rib.l2vpn,
                                 "attribute-sets", bgp_session->rib.attr ? (int)hashtable2_count(bgp_session->rib.attr) : 0,
                                 "route-reach-rx", bgp_session->stats.route_reach_rx,
                                 "route-withdraw-rx", bgp_session->stats.route_withdraw_rx,
                                 "evpn-reach-rx", bgp_session->stats.evpn_reach_rx,
-                                "evpn-withdraw-rx", bgp_session->stats.evpn_withdraw_rx);
+                                "evpn-withdraw-rx", bgp_session->stats.evpn_withdraw_rx,
+                                "l2vpn-reach-rx", bgp_session->stats.l2vpn_reach_rx,
+                                "l2vpn-withdraw-rx", bgp_session->stats.l2vpn_withdraw_rx);
             if(session) {
                 json_array_append_new(sessions, session);
             }
