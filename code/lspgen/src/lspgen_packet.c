@@ -928,7 +928,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
         switch (packet->prev_attr_cp[0]) {
             case OSPF_MSG_LSUPDATE:
                 write_be_uint(buf0->data+20+2, 2, buf0->idx - 20); /* Packet length */
-                write_be_uint(buf0->data+20+12, 2, calculate_cksum(buf0->data+20, buf0->idx-20)); /* Checksum */
+                write_le_uint(buf0->data+20+12, 2, calculate_cksum(buf0->data+20, buf0->idx-20)); /* Checksum */
 
                 write_be_uint(buf0->data+2, 2, buf0->idx); /* IP Total length */
                 write_le_uint(buf0->data+10, 2, calculate_cksum(buf0->data, 20)); /* IP header checksum */
