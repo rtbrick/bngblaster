@@ -12,6 +12,7 @@
 #include "lspgen.h"
 #include "lspgen_lsdb.h"
 #include "lspgen_isis.h"
+#include "lspgen_ospf.h"
 
 void
 lspgen_dump_ipv4_stream(json_t *dest_arr, ipv4_prefix *prefix)
@@ -36,7 +37,7 @@ lspgen_dump_ipv6_stream(json_t *dest_arr, ipv6_prefix *prefix)
 }
 
 void
-lspgen_gen_stream_node(__attribute__((unused))lsdb_ctx_t *ctx,
+lspgen_gen_stream_node(lsdb_ctx_t *ctx,
                        lsdb_node_t *node, json_t *dest_arr)
 {
     struct lsdb_attr_ *attr;
@@ -61,15 +62,38 @@ lspgen_gen_stream_node(__attribute__((unused))lsdb_ctx_t *ctx,
 
     do {
         attr = *dict_itor_datum(itor);
-        switch (attr->key.attr_type) {
-            case ISIS_TLV_EXTD_IPV4_REACH:
+        switch (ctx->protocol_id) {
+        case PROTO_ISIS:
+            switch (attr->key.attr_type) {
+                case ISIS_TLV_INT_IPV4_REACH: /* fall through */
+                case ISIS_TLV_EXT_IPV4_REACH:
+                case ISIS_TLV_EXTD_IPV4_REACH:
+                    lspgen_dump_ipv4_stream(dest_arr, &attr->key.prefix.ipv4_prefix);
+                    break;
+                case ISIS_TLV_EXTD_IPV6_REACH:
+                    lspgen_dump_ipv6_stream(dest_arr, &attr->key.prefix.ipv6_prefix);
+                    break;
+                default:
+                    break;
+            }
+            break;
+        case PROTO_OSPF2:
+            /* The prefixes of the extended prefix LSAs are duplicates. */
+            if ((attr->key.attr_cp[1] == OSPF_LSA_ROUTER &&
+                 attr->key.attr_cp[2] == OSPF_ROUTER_LSA_LINK_STUB) ||
+                attr->key.attr_cp[1] == OSPF_LSA_EXTERNAL) {
                 lspgen_dump_ipv4_stream(dest_arr, &attr->key.prefix.ipv4_prefix);
-                break;
-            case ISIS_TLV_EXTD_IPV6_REACH:
+            }
+            break;
+        case PROTO_OSPF3:
+            /* The prefixes of the extended intra-area prefix LSAs are duplicates. */
+            if (attr->key.attr_cp[1] == OSPF_LSA_INTRA_AREA_PREFIX ||
+                attr->key.attr_cp[1] == OSPF_LSA_EXTERNAL6) {
                 lspgen_dump_ipv6_stream(dest_arr, &attr->key.prefix.ipv6_prefix);
-                break;
-            default:
-                break;
+            }
+            break;
+        default:
+            break;
         }
     } while (dict_itor_next(itor));
 
