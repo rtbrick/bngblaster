@@ -561,6 +561,8 @@ lsdb_add_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
          */
         result = dict_insert(ctx->node_dict, &node->key);
         if (!result.inserted) {
+            free(node->node_name);
+            free(node);
             return NULL;
         }
         *result.datum_ptr = node;
@@ -666,6 +668,7 @@ lsdb_add_link(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node, struct lsdb_link_ 
          */
         result = dict_insert(ctx->link_dict, &link->key);
         if (!result.inserted) {
+            free(link);
             return NULL;
         }
         *result.datum_ptr = link;
@@ -1013,6 +1016,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
          */
         result = dict_insert(node->attr_dict, &attr->key);
         if (!result.inserted) {
+            free(attr);
             return NULL;
         }
         *result.datum_ptr = attr;
