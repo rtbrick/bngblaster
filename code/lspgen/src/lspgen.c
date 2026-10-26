@@ -479,6 +479,9 @@ lspgen_parse_sr_algo(struct lsdb_ctx_ *ctx, char *arg)
 
     ctx->sr_algo_count = 0;
     list = strdup(arg);
+    if (!list) {
+        return false;
+    }
     for (tok = strtok_r(list, ",", &save); tok; tok = strtok_r(NULL, ",", &save)) {
         algo = strtol(tok, &end, 10);
         if (*end || end == tok || algo < 0 || algo > 255 || (algo > 1 && algo < 128)) {
@@ -522,9 +525,15 @@ lspgen_parse_flex_algo(struct lsdb_ctx_ *ctx, char *arg)
 
     if (!ctx->fad) {
         ctx->fad = calloc(LSDB_MAX_FLEX_ALGO, sizeof(lsdb_attr_fad_t));
+        if (!ctx->fad) {
+            return false;
+        }
     }
     ctx->fad_count = 0;
     list = strdup(arg);
+    if (!list) {
+        return false;
+    }
     for (tok = strtok_r(list, ",", &save); tok; tok = strtok_r(NULL, ",", &save)) {
         if (ctx->fad_count >= LSDB_MAX_FLEX_ALGO) {
             LOG(ERROR, "Maximum %u Flex-Algo definitions supported\n", LSDB_MAX_FLEX_ALGO);

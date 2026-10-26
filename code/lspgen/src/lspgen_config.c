@@ -1641,6 +1641,9 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
         }
 
         node = lsdb_add_node(ctx, &node_template);
+        if (!node) {
+            return;
+        }
 
         value = json_object_get(node_obj, "is_root");
         if (value && json_is_boolean(value) && json_boolean_value(value)) {

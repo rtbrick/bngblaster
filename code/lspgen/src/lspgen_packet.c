@@ -1937,7 +1937,9 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
          * Purge if no attributes or explicit purge.
          */
         packet = lspgen_add_packet(ctx, node, id);
-        lspgen_finalize_packet(ctx, node, packet);
+        if (packet) {
+            lspgen_finalize_packet(ctx, node, packet);
+        }
         return;
     }
 
@@ -1993,6 +1995,11 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
          */
         if (!packet) {
             packet = lspgen_add_packet(ctx, node, id);
+            if (!packet) {
+                dict_itor_free(itor);
+                LOG(ERROR, "Failed to add packet for node %s\n", lsdb_format_node(node));
+                return;
+            }
             tlv_start_idx = packet->buf[0].idx;
             last_attr = 0; /* start with a fresh TLV */
         }
@@ -2049,7 +2056,9 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
          * No attributes. This is a purge.
          */
         packet = lspgen_add_packet(ctx, node, id);
-        lspgen_finalize_packet(ctx, node, packet);
+        if (packet) {
+            lspgen_finalize_packet(ctx, node, packet);
+        }
         return;
     }
 
@@ -2105,6 +2114,11 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
          */
         if (!packet) {
             packet = lspgen_add_packet(ctx, node, id);
+            if (!packet) {
+                dict_itor_free(itor);
+                LOG(ERROR, "Failed to add packet for node %s\n", lsdb_format_node(node));
+                return;
+            }
         }
 
         /*
