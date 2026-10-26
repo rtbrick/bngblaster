@@ -232,12 +232,6 @@ lspgen_dump_pcap (struct lsdb_ctx_ *ctx)
     uint8_t pcap_header[256];
     struct io_buffer_ buf;
 
-    ctx->pcap_file = fopen(ctx->pcap_filename, "w");
-    if (!ctx->pcap_file) {
-        LOG(ERROR, "Error opening PCAP file %s\n", ctx->pcap_filename);
-        return;
-    }
-
     /*
      * Walk the node DB.
      */
@@ -252,6 +246,13 @@ lspgen_dump_pcap (struct lsdb_ctx_ *ctx)
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);
         LOG_NOARG(ERROR, "Empty LSDB.\n");
+        return;
+    }
+
+    ctx->pcap_file = fopen(ctx->pcap_filename, "w");
+    if (!ctx->pcap_file) {
+        LOG(ERROR, "Error opening PCAP file %s\n", ctx->pcap_filename);
+        dict_itor_free(itor);
         return;
     }
 

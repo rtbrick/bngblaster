@@ -831,12 +831,6 @@ lspgen_write_config(lsdb_ctx_t *ctx)
     int res;
     char ospf_area[sizeof("area255.255.255.255")];
 
-    ctx->config_file = fopen(ctx->config_filename, "w");
-    if (!ctx->config_file) {
-        LOG(ERROR, "Error opening config file %s\n", ctx->config_filename);
-        return;
-    }
-
     /* Walk the node DB. */
     itor = dict_itor_new(ctx->node_dict);
     if (!itor) {
@@ -847,6 +841,13 @@ lspgen_write_config(lsdb_ctx_t *ctx)
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);
         LOG_NOARG(ERROR, "Empty LSDB.\n");
+        return;
+    }
+
+    ctx->config_file = fopen(ctx->config_filename, "w");
+    if (!ctx->config_file) {
+        LOG(ERROR, "Error opening config file %s\n", ctx->config_filename);
+        dict_itor_free(itor);
         return;
     }
 

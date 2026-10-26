@@ -113,12 +113,6 @@ lspgen_dump_stream(lsdb_ctx_t *ctx)
     json_t *root_obj, *dest_arr;
     int res;
 
-    ctx->stream_file = fopen(ctx->stream_filename, "w");
-    if (!ctx->stream_file) {
-        LOG(ERROR, "Error opening stream file %s\n", ctx->stream_filename);
-        return;
-    }
-
     /*
      * Walk the node DB.
      */
@@ -133,6 +127,13 @@ lspgen_dump_stream(lsdb_ctx_t *ctx)
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);
         LOG_NOARG(ERROR, "Empty LSDB.\n");
+        return;
+    }
+
+    ctx->stream_file = fopen(ctx->stream_filename, "w");
+    if (!ctx->stream_file) {
+        LOG(ERROR, "Error opening stream file %s\n", ctx->stream_filename);
+        dict_itor_free(itor);
         return;
     }
 

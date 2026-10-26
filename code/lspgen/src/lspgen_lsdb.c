@@ -1113,11 +1113,6 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
     }
 
     snprintf(filename, sizeof(filename), "%s.dot", ctx->graphviz_filename);
-    graphviz = fopen(filename, "w");
-    if (!graphviz) {
-        LOG(ERROR, "Error opening graphviz file %s\n", filename);
-        return;
-    }
 
     /*
      * Walk the node DB.
@@ -1133,6 +1128,13 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);
         LOG_NOARG(ERROR, "Empty LSDB.\n");
+        return;
+    }
+
+    graphviz = fopen(filename, "w");
+    if (!graphviz) {
+        LOG(ERROR, "Error opening graphviz file %s\n", filename);
+        dict_itor_free(itor);
         return;
     }
 

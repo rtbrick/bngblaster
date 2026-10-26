@@ -114,6 +114,7 @@ lspgen_dump_mrt_node(lsdb_ctx_t *ctx, lsdb_node_t *node)
 
         default:
             LOG(ERROR, "No MRT writer for protocol %u\n", ctx->protocol_id);
+            dict_itor_free(itor);
             return;
         }
 
@@ -136,12 +137,6 @@ lspgen_dump_mrt(lsdb_ctx_t *ctx)
     struct lsdb_node_ *node;
     dict_itor *itor;
 
-    ctx->mrt_file = fopen(ctx->mrt_filename, "w");
-    if (!ctx->mrt_file) {
-        LOG(ERROR, "Error opening MRT file %s\n", ctx->mrt_filename);
-        return;
-    }
-
     /*
      * Walk the node DB.
      */
@@ -158,6 +153,13 @@ lspgen_dump_mrt(lsdb_ctx_t *ctx)
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);
         LOG_NOARG(ERROR, "Empty LSDB.\n");
+        return;
+    }
+
+    ctx->mrt_file = fopen(ctx->mrt_filename, "w");
+    if (!ctx->mrt_file) {
+        LOG(ERROR, "Error opening MRT file %s\n", ctx->mrt_filename);
+        dict_itor_free(itor);
         return;
     }
 
