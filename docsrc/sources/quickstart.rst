@@ -336,21 +336,27 @@ Now use the included tool ``lspgen`` to generate the attached ISIS topology.
 .. code-block:: none
 
     $ lspgen -a 49.0001/24 -K secret123 -T md5 -C 1921.6800.1001 -m isis.mrt
-    Mar 30 14:54:19.647569 Add context for instance default, protocol isis, topology unicast
-    Mar 30 14:54:19.647630 Add connector to 0x192168001001
-    Mar 30 14:54:19.647633 LSP generation parameters
-    Mar 30 14:54:19.647639  Area 49.0001/24
-    Mar 30 14:54:19.647642  Level 1, sequence 0x1, lsp-lifetime 65535
-    Mar 30 14:54:19.647645  Authentication-key secret123, Authentication-type md5
-    Mar 30 14:54:19.647648  IPv4 Node Base Prefix 192.168.0.0/32
-    Mar 30 14:54:19.647651  IPv4 Link Base Prefix 172.16.0.0/31
-    Mar 30 14:54:19.647654  IPv4 External Base Prefix 10.0.0.0/28
-    Mar 30 14:54:19.647657  IPv6 Node Base Prefix fc00::c0a8:0/128
-    Mar 30 14:54:19.647660  IPv6 Link Base Prefix fc00::ac10:0/127
-    Mar 30 14:54:19.647669  IPv6 External Base Prefix fc00::a00:0/124
-    Mar 30 14:54:19.647672  SRGB base 10000, range 2000
-    Mar 30 14:54:19.647678 Generating a graph of 10 nodes and 20 links
-    Mar 30 14:54:19.647813  Root node 1921.6800.0000.00
+    Mar 30 14:54:19.647569 Add context for instance default
+    Mar 30 14:54:19.647572 Add connector to 1921.6800.1001.00
+    Mar 30 14:54:19.647575 LSP generation parameters
+    Mar 30 14:54:19.647578  Protocol isis
+    Mar 30 14:54:19.647581  Area 49.0001/24
+    Mar 30 14:54:19.647584  Level 1
+    Mar 30 14:54:19.647587  LSP Buffer size 1492
+    Mar 30 14:54:19.647590  Sequence 0x1, lsp-lifetime 65535
+    Mar 30 14:54:19.647593  Authentication-key secret123, Authentication-type md5
+    Mar 30 14:54:19.647596  Link-multiplier 1
+    Mar 30 14:54:19.647599  IPv4 Node Base Prefix 192.168.0.0/32, End Prefix 192.168.0.9/32, 10 prefixes
+    Mar 30 14:54:19.647602  IPv4 Link Base Prefix 172.16.0.0/31, End Prefix 172.16.0.38/31, 20 prefixes
+    Mar 30 14:54:19.647605  IPv4 External Base Prefix 10.0.0.0/28, End Prefix 10.0.0.0/28, 0 prefixes
+    Mar 30 14:54:19.647608  IPv6 Node Base Prefix fc00::c0a8:0/128, End Prefix fc00::c0a8:9/128, 10 prefixes
+    Mar 30 14:54:19.647611  IPv6 Link Base Prefix fc00::ac10:0/127, End Prefix fc00::ac10:26/127, 20 prefixes
+    Mar 30 14:54:19.647614  IPv6 External Base Prefix fc00::a00:0/124, End Prefix fc00::a00:0/124, 0 prefixes
+    Mar 30 14:54:19.647617  SRGB base 10000, range 2000
+    Mar 30 14:54:19.647620 Generating a graph of 10 nodes and 20 links
+    Mar 30 14:54:19.647623  Generating a subgraph of 10 nodes and 20 links
+    Mar 30 14:54:19.647626  Root node 1921.6800.0000.00 (node1)
+    Mar 30 14:54:19.647629 Wrote 10 nodes to file isis-level1-sequence-cache.json
 
 Finally, you can start the BNG Blaster. 
 

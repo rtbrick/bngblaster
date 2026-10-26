@@ -9,7 +9,10 @@ as MRT and PCAP files. Initially, ``lspgen`` was developed exclusively for ISIS,
 hence its name. However, with the introduction of OSPF support in BNG Blaster, 
 ``lspgen`` has been enhanced to accommodate OSPF topologies as well.
 
-The default protocol is ISIS which can be changed using the argument ``-P ospf2``. 
+The default protocol is ISIS which can be changed using the argument
+``-P ospf2`` or ``-P ospf3``. The arguments are processed in the given order
+and the area (``-a``), connector (``-C``), sequence number (``-q``) and level
+(``-V``) depend on the protocol, so ``-P`` must be set before those arguments.
 
 .. code-block:: none
 
@@ -73,6 +76,44 @@ The default protocol is ISIS which can be changed using the argument ``-P ospf2`
 You can generate random topologies or define a topology manually 
 using configuration files.
 
+The following defaults are used if not changed by the corresponding arguments.
+
++-------------------------------+----------------------------------------------+
+| Argument                      | Default                                      |
++===============================+==============================================+
+| ``-c --node-count``           | 10                                           |
++-------------------------------+----------------------------------------------+
+| ``-a --area``                 | ISIS 49.0001/24, OSPF 0.0.0.0                |
++-------------------------------+----------------------------------------------+
+| ``-V --level``                | 1 (ISIS only)                                |
++-------------------------------+----------------------------------------------+
+| ``-n --ipv4-node-prefix``     | 192.168.0.0/32                               |
++-------------------------------+----------------------------------------------+
+| ``-l --ipv4-link-prefix``     | 172.16.0.0/31                                |
++-------------------------------+----------------------------------------------+
+| ``-x --ipv4-external-prefix`` | 10.0.0.0/28                                  |
++-------------------------------+----------------------------------------------+
+| ``-N --ipv6-node-prefix``     | fc00::c0a8:0/128                             |
++-------------------------------+----------------------------------------------+
+| ``-L --ipv6-link-prefix``     | fc00::ac10:0/127                             |
++-------------------------------+----------------------------------------------+
+| ``-X --ipv6-external-prefix`` | fc00::a00:0/124                              |
++-------------------------------+----------------------------------------------+
+| ``-e --external-count``       | 0                                            |
++-------------------------------+----------------------------------------------+
+| ``-u --link-multiplier``      | 1 (parallel links, maximum 150)              |
++-------------------------------+----------------------------------------------+
+| ``-M --lsp-lifetime``         | ISIS 65535, OSPF 3600 (minimum 120 seconds)  |
++-------------------------------+----------------------------------------------+
+| ``-q --sequence``             | ISIS 0x1, OSPF 0x80000001                    |
++-------------------------------+----------------------------------------------+
+
+The prefixes should be set with prefix length, as a prefix without
+length is interpreted as /24 for IPv4 and /64 for IPv6. OSPFv2 topologies
+are IPv4 only and OSPFv3 topologies are IPv6 only. ISIS topologies
+contain both address families unless disabled with ``-z`` (no IPv4)
+or ``-Z`` (no IPv6).
+
 Connector
 ^^^^^^^^^
 
@@ -120,7 +161,7 @@ the ``system-id`` of the root node from the generated toplogy must be referenced
         ]
     }
 
-This is simlar for OSPFv2 but here the connector is constructed based on remote router-id 
+This is similar for OSPFv2 but here the connector is constructed based on remote router-id 
 and local link IPv4 address (``remote-router-id:local-ipv4-address``). 
 
 .. image:: ../images/bbl_ospf.png
@@ -128,7 +169,7 @@ and local link IPv4 address (``remote-router-id:local-ipv4-address``).
 
 .. code-block:: none
 
-    $ lspgen -P ospf2 -m ospf.mrt -n 10.10.0.1 --connector "10.0.0.11:10.0.0.2" -p lspgen.pcap
+    $ lspgen -P ospf2 -m ospf.mrt -n 10.10.0.1/32 --connector "10.0.0.11:10.0.0.2" -p lspgen.pcap
     ...
     Sep 04 11:02:59.242810 Generating a graph of 10 nodes and 20 links
     Sep 04 11:02:59.242827  Root node 10.10.0.1 (node1)
@@ -156,6 +197,11 @@ and local link IPv4 address (``remote-router-id:local-ipv4-address``).
         ]
     }
 
+For OSPFv3, the second part of the connector is the interface ID of the
+root node towards the BNG Blaster (``remote-router-id:local-interface-id``),
+for example ``10.0.0.11:0.0.0.1``, which corresponds to the
+``neighbor-interface-id`` of the BNG Blaster connection.
+
 Random Topologies
 ^^^^^^^^^^^^^^^^^
 
@@ -171,7 +217,11 @@ to the generated LSPs in the MRT file.
 Those topologies could be even exported as configuration file 
 with the argument ``-w`` and later imported with the argument ``-r``.
 This allows the generation of a large random topology that can be modified
-manually. 
+manually. Only one of both arguments is used, the last one wins.
+
+Topologies with more than 1000 nodes are generated as multiple random
+subgraphs of up to 1000 nodes, each connected to the previous one by
+two links with metric 99.
 
 Segment Routing
 ^^^^^^^^^^^^^^^
@@ -198,8 +248,8 @@ format ``<algo>:<metric-type>[:<priority>]`` with the metric types
 ``igp`` (default), ``min-delay`` and ``te`` and the default priority 128.
 The definitions are advertised by the first two nodes of the topology,
 each in a dedicated router capability TLV. All Flex-Algos are added to the
-SR algorithms together with algorithm 0, so node SIDs are generated
-for each of them.
+SR algorithms, so node SIDs are generated for each of them. Without the
+argument ``-A``, the SR algorithms are algorithm 0 and the Flex-Algos.
 
 .. code-block:: none
 
@@ -316,6 +366,47 @@ the router capability TLV should be set to the router ID of the node.
              "priority": 200, "m_flag": true, "exclude_any": 1}
         ]
     }
+
+Output Files
+^^^^^^^^^^^^
+
+The generated link state packets are written to the following files.
+
+* ``-m --mrt-file``: MRT file (RFC 6396) to be loaded by the BNG Blaster
+  with the ``mrt-file`` of the ``external`` ISIS or OSPF configuration.
+* ``-p --pcap-file``: PCAP file with all link state packets.
+* ``-w --write-config-file``: configuration file of the topology,
+  see below.
+* ``-f --stream-file``: JSON file with the list of ``destinations``,
+  which are all node, link and external prefixes of the topology. This
+  list can be used to create the corresponding BNG Blaster traffic streams.
+* ``-g --graphviz-file``: graphviz file ``<filename>.dot``, which is
+  converted into ``<filename>.svg`` if the graphviz command ``dot`` is installed.
+
+The sequence numbers of all nodes are stored in a sequence cache file
+in the current working directory (``isis-level<level>-sequence-cache.json``
+or ``ospf-area<area>-sequence-cache.json``). The next run of ``lspgen`` for
+the same level or area increments those sequence numbers by one, so that the
+updated link state packets replace the previous ones in the network.
+With the argument ``-G``, all link state packets are generated as purges.
+
+Control Socket
+^^^^^^^^^^^^^^
+
+Instead of loading an MRT file, ``lspgen`` can inject the generated link
+state packets directly into a running BNG Blaster instance using its
+control socket (``-S --control-socket``) with the ``isis-lsp-update``
+or ``ospf-pdu-update`` :ref:`command <api>`. The ISIS or OSPF instance
+of the BNG Blaster is selected with ``-I --control-instance`` (default 0).
+
+.. code-block:: none
+
+    lspgen -C 1921.6800.1001 -S run.sock -I 1
+
+In this mode, ``lspgen`` keeps running and refreshes the link state
+packets 300 seconds before the lifetime expires until it is stopped
+with Ctrl-C. The argument ``-Q --quit-loop`` stops ``lspgen`` after all
+packets have been sent once.
 
 Topology from Configuration File
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -456,6 +547,78 @@ shows the configuration for a topology with three nodes.
             }
         ]
     }
+
+For OSPF, the topology is defined in the list ``area<area>`` (e.g.
+``area0.0.0.0``) instead of ``level1`` or ``level2``, and the
+``protocol`` is ``ospf2`` or ``ospf3``. The ``node_id`` is the router ID.
+The links are defined with the ``local_link_id`` (OSPFv2 local interface
+address, OSPFv3 interface ID) and the optional ``remote_link_id``. A
+prefix with ``node_flag`` and ``segment_id`` is advertised as loopback
+including the Prefix-SID in the OSPFv2 Extended Prefix LSA or OSPFv3
+Extended Intra-Area-Prefix LSA. Prefixes with ``external_flag``
+are advertised as external LSA.
+
+.. code-block:: json
+
+    {
+        "instance": "default",
+        "protocol": "ospf2",
+        "lsp_lifetime": 3600,
+        "area0.0.0.0": [
+            {
+                "node_id": "192.168.0.0",
+                "hostname": "node1",
+                "is_root": true,
+                "capability_list": [
+                    {
+                        "router_id": "192.168.0.0",
+                        "srgb_base": 10000,
+                        "srgb_range": 5
+                    }
+                ],
+                "ipv4_prefix_list": [
+                    {
+                        "ipv4_prefix": "192.168.0.0/32",
+                        "metric": 0,
+                        "segment_id": 0,
+                        "node_flag": true
+                    },
+                    {
+                        "ipv4_prefix": "172.16.0.0/31",
+                        "metric": 5000
+                    }
+                ],
+                "neighbor_list": [
+                    {
+                        "remote_node_id": "10.0.0.11",
+                        "local_link_id": "10.0.0.2",
+                        "remote_link_id": "0.0.0.1",
+                        "metric": 100
+                    },
+                    {
+                        "remote_node_id": "192.168.0.1",
+                        "local_link_id": "172.16.0.0",
+                        "metric": 5000
+                    }
+                ]
+            }
+        ]
+    }
+
+The following further attributes are supported.
+
+* Node: ``sequence``, ``lsp_lifetime``, ``is_root`` (root node of the
+  topology), and for ISIS ``overload``, ``attach``, ``lsp_buffer_size``,
+  ``ipv6_address_list`` and ``adjacency_sid_base`` (first Adjacency-SID,
+  incremented per neighbor).
+* Prefix: ``external_flag``, ``updown_flag``, ``tag`` and for ISIS
+  ``small_metrics`` (TLV 128 and 130 instead of TLV 135), which is
+  also supported per neighbor (TLV 2 instead of TLV 22).
+* Router capability: ``s_flag`` and ``d_flag`` (ISIS flooding scope
+  and down flag).
+* Label binding (ISIS SID/Label Binding TLV): ``label_binding_list``
+  with entries of ``ipv4_prefix`` or ``ipv6_prefix``, ``range``,
+  ``segment_id`` and ``s_flag``.
 
 The randomly generated topologies can be also written to a file
 to have an example or starting point for the desired topologies. 
