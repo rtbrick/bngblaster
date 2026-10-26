@@ -1829,7 +1829,7 @@ lspgen_read_config(lsdb_ctx_t *ctx)
     if (json_typeof(root_obj) != JSON_OBJECT) {
         LOG(ERROR, "Error reading config file %s, root element must be object\n",
             ctx->config_filename);
-        return;
+        goto cleanup;
     }
 
     LOG(NORMAL, "Reading config file %s\n", ctx->config_filename);
@@ -1852,6 +1852,7 @@ lspgen_read_config(lsdb_ctx_t *ctx)
     if (ctx->protocol_id == PROTO_UNKNOWN) {
         LOG(ERROR, "Error reading config file %s, unknown protocol %s\n",
             ctx->config_filename, json_string_value(protocol));
+        goto cleanup;
     }
 
     /*
