@@ -6,9 +6,10 @@
  * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include <string.h>
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
-#include <strings.h>
+#include "hmac_md5.h"
 
 /**
  * @brief
@@ -25,6 +26,10 @@ hmac_md5(unsigned char* text, int text_len,
          uint8_t* digest)
 {
     HMAC_CTX *hmac = HMAC_CTX_new();
+    if (!hmac) {
+        memset(digest, 0, 16);
+        return;
+    }
     HMAC_Init_ex(hmac, key, key_len, EVP_md5(), NULL);
     HMAC_Update(hmac, text, text_len);
     HMAC_Final(hmac, digest, NULL);

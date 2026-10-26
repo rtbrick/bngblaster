@@ -9,6 +9,8 @@
 #ifndef __HMAC_MD5_H__
 #define __HMAC_MD5_H__
 
+#include <stdint.h>
+
 void
 hmac_md5(unsigned char* text, int text_len,
          unsigned char*key, int key_len,
