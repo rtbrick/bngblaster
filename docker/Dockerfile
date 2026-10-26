@@ -53,8 +53,10 @@ FROM golang:${DEBIAN_VERSION} AS controller-build
 ARG CONTROLLER_VERSION=latest
 ARG CONTROLLER_REPO=https://github.com/rtbrick/bngblaster-controller
 
-# The tag list invalidates the build cache with each new controller release.
-ADD https://api.github.com/repos/rtbrick/bngblaster-controller/git/refs/tags /tmp/controller-tags.json
+# The release feed invalidates the build cache with each new controller
+# release. Not the GitHub API, which fails unauthenticated requests (403)
+# from shared CI runners at its rate limit.
+ADD https://github.com/rtbrick/bngblaster-controller/releases.atom /tmp/controller-releases.atom
 
 # The release tags have no v prefix, therefore the controller is built
 # from a clone instead of go install. GOTOOLCHAIN=auto downloads a newer
