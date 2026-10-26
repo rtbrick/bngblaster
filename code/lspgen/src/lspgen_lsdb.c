@@ -572,7 +572,7 @@ lsdb_add_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
         CIRCLEQ_INIT(&node->link_qhead);
 
         /*
-         * Assign a monotonically index for mapping loopback IPs and system-ID.
+         * Assign a monotonic index for mapping loopback IPs and system-ID.
          */
         node->node_index = ctx->node_index;
         ctx->node_index++;
@@ -734,7 +734,7 @@ lsdb_add_link(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node, struct lsdb_link_ 
         }
 
         /*
-         * Assign a monotonically index for mapping links IPs.
+         * Assign a monotonic index for mapping link IPs.
          */
         link->link_index = ctx->link_index;
         ctx->link_index++;
@@ -1075,7 +1075,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
 }
 
 /*
- * Safeley free a name.
+ * Safely free a name.
  */
 void
 lsdb_free_name (char **name_ptr)
@@ -1182,7 +1182,7 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
 
     /*
      * First lookup the root node.
-     * Graphviz renders the graphs much more nicer
+     * Graphviz renders the graphs much nicer
      * if the root node and its neighbors get listed first.
      */
     nodes = 0;

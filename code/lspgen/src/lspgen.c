@@ -21,9 +21,6 @@
  */
 volatile sig_atomic_t loop_running = true;
 
-/*
- * Prototypes
- */
 const char banner[] = "\n"
 "      ____   __   ____         _        __            ,/\n"
 "     / __ \\ / /_ / __ ) _____ (_)_____ / /__        ,'/\n"
@@ -332,7 +329,7 @@ lspgen_store_bcd_addr(__uint128_t addr, uint8_t *buf, uint32_t len)
     stack_idx = 0;
     for (idx = 0; idx < len; idx++) {
         /*
-         * Load a byte and do the decimal conversation.
+         * Load a byte and do the decimal conversion.
          */
         digit = addr & 0xff;
         bcd_digit[0] = digit/100;
@@ -589,7 +586,7 @@ ERROR:
 
 /*
  * Each Flex-Algo requires node SIDs and must be advertised
- * in the SR-Algorithm subTLV, which always includes algorithm 0.
+ * in the SR-Algorithm subTLV, which includes algorithm 0 by default.
  */
 static bool
 lspgen_add_flex_algo_to_sr_algo(struct lsdb_ctx_ *ctx)
@@ -1488,7 +1485,7 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 }
 
 /*
- * Add  a connector string in the form of an
+ * Add a connector string in the form of an
  * iso remote_id xxxx.xxxx.xxxx.xx or
  * ipv4 remote_id:local_ip xxx.xxx.xxx.xxx:yyy.yyy.yyy.yyy
 */
@@ -1514,7 +1511,7 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
         char *tok;
 
         /*
-         * First check if this is an remote-id:local_ip format.
+         * First check if this is a remote-id:local_ip format.
          */
         colon_found = false;
         for (src = 0; src < src_len; src++) {
@@ -2026,7 +2023,7 @@ main(int argc, char *argv[])
                            "connect", 1, 0, ctx, &lspgen_ctrl_connect_cb);
 
         /*
-        * Wakeup at least once a second doing nothing,
+         * Wakeup at least once a second doing nothing,
          * such that we do not sleep while user tries to quit the timer loop.
          */
         timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_wakeup_timer,

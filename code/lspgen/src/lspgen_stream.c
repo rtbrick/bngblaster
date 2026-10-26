@@ -56,7 +56,7 @@ lspgen_gen_stream_node(lsdb_ctx_t *ctx,
     }
 
     /*
-     * Node DB empty?
+     * Node attribute DB empty?
      */
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);

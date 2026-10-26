@@ -170,7 +170,7 @@ lspgen_calculate_auth_len(lsdb_ctx_t *ctx)
             if (ctx->authentication_key && ctx->authentication_type) {
                 if (ctx->authentication_type == ISIS_AUTH_SIMPLE) {
                     auth_len = strlen(ctx->authentication_key) + 1 + TLV_OVERHEAD;
-                } if (ctx->authentication_type == ISIS_AUTH_MD5) {
+                } else if (ctx->authentication_type == ISIS_AUTH_MD5) {
                     auth_len = 16 + 1 + TLV_OVERHEAD;
                 }
             }
@@ -203,7 +203,7 @@ lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *p
         auth_len = 0;
         if (ctx->authentication_type == ISIS_AUTH_SIMPLE) {
             auth_len = strlen(ctx->authentication_key);
-        } if (ctx->authentication_type == ISIS_AUTH_MD5) {
+        } else if (ctx->authentication_type == ISIS_AUTH_MD5) {
             auth_len = 16;
         }
 
@@ -666,7 +666,7 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
             push_be_uint(buf, 1, flags); /* Flags */
             if (attr->key.cap.srgb_base && attr->key.cap.srgb_range) {
                 push_be_uint(buf, 1, ISIS_SUBTLV_CAP_SR); /* subTLV Type */
-                push_be_uint(buf, 1, 9); /* *subTLV Length */
+                push_be_uint(buf, 1, 9); /* subTLV Length */
                 flags = 0;
                 if (attr->key.cap.mpls_ipv4_flag) {
                     flags |= 0x80;
@@ -682,7 +682,7 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
             }
             if (attr->key.cap.sr_algo_len > 0) {
                 push_be_uint(buf, 1, ISIS_SUBTLV_CAP_SR_ALGO); /* subTLV Type */
-                push_be_uint(buf, 1, attr->key.cap.sr_algo_len); /* Area Length in bytes */
+                push_be_uint(buf, 1, attr->key.cap.sr_algo_len); /* SR-Algorithm Length */
                 push_data(buf, attr->key.cap.sr_algo, attr->key.cap.sr_algo_len);
             }
             lspgen_serialize_msd(buf, ISIS_SUBTLV_CAP_NODE_MSD, attr->key.cap.msd);
@@ -719,7 +719,7 @@ lspgen_serialize_isis_attr(lsdb_attr_t *attr, lsdb_packet_t *packet)
 }
 
 /*
- * Inititialize a next level buffer to the remnants of the passed in buffer.
+ * Initialize a next level buffer to the remnants of the passed in buffer.
  * This gives us nice hierarchical buffers with boundary protection.
  */
 void
@@ -1055,7 +1055,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
     }
 
     /*
-     * If users wants to generate purges encoding stops at level 1.
+     * If the user wants to generate purges encoding stops at level 1.
      */
     if (ctx->purge) {
         return;
@@ -1336,7 +1336,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
             push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
             push_be_uint(buf1, 2, 0); /* # Prefixes - will be overwritten later */
-            push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
+            push_be_uint(buf1, 2, 0x2001); /* Referenced LS Type */
 
             push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
             push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
@@ -1352,8 +1352,8 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
             push_be_uint(buf1, 2, 0); /* Checksum - will be overwritten later */
             push_be_uint(buf1, 2, 0); /* Length - will be overwritten later */
 
-            push_be_uint(buf1, 2, 0); /* */
-            push_be_uint(buf1, 2, 0x2001); /* # Referenced LS Type */
+            push_be_uint(buf1, 2, 0); /* Reserved */
+            push_be_uint(buf1, 2, 0x2001); /* Referenced LS Type */
 
             push_be_uint(buf1, 4, 0); /* Referenced Link State ID */
             push_be_uint(buf1, 4, router_id); /* Referenced Advertising Router */
@@ -1394,7 +1394,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
     }
 
     /*
-     * If users wants to generate purges encoding stops at level 1.
+     * If the user wants to generate purges encoding stops at level 1.
      */
     if (ctx->purge) {
         return;
@@ -1405,11 +1405,11 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
         switch(attr->key.attr_cp[2]) {
         case OSPF_ROUTER_LSA_LINK_PTP:
             push_be_uint(buf2, 1, 1); /* Type ptp */
-            push_be_uint(buf2, 1, 0); /* #TOS */
+            push_be_uint(buf2, 1, 0); /* Reserved */
             push_be_uint(buf2, 2, attr->key.link.metric); /* metric */
             push_be_uint(buf2, 4, read_be_uint(attr->key.link.local_link_id, 4)); /* Interface ID */
             push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_link_id, 4)); /* Neighbor Interface ID */
-            push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Neighbor Router  ID */
+            push_be_uint(buf2, 4, read_be_uint(attr->key.link.remote_node_id, 4)); /* Neighbor Router ID */
             break;
 
         case OSPF_IA_PREFIX_LSA_PREFIX:
@@ -1952,7 +1952,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
     }
 
     /*
-     * Node DB empty ?
+     * Node attribute DB empty ?
      */
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);
@@ -2068,7 +2068,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
     }
 
     /*
-     * Node DB empty ?
+     * Node attribute DB empty ?
      */
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);

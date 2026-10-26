@@ -904,7 +904,7 @@ done:
 }
 
 /*
- * Read an ISO Area from a config and add it as an node attribute.
+ * Read an ISO Area from a config and add it as a node attribute.
  */
 void
 lspgen_read_iso_area_config(lsdb_node_t *node, json_t *obj)
@@ -986,10 +986,6 @@ lspgen_read_ipv6_addr_config(lsdb_node_t *node, json_t *obj)
     lsdb_add_node_attr(node, &attr_template);
 }
 
-/*
- * Common function shared between ipv4_prefix,
- * ipv6_prefix and label_binding readers.
- */
 /*
  * Translation table for Prefix-SID flags.
  */
@@ -1108,6 +1104,10 @@ lspgen_read_prefix_fapm_config(lsdb_attr_t *attr, json_t *arr)
     }
 }
 
+/*
+ * Common function shared between ipv4_prefix,
+ * ipv6_prefix and label_binding readers.
+ */
 void
 lspgen_read_common_prefix_config(lsdb_attr_t *attr, json_t *obj)
 {

@@ -218,7 +218,7 @@ lspgen_read_seq_cache(lsdb_ctx_t *ctx)
 
         if (!json_is_array(value)) {
             LOG(ERROR, "key %s is not an array\n", key);
-            continue;;
+            continue;
         }
 
         /* Good to parse the sequence number node array. */

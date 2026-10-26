@@ -70,7 +70,7 @@ typedef struct lsdb_msd_ {
 #define LSDB_FAD_DEFAULT_PRIORITY     128
 
 /*
- * An Linkstate database context.
+ * A link-state database context.
  */
 typedef struct lsdb_ctx_
 {
@@ -393,7 +393,7 @@ typedef struct lsdb_attr_ {
 #define MAX_ISIS_FRAGMENT 256 /*  1462 *  256 bytes total LSP advertisement size */
 
 /*
- * An serialized LSA/LSP hanging off a node.
+ * A serialized LSA/LSP hanging off a node.
  */
 typedef struct lsdb_packet_ {
 

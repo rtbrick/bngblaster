@@ -219,7 +219,7 @@ lspgen_ctrl_close_cb(timer_s *timer)
     LOG(NORMAL, "Closing connection to %s\n", ctx->ctrl_socket_path);
 
     /*
-     * If not all packet have been drained then start another connection to finish the job.
+     * If not all packets have been drained then start another connection to finish the job.
      */
     if (!CIRCLEQ_EMPTY(&ctx->packet_change_qhead)) {
         timer_add_periodic(&ctx->timer_root, &ctx->ctrl_socket_connect_timer,
@@ -299,7 +299,7 @@ lspgen_ctrl_write_cb(timer_s *timer)
         buffer_left = ctx->ctrl_io_buf.size - ctx->ctrl_io_buf.idx;
 
         /*
-         * Close the JSON message and socket once 96% of the buffer have been consumed.
+         * Close the JSON message and socket once 96% of the buffer has been consumed.
          */
         if (buffer_left < (CTRL_SOCKET_BUFSIZE/25)) {
 
@@ -338,7 +338,7 @@ close_socket:
     ctx->ctrl_socket_path);
 
     /*
-     * For once, close the connection.
+     * Once done, close the connection.
      */
     timer_add(&ctx->timer_root, &ctx->ctrl_socket_close_timer, "close",
               1, 0, ctx, &lspgen_ctrl_close_cb);
