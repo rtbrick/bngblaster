@@ -1788,6 +1788,7 @@ main(int argc, char *argv[])
                 scan_ipv4_prefix(optarg, &ctx->ipv4_node_prefix);
                 break;
             case 'm':
+                free(ctx->mrt_filename);
                 ctx->mrt_filename = strdup(optarg);
                 break;
             case 'N':
@@ -1815,6 +1816,7 @@ main(int argc, char *argv[])
                 break;
             case 'K':
                 /* authentication-key */
+                free(ctx->authentication_key);
                 ctx->authentication_key = strdup(optarg);
                 if (ctx->authentication_type == ISIS_AUTH_NONE) {
                     ctx->authentication_type = ISIS_AUTH_SIMPLE;
@@ -1822,14 +1824,17 @@ main(int argc, char *argv[])
                 break;
             case 'g':
                 /* export LSDB as graphviz file and render into a SVG */
+                free(ctx->graphviz_filename);
                 ctx->graphviz_filename = strdup(optarg);
                 break;
             case 'p':
                 /* export LSDB as pcap file */
+                free(ctx->pcap_filename);
                 ctx->pcap_filename = strdup(optarg);
                 break;
             case 'f':
                 /* export traffic stream file */
+                free(ctx->stream_filename);
                 ctx->stream_filename = strdup(optarg);
                 break;
             case 'q':
@@ -1853,6 +1858,7 @@ main(int argc, char *argv[])
                 break;
             case 'S':
                 /* open control socket to BNG Blaster */
+                free(ctx->ctrl_socket_path);
                 ctx->ctrl_socket_path = strdup(optarg);
                 break;
             case 'I':

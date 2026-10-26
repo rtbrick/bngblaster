@@ -1088,6 +1088,11 @@ lsdb_delete_ctx(struct lsdb_ctx_ *ctx)
         ctx->ctrl_io_buf.data = NULL;
     }
 
+    if (ctx->fad) {
+        free(ctx->fad);
+        ctx->fad = NULL;
+    }
+
     if (ctx->ctrl_socket_sockfd > 0) {
         close(ctx->ctrl_socket_sockfd);
         ctx->ctrl_socket_sockfd = 0;
