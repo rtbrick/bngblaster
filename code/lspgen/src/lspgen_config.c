@@ -811,7 +811,7 @@ lspgen_write_config(lsdb_ctx_t *ctx)
     dict_itor *itor;
     json_t *root_obj, *arr;
     int res;
-    char ospf_area[sizeof("255.255.255.255")];
+    char ospf_area[sizeof("area255.255.255.255")];
 
     ctx->config_file = fopen(ctx->config_filename, "w");
     if (!ctx->config_file) {
@@ -844,7 +844,7 @@ lspgen_write_config(lsdb_ctx_t *ctx)
         break;
     case PROTO_OSPF2: /* fall through */
     case PROTO_OSPF3:
-        snprintf(ospf_area, sizeof(ospf_area)-1, "area%s", format_ipv4_address(&ctx->topology_id.area));
+        snprintf(ospf_area, sizeof(ospf_area), "area%s", format_ipv4_address(&ctx->topology_id.area));
         json_object_set_new(root_obj, ospf_area, arr);
         break;
     default:
@@ -1850,15 +1850,18 @@ lspgen_read_config(lsdb_ctx_t *ctx)
         }
 
         /* OSPF */
-        if (strstr(key, "area")) {
-            inet_pton(AF_INET, &key[4], &ctx->topology_id.area);
+        if (strncmp(key, "area", 4) == 0) {
+            if (inet_pton(AF_INET, &key[4], &ctx->topology_id.area) != 1) {
+                LOG(ERROR, "Error reading config file %s, invalid area %s\n", ctx->config_filename, key);
+                goto cleanup;
+            }
             lspgen_read_lsdb_config(ctx, lsdb);
             lsdb_found = true;
             break;
         }
 
         /* IS-IS */
-        if (strstr(key, "level")) {
+        if (strncmp(key, "level", 5) == 0) {
             ctx->topology_id.level = strtol(&key[5], NULL, 10);
             lspgen_read_lsdb_config(ctx, lsdb);
             lsdb_found = true;
