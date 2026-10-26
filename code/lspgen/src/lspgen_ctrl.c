@@ -147,9 +147,9 @@ lspgen_write_ctrl_buffer(lsdb_ctx_t *ctx)
         /*
          * Rebase the buffer.
          */
-        memmove(ctx->ctrl_io_buf.data, buffer_start+res, ctx->ctrl_io_buf.idx - res);
+        memmove(ctx->ctrl_io_buf.data, buffer_start+res, buffer_len - res);
         ctx->ctrl_io_buf.start_idx = 0;
-        ctx->ctrl_io_buf.idx -= res;
+        ctx->ctrl_io_buf.idx = buffer_len - res;
         return;
     }
 }
