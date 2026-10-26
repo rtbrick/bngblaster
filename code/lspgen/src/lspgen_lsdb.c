@@ -470,7 +470,7 @@ lsdb_delete_link(struct lsdb_ctx_ *ctx, struct lsdb_link_ *link_template)
      */
     CIRCLEQ_REMOVE(&link->node->link_qhead, link, link_qnode);
     dict_remove(ctx->link_dict, &link_template->key);
-    free(link);
+    lsdb_free_link(NULL, link);
 }
 
 /*
@@ -503,11 +503,17 @@ lsdb_delete_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
     /*
      * Stop refresh timer.
      */
-    timer_del(node->refresh_timer);
-    node->refresh_timer->ptimer = NULL; /* Reset field such that timer library does not late ref */
+    if (node->refresh_timer) {
+        timer_del(node->refresh_timer);
+        node->refresh_timer->ptimer = NULL; /* Reset field such that timer library does not late ref */
+        node->refresh_timer = NULL;
+    }
 
+    /*
+     * Free the node including its name, attributes and packets.
+     */
     dict_remove(ctx->node_dict, &node_template->key);
-    free(node);
+    lsdb_free_node(NULL, node);
 }
 
 /*
