@@ -58,7 +58,7 @@ lspgen_read_msd_config(json_t *obj, lsdb_msd_t *msd)
             continue;
         }
         if (count >= LSDB_MAX_MSD) {
-            LOG(ERROR, "Ignore MSDs exceeding the maximum of %u\n", LSDB_MAX_MSD);
+            LOG(ERROR, "Ignore MSDs exceeding the maximum of %d\n", LSDB_MAX_MSD);
             return;
         }
         msd[count].type = json_integer_value(type);
@@ -1017,7 +1017,7 @@ lspgen_get_prefix_algo(lsdb_attr_t *attr, uint8_t algo)
         }
     }
     if (attr->key.prefix.algo_count >= LSDB_MAX_PREFIX_ALGO) {
-        LOG(ERROR, "Ignore algorithm %u exceeding the maximum of %u algorithms per prefix\n",
+        LOG(ERROR, "Ignore algorithm %u exceeding the maximum of %d algorithms per prefix\n",
             algo, LSDB_MAX_PREFIX_ALGO);
         return NULL;
     }

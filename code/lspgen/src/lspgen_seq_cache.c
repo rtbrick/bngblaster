@@ -133,7 +133,7 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
     fclose(ctx->seq_cache_file);
     ctx->seq_cache_file = NULL;
 
-    LOG(NORMAL, "Wrote %d nodes to file %s\n", num_nodes, seq_cache_filename);
+    LOG(NORMAL, "Wrote %u nodes to file %s\n", num_nodes, seq_cache_filename);
 }
 
 void

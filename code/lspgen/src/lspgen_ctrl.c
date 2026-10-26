@@ -128,7 +128,7 @@ lspgen_write_ctrl_buffer(lsdb_ctx_t *ctx)
      * Full write ?
      */
     if (res == buffer_len) {
-        LOG(CTRL, "Full write %u bytes buffer to %s\n", res, ctx->ctrl_socket_path);
+        LOG(CTRL, "Full write %d bytes buffer to %s\n", res, ctx->ctrl_socket_path);
         /*
          * Reset the buffer.
          */
@@ -142,7 +142,7 @@ lspgen_write_ctrl_buffer(lsdb_ctx_t *ctx)
      * Partial write ?
      */
     if (res && res < buffer_len) {
-        LOG(CTRL, "Partial write %u bytes buffer to %s\n", res, ctx->ctrl_socket_path);
+        LOG(CTRL, "Partial write %d bytes buffer to %s\n", res, ctx->ctrl_socket_path);
         ctx->ctrl_stats.octets_sent += res;
         /*
          * Rebase the buffer.

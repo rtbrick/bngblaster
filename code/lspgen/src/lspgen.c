@@ -499,7 +499,7 @@ lspgen_parse_sr_algo(struct lsdb_ctx_ *ctx, char *arg)
             }
         }
         if (ctx->sr_algo_count >= LSDB_MAX_PREFIX_ALGO) {
-            LOG(ERROR, "Maximum %u SR algorithms supported\n", LSDB_MAX_PREFIX_ALGO);
+            LOG(ERROR, "Maximum %d SR algorithms supported\n", LSDB_MAX_PREFIX_ALGO);
             free(list);
             return false;
         }
@@ -538,7 +538,7 @@ lspgen_parse_flex_algo(struct lsdb_ctx_ *ctx, char *arg)
     }
     for (tok = strtok_r(list, ",", &save); tok; tok = strtok_r(NULL, ",", &save)) {
         if (ctx->fad_count >= LSDB_MAX_FLEX_ALGO) {
-            LOG(ERROR, "Maximum %u Flex-Algo definitions supported\n", LSDB_MAX_FLEX_ALGO);
+            LOG(ERROR, "Maximum %d Flex-Algo definitions supported\n", LSDB_MAX_FLEX_ALGO);
             goto ERROR;
         }
         fad = &ctx->fad[ctx->fad_count];
@@ -612,7 +612,7 @@ lspgen_add_flex_algo_to_sr_algo(struct lsdb_ctx_ *ctx)
             continue;
         }
         if (ctx->sr_algo_count >= LSDB_MAX_PREFIX_ALGO) {
-            LOG(ERROR, "Maximum %u SR algorithms supported\n", LSDB_MAX_PREFIX_ALGO);
+            LOG(ERROR, "Maximum %d SR algorithms supported\n", LSDB_MAX_PREFIX_ALGO);
             return false;
         }
         ctx->sr_algo[ctx->sr_algo_count++] = ctx->fad[idx].algo;
@@ -1845,7 +1845,7 @@ main(int argc, char *argv[])
             case 'K':
                 /* authentication-key */
                 if (strlen(optarg) > ISIS_AUTH_KEY_MAX_LEN) {
-                    LOG(ERROR, "Authentication key longer than %u characters\n", ISIS_AUTH_KEY_MAX_LEN);
+                    LOG(ERROR, "Authentication key longer than %d characters\n", ISIS_AUTH_KEY_MAX_LEN);
                     exit(EXIT_FAILURE);
                 }
                 free(ctx->authentication_key);
