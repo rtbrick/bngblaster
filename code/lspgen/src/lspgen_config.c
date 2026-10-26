@@ -1637,7 +1637,12 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
 
         value = json_object_get(node_obj, "lsp_lifetime");
         if (value && json_is_integer(value)) {
-            node_template.lsp_lifetime = json_integer_value(value);
+            if (json_integer_value(value) >= 0 && json_integer_value(value) <= UINT16_MAX) {
+                node_template.lsp_lifetime = json_integer_value(value);
+            } else {
+                LOG(ERROR, "Ignore lsp_lifetime %" JSON_INTEGER_FORMAT " out of range\n",
+                    json_integer_value(value));
+            }
         }
 
         node = lsdb_add_node(ctx, &node_template);
@@ -1881,6 +1886,11 @@ lspgen_read_config(lsdb_ctx_t *ctx)
     if (lsp_lifetime) {
         if (!json_is_integer(lsp_lifetime)) {
             LOG(ERROR, "Error reading config file %s, lsp_lifetime attribute is not an integer\n",
+                ctx->config_filename);
+            goto cleanup;
+        }
+        if (json_integer_value(lsp_lifetime) < 0 || json_integer_value(lsp_lifetime) > UINT16_MAX) {
+            LOG(ERROR, "Error reading config file %s, lsp_lifetime attribute out of range\n",
                 ctx->config_filename);
             goto cleanup;
         }
