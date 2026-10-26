@@ -85,9 +85,9 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
         return;
     }
 
-    ctx->seq_cache_file = fopen(seq_cache_filename, "w");
-    if (!ctx->seq_cache_file) {
-        LOG(ERROR, "Error opening sequence cache file %s\n", seq_cache_filename);
+    topology_id_name = lspgen_format_topology_id(ctx);
+    if (!topology_id_name) {
+        LOG_NOARG(ERROR, "Error building topology-id name\n");
         return;
     }
 
@@ -97,7 +97,7 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
         return;
     }
 
-    /* Node DB empty? */
+    /* Node DB empty? Keep the existing sequence cache. */
     if (!dict_itor_first(itor)) {
         dict_itor_free(itor);
         LOG_NOARG(ERROR, "Empty LSDB.\n");
@@ -106,11 +106,6 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
 
     root_obj = json_object();
     arr = json_array();
-    topology_id_name = lspgen_format_topology_id(ctx);
-    if (!topology_id_name) {
-        LOG_NOARG(ERROR, "Error building topology-id name\n");
-        return;
-    }
     json_object_set_new(root_obj, topology_id_name, arr);
 
     num_nodes = 0;
@@ -120,6 +115,13 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
         num_nodes++;
     } while (dict_itor_next(itor));
     dict_itor_free(itor);
+
+    ctx->seq_cache_file = fopen(seq_cache_filename, "w");
+    if (!ctx->seq_cache_file) {
+        LOG(ERROR, "Error opening sequence cache file %s\n", seq_cache_filename);
+        json_decref(root_obj);
+        return;
+    }
 
     res = json_dumpf(root_obj, ctx->seq_cache_file, JSON_INDENT(2));
     if (res == -1) {
