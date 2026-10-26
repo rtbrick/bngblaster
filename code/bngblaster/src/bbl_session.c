@@ -461,7 +461,6 @@ bbl_session_reset(bbl_session_s *session) {
     session->dhcpv6_lease_time = 0;
     session->dhcpv6_ia_na_t1 = 0;
     session->dhcpv6_ia_na_t2 = 0;
-    session->dhcpv6_ia_na_t2 = 0;
     session->dhcpv6_ia_na_preferred_lifetime = 0;
     session->dhcpv6_ia_na_valid_lifetime = 0;
     session->dhcpv6_ia_pd_t1 = 0;
