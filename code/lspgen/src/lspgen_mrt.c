@@ -136,6 +136,7 @@ lspgen_dump_mrt(lsdb_ctx_t *ctx)
 {
     struct lsdb_node_ *node;
     dict_itor *itor;
+    int write_error;
 
     /*
      * Walk the node DB.
@@ -170,6 +171,9 @@ lspgen_dump_mrt(lsdb_ctx_t *ctx)
     dict_itor_free(itor);
 
     /* done */
-    fclose(ctx->mrt_file);
+    write_error = ferror(ctx->mrt_file);
+    if (fclose(ctx->mrt_file) || write_error) {
+        LOG(ERROR, "Error writing MRT file %s\n", ctx->mrt_filename);
+    }
     ctx->mrt_file = NULL;
 }

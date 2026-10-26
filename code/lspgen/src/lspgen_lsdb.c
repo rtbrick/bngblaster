@@ -1142,6 +1142,7 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
     dict_itor *itor;
     unsigned int nodes;
     void **p;
+    int write_error;
 
     if (!ctx->graphviz_filename) {
         LOG_NOARG(ERROR, "No graphviz filename specified.\n");
@@ -1228,6 +1229,10 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
     } while (dict_itor_next(itor));
     dict_itor_free(itor);
     fprintf(graphviz, "}\n");
-    fclose(graphviz);
+    write_error = ferror(graphviz);
+    if (fclose(graphviz) || write_error) {
+        LOG(ERROR, "Error writing graphviz file %s\n", filename);
+        return;
+    }
     LOG(NORMAL, "Wrote %u nodes into graphviz file %s\n", nodes, filename);
 }

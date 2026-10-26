@@ -231,6 +231,7 @@ lspgen_dump_pcap (struct lsdb_ctx_ *ctx)
     dict_itor *itor;
     uint8_t pcap_header[256];
     struct io_buffer_ buf;
+    int write_error;
 
     /*
      * Walk the node DB.
@@ -273,6 +274,9 @@ lspgen_dump_pcap (struct lsdb_ctx_ *ctx)
     dict_itor_free(itor);
 
     /* done */
-    fclose(ctx->pcap_file);
+    write_error = ferror(ctx->pcap_file);
+    if (fclose(ctx->pcap_file) || write_error) {
+        LOG(ERROR, "Error writing PCAP file %s\n", ctx->pcap_filename);
+    }
     ctx->pcap_file = NULL;
 }
