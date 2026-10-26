@@ -1994,6 +1994,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
         if (!packet) {
             packet = lspgen_add_packet(ctx, node, id);
             tlv_start_idx = packet->buf[0].idx;
+            last_attr = 0; /* start with a fresh TLV */
         }
 
         /*
