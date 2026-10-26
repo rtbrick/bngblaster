@@ -24,10 +24,12 @@ struct keyval_ bgp_notification_error_values[] = {
     { 4, "Hold Timer Expired" },
     { 5, "FSM Error" },
     { 6, "Cease" },
+    { 7, "ROUTE-REFRESH Message Error" },
     { 0, NULL}
 };
 
 struct keyval_ bgp_notification_msg_hdr_error_values[] = {
+    { 0, "Unspecific" },
     { 1, "Connection Not Synchronized" },
     { 2, "Bad Message Length" },
     { 3, "Bad Message Type" },
@@ -35,15 +37,19 @@ struct keyval_ bgp_notification_msg_hdr_error_values[] = {
 };
 
 struct keyval_ bgp_notification_open_error_values[] = {
+    { 0, "Unspecific" },
     { 1, "Unsupported Version Number" },
     { 2, "Bad Peer AS" },
     { 3, "Bad BGP Identifier" },
     { 4, "Unsupported Optional Parameter" },
     { 6, "Unacceptable Hold Time" },
+    { 7, "Unsupported Capability" },
+    { 11, "Role Mismatch" },
     { 0, NULL}
 };
 
 struct keyval_ bgp_notification_update_error_values[] = {
+    { 0, "Unspecific" },
     { 1, "Malformed Attribute List" },
     { 2, "Unrecognized Well-known Attribute" },
     { 3, "Missing Well-known Attribute" },
@@ -58,6 +64,7 @@ struct keyval_ bgp_notification_update_error_values[] = {
 };
 
 struct keyval_ bgp_notification_cease_error_values[] = {
+    { 0, "Unspecific" },
     { 1, "Maximum Number of Prefixes Reached" },
     { 2, "Administrative Shutdown" },
     { 3, "Peer De-configured" },
@@ -66,6 +73,8 @@ struct keyval_ bgp_notification_cease_error_values[] = {
     { 6, "Other Configuration Change" },
     { 7, "Connection Collision Resolution" },
     { 8, "Out of Resources" },
+    { 9, "Hard Reset" },
+    { 10, "BFD Down" },
     { 0, NULL}
 };
 
@@ -185,57 +194,58 @@ bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
     return true;
 }
 
+/* Maximum notification data logged as hex */
+#define BGP_NOTIFICATION_DATA_LOG_MAX 64
+
 static bool
 bgp_notification(bgp_session_s *session, uint8_t *start, uint16_t length)
 {
     uint8_t error_code, error_subcode;
+    uint8_t *data;
+    uint16_t data_len;
+    struct keyval_ *subcodes = NULL;
+    char data_str[BGP_NOTIFICATION_DATA_LOG_MAX*2+4] = "";
+    uint16_t i;
 
     if(length < 21) {
         return false;
     }
+    data = start+21;
+    data_len = length-21;
 
     error_code = *(start+19);
     error_subcode = *(start+20);
     switch(error_code) {
-        case 1: /* Message Header Error */
-            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), %s (%u)\n", 
-                session->interface->name,
-                session->local_address_str,
-                session->peer_address_str,
-                keyval_get_key(bgp_notification_error_values, error_code), error_code,
-                keyval_get_key(bgp_notification_msg_hdr_error_values, error_subcode), error_subcode);
-            break;
-        case 2: /* OPEN Message Error */
-            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), %s (%u)\n",
-                session->interface->name,
-                session->local_address_str,
-                session->peer_address_str,
-                keyval_get_key(bgp_notification_error_values, error_code), error_code,
-                keyval_get_key(bgp_notification_open_error_values, error_subcode), error_subcode);
-            break;
-        case 3: /* Update Message Error */
-            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), %s (%u)\n", 
-                session->interface->name,
-                session->local_address_str,
-                session->peer_address_str,
-                keyval_get_key(bgp_notification_error_values, error_code), error_code,
-                keyval_get_key(bgp_notification_update_error_values, error_subcode), error_subcode);
-            break;
-        case 6: /* Cease */
-            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), %s (%u)\n", 
-                session->interface->name,
-                session->local_address_str,
-                session->peer_address_str,
-                keyval_get_key(bgp_notification_error_values, error_code), error_code,
-                keyval_get_key(bgp_notification_cease_error_values, error_subcode), error_subcode);
-            break;
-        default:
-            LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), subcode %u\n", 
-                session->interface->name,
-                session->local_address_str,
-                session->peer_address_str,
-                keyval_get_key(bgp_notification_error_values, error_code), error_code, error_subcode);
-            break;
+        case 1: subcodes = bgp_notification_msg_hdr_error_values; break;
+        case 2: subcodes = bgp_notification_open_error_values; break;
+        case 3: subcodes = bgp_notification_update_error_values; break;
+        case 6: subcodes = bgp_notification_cease_error_values; break;
+        default: break;
+    }
+    /* The data identifies the cause, e.g. the
+     * unsupported capability (RFC 5492). */
+    for(i = 0; i < data_len && i < BGP_NOTIFICATION_DATA_LOG_MAX; i++) {
+        snprintf(data_str+i*2, 3, "%02x", data[i]);
+    }
+    if(data_len > BGP_NOTIFICATION_DATA_LOG_MAX) {
+        strcat(data_str, "...");
+    }
+    LOG(BGP, "BGP (%s %s - %s) notification received with error: %s (%u), %s (%u)%s%s\n",
+        session->interface->name,
+        session->local_address_str,
+        session->peer_address_str,
+        keyval_get_key(bgp_notification_error_values, error_code), error_code,
+        subcodes ? keyval_get_key(subcodes, error_subcode) : "subcode", error_subcode,
+        data_len ? ", data: " : "", data_str);
+
+    /* Shutdown communication (RFC 9003) */
+    if(error_code == 6 && (error_subcode == 2 || error_subcode == 4) &&
+       data_len > 1 && data[0] && data[0] < data_len) {
+        LOG(BGP, "BGP (%s %s - %s) shutdown communication: %.*s\n",
+            session->interface->name,
+            session->local_address_str,
+            session->peer_address_str,
+            data[0], (char*)data+1);
     }
     session->error_code = 0;
     bgp_session_close(session);
