@@ -21,7 +21,7 @@ void
 lsdb_scan_node_id(uint8_t *node_id, char *node_id_str)
 {
     char input_val, val;
-    int dst_idx, reg;
+    int dst_idx;
     unsigned int idx, len;
 
     /*
@@ -35,7 +35,6 @@ lsdb_scan_node_id(uint8_t *node_id, char *node_id_str)
      * This is sysid (0000.0000.0000.00) notation.
      */
     dst_idx = 0;
-    reg = 0;
     len = strlen(node_id_str);
     for (idx = 0; idx < len; idx++) {
         input_val = *(node_id_str+idx);
@@ -49,9 +48,11 @@ lsdb_scan_node_id(uint8_t *node_id, char *node_id_str)
         } else {
             continue; /* non hex character */
         }
-        reg <<= 4;
-        reg |= val;
-        node_id[dst_idx >> 1] = reg;
+        if (dst_idx & 1) {
+            node_id[dst_idx >> 1] |= val;
+        } else {
+            node_id[dst_idx >> 1] = val << 4;
+        }
         dst_idx++;
 
         /*
