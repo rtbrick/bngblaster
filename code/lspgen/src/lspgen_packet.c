@@ -1637,7 +1637,8 @@ lspgen_serialize_ospf_attr(lsdb_attr_t *attr, lsdb_packet_t *packet,
          * Figure out max level.
          */
         if (attr->key.attr_cp[3]) {
-            state |= OPEN_LEVEL3;
+            /* The sub-TLV belongs to the TLV of its own prefix. */
+            state |= OPEN_LEVEL2 | OPEN_LEVEL3 | CLOSE_LEVEL2 | CLOSE_LEVEL3;
         } else if (attr->key.attr_cp[2]) {
             state |= OPEN_LEVEL2;
         } else if (attr->key.attr_cp[1]) {
