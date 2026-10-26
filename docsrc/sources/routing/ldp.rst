@@ -53,6 +53,7 @@ not supported:
 + Targeted LDP
 + LDP TCP authentication
 + Multiple links between LDP instance and DUT (ECMP)
++ Label release messages for label withdraw messages received
 
 LDP Adjacencies
 ~~~~~~~~~~~~~~~~
@@ -162,22 +163,30 @@ corresponding label database of the sending network interface function.
                 "afi": "ipv4",
                 "prefix": "10.0.0.0/24",
                 "label": 3,
+                "active": true,
                 "source-identifier": "10.2.3.1:0"
             },
             {
                 "afi": "ipv4",
                 "prefix": "13.37.0.0/32",
                 "label": 10000,
+                "active": true,
                 "source-identifier": "10.2.3.1:0"
             },
             {
                 "afi": "ipv4",
                 "prefix": "13.37.0.1/32",
                 "label": 10001,
+                "active": true,
                 "source-identifier": "10.2.3.1:0"
             }
         ]
     }
+
+Labels withdrawn by the peer (label withdraw message) and all labels of a
+session which went down are kept as inactive entries (``active`` false) and
+are not used by traffic streams, which stop sending until the label is
+advertised again.
 
 The ``ldp-ipv4-lookup-address`` and ``ldp-ipv6-lookup-address`` are mutually exclusive
 and must exactly match the prefix address as shown in the LDP database. This means
@@ -297,6 +306,16 @@ streams for use with the BNG Blaster.
     --pcap FILE           write LDP updates to PCAP file
     --log-level {warning,info,debug}
                             logging Level
+
+The label withdraw messages generated with ``--withdraw`` contain the
+label TLV, which withdraws only this label (RFC 5036 section 3.5.10).
+Therefore the same label base (``-m``) and count (``-M``) as for the
+advertised labels must be used.
+
+.. code-block:: none
+
+    ldpupdate -l 10.10.10.2 -p 10.200.0.0/32 -P 20 -m 50000 -M 20 -f update.ldp
+    ldpupdate -l 10.10.10.2 -p 10.200.0.0/32 -P 10 -m 50000 -M 20 -w -f withdraw.ldp
 
 The Python LDP RAW update generator is a Python script that uses
 scapy to build LDP PDU. Therefore this tool can be easily

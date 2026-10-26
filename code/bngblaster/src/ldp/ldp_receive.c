@@ -100,8 +100,14 @@ ldp_notification(ldp_session_s *session, uint8_t *start, uint16_t length)
     return true;
 }
 
+/*
+ * Label mapping or label withdraw message (RFC 5036 section 3.5.7 and 3.5.10).
+ * The label TLV is optional for label withdraw messages, where all labels of
+ * the FEC are withdrawn if not present. A wildcard FEC withdraws all labels
+ * learned from the session.
+ */
 static bool
-ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
+ldp_label_message(ldp_session_s *session, uint8_t *start, uint16_t length, bool withdraw)
 {
     uint8_t *tlv_start = start;
     uint16_t tlv_type = 0;
@@ -114,6 +120,7 @@ ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
     uint16_t fec_length = 0;
     uint16_t fec_afi = 0;
     uint32_t label = 0;
+    bool label_present = false;
 
     ipv4_prefix ipv4prefix;
     ipv6_prefix ipv6prefix;
@@ -132,6 +139,9 @@ ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
                 }
                 fec_element = tlv_start+LDP_TLV_LEN_MIN;
                 fec_length = tlv_length;
+                if(withdraw && *fec_element == LDP_FEC_ELEMENT_TYPE_WILDCARD) {
+                    break;
+                }
                 if(*fec_element != LDP_FEC_ELEMENT_TYPE_PREFIX) {
                     return false;
                 }
@@ -141,12 +151,24 @@ ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
                     return false;
                 }
                 label = read_be_uint(tlv_start+LDP_TLV_LEN_MIN, sizeof(label));
+                label_present = true;
                 break;
             default:
                 break;
         }
         length -= (tlv_length+LDP_TLV_LEN_MIN);
         tlv_start += (tlv_length+LDP_TLV_LEN_MIN);
+    }
+
+    if(!fec_element) {
+        return true;
+    }
+    if(withdraw && *fec_element == LDP_FEC_ELEMENT_TYPE_WILDCARD) {
+        LOG(LDP, "LDP (%s - %s) withdraw all labels (wildcard FEC)\n",
+            ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+            ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
+        ldb_db_withdraw_session(session, label, !label_present);
+        return true;
     }
 
     /* Read all FEC elements. */
@@ -167,12 +189,15 @@ ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
                 ipv4prefix.len = prefix_length;
                 ipv4prefix.address = 0;
                 memcpy((uint8_t*)&ipv4prefix.address, fec_element+LDP_FEC_LEN_MIN, prefix_bytes);
-                LOG(DEBUG, "LDP (%s - %s) add %s via label %u\n",
+                LOG(DEBUG, "LDP (%s - %s) %s %s via label %u\n",
                     ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
                     ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
-                    format_ipv4_prefix(&ipv4prefix), label);
-
-                ldb_db_add_ipv4(session, &ipv4prefix, label);
+                    withdraw ? "withdraw" : "add", format_ipv4_prefix(&ipv4prefix), label);
+                if(withdraw) {
+                    ldb_db_withdraw_ipv4(session, &ipv4prefix, label, !label_present);
+                } else {
+                    ldb_db_add_ipv4(session, &ipv4prefix, label);
+                }
                 break;
             case IANA_AFI_IPV6:
                 if(prefix_length > (IPV6_ADDR_LEN*8)) {
@@ -182,12 +207,15 @@ ldp_label_mapping(ldp_session_s *session, uint8_t *start, uint16_t length)
                 ipv6prefix.len = prefix_length;
                 memset(&ipv6prefix.address, 0x0, sizeof(ipv6addr_t));
                 memcpy((uint8_t*)&ipv6prefix.address, fec_element+LDP_FEC_LEN_MIN, prefix_bytes);
-                LOG(DEBUG, "LDP (%s - %s) add %s via label %u\n",
+                LOG(DEBUG, "LDP (%s - %s) %s %s via label %u\n",
                     ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
                     ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
-                    format_ipv6_prefix(&ipv6prefix), label);
-
-                ldb_db_add_ipv6(session, &ipv6prefix, label);
+                    withdraw ? "withdraw" : "add", format_ipv6_prefix(&ipv6prefix), label);
+                if(withdraw) {
+                    ldb_db_withdraw_ipv6(session, &ipv6prefix, label, !label_present);
+                } else {
+                    ldb_db_add_ipv6(session, &ipv6prefix, label);
+                }
                 break;
             default:
                 break;
@@ -347,15 +375,20 @@ ldp_read(ldp_session_s *session)
                     ldp_session_fsm(session, LDP_EVENT_RX_KEEPALIVE);
                     break;
                 case LDP_MESSAGE_TYPE_LABEL_MAPPING:
-                    if(!ldp_label_mapping(session, msg_start+8, msg_length-4)) {
+                    if(!ldp_label_message(session, msg_start+8, msg_length-4, false)) {
                         ldp_fatal_error(session, "invalid PDU received (label mapping message)");
+                        return;
+                    }
+                    break;
+                case LDP_MESSAGE_TYPE_LABEL_WITHDRAW:
+                    if(!ldp_label_message(session, msg_start+8, msg_length-4, true)) {
+                        ldp_fatal_error(session, "invalid PDU received (label withdraw message)");
                         return;
                     }
                     break;
                 case LDP_MESSAGE_TYPE_ADDRESS:
                 case LDP_MESSAGE_TYPE_ADDRESS_WITHDRAW:
                 case LDP_MESSAGE_TYPE_LABEL_REQUEST:
-                case LDP_MESSAGE_TYPE_LABEL_WITHDRAW:
                 case LDP_MESSAGE_TYPE_LABEL_RELEASE:
                 case LDP_MESSAGE_TYPE_ABORT_REQUEST:
                     break;

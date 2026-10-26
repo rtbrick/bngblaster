@@ -477,10 +477,11 @@ ldb_ctrl_database_entries(ldp_instance_s *instance)
     next = hb_itor_first(itor);
     while(next) {
         entry = *hb_itor_datum(itor);
-        json_entry = json_pack("{ss ss* si ss*}", 
+        json_entry = json_pack("{ss ss* si sb ss*}", 
             "afi", "ipv4",
             "prefix", format_ipv4_prefix(&entry->prefix.ipv4),
             "label", entry->label,
+            "active", entry->active,
             "source-identifier", ldp_id_to_str(entry->source->peer.lsr_id, entry->source->peer.label_space_id));
 
         if(json_entry) {
@@ -496,10 +497,11 @@ ldb_ctrl_database_entries(ldp_instance_s *instance)
     next = hb_itor_first(itor);
     while(next) {
         entry = *hb_itor_datum(itor);
-        json_entry = json_pack("{ss ss* si ss*}", 
+        json_entry = json_pack("{ss ss* si sb ss*}", 
             "afi", "ipv6",
             "prefix", format_ipv6_prefix(&entry->prefix.ipv6),
             "label", entry->label,
+            "active", entry->active,
             "source-identifier", ldp_id_to_str(entry->source->peer.lsr_id, entry->source->peer.label_space_id));
 
         if(json_entry) {

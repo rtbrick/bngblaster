@@ -24,4 +24,13 @@ ldb_db_add_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label);
 ldp_db_entry_s *
 ldb_db_lookup_ipv6(ldp_instance_s *instance, ipv6addr_t *address);
 
+void
+ldb_db_withdraw_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label, bool any_label);
+
+void
+ldb_db_withdraw_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label, bool any_label);
+
+void
+ldb_db_withdraw_session(ldp_session_s *session, uint32_t label, bool any_label);
+
 #endif

@@ -40,6 +40,11 @@ ldp_session_state_change(ldp_session_s *session, ldp_state_t new_state)
             ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
             ldp_session_state_string(session->state),
             ldp_session_state_string(new_state));
+        if(session->state == LDP_OPERATIONAL) {
+            /* The label mappings learned from the session are
+             * no longer valid if the session goes down. */
+            ldb_db_withdraw_session(session, 0, true);
+        }
         session->state = new_state;
     }
 }

@@ -125,3 +125,64 @@ ldb_db_lookup_ipv6(ldp_instance_s *instance, ipv6addr_t *address)
     }
     return NULL;
 }
+
+/* Deactivate an entry learned from the session, with any label
+ * or only with the given label (label withdraw with label TLV). */
+static void
+ldb_db_deactivate(ldp_session_s *session, ldp_db_entry_s *entry, uint32_t label, bool any_label)
+{
+    if(entry->active && entry->source == session && (any_label || entry->label == label)) {
+        entry->active = false;
+        entry->version++;
+    }
+}
+
+void
+ldb_db_withdraw_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label, bool any_label)
+{
+    ldp_db_entry_s *entry = ldb_db_lookup_ipv4(session->instance, prefix->address);
+    if(entry) {
+        ldb_db_deactivate(session, entry, label, any_label);
+    }
+}
+
+void
+ldb_db_withdraw_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label, bool any_label)
+{
+    ldp_db_entry_s *entry = ldb_db_lookup_ipv6(session->instance, &prefix->address);
+    if(entry) {
+        ldb_db_deactivate(session, entry, label, any_label);
+    }
+}
+
+/**
+ * ldb_db_withdraw_session
+ *
+ * Deactivate all entries learned from the session (e.g. session down
+ * or label withdraw with wildcard FEC). Entries are kept because traffic
+ * streams hold references.
+ *
+ * @param session LDP session
+ * @param label label (label withdraw with label TLV)
+ * @param any_label withdraw entries with any label
+ */
+void
+ldb_db_withdraw_session(ldp_session_s *session, uint32_t label, bool any_label)
+{
+    ldp_instance_s *instance = session->instance;
+    hb_tree *trees[] = { instance->db.ipv4, instance->db.ipv6 };
+    hb_itor *itor;
+    bool next;
+    size_t i;
+
+    for(i = 0; i < sizeof(trees)/sizeof(trees[0]); i++) {
+        if(!trees[i]) continue;
+        itor = hb_itor_new(trees[i]);
+        next = hb_itor_first(itor);
+        while(next) {
+            ldb_db_deactivate(session, *hb_itor_datum(itor), label, any_label);
+            next = hb_itor_next(itor);
+        }
+        hb_itor_free(itor);
+    }
+}

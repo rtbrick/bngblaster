@@ -53,6 +53,7 @@
 
 #define LDP_TLV_LEN_MIN                             4
 #define LDP_FEC_LEN_MIN                             4
+#define LDP_FEC_ELEMENT_TYPE_WILDCARD               1
 #define LDP_FEC_ELEMENT_TYPE_PREFIX                 2
 #define LDP_STATUS_LEN_MIN                          10
 
