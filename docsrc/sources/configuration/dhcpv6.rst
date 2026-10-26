@@ -2,10 +2,6 @@
 
     { "dhcpv6": {} }
 
-IA_NA and IA_PD T1/T2 timers and preferred/valid lifetimes are encoded in
-network byte order, including when reusing server-provided values in Renew
-messages. Raw, pre-encoded IA options are copied unchanged.
-
 +-----------------------------------+----------------------------------------------------------------------+
 | Attribute                         | Description                                                          |
 +===================================+======================================================================+
