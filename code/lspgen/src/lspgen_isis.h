@@ -14,6 +14,9 @@ enum {
     ISIS_AUTH_MD5 = 54
 };
 
+/* The TLV length covers the authentication type and the key. */
+#define ISIS_AUTH_KEY_MAX_LEN    254
+
 #define ISIS_PDU_L1_LSP           18
 #define ISIS_PDU_L2_LSP           20
 

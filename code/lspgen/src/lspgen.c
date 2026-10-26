@@ -1844,6 +1844,10 @@ main(int argc, char *argv[])
                 break;
             case 'K':
                 /* authentication-key */
+                if (strlen(optarg) > ISIS_AUTH_KEY_MAX_LEN) {
+                    LOG(ERROR, "Authentication key longer than %u characters\n", ISIS_AUTH_KEY_MAX_LEN);
+                    exit(EXIT_FAILURE);
+                }
                 free(ctx->authentication_key);
                 ctx->authentication_key = strdup(optarg);
                 if (ctx->authentication_type == ISIS_AUTH_NONE) {

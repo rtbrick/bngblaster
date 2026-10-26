@@ -162,7 +162,7 @@ calculate_ospf3_cksum(uint8_t *buf, uint16_t len)
 uint32_t
 lspgen_calculate_auth_len(lsdb_ctx_t *ctx)
 {
-    uint8_t auth_len;
+    uint32_t auth_len;
 
     auth_len = 0;
     switch (ctx->protocol_id) {
