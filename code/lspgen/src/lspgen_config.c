@@ -1301,11 +1301,13 @@ lspgen_read_label_binding_config(lsdb_node_t *node, json_t *obj)
         scan_ipv4_prefix(s, &attr_template.key.prefix.ipv4_prefix);
         attr_template.key.prefix.family_flag = false;
         lspgen_read_common_prefix_config(&attr_template, obj);
-    }
-    if (json_unpack(obj, "{s:s}", "ipv6_prefix", &s) == 0) {
+    } else if (json_unpack(obj, "{s:s}", "ipv6_prefix", &s) == 0) {
         scan_ipv6_prefix(s, &attr_template.key.prefix.ipv6_prefix);
         attr_template.key.prefix.family_flag = true;
         lspgen_read_common_prefix_config(&attr_template, obj);
+    } else {
+        LOG_NOARG(ERROR, "Ignore label binding without ipv4_prefix or ipv6_prefix\n");
+        return;
     }
 
     attr_template.key.attr_type = ISIS_TLV_BINDING;
