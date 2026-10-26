@@ -277,9 +277,10 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
             io->buf_len = tphdr->tp_len;
             if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
                 io->vlan_tci = tphdr->tp_vlan_tci;
-                io->vlan_tpid = tphdr->tp_vlan_tpid;
+                io->vlan_tpid = tphdr->tp_vlan_tpid ? tphdr->tp_vlan_tpid : ETH_TYPE_VLAN;
             } else {
                 io->vlan_tci = 0;
+                io->vlan_tpid = 0;
             }
             /* Process packet */
             if(io_thread_rx_handler(thread, io) == IO_FULL) {
@@ -386,6 +387,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
                 stream->flow_seq++;
             }
 
+            if(unlikely(io_capture_active(thread)) && !ctrl) io_capture_packet(io, io->buf, io->buf_len);
             tphdr->tp_len = io->buf_len;
             tphdr->tp_status = TP_STATUS_SEND_REQUEST;
 

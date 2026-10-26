@@ -300,6 +300,7 @@ io_raw_thread_tx_run_fn(io_thread_s *thread)
                     break;
                 }
                 if(unlikely(sendto(io->fd, stream->tx_buf, stream->tx_len, 0, (struct sockaddr*)&io->addr, sizeof(struct sockaddr_ll)) >=0)) {
+                    if(unlikely(io_capture_active(thread))) io_capture_packet(io, stream->tx_buf, stream->tx_len);
                     stream->tx_packets++;
                     stream->flow_seq++;
                     io->stats.packets++;

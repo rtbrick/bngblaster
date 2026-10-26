@@ -101,7 +101,7 @@ typedef struct io_handle_ {
     uint8_t *buf;
     uint16_t buf_len;
     uint16_t vlan_tci;
-    uint16_t vlan_tpid;
+    uint16_t vlan_tpid; /* stripped outer VLAN if not zero */
 
     uint32_t stream_count;
     double stream_pps;
@@ -147,6 +147,8 @@ typedef struct io_thread_ {
 
     io_handle_s *io;
     bbl_txq_s *txq;
+    struct io_capture_ *capture; /* stream capture queue */
+    timer_s *capture_job;
 
     struct io_thread_ *next;
 } io_thread_s;

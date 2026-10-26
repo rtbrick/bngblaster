@@ -362,6 +362,7 @@ io_loopback_thread_rx_run_fn(io_thread_s *thread)
                 lens[i] = slot->len;
             }
             io->vlan_tci = 0;
+            io->vlan_tpid = 0;
             io_thread_rx_burst(thread, io, bufs, lens, rcvd);
             io_loopback_ring_release(ring, rcvd);
         }
@@ -442,6 +443,7 @@ io_loopback_thread_tx_run_fn(io_thread_s *thread)
                 memcpy(slot->packet, stream->tx_buf, stream->tx_len);
                 slot->len = stream->tx_len;
                 used++;
+                if(unlikely(io_capture_active(thread))) io_capture_packet(io, slot->packet, slot->len);
                 stream->tx_packets++;
                 stream->flow_seq++;
                 io->stats.packets++;

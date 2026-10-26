@@ -492,6 +492,7 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
     uint16_t n;
     uint16_t nb_tx;
     uint16_t i;
+    bool capture;
     uint64_t now;
 
     struct timespec sleep, rem;
@@ -585,11 +586,27 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
                     rte_pktmbuf_free_bulk(&mbufs[built], n - built);
                 }
                 if(built) {
+                    /* Keep a reference to capture packets after TX. */
+                    capture = io_capture_active(thread);
+                    if(unlikely(capture)) {
+                        for(i = 0; i < built; i++) {
+                            rte_mbuf_refcnt_update(mbufs[i], 1);
+                        }
+                    }
                     nb_tx = rte_eth_tx_burst(interface->port_id, io->queue, mbufs, built);
                     for(i = 0; i < nb_tx; i++) {
                         streams[i]->tx_packets++;
                         io->stats.packets++;
                         io->stats.bytes += streams[i]->tx_len;
+                    }
+                    if(unlikely(capture)) {
+                        for(i = 0; i < built; i++) {
+                            if(i < nb_tx) {
+                                io_capture_packet(io, rte_pktmbuf_mtod(mbufs[i], uint8_t *),
+                                                  rte_pktmbuf_data_len(mbufs[i]));
+                            }
+                            rte_pktmbuf_free(mbufs[i]);
+                        }
                     }
                     if(unlikely(nb_tx < built)) {
                         /* Offered more than the NIC could actually transmit.
@@ -715,7 +732,10 @@ io_dpdk_interface_init(bbl_interface_s *interface)
     if(config->rx_threads) {
         nb_rx_queue = config->rx_threads;
     }
-    if(dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) {
+    /* Fast free requires refcount 1, but TX threads
+     * capturing streams keep a reference. */
+    if((dev_info.tx_offload_capa & RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE) &&
+       !(config->tx_threads && g_ctx->pcap.include_streams)) {
         local_port_conf.txmode.offloads |= RTE_ETH_TX_OFFLOAD_MBUF_FAST_FREE;
     }
 

@@ -25,6 +25,8 @@
 #define PCAPNG_EPB_FLAGS_OPTION 2
 #define PCAPNG_EPB_FLAGS_INBOUND  0x1
 #define PCAPNG_EPB_FLAGS_OUTBOUND 0x2
+/* Header, padding, flags option and trailer */
+#define PCAPNG_EPB_MAX_OVERHEAD 44
 
 /* Ethernet (10Mb, 100Mb, 1000Mb, and up);
  * the 10MB in the DLT_ name is historical. */
@@ -46,6 +48,11 @@ pcapng_free();
 void
 pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_length,
                           uint32_t ifindex, uint32_t direction);
+
+void
+pcapng_push_packet_header_vlan(struct timespec *ts, uint8_t *data, uint32_t packet_length,
+                               uint32_t ifindex, uint32_t direction,
+                               uint16_t vlan_tpid, uint16_t vlan_tci);
 
 void
 pcapng_push_packet_header_tphdr(struct timespec *ts, struct tpacket2_hdr *tphdr, uint32_t ifindex);

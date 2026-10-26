@@ -302,23 +302,57 @@ pcapng_packet_header(struct timespec *ts, uint32_t ifindex)
 
 /*
  * Write a pcapng enhanced packet block.
+ *
+ * A VLAN TPID other than zero restores the outer VLAN
+ * tag stripped by the kernel (e.g. PACKET_MMAP).
  */
-void
-pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_length,
-                          uint32_t ifindex, uint32_t direction)
+static void
+pcapng_push_packet(struct timespec *ts, uint8_t *data, uint32_t data_length,
+                   uint32_t ifindex, uint32_t direction,
+                   uint16_t vlan_tpid, uint16_t vlan_tci)
 {
     uint32_t start_idx, total_length;
+    uint32_t packet_length = data_length;
 
+    if(!g_ctx->pcap.write_buf) return;
+    if(vlan_tpid && data_length >= ETH_SRC_DST_ADDR_LEN) {
+        packet_length += BBL_ETH_VLAN_LEN;
+    } else {
+        vlan_tpid = 0;
+    }
+
+    /* Make room for the whole block, as packet
+     * data is not covered by the overrun protection. */
+    if(g_ctx->pcap.write_idx + packet_length + PCAPNG_EPB_MAX_OVERHEAD > PCAPNG_WRITEBUFSIZE) {
+        pcapng_fflush();
+    }
     pcapng_section_header();
+    if(g_ctx->pcap.write_idx + packet_length + PCAPNG_EPB_MAX_OVERHEAD > PCAPNG_WRITEBUFSIZE) {
+        LOG(PCAP, "dropped %u bytes pcap packet data, buffer fill %u/%u\n",
+            packet_length, g_ctx->pcap.write_idx, PCAPNG_WRITEBUFSIZE);
+        return;
+    }
+
     start_idx = g_ctx->pcap.write_idx;
     pcapng_packet_header(ts, ifindex);
 
     bbl_pcap_push_le_uint(4, packet_length); /* captured packet length */
     bbl_pcap_push_le_uint(4, packet_length); /* original packet length */
 
-    /* Copy packet. */
-    memcpy(&g_ctx->pcap.write_buf[g_ctx->pcap.write_idx], data, packet_length);
-    g_ctx->pcap.write_idx += packet_length;
+    if(vlan_tpid) {
+        /* Copy ethernet source and destination address */
+        memcpy(&g_ctx->pcap.write_buf[g_ctx->pcap.write_idx], data, ETH_SRC_DST_ADDR_LEN);
+        g_ctx->pcap.write_idx += ETH_SRC_DST_ADDR_LEN;
+        data += ETH_SRC_DST_ADDR_LEN; data_length -= ETH_SRC_DST_ADDR_LEN;
+        /* Restore outer VLAN */
+        *(uint16_t*)(g_ctx->pcap.write_buf+g_ctx->pcap.write_idx) = htobe16(vlan_tpid);
+        g_ctx->pcap.write_idx += sizeof(uint16_t);
+        *(uint16_t*)(g_ctx->pcap.write_buf+g_ctx->pcap.write_idx) = htobe16(vlan_tci);
+        g_ctx->pcap.write_idx += sizeof(uint16_t);
+    }
+    /* Copy (remaining) packet. */
+    memcpy(&g_ctx->pcap.write_buf[g_ctx->pcap.write_idx], data, data_length);
+    g_ctx->pcap.write_idx += data_length;
     bbl_pcap_push_le_uint(calc_pad(packet_length), 0); /* write pad bytes */
 
     /* Write epb_flags option for storing packet direction. */
@@ -340,65 +374,34 @@ pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_le
     }
 }
 
+void
+pcapng_push_packet_header(struct timespec *ts, uint8_t *data, uint32_t packet_length,
+                          uint32_t ifindex, uint32_t direction)
+{
+    pcapng_push_packet(ts, data, packet_length, ifindex, direction, 0, 0);
+}
+
+void
+pcapng_push_packet_header_vlan(struct timespec *ts, uint8_t *data, uint32_t packet_length,
+                               uint32_t ifindex, uint32_t direction,
+                               uint16_t vlan_tpid, uint16_t vlan_tci)
+{
+    pcapng_push_packet(ts, data, packet_length, ifindex, direction, vlan_tpid, vlan_tci);
+}
+
 /*
  * Write a pcapng enhanced packet block from tphdr.
  */
 void
 pcapng_push_packet_header_tphdr(struct timespec *ts, struct tpacket2_hdr *tphdr, uint32_t ifindex)
 {
-    uint8_t *data = (uint8_t*)tphdr + tphdr->tp_mac;
-    uint32_t packet_length = tphdr->tp_len;
-    uint32_t data_length = packet_length;
-
-    uint32_t start_idx, total_length;
-
-    pcapng_section_header();
-    start_idx = g_ctx->pcap.write_idx;
-    pcapng_packet_header(ts, ifindex);
+    uint16_t vlan_tpid = 0;
 
     if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
-        /* Restore outer VLAN from TPHDR. */
-        packet_length += BBL_ETH_VLAN_LEN;
-        bbl_pcap_push_le_uint(4, packet_length); /* captured packet length */
-        bbl_pcap_push_le_uint(4, packet_length); /* original packet length */
-        /* Copy ethernet source and destination address */
-        memcpy(&g_ctx->pcap.write_buf[g_ctx->pcap.write_idx], data, ETH_SRC_DST_ADDR_LEN);
-        g_ctx->pcap.write_idx += ETH_SRC_DST_ADDR_LEN; 
-        data += ETH_SRC_DST_ADDR_LEN; data_length -= ETH_SRC_DST_ADDR_LEN;
-        /* Restore outer VLAN */
-        *(uint16_t*)(g_ctx->pcap.write_buf+g_ctx->pcap.write_idx) = htobe16(tphdr->tp_vlan_tpid);
-        g_ctx->pcap.write_idx += sizeof(uint16_t);
-        *(uint16_t*)(g_ctx->pcap.write_buf+g_ctx->pcap.write_idx) = htobe16(tphdr->tp_vlan_tci);
-        g_ctx->pcap.write_idx += sizeof(uint16_t);
-        /* Copy remaining packet. */
-        memcpy(&g_ctx->pcap.write_buf[g_ctx->pcap.write_idx], data, data_length);
-        g_ctx->pcap.write_idx += data_length;
-    } else {
-        bbl_pcap_push_le_uint(4, packet_length); /* captured packet length */
-        bbl_pcap_push_le_uint(4, packet_length); /* original packet length */
-        /* Copy packet. */
-        memcpy(&g_ctx->pcap.write_buf[g_ctx->pcap.write_idx], data, packet_length);
-        g_ctx->pcap.write_idx += packet_length;
+        vlan_tpid = tphdr->tp_vlan_tpid ? tphdr->tp_vlan_tpid : ETH_TYPE_VLAN;
     }
-    bbl_pcap_push_le_uint(calc_pad(packet_length), 0); /* write pad bytes */
-
-    /* Write epb_flags option for storing packet direction. */
-    bbl_pcap_push_le_uint(2, PCAPNG_EPB_FLAGS_OPTION); /* option_type */
-    bbl_pcap_push_le_uint(2, 4); /* option_length */
-    bbl_pcap_push_le_uint(4, PCAPNG_EPB_FLAGS_INBOUND & 0x3); /* direction */
-
-    /* Calculate total length field. It occurs twice. Overwrite and append. */
-    total_length = g_ctx->pcap.write_idx - start_idx + 4;
-    write_le_uint(g_ctx->pcap.write_buf+start_idx+4, 4, total_length); /* block total_length */
-    bbl_pcap_push_le_uint(4, total_length); /* block total_length */
-
-    LOG(PCAP, "wrote %u bytes pcap packet data, buffer fill %u/%u\n",
-        packet_length, g_ctx->pcap.write_idx, PCAPNG_WRITEBUFSIZE);
-
-    /* Buffer about to be overrun? */
-    if(g_ctx->pcap.write_idx >= (PCAPNG_WRITEBUFSIZE/16)*15) {
-        pcapng_fflush();
-    }
+    pcapng_push_packet(ts, (uint8_t*)tphdr + tphdr->tp_mac, tphdr->tp_len, ifindex,
+                       PCAPNG_EPB_FLAGS_INBOUND, vlan_tpid, tphdr->tp_vlan_tci);
 }
 
 int

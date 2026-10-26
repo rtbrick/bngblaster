@@ -117,6 +117,7 @@ rx_handler(io_thread_s *thread, io_handle_s *io)
             eth->timestamp.tv_sec = io->timestamp.tv_sec;
             eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
             if(bbl_rx_thread(io->interface, eth)) {
+                if(unlikely(io_capture_active(thread))) io_capture_packet(io, io->buf, io->buf_len);
                 return IO_SUCCESS;
             }
         } else if(decode_result == UNKNOWN_PROTOCOL) {
@@ -288,16 +289,18 @@ io_thread_main_rx_job(timer_s *timer)
                     /* Dump the packet into pcap file. */
                     if(g_ctx->pcap.write_buf && (!eth->bbl || g_ctx->pcap.include_streams)) {
                         pcap = true;
-                        pcapng_push_packet_header(&slot->timestamp, slot->packet, slot->packet_len,
-                                                  interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+                        pcapng_push_packet_header_vlan(&slot->timestamp, slot->packet, slot->packet_len,
+                                                       interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND,
+                                                       slot->vlan_tpid, slot->vlan_tci);
                     }
                     bbl_rx_handler(interface, eth);
                 } else {
                     /* Dump the packet into pcap file. */
                     if(g_ctx->pcap.write_buf) {
                         pcap = true;
-                        pcapng_push_packet_header(&slot->timestamp, slot->packet, slot->packet_len,
-                                                  interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND);
+                        pcapng_push_packet_header_vlan(&slot->timestamp, slot->packet, slot->packet_len,
+                                                       interface->ifindex, PCAPNG_EPB_FLAGS_INBOUND,
+                                                       slot->vlan_tpid, slot->vlan_tci);
                     }
                     if(decode_result == UNKNOWN_PROTOCOL) {
                         io->stats.unknown++;
@@ -846,6 +849,17 @@ io_thread_start_all()
     /* Each I/O thread and the main thread should have its own CPU,
      * otherwise threads are delayed, which causes packet loss. */
     while(thread) {
+        /* Also without PCAP file, which can be started later. */
+        if(g_ctx->pcap.include_streams) {
+            io_handle_s *io = thread->io;
+            uint16_t slots = io->direction == IO_INGRESS ?
+                io->interface->config->io_slots_rx : io->interface->config->io_slots_tx;
+            if(!io_capture_init(thread, slots)) {
+                LOG_NOARG(ERROR, "Failed to allocate I/O stream capture queue\n");
+                io_thread_stop_all();
+                return false;
+            }
+        }
         threads++;
         thread = thread->next;
     }
@@ -967,6 +981,7 @@ io_thread_stop_all()
             pthread_join(thread->thread, NULL);
             thread->started = false;
         }
+        io_capture_free(thread);
         thread = thread->next;
     }
 }

@@ -1576,6 +1576,7 @@ io_af_xdp_thread_rx_run_fn(io_thread_s *thread)
             lens[i] = desc->len;
         }
         io->vlan_tci = 0;
+        io->vlan_tpid = 0;
         io_thread_rx_burst(thread, io, bufs, lens, rcvd);
         xsk_ring_cons__release(&q->rx, rcvd);
         io_af_xdp_refill(q, addrs, rcvd);
@@ -1674,6 +1675,7 @@ io_af_xdp_thread_tx_run_fn(io_thread_s *thread)
                 desc->options = 0;
                 used++;
 
+                if(unlikely(io_capture_active(thread))) io_capture_packet(io, io->buf, stream->tx_len);
                 stream->tx_packets++;
                 stream->flow_seq++;
                 io->stats.packets++;
