@@ -1629,6 +1629,10 @@ main(int argc, char *argv[])
                 break;
             case 'P':
                 ctx->protocol_id = key2val(proto_names, optarg);
+                if (ctx->protocol_id == PROTO_UNKNOWN) {
+                    LOG(ERROR, "Unknown protocol %s\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
                 if (ctx->protocol_id == PROTO_OSPF2) {
                     ctx->no_ipv6 = true;
                 }
