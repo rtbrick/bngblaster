@@ -401,6 +401,78 @@ test_protocols_dhcp_end_option(void **unused) {
     free(sp);
 }
 
+static void
+test_protocols_dhcpv6_timer_byte_order(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[512];
+    uint8_t reencoded[512];
+    uint16_t len = 0;
+    uint16_t reencoded_len = 0;
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    ipv6addr_t src_ip = {0};
+    ipv6addr_t dst_ip = {0};
+    ipv6addr_t address = {0};
+    ipv6_prefix prefix = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_dhcpv6_s dhcpv6 = {0};
+    bbl_ethernet_header_s *decoded;
+    bbl_dhcpv6_s *decoded_dhcpv6;
+
+    inet_pton(AF_INET6, "fe80::1", src_ip);
+    inet_pton(AF_INET6, "ff02::1:2", dst_ip);
+    inet_pton(AF_INET6, "2001:db8::1", address);
+    eth.dst = dst;
+    eth.src = src;
+    eth.type = ETH_TYPE_IPV6;
+    eth.next = &ipv6;
+    ipv6.src = src_ip;
+    ipv6.dst = dst_ip;
+    ipv6.protocol = IPV6_NEXT_HEADER_UDP;
+    ipv6.ttl = 64;
+    ipv6.next = &udp;
+    udp.src = DHCPV6_UDP_CLIENT;
+    udp.dst = DHCPV6_UDP_SERVER;
+    udp.protocol = UDP_PROTOCOL_DHCPV6;
+    udp.next = &dhcpv6;
+    dhcpv6.type = DHCPV6_MESSAGE_RENEW;
+    dhcpv6.ia_na_iaid = htobe32(1);
+    dhcpv6.ia_na_t1 = 40;
+    dhcpv6.ia_na_t2 = 64;
+    dhcpv6.ia_na_preferred_lifetime = 80;
+    dhcpv6.ia_na_valid_lifetime = 160;
+    dhcpv6.ia_na_address = &address;
+    dhcpv6.ia_pd_iaid = htobe32(2);
+    dhcpv6.ia_pd_t1 = 150;
+    dhcpv6.ia_pd_t2 = 240;
+    dhcpv6.ia_pd_preferred_lifetime = 300;
+    dhcpv6.ia_pd_valid_lifetime = 600;
+    dhcpv6.ia_pd_prefix = &prefix;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    decoded_dhcpv6 = (bbl_dhcpv6_s*)((bbl_udp_s*)((bbl_ipv6_s*)decoded->next)->next)->next;
+    assert_int_equal(decoded_dhcpv6->ia_na_t1, 40);
+    assert_int_equal(decoded_dhcpv6->ia_na_t2, 64);
+    assert_int_equal(decoded_dhcpv6->ia_na_preferred_lifetime, 80);
+    assert_int_equal(decoded_dhcpv6->ia_na_valid_lifetime, 160);
+    assert_int_equal(decoded_dhcpv6->ia_pd_t1, 150);
+    assert_int_equal(decoded_dhcpv6->ia_pd_t2, 240);
+    assert_int_equal(decoded_dhcpv6->ia_pd_preferred_lifetime, 300);
+    assert_int_equal(decoded_dhcpv6->ia_pd_valid_lifetime, 600);
+    assert_int_equal(decoded_dhcpv6->ia_na_option_len, 40);
+    assert_int_equal(decoded_dhcpv6->ia_pd_option_len, 41);
+    udp.next = decoded_dhcpv6;
+    assert_int_equal(encode_ethernet(reencoded, &reencoded_len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(reencoded_len, len);
+    assert_memory_equal(reencoded, buf, len);
+    free(sp);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -410,6 +482,7 @@ int main() {
         cmocka_unit_test(test_protocols_bbl_flow_id),
         cmocka_unit_test(test_protocols_lcp_chap),
         cmocka_unit_test(test_protocols_dhcp_end_option),
+        cmocka_unit_test(test_protocols_dhcpv6_timer_byte_order),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
