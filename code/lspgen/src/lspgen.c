@@ -992,6 +992,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.prefix.algos[0].sid = node->node_index;
             attr_template.key.prefix.algos[0].flags = LSDB_PREFIX_ALGO_SID;
             attr_template.key.prefix.algo_count = 1;
+            attr_template.key.prefix.node_flag = true;
 
             attr_template.key.ordinal = 1;
             attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
@@ -1178,6 +1179,7 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.prefix.algos[0].sid = node->node_index;
             attr_template.key.prefix.algos[0].flags = LSDB_PREFIX_ALGO_SID;
             attr_template.key.prefix.algo_count = 1;
+            attr_template.key.prefix.node_flag = true;
 
             /* For SR use the Extended-Intra-Area-Router-LSA */
             attr_template.key.ordinal = 1;

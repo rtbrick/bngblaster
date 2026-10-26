@@ -627,6 +627,12 @@ lspgen_write_node_ospf3_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
             lspgen_write_link_config(ctx, nbr_arr, attr);
             break;
         case OSPF_IA_PREFIX_LSA_PREFIX:
+
+            /* Skip node prefixes, they are encoded also in Extended Intra-Area Prefixes */
+            if (attr->key.prefix.node_flag && !ctx->no_sr) {
+                break;
+            }
+
             if (!ipv6_prefix_arr) {
                 ipv6_prefix_arr = json_array();
                 json_object_set_new(node_obj, "ipv6_prefix_list", ipv6_prefix_arr);
@@ -1149,6 +1155,7 @@ lspgen_read_ipv4_prefix_config(lsdb_node_t *node, json_t *obj)
 {
     struct lsdb_ctx_ *ctx;
     struct lsdb_attr_ attr_template;
+    struct lsdb_attr_ sid_attr_template;
     char *s;
 
     ctx = node->ctx;
@@ -1175,17 +1182,7 @@ lspgen_read_ipv4_prefix_config(lsdb_node_t *node, json_t *obj)
             }
         } else if (ctx->protocol_id == PROTO_OSPF2) {
 
-            if (attr_template.key.prefix.node_flag &&
-                LSDB_PREFIX_HAS_SID(&attr_template.key.prefix.algos[0])) {
-
-                /* OSPF loopback with prefix sid*/
-                attr_template.key.ordinal = 1;
-                attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-                attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_EP;
-                attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX;
-                attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
-
-            } else if (attr_template.key.prefix.ext_flag) {
+            if (attr_template.key.prefix.ext_flag) {
 
                 /* OSPF external */
                 attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
@@ -1193,6 +1190,25 @@ lspgen_read_ipv4_prefix_config(lsdb_node_t *node, json_t *obj)
                 attr_template.key.start_tlv = true;
             } else {
 
+                if (LSDB_PREFIX_HAS_SID(&attr_template.key.prefix.algos[0])) {
+
+                    /* OSPF loopback with prefix sid, advertised as stub link
+                     * in the router-LSA and in the extended prefix LSA */
+                    memcpy(&sid_attr_template, &attr_template, sizeof(sid_attr_template));
+                    sid_attr_template.key.ordinal = 1;
+                    sid_attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+                    sid_attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_EP;
+                    sid_attr_template.key.attr_cp[2] = OSPF_TLV_EXTENDED_PREFIX;
+                    sid_attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
+                    lsdb_add_node_attr(node, &sid_attr_template);
+
+                    memset(attr_template.key.prefix.algos, 0, sizeof(attr_template.key.prefix.algos));
+                    attr_template.key.prefix.algo_count = 0;
+                    attr_template.key.prefix.node_flag = true;
+                }
+
+                /* Default ordinal, the prefixes must not split the LSA. */
+                attr_template.key.ordinal = 255;
                 attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
                 attr_template.key.attr_cp[1] = OSPF_LSA_ROUTER;
                 attr_template.key.attr_cp[2] = OSPF_ROUTER_LSA_LINK_STUB;
@@ -1208,6 +1224,7 @@ lspgen_read_ipv6_prefix_config(lsdb_node_t *node, json_t *obj)
 {
     struct lsdb_ctx_ *ctx;
     struct lsdb_attr_ attr_template;
+    struct lsdb_attr_ sid_attr_template;
     char *s;
 
     ctx = node->ctx;
@@ -1222,17 +1239,7 @@ lspgen_read_ipv6_prefix_config(lsdb_node_t *node, json_t *obj)
 
         } else if (ctx->protocol_id == PROTO_OSPF3) {
 
-            if (attr_template.key.prefix.node_flag &&
-                LSDB_PREFIX_HAS_SID(&attr_template.key.prefix.algos[0])) {
-
-                /* OSPF loopback with prefix sid*/
-                attr_template.key.ordinal = 1;
-                attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
-                attr_template.key.attr_cp[1] = OSPF_LSA_E_INTRA_AREA_PREFIX;
-                attr_template.key.attr_cp[2] = OSPF_TLV_INTRA_AREA_PREFIX;
-                attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
-
-            } else if (attr_template.key.prefix.ext_flag) {
+            if (attr_template.key.prefix.ext_flag) {
 
                 /* OSPF external */
                 attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
@@ -1241,6 +1248,25 @@ lspgen_read_ipv6_prefix_config(lsdb_node_t *node, json_t *obj)
 
             } else {
 
+                if (LSDB_PREFIX_HAS_SID(&attr_template.key.prefix.algos[0])) {
+
+                    /* OSPF loopback with prefix sid, advertised in the intra-area
+                     * prefix LSA and in the extended intra-area prefix LSA */
+                    memcpy(&sid_attr_template, &attr_template, sizeof(sid_attr_template));
+                    sid_attr_template.key.ordinal = 1;
+                    sid_attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+                    sid_attr_template.key.attr_cp[1] = OSPF_LSA_E_INTRA_AREA_PREFIX;
+                    sid_attr_template.key.attr_cp[2] = OSPF_TLV_INTRA_AREA_PREFIX;
+                    sid_attr_template.key.attr_cp[3] = OSPF_SUBTLV_PREFIX_SID;
+                    lsdb_add_node_attr(node, &sid_attr_template);
+
+                    memset(attr_template.key.prefix.algos, 0, sizeof(attr_template.key.prefix.algos));
+                    attr_template.key.prefix.algo_count = 0;
+                    attr_template.key.prefix.node_flag = true;
+                }
+
+                /* Default ordinal, the prefixes must not split the LSA. */
+                attr_template.key.ordinal = 255;
                 attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
                 attr_template.key.attr_cp[1] = OSPF_LSA_INTRA_AREA_PREFIX;
                 attr_template.key.attr_cp[2] = OSPF_IA_PREFIX_LSA_PREFIX;
