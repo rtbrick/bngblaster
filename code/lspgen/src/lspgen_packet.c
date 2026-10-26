@@ -961,7 +961,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
             router_id = read_be_uint(node->key.node_id, 4);
             push_be_uint(buf0, 4, router_id); /* Router ID */
-            push_be_uint(buf0, 4, ctx->topology_id.area); /* Area ID */
+            push_data(buf0, (uint8_t*)&ctx->topology_id.area, 4); /* Area ID */
 
             push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
 
@@ -1269,7 +1269,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
 
             router_id = read_be_uint(node->key.node_id, 4);
             push_be_uint(buf0, 4, router_id); /* Router ID */
-            push_be_uint(buf0, 4, ctx->topology_id.area); /* Area ID */
+            push_data(buf0, (uint8_t*)&ctx->topology_id.area, 4); /* Area ID */
 
             push_be_uint(buf0, 2, 0); /* Checksum - will be overwritten later */
 
