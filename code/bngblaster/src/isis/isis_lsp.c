@@ -815,8 +815,34 @@ NEXT:
     return true;
 }
 
+/*
+ * A received LSP is newer than the stored one with a higher sequence
+ * number or with the same sequence number if it is a purge (zero
+ * remaining lifetime) and the stored LSP is not (ISO 10589 7.3.16).
+ * The same sequence number with a different checksum is also newer for
+ * self originated and external LSPs, e.g. if the neighbor still has the
+ * LSP of a previous BNG Blaster instance, to re-originate them.
+ */
+static bool
+isis_lsp_rx_newer(isis_lsp_s *lsp, isis_pdu_s *pdu, uint32_t seq)
+{
+    uint16_t lifetime = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME));
+
+    if(seq != lsp->seq) {
+        return seq > lsp->seq;
+    }
+    if(lifetime == 0) {
+        return !lsp->expired;
+    }
+    if(lsp->source.type == ISIS_SOURCE_SELF || lsp->source.type == ISIS_SOURCE_EXTERNAL) {
+        return *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM) !=
+               *(uint16_t*)ISIS_PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
+    }
+    return false;
+}
+
 /**
- * isis_lsp_handler_rx 
+ * isis_lsp_handler_rx
  * 
  * @param interface receive interface
  * @param pdu received ISIS PDU
@@ -878,7 +904,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
     if(search) {
         /* Update existing LSP. */
         lsp = *search;
-        if(lsp->seq >= seq) {
+        if(!isis_lsp_rx_newer(lsp, pdu, seq)) {
             goto ACK;
         }
         if(lsp->source.type == ISIS_SOURCE_EXTERNAL) {

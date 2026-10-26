@@ -14,6 +14,16 @@ add_executable(test-decode-pcap protocols_decode_pcap.c ../src/bbl_protocols.c)
 target_link_libraries(test-decode-pcap ${LINK_LIBS})
 target_compile_options(test-decode-pcap PRIVATE -Werror -Wall -Wextra)
 
+# The test includes isis_lsp.c, unused functions referencing the
+# rest of BNG Blaster are removed by the linker.
+add_executable(test-isis-lsp isis_lsp.c)
+target_include_directories(test-isis-lsp PRIVATE $<TARGET_PROPERTY:bngblaster,INCLUDE_DIRECTORIES>)
+target_compile_definitions(test-isis-lsp PRIVATE $<TARGET_PROPERTY:bngblaster,COMPILE_DEFINITIONS>)
+target_link_libraries(test-isis-lsp cmocka)
+target_compile_options(test-isis-lsp PRIVATE -Werror -Wall -Wextra -ffunction-sections -fdata-sections)
+target_link_options(test-isis-lsp PRIVATE -Wl,--gc-sections)
+add_test(NAME "TestIsisLsp" COMMAND test-isis-lsp)
+
 if(BNGBLASTER_AF_XDP)
     # The test includes io_af_xdp.c, unused functions referencing the
     # rest of BNG Blaster are removed by the linker.
