@@ -19,7 +19,7 @@
 /*
  * Globals
  */
-bool loop_running = true;
+volatile sig_atomic_t loop_running = true;
 
 /*
  * Prototypes
@@ -1594,8 +1594,7 @@ lspgen_quit_loop (void)
 void
 lspgen_sig_handler (int signum)
 {
-    LOG(NORMAL, "Received %s signal\n", strsignal(signum));
-
+    /* Only async-signal-safe operations, the signal is logged after the loop. */
     switch (signum) {
         case SIGINT:
             lspgen_quit_loop();
@@ -2039,6 +2038,7 @@ main(int argc, char *argv[])
         while (loop_running) {
             timer_walk(&ctx->timer_root);
         }
+        LOG_NOARG(NORMAL, "Stopped event loop\n");
     }
 
     /*
