@@ -8,6 +8,7 @@
 #ifndef __LSPGEN_H__
 #define __LSPGEN_H__
 
+#include <ctype.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>

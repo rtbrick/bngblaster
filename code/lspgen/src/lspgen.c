@@ -1484,7 +1484,7 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
 void
 lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
 {
-    long long int iso_node_id; /* Used for ISO */
+    uint64_t iso_node_id; /* Used for ISO */
     uint32_t remote_id, local_ip; /* Used for IP */
     char conn_dst[32];
     size_t src_len, dst_len;
@@ -1547,19 +1547,14 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
                 break;
             }
 
-            if (conn_src[src] >= 'a' && conn_src[src] <= 'f') {
+            if (isxdigit((unsigned char)conn_src[src])) {
                 conn_dst[dst++] = conn_src[src];
-                continue;
-            }
-            if (conn_src[src] >= '0' && conn_src[src] <= '9') {
-                conn_dst[dst++] = conn_src[src];
-                continue;
             }
         }
-        iso_node_id = strtoll(conn_dst, NULL, 16);
+        iso_node_id = strtoull(conn_dst, NULL, 16);
 
         dst_len = strlen(&conn_dst[2]);
-        if (dst_len > 16) {
+        if (dst_len == 0 || dst_len > 16) {
             LOG(ERROR, "illegal connector length %s\n", conn_src);
             return;
         }
