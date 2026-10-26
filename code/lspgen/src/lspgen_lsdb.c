@@ -517,6 +517,27 @@ lsdb_delete_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
 }
 
 /*
+ * Increment the sequence number of a node. The sequence number space
+ * is exhausted at 0xffffffff for IS-IS and 0x7fffffff for OSPF (signed),
+ * as the next value would be invalid (IS-IS 0, OSPF 0x80000000).
+ */
+void
+lsdb_bump_sequence(lsdb_node_t *node)
+{
+    uint32_t max_sequence;
+
+    max_sequence = UINT32_MAX;
+    if (node->ctx->protocol_id == PROTO_OSPF2 || node->ctx->protocol_id == PROTO_OSPF3) {
+        max_sequence = INT32_MAX;
+    }
+    if (node->sequence == max_sequence) {
+        LOG(ERROR, "Sequence number of node %s exhausted\n", lsdb_format_node(node));
+        return;
+    }
+    node->sequence++;
+}
+
+/*
  * First search a node in the database before adding.
  * Create if not exists.
  */

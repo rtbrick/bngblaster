@@ -1810,7 +1810,7 @@ lspgen_refresh_cb (timer_s *timer)
     node = timer->data;
     ctx = node->ctx;
 
-    node->sequence++;
+    lsdb_bump_sequence(node);
     LOG(LSDB, "Refresh LSP for %s, sequence 0x%0x\n", lsdb_format_node(node), node->sequence);
 
     lspgen_gen_packet_node(node);

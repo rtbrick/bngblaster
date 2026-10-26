@@ -436,6 +436,7 @@ lsdb_attr_t *lsdb_add_node_attr(lsdb_node_t *, lsdb_attr_t *);
 void lsdb_reset_attr_template(lsdb_attr_t *);
 void lsdb_delete_link(lsdb_ctx_t *, lsdb_link_t *);
 void lsdb_delete_node(lsdb_ctx_t *, lsdb_node_t *);
+void lsdb_bump_sequence(lsdb_node_t *);
 lsdb_ctx_t *lsdb_alloc_ctx(char *);
 void lsdb_delete_ctx(lsdb_ctx_t *);
 void lsdb_dump_graphviz(lsdb_ctx_t *);

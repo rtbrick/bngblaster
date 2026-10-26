@@ -158,7 +158,8 @@ lspgen_read_node_seq_cache(lsdb_ctx_t *ctx, json_t *node_obj)
         }
 
         if (json_unpack(node_obj, "{s:s}", "sequence", &s) == 0) {
-            node->sequence = strtol(s, NULL, 0) + 1;
+            node->sequence = strtoul(s, NULL, 0);
+            lsdb_bump_sequence(node);
         }
     }
 }
