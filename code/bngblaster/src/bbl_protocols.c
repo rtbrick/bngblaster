@@ -360,9 +360,9 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint32_t*)buf = dhcpv6->ia_na_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = dhcpv6->ia_na_t1; /* T1 */
+        *(uint32_t*)buf = htobe32(dhcpv6->ia_na_t1); /* T1 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = dhcpv6->ia_na_t2; /* T2 */
+        *(uint32_t*)buf = htobe32(dhcpv6->ia_na_t2); /* T2 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         if(dhcpv6->ia_na_address) {
             *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IAADDR);
@@ -371,9 +371,9 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
             memcpy(buf, dhcpv6->ia_na_address, sizeof(ipv6addr_t));
             BUMP_WRITE_BUFFER(buf, len, sizeof(ipv6addr_t));
-            *(uint32_t*)buf = dhcpv6->ia_na_preferred_lifetime;
+            *(uint32_t*)buf = htobe32(dhcpv6->ia_na_preferred_lifetime);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-            *(uint32_t*)buf = dhcpv6->ia_na_valid_lifetime;
+            *(uint32_t*)buf = htobe32(dhcpv6->ia_na_valid_lifetime);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         }
     }
@@ -392,17 +392,17 @@ encode_dhcpv6(uint8_t *buf, uint16_t *len,
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint32_t*)buf = dhcpv6->ia_pd_iaid;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = dhcpv6->ia_pd_t1; /* T1 */
+        *(uint32_t*)buf = htobe32(dhcpv6->ia_pd_t1); /* T1 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = dhcpv6->ia_pd_t2; /* T2 */
+        *(uint32_t*)buf = htobe32(dhcpv6->ia_pd_t2); /* T2 */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         *(uint16_t*)buf = htobe16(DHCPV6_OPTION_IAPREFIX);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
         *(uint16_t*)buf = htobe16(25); /* length */
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-        *(uint32_t*)buf = dhcpv6->ia_pd_preferred_lifetime;
+        *(uint32_t*)buf = htobe32(dhcpv6->ia_pd_preferred_lifetime);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
-        *(uint32_t*)buf = dhcpv6->ia_pd_valid_lifetime;
+        *(uint32_t*)buf = htobe32(dhcpv6->ia_pd_valid_lifetime);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
         if(dhcpv6->ia_pd_prefix) {
             memcpy(buf, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix));
