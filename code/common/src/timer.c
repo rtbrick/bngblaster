@@ -326,12 +326,19 @@ timer_del_internal(timer_s *timer)
 
 /**
  * Mark a timer for deletion.
+ *
+ * The reference to this timer is cleared immediately, as
+ * the owner may be freed before the deletion is processed.
  */
 void
 timer_del(timer_s *timer)
 {
     if(timer) {
         timer->delete = true;
+        if(timer->ptimer) {
+            *timer->ptimer = NULL;
+            timer->ptimer = NULL;
+        }
         timer_change(timer);
     }
 }

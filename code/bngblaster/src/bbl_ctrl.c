@@ -812,6 +812,7 @@ bbl_ctrl_socket_close()
         if(ctrl->socket) {
             close(ctrl->socket);
         }
+        timer_del(ctrl->main.timer);
         unlink(g_ctx->ctrl_socket_path);
         free(g_ctx->ctrl_thread);
         g_ctx->ctrl_thread = NULL;

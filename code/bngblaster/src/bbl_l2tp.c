@@ -291,6 +291,7 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_s *l2tp_tunnel)
 
         /* Delete timer */
         timer_del(l2tp_tunnel->timer_tx);
+        timer_del(l2tp_tunnel->timer_ctrl);
 
         /* Delete all remaining sessions */
         while (!CIRCLEQ_EMPTY(&l2tp_tunnel->session_qhead)) {
