@@ -2991,18 +2991,23 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
 
 static protocol_error_t
 decode_dhcp_agent(uint8_t *buf, uint16_t len,
-                  uint8_t *sp, uint16_t sp_len,
+                  uint8_t **_sp, uint16_t *_sp_len,
                   bbl_dhcp_s *dhcp)
 {
     access_line_s *access_line;
-    
+    uint8_t *sp = *_sp;
+    uint16_t sp_len = *_sp_len;
+
     uint8_t tlv_type;
     uint8_t tlv_length;
 
     if(dhcp->access_line) {
         access_line = dhcp->access_line;
     } else {
-        access_line = (access_line_s*)sp; 
+        if(sp_len < sizeof(access_line_s)) {
+            return DECODE_ERROR;
+        }
+        access_line = (access_line_s*)sp;
         BUMP_BUFFER(sp, sp_len, sizeof(access_line_s));
         memset(access_line, 0x0, sizeof(access_line_s));
         dhcp->access_line = access_line;
@@ -3042,6 +3047,9 @@ decode_dhcp_agent(uint8_t *buf, uint16_t len,
         }
         BUMP_BUFFER(buf, len, tlv_length);
     }
+    /* Option 82 may be present multiple times. */
+    *_sp = sp;
+    *_sp_len = sp_len;
     return PROTOCOL_SUCCESS;
 }
 
@@ -3154,7 +3162,7 @@ decode_dhcp(uint8_t *buf, uint16_t len,
                 dhcp->option_mtu = true;
                 break;
             case DHCP_OPTION_RELAY_AGENT_INFORMATION:
-                if(decode_dhcp_agent(buf, option_len, sp, sp_len, dhcp) != PROTOCOL_SUCCESS) {
+                if(decode_dhcp_agent(buf, option_len, &sp, &sp_len, dhcp) != PROTOCOL_SUCCESS) {
                     return DECODE_ERROR;
                 }
                 break;

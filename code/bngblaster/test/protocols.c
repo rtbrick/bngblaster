@@ -402,6 +402,58 @@ test_protocols_dhcp_end_option(void **unused) {
 }
 
 static void
+test_protocols_dhcp_agent_option_repeated(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[512] = {0};
+    uint8_t options[] = {
+        0x63, 0x82, 0x53, 0x63,                         /* magic cookie */
+        0x35, 0x01, 0x01,                               /* message type discover */
+        0x52, 0x07, 0x01, 0x05, 'a', 'c', 'i', '-', '1',/* relay agent information */
+        0x52, 0x1b, 0x01, 0x14,                         /* relay agent information */
+        'c', 'i', 'r', 'c', 'u', 'i', 't', '-', 'i', 'd',
+        '-', '0', '0', '0', '0', '0', '0', '0', '0', '2',
+        0x02, 0x03, 'a', 'r', 'i',
+        0xff                                            /* end */
+    };
+    uint16_t udp_len = UDP_HDR_LEN + sizeof(struct dhcp_header) + sizeof(options);
+    uint16_t ip_len = sizeof(struct iphdr) + udp_len;
+
+    struct ether_header *eth_hdr = (struct ether_header*)buf;
+    struct iphdr *ip_hdr = (struct iphdr*)(buf + ETH_HDR_LEN);
+    struct udphdr *udp_hdr = (struct udphdr*)((uint8_t*)ip_hdr + sizeof(struct iphdr));
+    struct dhcp_header *dhcp_hdr = (struct dhcp_header*)((uint8_t*)udp_hdr + UDP_HDR_LEN);
+
+    bbl_ethernet_header_s *eth;
+    bbl_ipv4_s *ipv4;
+    bbl_udp_s *udp;
+    bbl_dhcp_s *dhcp;
+
+    eth_hdr->ether_type = htobe16(ETH_TYPE_IPV4);
+    ip_hdr->version = 4;
+    ip_hdr->ihl = sizeof(struct iphdr) / 4;
+    ip_hdr->tot_len = htobe16(ip_len);
+    ip_hdr->ttl = 64;
+    ip_hdr->protocol = PROTOCOL_IPV4_UDP;
+    udp_hdr->source = htobe16(DHCP_UDP_CLIENT);
+    udp_hdr->dest = htobe16(DHCP_UDP_SERVER);
+    udp_hdr->len = htobe16(udp_len);
+    dhcp_hdr->op = BOOTREQUEST;
+    memcpy((uint8_t*)dhcp_hdr + sizeof(struct dhcp_header), options, sizeof(options));
+
+    assert_int_equal(decode_ethernet(buf, ETH_HDR_LEN + ip_len, sp, SCRATCHPAD_LEN, &eth), PROTOCOL_SUCCESS);
+    ipv4 = (bbl_ipv4_s*)eth->next;
+    udp = (bbl_udp_s*)ipv4->next;
+    dhcp = (bbl_dhcp_s*)udp->next;
+    assert_int_equal(dhcp->type, DHCP_MESSAGE_DISCOVER);
+    assert_non_null(dhcp->access_line);
+    assert_string_equal(dhcp->access_line->aci, "circuit-id-000000002");
+    assert_string_equal(dhcp->access_line->ari, "ari");
+    free(sp);
+}
+
+static void
 test_protocols_dhcpv6_timer_byte_order(void **unused) {
     (void) unused;
 
@@ -689,6 +741,7 @@ int main() {
         cmocka_unit_test(test_protocols_bbl_flow_id),
         cmocka_unit_test(test_protocols_lcp_chap),
         cmocka_unit_test(test_protocols_dhcp_end_option),
+        cmocka_unit_test(test_protocols_dhcp_agent_option_repeated),
         cmocka_unit_test(test_protocols_dhcpv6_timer_byte_order),
         cmocka_unit_test(test_protocols_gratuitous_arp),
         cmocka_unit_test(test_protocols_unsolicited_na),
