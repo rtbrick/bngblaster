@@ -111,11 +111,87 @@ test_isis_lsp_checksum(void **unused)
     assert_false(test_newer(&lsp, TEST_SEQ, TEST_LIFETIME, TEST_CHECKSUM+1));
 }
 
+void
+timer_del(timer_s *timer)
+{
+    (void)timer;
+}
+
+static int
+test_lsp_id_compare(const void *id1, const void *id2)
+{
+    const uint64_t a = *(const uint64_t*)id1;
+    const uint64_t b = *(const uint64_t*)id2;
+    return (a > b) - (a < b);
+}
+
+static void
+test_gc_lsp_add(hb_tree *lsdb, uint64_t id, bool deleted)
+{
+    isis_lsp_s *lsp = calloc(1, sizeof(isis_lsp_s));
+    dict_insert_result result;
+
+    lsp->id = id;
+    lsp->deleted = deleted;
+    result = hb_tree_insert(lsdb, &lsp->id);
+    assert_true(result.inserted);
+    *result.datum_ptr = lsp;
+}
+
+static void
+test_gc_lsp_free(void *key, void *datum)
+{
+    (void)key;
+    free(datum);
+}
+
+static void
+test_gc_lsdb_free(hb_tree *lsdb)
+{
+    hb_tree_free(lsdb, test_gc_lsp_free);
+}
+
+/* Deleted LSPs are removed per level, without touching LSPs
+ * with the same LSP ID in the other level. */
+static void
+test_isis_lsp_gc(void **unused)
+{
+    isis_instance_s instance = {0};
+    timer_s timer = {0};
+    uint64_t id = 1;
+    (void)unused;
+
+    timer.data = &instance;
+    instance.level[0].lsdb = hb_tree_new(test_lsp_id_compare);
+    instance.level[1].lsdb = hb_tree_new(test_lsp_id_compare);
+
+    test_gc_lsp_add(instance.level[0].lsdb, id, true);
+    test_gc_lsp_add(instance.level[1].lsdb, id, false);
+    isis_lsp_gc_job(&timer);
+    assert_int_equal(hb_tree_count(instance.level[0].lsdb), 0);
+    assert_int_equal(hb_tree_count(instance.level[1].lsdb), 1);
+    test_gc_lsdb_free(instance.level[1].lsdb);
+    instance.level[1].lsdb = hb_tree_new(test_lsp_id_compare);
+
+    /* The delete list is limited per run and level. */
+    for(id = 1; id <= ISIS_LSP_GC_DELETE_MAX + 1; id++) {
+        test_gc_lsp_add(instance.level[0].lsdb, id, true);
+        test_gc_lsp_add(instance.level[1].lsdb, id, true);
+    }
+    isis_lsp_gc_job(&timer);
+    assert_int_equal(hb_tree_count(instance.level[0].lsdb), 1);
+    assert_int_equal(hb_tree_count(instance.level[1].lsdb), 1);
+
+    test_gc_lsdb_free(instance.level[0].lsdb);
+    test_gc_lsdb_free(instance.level[1].lsdb);
+}
+
 int main(void) {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_isis_lsp_seq),
         cmocka_unit_test(test_isis_lsp_purge),
         cmocka_unit_test(test_isis_lsp_checksum),
+        cmocka_unit_test(test_isis_lsp_gc),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

@@ -29,11 +29,12 @@ isis_lsp_gc_job(timer_s *timer)
      * process to mark them for deletion. Once the iteration is complete, 
      * the objects in the delete list can be safely removed from the tree. */
     uint64_t delete_list[ISIS_LSP_GC_DELETE_MAX];
-    size_t delete_list_len = 0;
+    size_t delete_list_len;
 
     dict_remove_result removed;
 
     for(int l=0; l < ISIS_LEVELS; l++) {
+        delete_list_len = 0;
         lsdb = instance->level[l].lsdb;
         if(lsdb) {
             itor = hb_itor_new(lsdb);
