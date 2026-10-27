@@ -400,7 +400,7 @@ pcapng_push_packet_header_tphdr(struct timespec *ts, struct tpacket2_hdr *tphdr,
     if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
         vlan_tpid = tphdr->tp_vlan_tpid ? tphdr->tp_vlan_tpid : ETH_TYPE_VLAN;
     }
-    pcapng_push_packet(ts, (uint8_t*)tphdr + tphdr->tp_mac, tphdr->tp_len, ifindex,
+    pcapng_push_packet(ts, (uint8_t*)tphdr + tphdr->tp_mac, tphdr->tp_snaplen, ifindex,
                        PCAPNG_EPB_FLAGS_INBOUND, vlan_tpid, tphdr->tp_vlan_tci);
 }
 

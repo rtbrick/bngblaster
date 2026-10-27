@@ -70,7 +70,7 @@ io_packet_mmap_rx_job(timer_s *timer)
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
     while(tphdr->tp_status & TP_STATUS_USER) {
         io->buf = (uint8_t*)tphdr + tphdr->tp_mac;
-        io->buf_len = tphdr->tp_len;
+        io->buf_len = tphdr->tp_snaplen;
         io->stats.packets++;
         io->stats.bytes += io->buf_len;
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
@@ -274,7 +274,7 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
         while(tphdr->tp_status & TP_STATUS_USER) {
             io->buf = (uint8_t*)tphdr + tphdr->tp_mac;
-            io->buf_len = tphdr->tp_len;
+            io->buf_len = tphdr->tp_snaplen;
             if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
                 io->vlan_tci = tphdr->tp_vlan_tci;
                 io->vlan_tpid = tphdr->tp_vlan_tpid ? tphdr->tp_vlan_tpid : ETH_TYPE_VLAN;
