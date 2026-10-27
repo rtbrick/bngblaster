@@ -145,6 +145,9 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
     while(tlv) {
         switch(tlv->type) {
             case ISIS_TLV_P2P_ADJACENCY_STATE:
+                if(tlv->len < 1) {
+                    break;
+                }
                 switch(*tlv->value) {
                     case ISIS_P2P_ADJACENCY_STATE_UP:
                     case ISIS_P2P_ADJACENCY_STATE_INIT:

@@ -290,7 +290,8 @@ isis_pdu_validate_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
 
     switch (pdu->auth_type) {
         case ISIS_AUTH_CLEARTEXT:
-            if(strncmp((char*)ISIS_PDU_OFFSET(pdu, pdu->auth_data_offset), key, pdu->auth_data_len) == 0) {
+            if(pdu->auth_data_len == strlen(key) &&
+               memcmp(ISIS_PDU_OFFSET(pdu, pdu->auth_data_offset), key, pdu->auth_data_len) == 0) {
                 return true;
             }
             break;
@@ -467,19 +468,32 @@ void
 isis_pdu_add_tlv_is_neighbor(isis_pdu_s *pdu, isis_adjacency_s *adjacency) 
 {
     isis_peer_s *peer = adjacency->peer;
-    isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
-    uint8_t *tlv_cur = tlv->value;
-    tlv->type = ISIS_TLV_IS_NEIGHBOR;
-    tlv->len = 0;
+    isis_tlv_s *tlv = NULL;
+
+    /* Neighbors exceeding the TLV length start a new TLV,
+     * neighbors exceeding the PDU are not added. */
     while(peer) {
         if(peer->state != ISIS_PEER_STATE_DOWN) {
-            memcpy(tlv_cur, peer->mac, ETH_ADDR_LEN);
-            tlv_cur += ETH_ADDR_LEN;
+            if(tlv && tlv->len + ETH_ADDR_LEN > UINT8_MAX) {
+                ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
+                tlv = NULL;
+            }
+            if(!tlv) {
+                if(ISIS_PDU_REMAINING(pdu) < (int)(sizeof(isis_tlv_s)+ETH_ADDR_LEN)) {
+                    break;
+                }
+                tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
+                tlv->type = ISIS_TLV_IS_NEIGHBOR;
+                tlv->len = 0;
+            } else if(ISIS_PDU_REMAINING(pdu) < (int)(sizeof(isis_tlv_s)+tlv->len+ETH_ADDR_LEN)) {
+                break;
+            }
+            memcpy(tlv->value+tlv->len, peer->mac, ETH_ADDR_LEN);
             tlv->len += ETH_ADDR_LEN;
         }
         peer = peer->next;
     }
-    if(tlv->len) {
+    if(tlv) {
         ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
     }
 }
