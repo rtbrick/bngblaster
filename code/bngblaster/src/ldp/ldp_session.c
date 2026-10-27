@@ -503,11 +503,15 @@ ldp_session_ipv4_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     session->peer.keepalive_time = 0;
     session->peer.max_pdu_len = 0;
 
-    /* Init read/write buffer */
-    session->read_buf.data = malloc(LDP_BUF_SIZE);
-    session->read_buf.size = LDP_BUF_SIZE;
-    session->write_buf.data = malloc(LDP_BUF_SIZE);
-    session->write_buf.size = LDP_BUF_SIZE;
+    /* Init read/write buffer, which are kept if the session is reused. */
+    if(!session->read_buf.data) {
+        session->read_buf.data = malloc(LDP_BUF_SIZE);
+        session->read_buf.size = LDP_BUF_SIZE;
+    }
+    if(!session->write_buf.data) {
+        session->write_buf.data = malloc(LDP_BUF_SIZE);
+        session->write_buf.size = LDP_BUF_SIZE;
+    }
 
     if(be32toh(session->local.ipv4_address) > be32toh(session->peer.ipv4_address)) {
         session->active = true;
@@ -562,11 +566,15 @@ ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     session->peer.keepalive_time = 0;
     session->peer.max_pdu_len = 0;
 
-    /* Init read/write buffer */
-    session->read_buf.data = malloc(LDP_BUF_SIZE);
-    session->read_buf.size = LDP_BUF_SIZE;
-    session->write_buf.data = malloc(LDP_BUF_SIZE);
-    session->write_buf.size = LDP_BUF_SIZE;
+    /* Init read/write buffer, which are kept if the session is reused. */
+    if(!session->read_buf.data) {
+        session->read_buf.data = malloc(LDP_BUF_SIZE);
+        session->read_buf.size = LDP_BUF_SIZE;
+    }
+    if(!session->write_buf.data) {
+        session->write_buf.data = malloc(LDP_BUF_SIZE);
+        session->write_buf.size = LDP_BUF_SIZE;
+    }
 
     if(memcmp(&session->local.ipv6_address, &session->peer.ipv6_address, sizeof(ipv6addr_t)) > 0) {
         session->active = true;

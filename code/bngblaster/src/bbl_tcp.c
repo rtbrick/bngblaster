@@ -1155,8 +1155,8 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
             ldp_session = instance->sessions;
             instance = instance->next;
             while(ldp_session) {
-                if(memcpy(&ldp_session->local.ipv6_address, ipv6->dst, IPV6_ADDR_LEN) == 0 && 
-                   memcpy(&ldp_session->peer.ipv6_address, ipv6->src, IPV6_ADDR_LEN) == 0) {
+                if(memcmp(&ldp_session->local.ipv6_address, ipv6->dst, IPV6_ADDR_LEN) == 0 &&
+                   memcmp(&ldp_session->peer.ipv6_address, ipv6->src, IPV6_ADDR_LEN) == 0) {
                     interface = ldp_session->interface;
                     instance = NULL;
                     break;

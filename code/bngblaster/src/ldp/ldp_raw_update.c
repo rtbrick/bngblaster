@@ -59,16 +59,20 @@ ldp_raw_update_load_file(const char *file, bool decode_file)
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
             pdu_length = be16toh(*(uint16_t*)buf);
             BUMP_BUFFER(buf, len, sizeof(uint16_t));
-            if(pdu_length > len) {
+            if(pdu_length < LDP_IDENTIFIER_LEN || pdu_length > len) {
                 goto DECODE_ERROR;
             }
             BUMP_BUFFER(buf, len, LDP_IDENTIFIER_LEN);
-            while(pdu_length > LDP_MIN_MSG_LEN) {
+            pdu_length -= LDP_IDENTIFIER_LEN;
+            while(pdu_length) {
+                if(pdu_length < LDP_MIN_MSG_LEN) {
+                    goto DECODE_ERROR;
+                }
                 BUMP_BUFFER(buf, len, sizeof(uint16_t));
                 msg_len = be16toh(*(uint16_t*)buf);
                 BUMP_BUFFER(buf, len, sizeof(uint16_t));
                 pdu_length -= 4;
-                if(msg_len > pdu_length) {
+                if(msg_len < 4 || msg_len > pdu_length) {
                     goto DECODE_ERROR;
                 }
                 BUMP_BUFFER(buf, len, msg_len);

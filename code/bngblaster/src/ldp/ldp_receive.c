@@ -271,7 +271,7 @@ ldp_rebase_read_buffer(io_buffer_t *buffer)
     size = buffer->idx - buffer->start_idx;
     if(size) {
         /* Copy what is left to the buffer start. */
-        memcpy(buffer->data, buffer->data+buffer->start_idx, size);
+        memmove(buffer->data, buffer->data+buffer->start_idx, size);
     }
     buffer->start_idx = 0;
     buffer->idx = size;
@@ -345,7 +345,8 @@ ldp_read(ldp_session_s *session)
             msg_type = read_be_uint(msg_start, 2);
             msg_length = read_be_uint(msg_start+2, 2);
             msg_id = read_be_uint(msg_start+4, 4);
-            if(msg_length+4 > pdu_length) {
+            /* The message length includes the mandatory message ID. */
+            if(msg_length < 4 || msg_length+4 > pdu_length) {
                 ldp_fatal_error(session, "invalid PDU received");
                 return;
             }
