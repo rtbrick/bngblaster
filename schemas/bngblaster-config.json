@@ -1205,7 +1205,7 @@
                         "description": "Control messages max retry",
                         "default": 5,
                         "minimum": 1,
-                        "maximum": 65535
+                        "maximum": 255
                     },
                     "congestion-mode": {
                         "type": "string",
@@ -1338,7 +1338,7 @@
                         "description": "Maximum number of tunnel setup retries",
                         "default": 5,
                         "minimum": 1,
-                        "maximum": 65535
+                        "maximum": 255
                     },
                     "congestion-mode": {
                         "type": "string",

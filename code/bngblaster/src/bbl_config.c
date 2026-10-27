@@ -3977,8 +3977,8 @@ json_parse_l2tp_tunnel_config(json_t *sub, const char *scope, bbl_l2tp_tunnel_co
     }
     value = json_object_get(sub, "max-retry");
     if(value) {
-        if(!(json_is_number(value) && json_number_value(value) >= 1 && json_number_value(value) <= 65535)) {
-            fprintf(stderr, "JSON config error: Invalid value for %s->max-retry (1 - 65535)\n", scope);
+        if(!(json_is_number(value) && json_number_value(value) >= 1 && json_number_value(value) <= 255)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->max-retry (1 - 255)\n", scope);
             return false;
         }
         config->max_retry = json_number_value(value);

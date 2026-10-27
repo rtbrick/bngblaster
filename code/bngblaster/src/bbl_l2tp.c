@@ -390,7 +390,7 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
 
     struct timespec now;
     struct timespec time_diff;
-    int backoff;
+    uint32_t backoff;
 
     uint16_t max_ns = l2tp_tunnel->peer_nr + l2tp_tunnel->cwnd;
     uint16_t max_retry = l2tp_tunnel->config->max_retry;
@@ -429,7 +429,7 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
         if(L2TP_SEQ_LT(q->ns, max_ns)) {
             if(q->last_tx_time.tv_sec) {
                 timespec_sub(&time_diff, &now, &q->last_tx_time);
-                backoff = 1 << (q->retries - 1);
+                backoff = 1U << (q->retries > 31 ? 30 : q->retries - 1);
                 if(time_diff.tv_sec < backoff) {
                     q = CIRCLEQ_NEXT(q, tunnel_tx_qnode);
                     continue;
@@ -550,6 +550,32 @@ bbl_l2tp_tunnel_control_job(timer_s *timer)
 }
 
 /**
+ * bbl_l2tp_encode
+ *
+ * The LNS replies with data received from the peer, which may exceed
+ * the queue packet buffer. Therefore the packet is encoded into a
+ * buffer large enough for any received packet first.
+ *
+ * @param q L2TP queue entry.
+ * @param eth Ethernet header structure.
+ * @return true if encoded into the queue entry.
+ */
+static bool
+bbl_l2tp_encode(bbl_l2tp_queue_s *q, bbl_ethernet_header_s *eth)
+{
+    static uint8_t buf[UINT16_MAX];
+    uint16_t len = 0;
+
+    if(encode_ethernet(buf, &len, eth) != PROTOCOL_SUCCESS || 
+       len > sizeof(q->packet)) {
+        return false;
+    }
+    memcpy(q->packet, buf, len);
+    q->packet_len = len;
+    return true;
+}
+
+/**
  * bbl_l2tp_send
  *
  * This function send control packets for a given L2TP tunnel.
@@ -572,7 +598,6 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
 
     uint8_t sp[L2TP_MAX_AVP_SIZE]; /* scratchpad memory to craft the AVP attributes */
     uint16_t sp_len = 0;
-    uint16_t len = 0;
 
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
@@ -606,14 +631,14 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
      * using the latest received Ns. from peer.
      * Therfore we need to remember offset to Nr. */
     l2tp.nr = 0;
+    q->ns_offset = 50;
     if(eth.vlan_outer) {
-        q->ns_offset = 54;
-        q->nr_offset = 56;
-
-    } else {
-        q->ns_offset = 50;
-        q->nr_offset = 52;
+        q->ns_offset += 4;
+        if(eth.vlan_inner) {
+            q->ns_offset += 4;
+        }
     }
+    q->nr_offset = q->ns_offset + 2;
     if(l2tp_type != L2TP_MESSAGE_ZLB) {
         l2tp.ns = l2tp_tunnel->ns++;
         bbl_l2tp_avp_encode_attributes(l2tp_tunnel, l2tp_session, l2tp_type, sp, &sp_len);
@@ -622,8 +647,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
     }
     q->ns = l2tp.ns;
     q->tunnel = l2tp_tunnel;
-    if(encode_ethernet(q->packet, &len, &eth) == PROTOCOL_SUCCESS) {
-        q->packet_len = len;
+    if(bbl_l2tp_encode(q, &eth)) {
         if(l2tp_type == L2TP_MESSAGE_ZLB) {
             if(l2tp_tunnel->zlb_qnode) {
                 free(q);
@@ -666,7 +690,6 @@ bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *ne
     bbl_ipv4_s ipv4 = {0};
     bbl_udp_s udp = {0};
     bbl_l2tp_s l2tp = {0};
-    uint16_t len = 0;
     eth.dst = interface->gateway_mac;
     eth.src = interface->mac;
     eth.vlan_outer = interface->vlan;
@@ -702,8 +725,7 @@ bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *ne
         ipv4.tos = l2tp_tunnel->config->data_control_tos;
     }
     l2tp.next = next;
-    if(encode_ethernet(q->packet, &len, &eth) == PROTOCOL_SUCCESS) {
-        q->packet_len = len;
+    if(bbl_l2tp_encode(q, &eth)) {
         bbl_l2tp_interface_txq_append(interface, q);
         l2tp_tunnel->stats.data_tx++;
         l2tp_session->stats.data_tx++;
