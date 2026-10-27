@@ -197,6 +197,24 @@ test_timer_rearm_from_callback(void **state)
     assert_null(timer);
 }
 
+/* The owner of the timer reference may be freed directly after
+ * timer_del, before the deletion is processed. */
+static void
+test_timer_del_clears_reference(void **state)
+{
+    timer_root_s *root = *state;
+    timer_s **owner = calloc(1, sizeof(timer_s*));
+
+    timer_add(root, owner, "OWNER", 0, 50 * MSEC, NULL, single_shot_cb);
+    assert_non_null(*owner);
+    timer_del(*owner);
+    assert_null(*owner);
+    free(owner);
+    timer_walk(root);
+    timer_flush_root(root);
+    assert_int_equal(g_callback_counter, 0);
+}
+
 static void
 test_timer_delete_from_callback(void **state)
 {
@@ -290,6 +308,9 @@ main(void)
                                         setup_timer_root,
                                         teardown_timer_root),
         cmocka_unit_test_setup_teardown(test_timer_rearm_from_callback,
+                                        setup_timer_root,
+                                        teardown_timer_root),
+        cmocka_unit_test_setup_teardown(test_timer_del_clears_reference,
                                         setup_timer_root,
                                         teardown_timer_root),
         cmocka_unit_test_setup_teardown(test_timer_delete_from_callback,
