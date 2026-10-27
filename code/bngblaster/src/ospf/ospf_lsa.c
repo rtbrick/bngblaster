@@ -1717,7 +1717,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         lsa_id = hdr->id;
         lsa_router = hdr->router;
 
-        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_MAX) {
+        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type >= OSPF_LSA_TYPE_MAX) {
             ospf_rx_error(interface, pdu, "decode (invalid LSA type)");
             return;
         }
@@ -1899,7 +1899,7 @@ ospf_lsa_req_handler_rx(ospf_interface_s *ospf_interface,
             lsa_type = *OSPF_PDU_CURSOR(pdu);
             OSPF_PDU_CURSOR_INC(pdu, 1);
         }
-        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_MAX) {
+        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type >= OSPF_LSA_TYPE_MAX) {
             ospf_rx_error(interface, pdu, "decode (invalid LSA type)");
             break;
         }
@@ -1980,7 +1980,7 @@ ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface,
         key = (ospf_lsa_key_s*)&hdr_a->id;
         OSPF_PDU_CURSOR_INC(pdu, OSPF_LSA_HDR_LEN);
 
-        if(hdr_a->type < OSPF_LSA_TYPE_1 || hdr_a->type > OSPF_LSA_TYPE_MAX) {
+        if(hdr_a->type < OSPF_LSA_TYPE_1 || hdr_a->type >= OSPF_LSA_TYPE_MAX) {
             ospf_rx_error(interface, pdu, "invalid LSA type");
             return;
         }
@@ -2022,7 +2022,7 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8
         key = (ospf_lsa_key_s*)&hdr->id;
 
         lsa_type = hdr->type;
-        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type > OSPF_LSA_TYPE_MAX) {
+        if(lsa_type < OSPF_LSA_TYPE_1 || lsa_type >= OSPF_LSA_TYPE_MAX) {
             LOG(ERROR, "Failed to decode external OSPF LSA %s (invalid LSA type %u)\n", ospf_lsa_hdr_string(hdr), lsa_type);
             return false;
         }
