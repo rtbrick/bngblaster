@@ -160,6 +160,30 @@ test_scan_ipv6_prefix(void **unused) {
 }
 
 static void
+test_ipv6_prefix_not_zero(void **unused) {
+    (void) unused;
+
+    /* The bytes following the prefix must not be evaluated. */
+    struct {
+        ipv6_prefix prefix;
+        uint8_t next[IPV6_ADDR_LEN];
+    } test;
+
+    memset(&test, 0xff, sizeof(test));
+    memset(&test.prefix, 0x0, sizeof(test.prefix));
+    test.prefix.len = 64;
+    assert_false(ipv6_prefix_not_zero(&test.prefix));
+
+    memset(test.next, 0x0, sizeof(test.next));
+    test.prefix.address[0] = 0x20;
+    assert_true(ipv6_prefix_not_zero(&test.prefix));
+
+    test.prefix.len = 0;
+    assert_false(ipv6_prefix_not_zero(&test.prefix));
+    assert_false(ipv6_prefix_not_zero(NULL));
+}
+
+static void
 test_format_iso_prefix(void **unused) {
     (void) unused;
 
@@ -390,6 +414,7 @@ int main() {
         cmocka_unit_test(test_scan_ipv4_address),
         cmocka_unit_test(test_format_ipv6_prefix),
         cmocka_unit_test(test_scan_ipv6_prefix),
+        cmocka_unit_test(test_ipv6_prefix_not_zero),
         cmocka_unit_test(test_format_iso_prefix),
         cmocka_unit_test(test_scan_iso_prefix),
         cmocka_unit_test(test_replace_substring),

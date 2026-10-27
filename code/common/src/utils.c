@@ -659,8 +659,8 @@ bool
 ipv6_prefix_not_zero(ipv6_prefix *prefix) 
 {
     /* check if pointer and prefix length */
-    if(prefix && *(uint8_t*)prefix > 0) {
-        return ipv6_addr_not_zero((ipv6addr_t *)prefix+1);
+    if(prefix && prefix->len > 0) {
+        return ipv6_addr_not_zero(&prefix->address);
     }
     return false;
 }
