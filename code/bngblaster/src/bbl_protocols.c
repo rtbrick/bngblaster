@@ -2468,7 +2468,7 @@ decode_lacp(uint8_t *buf, uint16_t len,
     uint8_t tlv_type;
     uint8_t tlv_len;
 
-    if(len && *buf != SLOW_PROTOCOLS_LACP) {
+    if(!len || *buf != SLOW_PROTOCOLS_LACP) {
         return UNKNOWN_PROTOCOL;
     }
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
@@ -2491,13 +2491,13 @@ decode_lacp(uint8_t *buf, uint16_t len,
     while(len >= 2) {
         tlv_type = *buf;
         tlv_len = *(buf+1);
-        if(tlv_len > len) {
+        if(tlv_type == LACP_TLV_TERMINATOR) {
+            break;
+        }
+        if(tlv_len < 2 || tlv_len > len) {
             return DECODE_ERROR;
         }
         switch(tlv_type) {
-            case LACP_TLV_TERMINATOR:
-                len = 0;
-                break;
             case LACP_TLV_ACTOR_INFORMATION:
                 if(tlv_len != 20) {
                     return DECODE_ERROR;
@@ -2524,6 +2524,9 @@ decode_lacp(uint8_t *buf, uint16_t len,
                 break;
         }
         BUMP_BUFFER(buf, len, tlv_len);
+    }
+    if(!lacp->actor_system_id) {
+        return DECODE_ERROR;
     }
 
     *_lacp = lacp;

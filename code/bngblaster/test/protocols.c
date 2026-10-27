@@ -629,6 +629,57 @@ test_protocols_pppoe_max_payload(void **unused) {
     free(sp);
 }
 
+static void
+test_protocols_lacp_invalid_tlv(void **unused) {
+    (void) unused;
+
+    /* Ethernet header (14) + subtype + version, followed by the actor TLV. */
+    const uint16_t actor = 16;
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t lacpdu[512];
+    uint8_t buf[512];
+    uint16_t len = 0;
+    uint16_t terminator;
+    uint8_t mac[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t dst[ETH_ADDR_LEN] = {0x01, 0x80, 0xc2, 0x00, 0x00, 0x02};
+    bbl_ethernet_header_s eth = {0};
+    bbl_lacp_s lacp = {0};
+    bbl_ethernet_header_s *decoded;
+
+    eth.dst = dst;
+    eth.src = mac;
+    eth.type = ETH_TYPE_LACP;
+    eth.next = &lacp;
+    lacp.actor_system_id = mac;
+    lacp.partner_system_id = mac;
+    assert_int_equal(encode_ethernet(lacpdu, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(lacpdu[actor], LACP_TLV_ACTOR_INFORMATION);
+    assert_int_equal(lacpdu[actor+1], 20);
+    terminator = actor + 20 + 20 + 16;
+    assert_int_equal(lacpdu[terminator], LACP_TLV_TERMINATOR);
+    assert_int_equal(decode_ethernet(lacpdu, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+
+    /* TLV with length zero must not loop forever. */
+    memcpy(buf, lacpdu, len);
+    buf[actor] = LACP_TLV_COLLECTOR_INFORMATION;
+    buf[actor+1] = 0;
+    assert_int_not_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+
+    /* Terminator with non-zero length ends the TLVs. */
+    memcpy(buf, lacpdu, len);
+    buf[terminator+1] = 50;
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+
+    /* Actor TLV is mandatory. */
+    memcpy(buf, lacpdu, len);
+    buf[actor] = 0x7f;
+    assert_int_not_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+
+    /* Ethernet header without LACP payload. */
+    assert_int_not_equal(decode_ethernet(lacpdu, 14, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    free(sp);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -642,6 +693,7 @@ int main() {
         cmocka_unit_test(test_protocols_gratuitous_arp),
         cmocka_unit_test(test_protocols_unsolicited_na),
         cmocka_unit_test(test_protocols_pppoe_max_payload),
+        cmocka_unit_test(test_protocols_lacp_invalid_tlv),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }
