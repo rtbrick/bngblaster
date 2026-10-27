@@ -590,6 +590,45 @@ test_protocols_unsolicited_na(void **unused) {
     free(sp);
 }
 
+/* PPP-Max-Payload tag (RFC 4638) echoed in PADS. */
+static void
+test_protocols_pppoe_max_payload(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[512];
+    uint16_t len = 0;
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    bbl_ethernet_header_s eth = {0};
+    bbl_pppoe_discovery_s pppoe = {0};
+    bbl_ethernet_header_s *decoded;
+    bbl_pppoe_discovery_s *decoded_pppoe;
+
+    eth.dst = dst;
+    eth.src = src;
+    eth.vlan_outer = 100;
+    eth.type = ETH_TYPE_PPPOE_DISCOVERY;
+    eth.next = &pppoe;
+    pppoe.code = PPPOE_PADS;
+    pppoe.session_id = 1;
+    pppoe.max_payload = 1570;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    assert_int_equal(decoded->type, ETH_TYPE_PPPOE_DISCOVERY);
+    decoded_pppoe = (bbl_pppoe_discovery_s*)decoded->next;
+    assert_int_equal(decoded_pppoe->code, PPPOE_PADS);
+    assert_int_equal(decoded_pppoe->max_payload, 1570);
+
+    pppoe.max_payload = 0;
+    len = 0;
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    assert_int_equal(((bbl_pppoe_discovery_s*)decoded->next)->max_payload, 0);
+    free(sp);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -602,6 +641,7 @@ int main() {
         cmocka_unit_test(test_protocols_dhcpv6_timer_byte_order),
         cmocka_unit_test(test_protocols_gratuitous_arp),
         cmocka_unit_test(test_protocols_unsolicited_na),
+        cmocka_unit_test(test_protocols_pppoe_max_payload),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

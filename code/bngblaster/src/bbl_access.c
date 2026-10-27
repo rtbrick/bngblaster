@@ -1286,6 +1286,28 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
 }
 
 /**
+ * bbl_access_lcp_mru_max
+ *
+ * The LCP MRU accepted from or suggested by the PPPoE server
+ * must not exceed 1492 unless a larger PPP-Max-Payload was
+ * echoed by the server in the discovery stage (RFC 4638).
+ *
+ * @param session corresponding session
+ * @return maximum MRU or zero if not limited
+ */
+static uint16_t
+bbl_access_lcp_mru_max(bbl_session_s *session)
+{
+    if(session->access_type != ACCESS_TYPE_PPPOE) {
+        return 0;
+    }
+    if(session->pppoe_max_payload > PPPOE_DEFAULT_MRU) {
+        return session->pppoe_max_payload;
+    }
+    return PPPOE_DEFAULT_MRU;
+}
+
+/**
  * bbl_access_rx_lcp_conf_reject
  * 
  * This function rejects all unknown LCP configuration
@@ -1486,6 +1508,8 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                   bbl_lcp_s *lcp,
                   struct timespec *timestamp)
 {
+    uint16_t mru_max;
+
     UNUSED(interface);
 
     if(session->session_state < BBL_PPP_LINK) {
@@ -1545,6 +1569,7 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                 bbl_access_lcp_restart(session);
             }
 
+            session->lcp_options_len = 0;
             if(lcp->auth || session->access_config->authentication_protocol) {
                 /* Negotiate authentication protocol */
                 if(lcp->auth == PROTOCOL_CHAP && lcp->alg != PROTOCOL_CHAP_ALG_MD5) {
@@ -1574,12 +1599,25 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                         *(uint16_t*)&session->lcp_options[2] = htobe16(PROTOCOL_PAP);
                         session->lcp_options_len = 4;
                     }
-                    session->lcp_peer_identifier = lcp->identifier;
-                    session->lcp_response_code = PPP_CODE_CONF_NAK;
-                    session->send_requests |= BBL_SEND_LCP_RESPONSE;
-                    bbl_session_tx_qnode_insert(session);
-                    return;
                 }
+            }
+            mru_max = bbl_access_lcp_mru_max(session);
+            if(mru_max && lcp->mru > mru_max) {
+                /* Nak MRU with maximum allowed value */
+                LOG(PPPOE, "LCP Warning (ID: %u) Peer MRU %u exceeds maximum %u\n",
+                    session->session_id, lcp->mru, mru_max);
+                session->access_interface->stats.lcp_mru_invalid++;
+                session->lcp_options[session->lcp_options_len] = PPP_LCP_OPTION_MRU;
+                session->lcp_options[session->lcp_options_len+1] = 4;
+                *(uint16_t*)&session->lcp_options[session->lcp_options_len+2] = htobe16(mru_max);
+                session->lcp_options_len += 4;
+            }
+            if(session->lcp_options_len) {
+                session->lcp_peer_identifier = lcp->identifier;
+                session->lcp_response_code = PPP_CODE_CONF_NAK;
+                session->send_requests |= BBL_SEND_LCP_RESPONSE;
+                bbl_session_tx_qnode_insert(session);
+                return;
             }
             if(lcp->mru) {
                 session->peer_mru = lcp->mru;
@@ -1624,7 +1662,15 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
         case PPP_CODE_CONF_NAK:
             session->lcp_retries = 0;
             if(lcp->mru) {
-                session->mru = lcp->mru;
+                mru_max = bbl_access_lcp_mru_max(session);
+                if(mru_max && lcp->mru > mru_max) {
+                    LOG(PPPOE, "LCP Warning (ID: %u) Peer suggested MRU %u exceeds maximum %u\n",
+                        session->session_id, lcp->mru, mru_max);
+                    session->access_interface->stats.lcp_mru_invalid++;
+                    session->mru = mru_max;
+                } else {
+                    session->mru = lcp->mru;
+                }
             }
             if(lcp->magic) {
                 session->magic_number = lcp->magic;
@@ -1842,6 +1888,20 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
                         if(session->pppoe_service_name_len) {
                             LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADS\n", session->session_id);
                             return;
+                        }
+                    }
+                    if(g_ctx->config.pppoe_max_payload > PPPOE_DEFAULT_MRU) {
+                        /* A server supporting a larger MRU echoes the tag (RFC 4638). */
+                        if(!pppoed->max_payload) {
+                            LOG(PPPOE, "PPPoE Info (ID: %u) PPP-Max-Payload not echoed in PADS (MRU limited to %u)\n",
+                                session->session_id, PPPOE_DEFAULT_MRU);
+                        } else if(pppoed->max_payload != g_ctx->config.pppoe_max_payload) {
+                            LOG(PPPOE, "PPPoE Warning (ID: %u) Wrong PPP-Max-Payload %u in PADS (expected %u)\n",
+                                session->session_id, pppoed->max_payload, g_ctx->config.pppoe_max_payload);
+                        }
+                        session->pppoe_max_payload = pppoed->max_payload;
+                        if(session->pppoe_max_payload > g_ctx->config.pppoe_max_payload) {
+                            session->pppoe_max_payload = g_ctx->config.pppoe_max_payload;
                         }
                     }
                     session->pppoe_retries = 0;
@@ -2222,6 +2282,7 @@ bbl_access_interface_protocol_stats_json(bbl_access_interface_s *interface)
     json_object_set_new(stats, "lcp-echo-timeout", json_integer(interface->stats.lcp_echo_timeout));
     json_object_set_new(stats, "lcp-echo-expired", json_integer(interface->stats.lcp_echo_expired));
     json_object_set_new(stats, "lcp-request-timeout", json_integer(interface->stats.lcp_timeout));
+    json_object_set_new(stats, "lcp-mru-invalid", json_integer(interface->stats.lcp_mru_invalid));
     json_object_set_new(stats, "ipcp-request-timeout", json_integer(interface->stats.ipcp_timeout));
     json_object_set_new(stats, "ip6cp-request-timeout", json_integer(interface->stats.ip6cp_timeout));
     json_object_set_new(stats, "pap-timeout", json_integer(interface->stats.pap_timeout));

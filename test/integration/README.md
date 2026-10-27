@@ -29,6 +29,9 @@ Functional tests over veth pairs between network namespaces:
   (`test_capture_streams.py`)
 * Teardown order of BGP and IS-IS against FRR: the IGP withdraw waits
   until BGP sessions routed via the IGP are closed (`test_teardown_order.py`)
+* PPPoE LCP MRU negotiation with PPP-Max-Payload (RFC 4638) against a
+  minimal scapy PPPoE server requesting or suggesting MRUs above the
+  allowed maximum (`test_pppoe_mru.py`, `pppoe_server.py`)
 * Gratuitous ARP and unsolicited NA of primary and secondary addresses
   overriding stale neighbor entries of the Linux peer, periodic
   announcements and `network-announce` (`test_network_announce.py`)

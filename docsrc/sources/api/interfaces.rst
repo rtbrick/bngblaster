@@ -49,7 +49,9 @@ and timeout counters. The counter
 ``lcp-echo-timeout`` is incremented for each LCP echo request without
 response and ``lcp-echo-expired`` for each session terminated because
 all LCP echo requests (``lcp`` ``keepalive-retry``) remained without
-response.
+response. The counter ``lcp-mru-invalid`` is incremented for each LCP
+configure-request or configure-nak of a PPPoE server with an MRU above
+1492, or above the PPP-Max-Payload echoed by the server (RFC4638).
 
 ``$ sudo bngblaster-cli run.sock access-protocol-stats interface eth1``
 

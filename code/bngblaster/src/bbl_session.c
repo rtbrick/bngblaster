@@ -423,6 +423,7 @@ bbl_session_reset(bbl_session_s *session) {
         }
         session->pppoe_service_name_len = 0;
     }
+    session->pppoe_max_payload = 0;
     session->mru = session->access_config->ppp_mru;
     session->peer_mru = 0;
     session->peer_magic_number = 0;

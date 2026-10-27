@@ -4503,6 +4503,11 @@ decode_pppoe_discovery(uint8_t *buf, uint16_t len,
                 pppoe->ac_cookie = buf;
                 pppoe->ac_cookie_len = pppoe_tag_len;
                 break;
+            case PPPOE_TAG_MAX_PAYLOAD:
+                if(pppoe_tag_len >= sizeof(uint16_t)) {
+                    pppoe->max_payload = be16toh(*(uint16_t*)buf);
+                }
+                break;
             case PPPOE_TAG_VENDOR:
                 if(decode_pppoe_vendor(buf, pppoe_tag_len, sp, sp_len, pppoe) != PROTOCOL_SUCCESS) {
                     return DECODE_ERROR;

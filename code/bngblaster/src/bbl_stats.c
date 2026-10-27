@@ -668,6 +668,7 @@ bbl_stats_stdout(bbl_stats_s *stats) {
             printf("  DHCPv6 TX: %10u RX: %10u\n", access_interface->stats.dhcpv6_tx, access_interface->stats.dhcpv6_rx);
             printf("  ICMPv6 TX: %10u RX: %10u\n", access_interface->stats.icmpv6_tx, access_interface->stats.icmpv6_rx);
             printf("  IPv4 Fragmented       RX: %10u\n", access_interface->stats.ipv4_fragmented_rx);
+            printf("  LCP MRU Invalid       RX: %10u\n", access_interface->stats.lcp_mru_invalid);
             printf("\nAccess Interface Protocol Timeout Stats:\n");
             printf("  LCP Echo Request: %10u\n", access_interface->stats.lcp_echo_timeout);
             printf("  LCP Echo Expired: %10u\n", access_interface->stats.lcp_echo_expired);

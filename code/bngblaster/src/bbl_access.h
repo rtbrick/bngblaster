@@ -49,6 +49,7 @@ typedef struct bbl_access_interface_
         uint32_t lcp_timeout;
         uint32_t lcp_echo_timeout;
         uint32_t lcp_echo_expired;
+        uint32_t lcp_mru_invalid;
         uint32_t pap_tx;
         uint32_t pap_rx;
         uint32_t pap_timeout;
