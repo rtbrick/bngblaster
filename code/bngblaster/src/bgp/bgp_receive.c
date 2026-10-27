@@ -409,7 +409,7 @@ bgp_rebase_read_buffer(bgp_session_s *session)
     size = buffer->idx - buffer->start_idx;
     if(size) {
         /* Copy what is left to the buffer start. */
-        memcpy(buffer->data, buffer->data+buffer->start_idx, size);
+        memmove(buffer->data, buffer->data+buffer->start_idx, size);
     }
     buffer->start_idx = 0;
     buffer->idx = size;
