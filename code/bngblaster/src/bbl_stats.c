@@ -571,6 +571,12 @@ bbl_stats_stdout(bbl_stats_s *stats) {
             printf("  RX:                %16lu packets %16lu bytes\n", 
                 network_interface->stats.packets_rx, network_interface->stats.bytes_rx);
             printf("  TX Multicast:      %16lu packets\n", network_interface->stats.mc_tx);
+            if(network_interface->gratuitous_arp) {
+                printf("  TX GARP:           %16u packets\n", network_interface->stats.garp_tx);
+            }
+            if(network_interface->unsolicited_na) {
+                printf("  TX Unsolicited NA: %16u packets\n", network_interface->stats.unsolicited_na_tx);
+            }
             if(g_ctx->stats.stream_traffic_flows) {
                 printf("  TX Stream:         %16lu packets\n",
                     network_interface->stats.stream_tx);
@@ -983,6 +989,12 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set_new(jobj_sub, "tx-packets", json_integer(network_interface->stats.packets_tx));
             json_object_set_new(jobj_sub, "tx-multicast-packets", json_integer(network_interface->stats.mc_tx));
             json_object_set_new(jobj_sub, "rx-packets", json_integer(network_interface->stats.packets_rx));
+            if(network_interface->gratuitous_arp) {
+                json_object_set_new(jobj_sub, "tx-garp-packets", json_integer(network_interface->stats.garp_tx));
+            }
+            if(network_interface->unsolicited_na) {
+                json_object_set_new(jobj_sub, "tx-unsolicited-na-packets", json_integer(network_interface->stats.unsolicited_na_tx));
+            }
             if(g_ctx->stats.stream_traffic_flows) {
                 json_object_set_new(jobj_sub, "tx-stream-packets", json_integer(network_interface->stats.stream_tx));
                 json_object_set_new(jobj_sub, "rx-stream-packets", json_integer(network_interface->stats.stream_rx));

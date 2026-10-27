@@ -61,6 +61,25 @@ typedef struct bbl_network_interface_
     struct timer_ *timer_nd;
     struct timer_ *timer_ra;
 
+    /* Gratuitous ARP and unsolicited NA for primary 
+     * and secondary addresses. The cursor points to the 
+     * next secondary address of the current round. */
+    bool gratuitous_arp;
+    bool unsolicited_na;
+    uint16_t announce_interval;
+
+    bool garp_primary;
+    uint8_t garp_burst;
+    uint8_t garp_chunk;
+    bbl_secondary_ip_s *garp_cursor;
+    struct timer_ *timer_garp;
+
+    bool na_primary;
+    uint8_t na_burst;
+    uint8_t na_chunk;
+    bbl_secondary_ip6_s *na_cursor;
+    struct timer_ *timer_na;
+
     uint8_t *mc_packets;
     uint16_t mc_packet_len;
     uint64_t mc_packet_seq;
@@ -99,6 +118,8 @@ typedef struct bbl_network_interface_
         uint32_t icmpv6_tx;
         uint32_t icmpv6_rx;
         uint32_t icmpv6_rs_timeout;
+        uint32_t garp_tx;
+        uint32_t unsolicited_na_tx;
         uint32_t tcp_tx;
         uint32_t tcp_rx;
 
@@ -183,7 +204,13 @@ void
 bbl_network_rx_handler(bbl_network_interface_s *interface, 
                        bbl_ethernet_header_s *eth);
 
+void
+bbl_network_announce(bbl_network_interface_s *interface);
+
 int
 bbl_network_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));
+
+int
+bbl_network_ctrl_announce(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments);
 
 #endif

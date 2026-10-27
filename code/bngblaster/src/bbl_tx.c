@@ -1481,6 +1481,48 @@ bbl_tx_network_ra_timeout(timer_s *timer)
     interface->send_requests |= BBL_IF_SEND_ICMPV6_RA;
 }
 
+void
+bbl_tx_network_garp_timeout(timer_s *timer)
+{
+    bbl_network_interface_s *interface = timer->data;
+    if(!(interface->garp_primary || interface->garp_cursor)) {
+        /* Start next announcement round. */
+        interface->garp_primary = true;
+        interface->garp_cursor = interface->secondary_ip_addresses;
+    }
+    interface->send_requests |= BBL_IF_SEND_GARP;
+}
+
+void
+bbl_tx_network_na_timeout(timer_s *timer)
+{
+    bbl_network_interface_s *interface = timer->data;
+    if(!(interface->na_primary || interface->na_cursor)) {
+        /* Start next announcement round. */
+        interface->na_primary = true;
+        interface->na_cursor = interface->secondary_ip6_addresses;
+    }
+    interface->send_requests |= BBL_IF_SEND_UNSOLICITED_NA;
+}
+
+/*
+ * Returns the delay in seconds until the next announcement 
+ * round or zero if no further round is required.
+ */
+static time_t
+bbl_tx_network_announce_next_round(bbl_network_interface_s *interface, uint8_t *burst)
+{
+    if(*burst) (*burst)--;
+    if(*burst) {
+        return 1;
+    }
+    if(interface->announce_interval) {
+        *burst = 1;
+        return interface->announce_interval;
+    }
+    return 0;
+}
+
 static protocol_error_t
 bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, uint16_t *len)
 {
@@ -1492,6 +1534,8 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
     bbl_icmpv6_s icmpv6 = {0};
     uint8_t mac[ETH_ADDR_LEN];
     ipv6addr_t ipv6_dst;
+    uint8_t *ipv6_target;
+    time_t delay;
 
     *len = 0;
 
@@ -1558,6 +1602,78 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
         timer_add(&g_ctx->timer_root, &interface->timer_ra, "RA timer", 
                   10, 0, interface, &bbl_tx_network_ra_timeout);
         result = encode_ethernet(buf, len, &eth);
+    } else if(interface->send_requests & BBL_IF_SEND_GARP) {
+        eth.type = ETH_TYPE_ARP;
+        eth.next = &arp;
+        arp.code = ARP_REQUEST;
+        arp.sender = interface->mac;
+        if(interface->garp_primary) {
+            interface->garp_primary = false;
+            arp.sender_ip = interface->ip.address;
+        } else {
+            arp.sender_ip = interface->garp_cursor->ip;
+            interface->garp_cursor = interface->garp_cursor->next;
+        }
+        arp.target_ip = arp.sender_ip;
+        if(!interface->garp_cursor) {
+            interface->send_requests &= ~BBL_IF_SEND_GARP;
+            interface->garp_chunk = 0;
+            delay = bbl_tx_network_announce_next_round(interface, &interface->garp_burst);
+            if(delay) {
+                timer_add(&g_ctx->timer_root, &interface->timer_garp, "GARP", 
+                          delay, 0, interface, &bbl_tx_network_garp_timeout);
+            }
+        } else if(++interface->garp_chunk >= BBL_NETWORK_ANNOUNCE_CHUNK) {
+            /* Pace announcements of many secondary addresses. */
+            interface->send_requests &= ~BBL_IF_SEND_GARP;
+            interface->garp_chunk = 0;
+            timer_add(&g_ctx->timer_root, &interface->timer_garp, "GARP", 
+                      0, 10 * MSEC, interface, &bbl_tx_network_garp_timeout);
+        }
+        result = encode_ethernet(buf, len, &eth);
+        if(result == PROTOCOL_SUCCESS) {
+            interface->stats.garp_tx++;
+        }
+    } else if(interface->send_requests & BBL_IF_SEND_UNSOLICITED_NA) {
+        if(interface->na_primary) {
+            interface->na_primary = false;
+            ipv6_target = interface->ip6.address;
+        } else {
+            ipv6_target = interface->na_cursor->ip;
+            interface->na_cursor = interface->na_cursor->next;
+        }
+        ipv6_multicast_mac(ipv6_multicast_all_nodes, mac);
+        eth.dst = mac;
+        eth.type = ETH_TYPE_IPV6;
+        eth.next = &ipv6;
+        ipv6.src = ipv6_target;
+        ipv6.dst = (void*)ipv6_multicast_all_nodes;
+        ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
+        ipv6.next = &icmpv6;
+        ipv6.ttl = 255;
+        icmpv6.type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
+        icmpv6.flags = IPV6_ICMPV6_NA_FLAG_OVERRIDE;
+        memcpy(icmpv6.prefix.address, ipv6_target, IPV6_ADDR_LEN);
+        icmpv6.mac = interface->mac;
+        if(!interface->na_cursor) {
+            interface->send_requests &= ~BBL_IF_SEND_UNSOLICITED_NA;
+            interface->na_chunk = 0;
+            delay = bbl_tx_network_announce_next_round(interface, &interface->na_burst);
+            if(delay) {
+                timer_add(&g_ctx->timer_root, &interface->timer_na, "Unsolicited NA", 
+                          delay, 0, interface, &bbl_tx_network_na_timeout);
+            }
+        } else if(++interface->na_chunk >= BBL_NETWORK_ANNOUNCE_CHUNK) {
+            /* Pace announcements of many secondary addresses. */
+            interface->send_requests &= ~BBL_IF_SEND_UNSOLICITED_NA;
+            interface->na_chunk = 0;
+            timer_add(&g_ctx->timer_root, &interface->timer_na, "Unsolicited NA", 
+                      0, 10 * MSEC, interface, &bbl_tx_network_na_timeout);
+        }
+        result = encode_ethernet(buf, len, &eth);
+        if(result == PROTOCOL_SUCCESS) {
+            interface->stats.unsolicited_na_tx++;
+        }
     } else if(interface->send_requests & BBL_IF_SEND_ISIS_P2P_HELLO) {
         interface->send_requests &= ~BBL_IF_SEND_ISIS_P2P_HELLO;
         result = isis_p2p_hello_encode(interface, buf, len, &eth);

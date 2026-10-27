@@ -114,6 +114,12 @@ static const ipv6_prefix mock_ipv6_ra_prefix = {
 #define BBL_IF_SEND_ISIS_L1_HELLO   0x00000100
 #define BBL_IF_SEND_ISIS_L2_HELLO   0x00000200
 #define BBL_IF_SEND_CFM_CC          0x00000400
+#define BBL_IF_SEND_GARP            0x00000800
+#define BBL_IF_SEND_UNSOLICITED_NA  0x00001000
+
+/* Gratuitous ARP and unsolicited NA */
+#define BBL_NETWORK_ANNOUNCE_BURST  3   /* initial announcement rounds (1s apart) */
+#define BBL_NETWORK_ANNOUNCE_CHUNK  32  /* packets per 10ms */
 
 #define BBL_AVG_SAMPLES             5
 #define BBL_MAX_STREAM_OVERHEAD     128

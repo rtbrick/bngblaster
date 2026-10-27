@@ -473,6 +473,123 @@ test_protocols_dhcpv6_timer_byte_order(void **unused) {
     free(sp);
 }
 
+/* Gratuitous ARP: broadcast ARP request with sender IP == target IP. */
+static void
+test_protocols_gratuitous_arp(void **unused) {
+    (void) unused;
+
+    uint8_t buf[512];
+    uint16_t len = 0;
+    uint8_t mac[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t broadcast[ETH_ADDR_LEN] = {0xff, 0xff, 0xff, 0xff, 0xff, 0xff};
+    uint8_t zero_mac[ETH_ADDR_LEN] = {0};
+    uint32_t ip;
+    bbl_ethernet_header_s eth = {0};
+    bbl_arp_s arp = {0};
+
+    inet_pton(AF_INET, "192.0.2.10", &ip);
+    eth.src = mac;
+    eth.vlan_outer = 100;
+    eth.type = ETH_TYPE_ARP;
+    eth.next = &arp;
+    arp.code = ARP_REQUEST;
+    arp.sender = mac;
+    arp.sender_ip = ip;
+    arp.target_ip = ip;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(len, 18 + 28);
+    assert_memory_equal(buf, broadcast, ETH_ADDR_LEN);
+    assert_memory_equal(buf + 6, mac, ETH_ADDR_LEN);
+    assert_int_equal(be16toh(*(uint16_t*)(buf + 12)), ETH_TYPE_VLAN);
+    assert_int_equal(be16toh(*(uint16_t*)(buf + 14)) & 4095, 100);
+    assert_int_equal(be16toh(*(uint16_t*)(buf + 16)), ETH_TYPE_ARP);
+    assert_int_equal(be16toh(*(uint16_t*)(buf + 24)), ARP_REQUEST);
+    assert_memory_equal(buf + 26, mac, ETH_ADDR_LEN);
+    assert_memory_equal(buf + 32, &ip, sizeof(ip));
+    assert_memory_equal(buf + 36, zero_mac, ETH_ADDR_LEN);
+    assert_memory_equal(buf + 42, &ip, sizeof(ip));
+}
+
+/* RFC 1071 checksum over IPv6 pseudo header and ICMPv6 message. */
+static bool
+test_icmpv6_checksum_valid(uint8_t *src, uint8_t *dst, uint8_t *icmp, uint16_t icmp_len)
+{
+    uint32_t sum = IPV6_NEXT_HEADER_ICMPV6 + icmp_len;
+    uint16_t i;
+
+    for(i = 0; i < IPV6_ADDR_LEN; i += 2) {
+        sum += (src[i] << 8) | src[i+1];
+        sum += (dst[i] << 8) | dst[i+1];
+    }
+    for(i = 0; i + 1 < icmp_len; i += 2) {
+        sum += (icmp[i] << 8) | icmp[i+1];
+    }
+    if(icmp_len & 1) {
+        sum += icmp[icmp_len-1] << 8;
+    }
+    while(sum >> 16) {
+        sum = (sum & 0xffff) + (sum >> 16);
+    }
+    return sum == 0xffff;
+}
+
+/* Unsolicited NA (RFC 4861 section 7.2.6) to all-nodes with only override set. */
+static void
+test_protocols_unsolicited_na(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[512];
+    uint16_t len = 0;
+    uint8_t mac[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t all_nodes_mac[ETH_ADDR_LEN] = {0x33, 0x33, 0x00, 0x00, 0x00, 0x01};
+    ipv6addr_t ip = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_icmpv6_s icmpv6 = {0};
+    bbl_ethernet_header_s *decoded;
+    bbl_ipv6_s *decoded_ipv6;
+    bbl_icmpv6_s *decoded_icmpv6;
+
+    inet_pton(AF_INET6, "2001:db8::10", ip);
+    eth.dst = all_nodes_mac;
+    eth.src = mac;
+    eth.type = ETH_TYPE_IPV6;
+    eth.next = &ipv6;
+    ipv6.src = ip;
+    ipv6.dst = (void*)ipv6_multicast_all_nodes;
+    ipv6.protocol = IPV6_NEXT_HEADER_ICMPV6;
+    ipv6.ttl = 255;
+    ipv6.next = &icmpv6;
+    icmpv6.type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
+    icmpv6.flags = IPV6_ICMPV6_NA_FLAG_OVERRIDE;
+    memcpy(icmpv6.prefix.address, ip, IPV6_ADDR_LEN);
+    icmpv6.mac = mac;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(len, 14 + 40 + 32);
+    assert_memory_equal(buf, all_nodes_mac, ETH_ADDR_LEN);
+    assert_int_equal(buf[14+7], 255); /* hop limit */
+    assert_memory_equal(buf + 14 + 8, ip, IPV6_ADDR_LEN);
+    assert_memory_equal(buf + 14 + 24, ipv6_multicast_all_nodes, IPV6_ADDR_LEN);
+    assert_int_equal(buf[54], IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT);
+    assert_int_equal(buf[54+4], IPV6_ICMPV6_NA_FLAG_OVERRIDE); /* R=0 S=0 O=1 */
+    assert_memory_equal(buf + 54 + 8, ip, IPV6_ADDR_LEN);
+    assert_int_equal(buf[54+24], 2); /* target link-layer address */
+    assert_int_equal(buf[54+25], 1);
+    assert_memory_equal(buf + 54 + 26, mac, ETH_ADDR_LEN);
+
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    decoded_ipv6 = (bbl_ipv6_s*)decoded->next;
+    assert_int_equal(decoded_ipv6->protocol, IPV6_NEXT_HEADER_ICMPV6);
+    decoded_icmpv6 = (bbl_icmpv6_s*)decoded_ipv6->next;
+    assert_int_equal(decoded_icmpv6->type, IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT);
+    assert_memory_equal(decoded_icmpv6->prefix.address, ip, IPV6_ADDR_LEN);
+    assert_true(test_icmpv6_checksum_valid(buf + 14 + 8, buf + 14 + 24, buf + 54, len - 54));
+    free(sp);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -483,6 +600,8 @@ int main() {
         cmocka_unit_test(test_protocols_lcp_chap),
         cmocka_unit_test(test_protocols_dhcp_end_option),
         cmocka_unit_test(test_protocols_dhcpv6_timer_byte_order),
+        cmocka_unit_test(test_protocols_gratuitous_arp),
+        cmocka_unit_test(test_protocols_unsolicited_na),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

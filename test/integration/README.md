@@ -29,6 +29,9 @@ Functional tests over veth pairs between network namespaces:
   (`test_capture_streams.py`)
 * Teardown order of BGP and IS-IS against FRR: the IGP withdraw waits
   until BGP sessions routed via the IGP are closed (`test_teardown_order.py`)
+* Gratuitous ARP and unsolicited NA of primary and secondary addresses
+  overriding stale neighbor entries of the Linux peer, periodic
+  announcements and `network-announce` (`test_network_announce.py`)
 
 Each test creates two namespaces `bbl-it-<n>-a` and `bbl-it-<n>-b`
 connected by a veth pair. Configs, logs, pcaps and JSON reports of all

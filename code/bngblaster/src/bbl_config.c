@@ -897,6 +897,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         "address-ipv6", "gateway-ipv6", "ipv6-router-advertisement",
         "gateway-mac", "vlan", "inner-vlan", "qinq", "mtu", 
         "gateway-resolve-wait",
+        "gratuitous-arp", "unsolicited-na", "announce-interval",
         "isis-instance-id", "isis-level", "isis-p2p",
         "isis-l1-metric", "isis-l2-metric",
         "isis-l1-priority", "isis-l2-priority",
@@ -999,6 +1000,19 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         network_config->gateway_resolve_wait = json_boolean_value(value);
     } else {
         network_config->gateway_resolve_wait = true;
+    }
+
+    JSON_OBJ_GET_BOOL(network_interface, value, "network", "gratuitous-arp");
+    if(value) {
+        network_config->gratuitous_arp = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_BOOL(network_interface, value, "network", "unsolicited-na");
+    if(value) {
+        network_config->unsolicited_na = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "announce-interval", 0, 65535);
+    if(value) {
+        network_config->announce_interval = json_number_value(value);
     }
 
     /* IS-IS interface configuration */

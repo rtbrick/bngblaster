@@ -152,6 +152,10 @@ typedef struct bbl_network_config_
     bbl_secondary_ip_s *secondary_ip_addresses;
     bbl_secondary_ip6_s *secondary_ip6_addresses;
 
+    bool gratuitous_arp;
+    bool unsolicited_na;
+    uint16_t announce_interval;
+
     uint16_t isis_instance_id;
     uint8_t  isis_level;
     bool     isis_p2p;

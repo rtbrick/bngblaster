@@ -33,6 +33,36 @@ bbl_network_interface_rate_job(timer_s *timer) {
 }
 
 /**
+ * bbl_network_announce
+ *
+ * Start (or restart) announcing all local addresses 
+ * of the network interface with gratuitous ARP and 
+ * unsolicited NA if enabled.
+ *
+ * @param interface network interface
+ */
+void
+bbl_network_announce(bbl_network_interface_s *interface)
+{
+    if(interface->gratuitous_arp && interface->ip.address) {
+        timer_del(interface->timer_garp);
+        interface->garp_primary = true;
+        interface->garp_burst = BBL_NETWORK_ANNOUNCE_BURST;
+        interface->garp_chunk = 0;
+        interface->garp_cursor = interface->secondary_ip_addresses;
+        interface->send_requests |= BBL_IF_SEND_GARP;
+    }
+    if(interface->unsolicited_na && ipv6_prefix_not_zero(&interface->ip6)) {
+        timer_del(interface->timer_na);
+        interface->na_primary = true;
+        interface->na_burst = BBL_NETWORK_ANNOUNCE_BURST;
+        interface->na_chunk = 0;
+        interface->na_cursor = interface->secondary_ip6_addresses;
+        interface->send_requests |= BBL_IF_SEND_UNSOLICITED_NA;
+    }
+}
+
+/**
  * bbl_network_interfaces_add
  */
 bool
@@ -156,6 +186,12 @@ bbl_network_interfaces_add()
         }
 
         network_interface->gateway_resolve_wait = network_config->gateway_resolve_wait;
+
+        /* Init gratuitous ARP and unsolicited NA */
+        network_interface->gratuitous_arp = network_config->gratuitous_arp;
+        network_interface->unsolicited_na = network_config->unsolicited_na;
+        network_interface->announce_interval = network_config->announce_interval;
+        bbl_network_announce(network_interface);
 
         /* Init TCP */
         if(!bbl_tcp_network_interface_init(network_interface, network_config)) {
@@ -587,7 +623,7 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
 static json_t *
 bbl_network_interface_json(bbl_network_interface_s *interface)
 {
-    return json_pack("{ss si ss sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI}",
+    return json_pack("{ss si ss sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI sI}",
                      "name", interface->name,
                      "ifindex", interface->ifindex,
                      "type", "Network",
@@ -620,7 +656,9 @@ bbl_network_interface_json(bbl_network_interface_s *interface)
                      "tx-pps-streams", interface->stats.rate_stream_tx.avg,
                      "rx-packets-streams", interface->stats.stream_rx,
                      "rx-pps-streams", interface->stats.rate_stream_rx.avg,
-                     "rx-loss-packets-streams", interface->stats.stream_loss
+                     "rx-loss-packets-streams", interface->stats.stream_loss,
+                     "tx-garp", (json_int_t)interface->stats.garp_tx,
+                     "tx-unsolicited-na", (json_int_t)interface->stats.unsolicited_na_tx
                     );
 }
 
@@ -654,4 +692,30 @@ bbl_network_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)),
         json_decref(interfaces);
     }
     return result;
+}
+
+int
+bbl_network_ctrl_announce(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
+{
+    const char *name = NULL;
+    bool found = false;
+    bbl_interface_s *interface;
+    bbl_network_interface_s *network_interface;
+
+    json_unpack(arguments, "{s?s}", "interface", &name);
+
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
+        network_interface = interface->network;
+        while(network_interface) {
+            if(!name || strcmp(name, network_interface->name) == 0) {
+                bbl_network_announce(network_interface);
+                found = true;
+            }
+            network_interface = network_interface->next;
+        }
+    }
+    if(!found) {
+        return bbl_ctrl_status(fd, "warning", 404, "interface not found");
+    }
+    return bbl_ctrl_status(fd, "ok", 200, NULL);
 }

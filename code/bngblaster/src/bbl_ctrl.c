@@ -343,6 +343,7 @@ static const struct action actions[] = {
     {"access-interfaces", bbl_access_ctrl_interfaces, schema_no_args, true},
     {"access-protocol-stats", bbl_access_ctrl_protocol_stats, schema_interface, true},
     {"network-interfaces", bbl_network_ctrl_interfaces, schema_no_args, true},
+    {"network-announce", bbl_network_ctrl_announce, schema_interface, false},
     {"a10nsp-interfaces", bbl_a10nsp_ctrl_interfaces, schema_no_args, true},
     {"interface-enable", bbl_interface_ctrl_enable, schema_interface, false},
     {"interface-disable", bbl_interface_ctrl_disable, schema_interface, false},

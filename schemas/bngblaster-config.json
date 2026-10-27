@@ -1619,6 +1619,23 @@
                     "description": "Wait until gateways are resolved before starting sessions",
                     "default": true
                 },
+                "gratuitous-arp": {
+                    "type": "boolean",
+                    "description": "Announce IPv4 address and all secondary IPv4 addresses with gratuitous ARP on start",
+                    "default": false
+                },
+                "unsolicited-na": {
+                    "type": "boolean",
+                    "description": "Announce IPv6 address and all secondary IPv6 addresses with unsolicited NA on start",
+                    "default": false
+                },
+                "announce-interval": {
+                    "type": "integer",
+                    "description": "Repeat gratuitous ARP and unsolicited NA announcements every N seconds (0 = on start only)",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 65535
+                },
                 "isis-instance-id": {
                     "type": "integer",
                     "description": "Assign interface to ISIS instance",

@@ -302,6 +302,50 @@ both ``100:1`` and ``100:2`` to the same link interface. Additionally, network i
 referencing continues to be based solely on the name and outer VLAN; for example, ``eth1`` 
 with outer VLAN ``200`` and inner VLAN ``1`` is still referenced as ``eth1:200``.
 
+Address Announcements
+"""""""""""""""""""""
+
+The BNG Blaster answers ARP and ND requests for the network interface address and 
+all secondary addresses (e.g. stream ``network-ipv4-address``/``network-ipv6-address``, 
+BGP local addresses or HTTP server addresses), but does not announce them per default. 
+If the same addresses were used before on a different interface or MAC address, 
+the device under test may continue to send traffic to the old MAC address until its 
+ARP or neighbor cache entry expires.
+
+The options ``gratuitous-arp`` and ``unsolicited-na`` refresh those entries by 
+announcing all addresses three times, one second apart, when the network interface starts. 
+The option ``announce-interval`` repeats the announcements periodically. Many secondary 
+addresses are announced in chunks of 32 packets every 10 milliseconds.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "network": [
+                {
+                    "interface": "eth1",
+                    "address": "10.0.0.1/24",
+                    "gateway": "10.0.0.2",
+                    "address-ipv6": "fc66:1337:7331::1/64",
+                    "gateway-ipv6": "fc66:1337:7331::2",
+                    "gratuitous-arp": true,
+                    "unsolicited-na": true,
+                    "announce-interval": 0
+                }
+            ]
+        }
+    }
+
+The command ``network-announce`` restarts the announcements at runtime, for example
+before starting traffic streams. Sent announcements are counted as ``tx-garp`` and
+``tx-unsolicited-na`` in the ``network-interfaces`` command output.
+
+``$ sudo bngblaster-cli run.sock network-announce interface eth1``
+
+Linux accepts gratuitous ARP and unsolicited NA for existing neighbor entries per default,
+but creates no new entries from them unless ``arp_accept`` or ``accept_untracked_na``
+are enabled.
+
 
 .. _access-interface:
 

@@ -13,6 +13,13 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **network-interfaces**            | | List all network interface functions.                              |
 +-----------------------------------+----------------------------------------------------------------------+
+| **network-announce**              | | Restart gratuitous ARP and unsolicited NA announcements of all     |
+|                                   | | addresses for network interfaces with **gratuitous-arp** or        |
+|                                   | | **unsolicited-na** enabled.                                        |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``interface`` (all network interfaces if not set)                  |
++-----------------------------------+----------------------------------------------------------------------+
 | **a10nsp-interfaces**             | | List all a10nsp interface functions.                               |
 +-----------------------------------+----------------------------------------------------------------------+
 | **lag-info**                      | | List all link aggregation (LAG) interfaces.                        |
