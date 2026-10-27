@@ -2411,7 +2411,8 @@
                         "auto",
                         "zero-copy",
                         "copy",
-                        "generic"
+                        "generic",
+                        "copy-rx"
                     ]
                 },
                 "qdisc-bypass": {

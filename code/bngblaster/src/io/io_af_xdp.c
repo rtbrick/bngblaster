@@ -1200,10 +1200,13 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
          * the driver (e.g. i40e) then neither receives nor sends anything
          * on this queue because no native XDP program is attached.
          * Copy mode can be selected explicitly, e.g. if the zero-copy
-         * mode of the driver performs badly (ice with IOMMU translation
-         * fills the NIC RX ring only partially on some kernels). */
+         * mode of the driver performs badly (ice and i40e with IOMMU
+         * translation fill the NIC RX ring only partially on some
+         * kernels). As this affects only RX, copy-rx binds the RX queues
+         * in copy mode and keeps zero-copy for the TX queues. */
         sock_cfg.bind_flags = XDP_USE_NEED_WAKEUP;
-        if(sock_cfg.xdp_flags == XDP_FLAGS_SKB_MODE || config->af_xdp_mode == AF_XDP_MODE_COPY) {
+        if(sock_cfg.xdp_flags == XDP_FLAGS_SKB_MODE || config->af_xdp_mode == AF_XDP_MODE_COPY ||
+           (config->af_xdp_mode == AF_XDP_MODE_COPY_RX && want_rx)) {
             sock_cfg.bind_flags |= XDP_COPY;
         } else if(config->af_xdp_mode == AF_XDP_MODE_ZERO_COPY) {
             sock_cfg.bind_flags |= XDP_ZEROCOPY;

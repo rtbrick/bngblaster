@@ -721,6 +721,8 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             link_config->af_xdp_mode = AF_XDP_MODE_COPY;
         } else if(strcmp(s, "generic") == 0) {
             link_config->af_xdp_mode = AF_XDP_MODE_GENERIC;
+        } else if(strcmp(s, "copy-rx") == 0) {
+            link_config->af_xdp_mode = AF_XDP_MODE_COPY_RX;
         } else {
             fprintf(stderr, "JSON config error: Invalid value for links->af-xdp-mode\n");
             return false;

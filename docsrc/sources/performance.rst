@@ -696,15 +696,19 @@ it, which is logged once per interface:
 The selected mode is then used for all queues of this interface. The mode can be
 selected per link with ``af-xdp-mode``: ``auto`` (default) uses native mode with zero-copy if
 supported by the driver, ``zero-copy`` fails instead of falling back, ``copy`` uses native mode
-without zero-copy and ``generic`` uses generic mode.
+without zero-copy and ``generic`` uses generic mode. ``copy-rx`` binds the RX queues in copy mode
+and the TX queues like ``auto``, for drivers whose zero-copy RX performs badly while zero-copy TX
+works (see below).
 
 Zero-copy mode depends on the driver filling the NIC RX ring from the AF_XDP fill ring. With
-the Intel ice driver (E810) and an IOMMU in translation mode (``DMA`` or ``DMA-FQ`` in
-``/sys/bus/pci/devices/<pci>/iommu_group/type``), some kernels (e.g. 6.8) fill the ring only with
-a few buffers per interrupt, which drops most of the received packets. This is visible as
-``Failed to allocate some buffers on XSK buffer pool enabled Rx ring`` in the kernel log and
-``rx_dropped`` increasing with only few packets per RX queue (``rx_queue_<n>_packets``). Use
-``iommu=pt`` if possible, otherwise ``af-xdp-mode`` ``copy`` for such interfaces (see
+the Intel ice (E810) and i40e (X710) drivers and an IOMMU in translation mode (``DMA`` or
+``DMA-FQ`` in ``/sys/bus/pci/devices/<pci>/iommu_group/type``), some kernels (e.g. 6.8) fill the
+ring only with a few buffers per interrupt, which drops most of the received packets. This is
+visible in the kernel log as ``Failed to allocate some buffers on XSK buffer pool enabled Rx ring``
+(ice) or ``Failed to allocate some buffers on AF_XDP ZC enabled Rx ring`` (i40e), and as
+``rx_dropped`` increasing with only few packets per RX queue (``rx_queue_<n>_packets``). The NIC
+may also send pause frames, so control traffic is lost as well. Use ``iommu=pt`` if possible,
+otherwise ``af-xdp-mode`` ``copy-rx`` for such interfaces, which keeps zero-copy for TX (see
 :ref:`AF_XDP Tuning <af-xdp-tuning>`).
 
 A warning is logged at startup if the interface MTU exceeds 3712
@@ -822,8 +826,12 @@ default if supported by the driver. Copy mode (``"af-xdp-mode": "copy"``) copies
 packet between the driver and the AF_XDP frames, which limits the packet rate. In our
 tests, a single RX and TX thread reached about 4.4 Mpps in copy mode compared to 11 Mpps
 (10G line rate with 76-byte packets) in zero-copy mode. Use copy mode only for interfaces where zero-copy
-mode performs badly, e.g. the Intel ice driver with an IOMMU in translation mode (see
-above), where copy mode performed much better than zero-copy mode. Check the actual
+mode performs badly, e.g. the Intel ice or i40e driver with an IOMMU in translation mode (see
+above), where copy mode performed much better than zero-copy mode. If only RX is affected,
+``"af-xdp-mode": "copy-rx"`` limits copy mode to the RX queues and keeps zero-copy for TX.
+On an X710 (i40e) with the IOMMU in ``DMA-FQ`` mode, this reached 4.47 Mpps without loss
+with 27,000 double-tagged PPPoE sessions (1.40 Mpps RX on one access queue, 3.07 Mpps TX),
+while about half of the sessions never came up with zero-copy RX. Check the actual
 mode of each queue with ``-l af_xdp``.
 
 .. _single-queue:

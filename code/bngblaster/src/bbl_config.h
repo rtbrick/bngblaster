@@ -200,6 +200,7 @@ typedef enum {
     AF_XDP_MODE_ZERO_COPY,  /* native zero-copy only */
     AF_XDP_MODE_COPY,       /* native or generic copy mode */
     AF_XDP_MODE_GENERIC,    /* generic (SKB) copy mode */
+    AF_XDP_MODE_COPY_RX,    /* native, RX queues in copy mode, TX queues like auto */
 } af_xdp_mode_t;
 
 typedef struct bbl_link_config_
