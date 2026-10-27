@@ -6,6 +6,8 @@ Functional tests over veth pairs between network namespaces:
   (`test_l2tp_lac_lns.py`)
 * BNG Blaster BGP against GoBGP: IPv4/IPv6 unicast, connection
   collision, MD5, TCP-AO and EVPN (`test_bgp_*.py`)
+* BNG Blaster RAW updates over 1000 BGP sessions in parallel against
+  a slow receiver with zero windows (`test_bgp_scale.py`, `bgp_sink.py`)
 * BNG Blaster ISIS and OSPFv2 against FRR: adjacency (P2P and
   broadcast, L1/L2/L1L2), database synchronization in both directions
   with routes installed by FRR, and authentication

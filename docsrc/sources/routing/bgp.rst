@@ -237,6 +237,17 @@ them via the ``bgp-raw-update-files`` configuration option.
 Incremental updates not listed here will be loaded dynamically as soon
 as referenced by the first session.
 
+The ``bgp-sessions`` :ref:`command <api>` shows the progress of the RAW
+update file in ``raw-update-state`` (``wait``, ``sending`` or ``done``).
+The update counters (``update-tx``) are incremented once the whole file
+is sent and acknowledged. The bytes of the file acknowledged by the peer
+so far are shown in ``raw-update-bytes-acked`` (of ``raw-update-bytes``).
+The ``tcp`` object shows the bytes sent but not yet acknowledged
+(``send-queue``), the free TCP send buffer (``send-buffer-free``) and
+the receive window of the peer (``peer-window``). A ``peer-window`` of
+zero means that the peer does not accept further data at the moment
+(receiver backpressure).
+
 BGP RAW Update Generator
 ~~~~~~~~~~~~~~~~~~~~~~~~
 

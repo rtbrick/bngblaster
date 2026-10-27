@@ -10,7 +10,7 @@ import os
 import pytest
 
 import helpers
-from helpers import Bird, BngBlaster, Frr, GoBgp, Netns
+from helpers import BgpSink, Bird, BngBlaster, Frr, GoBgp, Netns
 
 _ids = itertools.count(1)
 
@@ -110,7 +110,7 @@ def processes():
     for proc in started:
         if isinstance(proc, BngBlaster):
             proc.kill()
-        elif isinstance(proc, (GoBgp, Frr, Bird)):
+        elif isinstance(proc, (GoBgp, BgpSink, Frr, Bird)):
             proc.stop()
 
 

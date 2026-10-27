@@ -284,19 +284,24 @@ bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
     UNUSED(len);
 
     if(tcpc->tx.offset < tcpc->tx.len) {
-        tx = tcp_sndbuf(tpcb);
-        if(tx) {
-            if(tx > 4096) tx = 4096;
+        /* Sending until the whole buffer is queued, even if lwIP is out
+         * of memory (pools shared by all connections). The next ACK or,
+         * with nothing in flight, the TCP poll timer retries. */
+        tcpc->state = BBL_TCP_STATE_SENDING;
+        while(tcpc->tx.offset < tcpc->tx.len) {
+            tx = tcp_sndbuf(tpcb);
+            if(!tx) {
+                result = ERR_MEM;
+                break;
+            }
             if((tcpc->tx.offset + tx) > tcpc->tx.len) {
                 tx = tcpc->tx.len - tcpc->tx.offset;
             }
             result = tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, tx, tcpc->tx.flags);
-            if(result == ERR_OK) {
-                tcpc->state = BBL_TCP_STATE_SENDING;
-                tcpc->tx.offset += tx;
+            if(result != ERR_OK) {
+                break;
             }
-        } else {
-            result = ERR_MEM;
+            tcpc->tx.offset += tx;
         }
     } else if(tcpc->pcb->unacked == NULL && tcpc->pcb->unsent == NULL) {
         /* Idle means that it is save to replace buffer. */
@@ -408,6 +413,10 @@ err_t
 bbl_tcp_poll_cb(void *arg, struct tcp_pcb *tpcb)
 {
     bbl_tcp_ctx_s *tcpc = arg;
+    if(tcpc->tx.offset < tcpc->tx.len) {
+        /* Resume sending stopped by lwIP memory errors. */
+        bbl_tcp_sent_cb(tcpc, tpcb, 0);
+    }
     if(tcpc->poll_cb) {
         return (tcpc->poll_cb)(tcpc->arg, tpcb);
     }
@@ -424,9 +433,7 @@ bbl_tcp_connected(void *arg, struct tcp_pcb *tpcb, err_t err)
     /* Add send/receive callback functions. */
     tcp_sent(tpcb, bbl_tcp_sent_cb);
     tcp_recv(tpcb, bbl_tcp_recv_cb);
-    if(tcpc->poll_cb && tcpc->poll_interval) {
-        tcp_poll(tpcb, bbl_tcp_poll_cb, tcpc->poll_interval);
-    }
+    tcp_poll(tpcb, bbl_tcp_poll_cb, tcpc->poll_interval ? tcpc->poll_interval : BBL_TCP_POLL_INTERVAL);
 
     if(tcpc->af == AF_INET) {
         LOG(TCP, "TCP (%s %s:%u - %s:%u) session connected\n",
@@ -512,9 +519,7 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
     /* Add send/receive callback functions. */
     tcp_sent(tpcb, bbl_tcp_sent_cb);
     tcp_recv(tpcb, bbl_tcp_recv_cb);
-    if(tcpc->poll_cb && tcpc->poll_interval) {
-        tcp_poll(tpcb, bbl_tcp_poll_cb, tcpc->poll_interval);
-    }
+    tcp_poll(tpcb, bbl_tcp_poll_cb, tcpc->poll_interval ? tcpc->poll_interval : BBL_TCP_POLL_INTERVAL);
     tcp_err(tpcb, bbl_tcp_error_cb);
 
     if(tcpc->af == AF_INET) {
@@ -1061,6 +1066,9 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
     ip_data.current_iphdr_src.u_addr.ip4.addr = ipv4->src;
 
     pbuf = pbuf_alloc_reference(ipv4->payload, ipv4->payload_len, PBUF_ROM);
+    if(!pbuf) {
+        return;
+    }
     tcp_input(pbuf, &interface->netif);
 }
 
@@ -1096,6 +1104,9 @@ bbl_tcp_ipv4_rx_session(bbl_session_s *session, bbl_ipv4_s *ipv4)
     ip_data.current_iphdr_src.u_addr.ip4.addr = ipv4->src;
 
     pbuf = pbuf_alloc_reference(ipv4->payload, ipv4->payload_len, PBUF_ROM);
+    if(!pbuf) {
+        return;
+    }
     tcp_input(pbuf, &session->netif);
 }
 
@@ -1156,6 +1167,9 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
     }
 
     pbuf = pbuf_alloc_reference(ipv6->hdr, ipv6->len, PBUF_ROM);
+    if(!pbuf) {
+        return;
+    }
     interface->netif.input(pbuf, &interface->netif);
 
     ip_data.current_netif = &interface->netif;
@@ -1166,6 +1180,9 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
     ip_data.current_iphdr_src.type = IPADDR_TYPE_V6;
 
     pbuf = pbuf_alloc_reference(ipv6->payload, ipv6->payload_len, PBUF_ROM);
+    if(!pbuf) {
+        return;
+    }
     tcp_input(pbuf, &interface->netif);
 }
 
@@ -1194,6 +1211,9 @@ bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ipv6_s *ipv6)
 #endif
 
     pbuf = pbuf_alloc_reference(ipv6->hdr, ipv6->len, PBUF_ROM);
+    if(!pbuf) {
+        return;
+    }
     session->netif.input(pbuf, &session->netif);
 
     ip_data.current_netif = &session->netif;
@@ -1204,6 +1224,9 @@ bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ipv6_s *ipv6)
     ip_data.current_iphdr_src.type = IPADDR_TYPE_V6;
 
     pbuf = pbuf_alloc_reference(ipv6->payload, ipv6->payload_len, PBUF_ROM);
+    if(!pbuf) {
+        return;
+    }
     tcp_input(pbuf, &session->netif);
 }
 

@@ -315,6 +315,41 @@ class GoBgp:
                 self.proc.kill()
 
 
+class BgpSink:
+    """Passive BGP speaker (bgp_sink.py) accepting many sessions in a
+    network namespace, counting received messages per peer address."""
+
+    def __init__(self, ns, workdir):
+        self.ns = ns
+        self.workdir = Path(workdir)
+        self.stats_file = str(self.workdir / "bgp_sink.json")
+        self.proc = None
+
+    def start(self, args=()):
+        cmd = [sys.executable, "-I", str(Path(__file__).parent / "bgp_sink.py"),
+               "--stats", self.stats_file] + list(args)
+        with open(str(self.workdir / "bgp_sink.log"), "w") as out:
+            self.proc = subprocess.Popen(self.ns.cmd(cmd), stdout=out,
+                                         stderr=subprocess.STDOUT)
+        wait_until(lambda: os.path.exists(self.stats_file) or self.proc.poll() is not None,
+                   10, 0.2, "BGP sink")
+        if self.proc.poll() is not None:
+            raise RuntimeError("BGP sink exited on start, see bgp_sink.log")
+        return self
+
+    def stats(self):
+        with open(self.stats_file) as f:
+            return json.load(f)
+
+    def stop(self):
+        if self.proc and self.proc.poll() is None:
+            self.proc.terminate()
+            try:
+                self.proc.wait(10)
+            except subprocess.TimeoutExpired:
+                self.proc.kill()
+
+
 class Frr:
     """FRR daemons running in a network namespace. The daemons run in
     foreground as root in their own path space, so that they don't

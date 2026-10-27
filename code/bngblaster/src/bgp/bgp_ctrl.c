@@ -32,16 +32,44 @@ bgp_ctrl_session_json(bgp_session_s *session)
 {
     json_t *root = NULL;
     json_t *stats = NULL;
+    json_t *tcp = NULL;
     uint32_t peer_id_be;
 
     const char *raw_update_file = NULL;
+    const char *raw_update;
+    uint32_t raw_update_bytes = 0;
+    uint32_t raw_update_bytes_acked = 0;
+
+    bbl_tcp_ctx_s *tcpc;
+    struct tcp_pcb *pcb = NULL;
+    uint32_t unacked = 0;
 
     if(!session) {
         return NULL;
     }
 
+    raw_update = raw_update_state(session);
+    tcpc = session->tcpc;
+    if(tcpc && tcpc->pcb && tcpc->state != BBL_TCP_STATE_CONNECTING) {
+        pcb = tcpc->pcb;
+        /* Bytes queued in lwIP which are not yet acknowledged by the peer. */
+        unacked = pcb->snd_lbb - pcb->lastack;
+        tcp = json_pack("{si si si}",
+                        "send-queue", unacked,
+                        "send-buffer-free", tcp_sndbuf(pcb),
+                        "peer-window", pcb->snd_wnd);
+    }
+
     if(session->raw_update) {
         raw_update_file = session->raw_update->file;
+        raw_update_bytes = session->raw_update->len;
+        if(session->raw_update_sending) {
+            if(pcb && tcpc->tx.buf == session->raw_update->buf && tcpc->tx.offset > unacked) {
+                raw_update_bytes_acked = tcpc->tx.offset - unacked;
+            }
+        } else if(raw_update && strcmp(raw_update, "done") == 0) {
+            raw_update_bytes_acked = raw_update_bytes;
+        }
     }
 
     stats = json_pack("{si si si si si si si si si si si si}",
@@ -59,6 +87,7 @@ bgp_ctrl_session_json(bgp_session_s *session)
                       "route-withdraw-rx", session->stats.route_withdraw_rx);
 
     if(!stats) {
+        if(tcp) json_decref(tcp);
         return NULL;
     }
 
@@ -66,7 +95,7 @@ bgp_ctrl_session_json(bgp_session_s *session)
      * is raw network order from inet_pton; convert before formatting. */
     peer_id_be = htobe32(session->peer.id);
 
-    root = json_pack("{ss ss ss sI si ss ss sI si ss ss* ss* si si si ss so*}",
+    root = json_pack("{ss ss ss sI si ss ss sI si ss ss* ss* sI sI si si si ss so* so*}",
                      "interface", session->interface->name,
                      "local-address", session->local_address_str,
                      "local-id", format_ipv4_address(&session->config->id),
@@ -77,13 +106,16 @@ bgp_ctrl_session_json(bgp_session_s *session)
                      "peer-as", (json_int_t)session->peer.as,
                      "peer-hold-time", session->peer.hold_time,
                      "state", bgp_session_state_string(session->state),
-                     "raw-update-state", raw_update_state(session),
+                     "raw-update-state", raw_update,
                      "raw-update-file", raw_update_file,
+                     "raw-update-bytes", (json_int_t)raw_update_bytes,
+                     "raw-update-bytes-acked", (json_int_t)raw_update_bytes_acked,
                      "raw-update-start-epoch", session->update_start_timestamp.tv_sec,
                      "raw-update-stop-epoch", session->update_stop_timestamp.tv_sec,
                      "raw-update-duration", session->update_duration.tv_sec,
                      "tcp-auth", session->config->tcp_ao_enabled ?
                                  bbl_tcp_ao_algo_string(session->config->tcp_ao_algo) : "none",
+                     "tcp", tcp,
                      "stats", stats);
 
     if(!root) {

@@ -70,11 +70,11 @@ extern unsigned char debug_flags;
 
 /* MEM_SIZE: the size of the heap memory. If the application will send
    a lot of data that needs to be copied, this should be set high. */
-#define MEM_SIZE                 4*1024*1024
+#define MEM_SIZE                 16*1024*1024
 /* MEMP_NUM_PBUF: the number of memp struct pbufs. If the application
    sends a lot of data out of ROM (or other static memory), this
    should be set high. */
-#define MEMP_NUM_PBUF            4096
+#define MEMP_NUM_PBUF            49152
 /* MEMP_NUM_RAW_PCB: the number of UDP protocol control blocks. One
    per active RAW "connection". */
 #define MEMP_NUM_RAW_PCB         3
@@ -83,13 +83,15 @@ extern unsigned char debug_flags;
 #define MEMP_NUM_UDP_PCB         4
 /* MEMP_NUM_TCP_PCB: the number of simultaneously active TCP
    connections. */
-#define MEMP_NUM_TCP_PCB         1024
+#define MEMP_NUM_TCP_PCB         2048
 /* MEMP_NUM_TCP_PCB_LISTEN: the number of listening TCP
    connections. */
 #define MEMP_NUM_TCP_PCB_LISTEN  256
 /* MEMP_NUM_TCP_SEG: the number of simultaneously queued TCP
-   segments. */
-#define MEMP_NUM_TCP_SEG         2048
+   segments. Sized for 1000 connections with a full send buffer
+   (TCP_SND_BUF/TCP_MSS segments), each segment also needs a pbuf
+   (MEMP_NUM_PBUF) and its headers from the heap (MEM_SIZE). */
+#define MEMP_NUM_TCP_SEG         32768
 /* MEMP_NUM_SYS_TIMEOUT: the number of simultaneously active
    timeouts. */
 #define MEMP_NUM_SYS_TIMEOUT     257
