@@ -256,7 +256,11 @@ bbl_icmp_client_add(bbl_icmp_client_config_s *config,
     switch(client->config->mode) {
         case ICMP_MODE_PING:
             client->result = calloc(client->results, sizeof(bbl_icmp_client_result_ping_s));
+            /* The data starts with identifier and sequence number. */
             client->data_len = client->config->size+2;
+            if(client->data_len < 4) {
+                client->data_len = 4;
+            }
             client->data = calloc(1, client->data_len);
             *(uint16_t*)client->data = id;
             break;
