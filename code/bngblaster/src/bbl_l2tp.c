@@ -2265,13 +2265,17 @@ bbl_l2tp_ctrl_csurq(int fd, uint32_t session_id __attribute__((unused)), json_t 
         sessions = json_object_get(arguments, "sessions");
         if(json_is_array(sessions)) {
             size = json_array_size(sessions);
-            l2tp_tunnel->csurq_requests_len = size;
+            if(size > L2TP_CSURQ_MAX_SESSIONS) {
+                return bbl_ctrl_status(fd, "error", 400, "too many sessions");
+            }
+            l2tp_tunnel->csurq_requests_len = 0;
             l2tp_tunnel->csurq_requests = malloc(size * sizeof(uint16_t));
             for (i = 0; i < size; i++) {
                 number = json_array_get(sessions, i);
-                if(json_is_number(number)) {
+                if(json_is_number(number) && json_number_value(number) >= 0 &&
+                   json_number_value(number) <= UINT16_MAX) {
                     l2tp_session_id = json_number_value(number);
-                    l2tp_tunnel->csurq_requests[i] = l2tp_session_id;
+                    l2tp_tunnel->csurq_requests[l2tp_tunnel->csurq_requests_len++] = l2tp_session_id;
                 }
             }
             bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_CSURQ);

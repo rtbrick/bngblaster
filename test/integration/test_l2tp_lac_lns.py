@@ -188,6 +188,18 @@ def test_l2tp_session_terminate_from_lac(lac_lns):
     assert_clean_exit(lac, lns)
 
 
+def test_csurq(lac_lns):
+    """Connect speed update requests are limited to the number of AVPs
+    fitting into a control message, invalid session IDs are ignored."""
+    lac, lns = lac_lns()
+    tunnel_id = lns_tunnels(lns)[0]["tunnel-id"]
+    csurq = lambda sessions: lns.ctrl("l2tp-csurq", **{"tunnel-id": tunnel_id, "sessions": sessions})
+    assert csurq(list(range(1, 51)))["code"] == 200
+    assert csurq(list(range(1, 61)))["code"] == 400
+    assert csurq([1, -1, "x", 70000])["code"] == 200
+    assert_clean_exit(lac, lns)
+
+
 def test_l2tp_tunnel_terminate_from_lns(lac_lns):
     lac, lns = lac_lns()
     tunnel_id = lns_tunnels(lns)[0]["tunnel-id"]

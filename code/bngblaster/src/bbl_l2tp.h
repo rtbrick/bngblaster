@@ -13,6 +13,7 @@
 #define L2TP_MD5_DIGEST_LEN         16
 #define L2TP_MAX_PACKET_SIZE        1500
 #define L2TP_MAX_AVP_SIZE           1024
+#define L2TP_CSURQ_MAX_SESSIONS     50 /* Connect Speed Update AVPs fitting into L2TP_MAX_AVP_SIZE */
 
 #define L2TP_TX_WAIT_MS             10
 

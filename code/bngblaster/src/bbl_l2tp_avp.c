@@ -1043,20 +1043,19 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
             }
             break;
         case L2TP_MESSAGE_CSURQ:
-            if(l2tp_tunnel->csurq_requests_len) {
-                for(i = 0; i < l2tp_tunnel->csurq_requests_len; i++) {
-                    /* Connect Speed Update */
-                    avp.m = false;
-                    avp.type = L2TP_AVP_CONNECT_SPEED_UPDATE;
-                    avp.len = 12;
-                    avp.value_type = L2TP_AVP_VALUE_BYTES;
-                    *(uint16_t*)(update +2) = htobe16(l2tp_tunnel->csurq_requests[i]);
-                    avp.value = update;
-                    bbl_l2tp_avp_encode(&buf, len, &avp);
-                }
-                l2tp_tunnel->csurq_requests_len = 0;
-                free(l2tp_tunnel->csurq_requests);
+            for(i = 0; i < l2tp_tunnel->csurq_requests_len; i++) {
+                /* Connect Speed Update */
+                avp.m = false;
+                avp.type = L2TP_AVP_CONNECT_SPEED_UPDATE;
+                avp.len = 12;
+                avp.value_type = L2TP_AVP_VALUE_BYTES;
+                *(uint16_t*)(update +2) = htobe16(l2tp_tunnel->csurq_requests[i]);
+                avp.value = update;
+                bbl_l2tp_avp_encode(&buf, len, &avp);
             }
+            l2tp_tunnel->csurq_requests_len = 0;
+            free(l2tp_tunnel->csurq_requests);
+            l2tp_tunnel->csurq_requests = NULL;
             break;
         default:
             break;
