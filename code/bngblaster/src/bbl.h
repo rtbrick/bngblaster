@@ -69,6 +69,9 @@ extern WINDOW *stats_win;
 void
 teardown_request();
 
+void
+teardown_signals_block(void);
+
 const char*
 test_state();
 

@@ -361,6 +361,7 @@ void *
 io_thread_main(void *thread_data)
 {
     io_thread_s *thread = thread_data;
+    teardown_signals_block();
     thread->tid = syscall(SYS_gettid);
     if(thread->setup_fn) {
         (*thread->setup_fn)(thread);

@@ -605,8 +605,9 @@ bbl_ctrl_socket_thread(void *thread_data)
     sleep.tv_sec = 0;
     sleep.tv_nsec = 10 * MSEC;
 
-    ctrl->active = true;
-    while(ctrl->active) {
+    teardown_signals_block();
+    __atomic_store_n(&ctrl->active, true, __ATOMIC_RELAXED);
+    while(__atomic_load_n(&ctrl->active, __ATOMIC_RELAXED)) {
         fd = accept(ctrl->socket, 0, 0);
         if(fd > 0) {
             /* New connection. */
@@ -820,8 +821,8 @@ bbl_ctrl_socket_close()
     bbl_ctrl_thread_s *ctrl;
     if(g_ctx->ctrl_thread) {
         ctrl = g_ctx->ctrl_thread;
-        if(ctrl->active) {
-            ctrl->active = false;
+        if(__atomic_load_n(&ctrl->active, __ATOMIC_RELAXED)) {
+            __atomic_store_n(&ctrl->active, false, __ATOMIC_RELAXED);
             /* Reject a command still waiting for the main loop. */
             bbl_ctrl_socket_main(ctrl, false);
             pthread_join(ctrl->thread, NULL);

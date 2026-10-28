@@ -73,6 +73,7 @@ static volatile sig_atomic_t g_teardown_signal = 0;
 void
 teardown_handler(int sig)
 {
+    int saved_errno = errno;
     g_teardown_signal = sig;
     g_teardown = true;
     g_teardown_request = true;
@@ -81,10 +82,24 @@ teardown_handler(int sig)
     } else if(g_teardown_request_count < BBL_TEARDOWN_REQUSTS_MAX) {
         g_teardown_request_count++;
     }
+    errno = saved_errno;
+}
+
+/* Teardown signals are handled by the main thread only,
+ * all other threads must block them. */
+void
+teardown_signals_block(void)
+{
+    sigset_t set;
+    sigemptyset(&set);
+    sigaddset(&set, SIGINT);
+    sigaddset(&set, SIGHUP);
+    sigaddset(&set, SIGTERM);
+    pthread_sigmask(SIG_BLOCK, &set, NULL);
 }
 
 static void
-teardown_log_signal()
+teardown_log_signal(void)
 {
     int sig = g_teardown_signal;
     if(sig) {
