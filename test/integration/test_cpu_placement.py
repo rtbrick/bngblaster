@@ -73,6 +73,32 @@ def pinned_cpus(instance):
     return pinned
 
 
+def thread_ids(instance):
+    """Map thread name to Linux thread ID."""
+    tids = {}
+    task_dir = "/proc/%d/task" % instance.proc.pid
+    for tid in os.listdir(task_dir):
+        try:
+            with open("%s/%s/comm" % (task_dir, tid)) as f:
+                tids[f.read().strip()] = int(tid)
+        except OSError:
+            continue
+    return tids
+
+
+LOGGED_THREAD = re.compile(r"Started I/O thread (\S+) \(TID (\d+)\) on CPU (\d+)")
+
+
+def assert_logged_ids(instance, pinned, tids):
+    """PID, TIDs and CPUs are logged to identify stuck instances."""
+    text = log(instance)
+    assert "Started BNG Blaster (PID %d)" % instance.proc.pid in text
+    assert "Main thread pinned to CPU %d" % pinned["bngblaster"] in text
+    logged = {m.group(1): (int(m.group(2)), int(m.group(3))) for m in LOGGED_THREAD.finditer(text)}
+    io_threads = {name for name in pinned if name != "bngblaster"}
+    assert logged == {name: (tids[name], pinned[name]) for name in io_threads}
+
+
 def lock_files():
     """Map PID to the CPUs locked by this process."""
     locks = {}
@@ -121,18 +147,21 @@ def test_parallel_start_disjoint_cpus(tmp_path, processes, round):
     instances = start_parallel(tmp_path, processes, range(1, count + 1))
 
     used = []
+    ids = []
     locks = lock_files()
     for instance in instances:
         pinned = pinned_cpus(instance)
         assert "bngblaster" in pinned, "main thread of %s not pinned" % instance.name
         assert locks[instance.proc.pid] == set(pinned.values())
         used += pinned.values()
+        ids.append((pinned, thread_ids(instance)))
     assert len(used) == 3 * count
     assert len(set(used)) == len(used), "CPU selected twice: %s" % used
 
-    for instance in instances:
+    for instance, (pinned, tids) in zip(instances, ids):
         assert instance.terminate(EXIT_TIMEOUT) == 0
         assert "sharing CPU" not in log(instance)
+        assert_logged_ids(instance, pinned, tids)
     locks = lock_files()
     assert not any(instance.proc.pid in locks for instance in instances)
 

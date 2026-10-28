@@ -357,12 +357,34 @@ io_thread_main_tx_job(timer_s *timer)
     }
 }
 
+/* Thread name with direction first, so that it is kept
+ * if long interface names are truncated (e.g. rx0-eth1). */
+static void
+io_thread_name(io_thread_s *thread, char *name, size_t len)
+{
+    snprintf(name, len, "%s%d-%s",
+             thread->io->direction == IO_INGRESS ? "rx" : "tx",
+             thread->io->id, thread->io->interface->name);
+}
+
 void *
 io_thread_main(void *thread_data)
 {
     io_thread_s *thread = thread_data;
+    char name[16];
+
     teardown_signals_block();
     thread->tid = syscall(SYS_gettid);
+    io_thread_name(thread, name, sizeof(name));
+    if(thread->set_cpu_affinity) {
+        LOG(INFO, "Started I/O thread %s (TID %d) on CPU %d%s%s\n",
+            name, thread->tid, thread->selected_cpu,
+            thread->cpu_auto ? " (automatic)" : "",
+            thread->cpu_shared ? " (shared)" : "");
+    } else {
+        LOG(INFO, "Started I/O thread %s (TID %d) without CPU affinity\n",
+            name, thread->tid);
+    }
     if(thread->setup_fn) {
         (*thread->setup_fn)(thread);
     }
@@ -653,7 +675,7 @@ io_thread_main_pin(int cpu)
         return;
     }
     g_io_main_cpu = cpu;
-    LOG(DEBUG, "Main thread pinned to CPU %d\n", cpu);
+    LOG(INFO, "Main thread pinned to CPU %d\n", cpu);
 }
 
 bool
@@ -815,16 +837,6 @@ io_thread_set_affinity_all()
         main_cpu = io_thread_main_select_cpu(irq_cpus);
     }
     return main_cpu;
-}
-
-/* Thread name with direction first, so that it is kept
- * if long interface names are truncated (e.g. rx0-eth1). */
-static void
-io_thread_name(io_thread_s *thread, char *name, size_t len)
-{
-    snprintf(name, len, "%s%d-%s",
-             thread->io->direction == IO_INGRESS ? "rx" : "tx",
-             thread->io->id, thread->io->interface->name);
 }
 
 /**

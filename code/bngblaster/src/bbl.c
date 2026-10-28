@@ -761,6 +761,7 @@ main(int argc, char *argv[])
                     "logfile fflush()", 0, 100 * MSEC, g_ctx, 
                     &logfile_fflush_job);
     }
+    LOG(INFO, "Started BNG Blaster (PID %d)\n", getpid());
 
     /* Teardown requests (signals) abort the startup. */
     signal(SIGINT, teardown_handler);
