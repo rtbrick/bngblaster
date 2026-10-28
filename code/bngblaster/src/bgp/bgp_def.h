@@ -205,24 +205,6 @@ typedef struct bgp_collision_ {
     io_buffer_t write_buf;
 } bgp_collision_s;
 
-/*
- * BGP Listen Socket
- *
- * One shared listen socket per unique (interface, local address, address
- * family), deduplicated across all configured BGP sessions that share it.
- * Owned independently of any single bgp_session_s.
- */
-typedef struct bgp_listen_ {
-    uint8_t af;
-    bbl_network_interface_s *interface;
-    uint32_t ipv4_local_address;
-    ipv6addr_t ipv6_local_address;
-
-    bbl_tcp_ctx_s *tcpc;
-
-    struct bgp_listen_ *next;
-} bgp_listen_s;
-
 /* Key of the BGP session hashtable (IPv4 addresses in the first 4 bytes). */
 typedef struct bgp_session_key_ {
     uint8_t af;

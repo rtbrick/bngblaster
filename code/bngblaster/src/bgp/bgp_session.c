@@ -132,7 +132,8 @@ bgp_session_find_ipv6(ipv6addr_t *local_address, ipv6addr_t *peer_address)
     return bgp_session_find_key(&key);
 }
 
-static bgp_listen_s *g_bgp_listen_sockets = NULL;
+/* Listen socket shared by all BGP sessions (any address and interface). */
+static bbl_tcp_ctx_s *g_bgp_listen = NULL;
 
 /* Fill TCP-AO/MD5 key of the session, returns false if not enabled. */
 static bool
@@ -176,6 +177,17 @@ bgp_pre_accept_cb(struct tcp_pcb *new_pcb, void *arg)
     UNUSED(arg);
 
     session = bgp_session_find_ip(&new_pcb->local_ip, &new_pcb->remote_ip);
+    if(!session) {
+        /* No configured peer for this address pair. */
+        return false;
+    }
+    /* The listen socket is shared by all sessions and interfaces. */
+    tcp_bind_netif(new_pcb, &session->interface->netif);
+    if(session->config->ttl) {
+        new_pcb->ttl = session->config->ttl;
+    }
+    new_pcb->tos = session->config->tos;
+
     if(bgp_session_tcp_ao_key(session, &ao)) {
         if(!bbl_tcp_ao_enable(new_pcb, &ao)) {
             /* Never accept the connection without authentication. */
@@ -229,80 +241,48 @@ bgp_accepted_cb(bbl_tcp_ctx_s *tcpc, void *arg)
 /**
  * bgp_session_listen
  *
- * Ensure a shared BGP listen socket exists for this session's
- * (interface, local address, address family), creating one only if no
- * earlier session already covers it.
+ * Ensure the BGP listen socket exists. A single socket on any
+ * local address of any interface serves all sessions, so that
+ * the number of local addresses is not limited by the lwIP
+ * listen pool. Connection requests are matched to sessions
+ * by bgp_pre_accept_cb().
  *
  * @param session BGP session
  */
 void
 bgp_session_listen(bgp_session_s *session)
 {
-    bgp_listen_s *bgp_listen = g_bgp_listen_sockets;
     bbl_tcp_ctx_s *tcpc;
 
-    while(bgp_listen) {
-        if(bgp_listen->af == session->af &&
-           bgp_listen->interface == session->interface &&
-           ((session->af == AF_INET && bgp_listen->ipv4_local_address == session->ipv4_local_address) ||
-            (session->af == AF_INET6 && memcmp(&bgp_listen->ipv6_local_address, session->ipv6_local_address, IPV6_ADDR_LEN) == 0))) {
-            /* Already listening for this (interface, local address, af). */
-            return;
-        }
-        bgp_listen = bgp_listen->next;
+    if(g_bgp_listen) {
+        return;
     }
 
-    if(session->af == AF_INET) {
-        tcpc = bbl_tcp_ipv4_listen(session->interface, &session->ipv4_local_address,
-                                    BGP_PORT, session->config->ttl, session->config->tos);
-    } else {
-        tcpc = bbl_tcp_ipv6_listen(session->interface, session->ipv6_local_address,
-                                    BGP_PORT, session->config->ttl, session->config->tos);
-    }
+    tcpc = bbl_tcp_listen_any(BGP_PORT);
     if(!tcpc) {
-        LOG(BGP, "BGP (%s %s) failed to enable passive/listen mode\n",
+        LOG(ERROR, "BGP (%s %s) failed to enable passive/listen mode\n",
             session->interface->name, session->local_address_str);
         return;
     }
     tcpc->pre_accept_cb = bgp_pre_accept_cb;
     tcpc->accepted_cb = bgp_accepted_cb;
     if(!bbl_tcp_ao_listen(tcpc->pcb, bgp_listen_tcp_ao_lookup)) {
-        LOG(BGP, "BGP (%s %s) failed to enable TCP-AO/MD5 on listen socket\n",
+        LOG(ERROR, "BGP (%s %s) failed to enable TCP-AO/MD5 on listen socket\n",
             session->interface->name, session->local_address_str);
     }
-
-    bgp_listen = calloc(1, sizeof(bgp_listen_s));
-    if(!bgp_listen) {
-        bbl_tcp_ctx_free(tcpc);
-        return;
-    }
-    bgp_listen->af = session->af;
-    bgp_listen->interface = session->interface;
-    if(session->af == AF_INET) {
-        bgp_listen->ipv4_local_address = session->ipv4_local_address;
-    } else {
-        memcpy(&bgp_listen->ipv6_local_address, session->ipv6_local_address, IPV6_ADDR_LEN);
-    }
-    bgp_listen->tcpc = tcpc;
-    bgp_listen->next = g_bgp_listen_sockets;
-    g_bgp_listen_sockets = bgp_listen;
+    g_bgp_listen = tcpc;
 }
 
 /**
  * bgp_session_listen_teardown
  *
- * Close and free every shared BGP listen socket.
+ * Close and free the BGP listen socket.
  */
 void
 bgp_session_listen_teardown(void)
 {
-    bgp_listen_s *bgp_listen;
-    while(g_bgp_listen_sockets) {
-        bgp_listen = g_bgp_listen_sockets;
-        g_bgp_listen_sockets = bgp_listen->next;
-        bbl_tcp_ctx_free(bgp_listen->tcpc);
-        free(bgp_listen);
-    }
+    bbl_tcp_ctx_free(g_bgp_listen);
+    g_bgp_listen = NULL;
 }
 
 /**

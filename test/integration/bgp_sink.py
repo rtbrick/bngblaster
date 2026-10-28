@@ -10,6 +10,9 @@ so that the BNG Blaster sees zero windows (receiver backpressure) as
 with a busy route reflector. The hold timer of the BNG Blaster is not
 enforced, so a stalled sender stays visible instead of being closed.
 
+With --connect, the sink does not listen but connects to the BNG Blaster
+addresses instead, so that sessions can only come up passively.
+
 Counters are written as JSON to the stats file once per second.
 
 Copyright (C) 2020-2026, RtBrick, Inc.
@@ -17,6 +20,7 @@ SPDX-License-Identifier: BSD-3-Clause
 """
 import argparse
 import asyncio
+import ipaddress
 import json
 import os
 import random
@@ -65,7 +69,12 @@ class Sink:
             writer.write(message(MSG_KEEPALIVE))
 
     async def handle(self, reader, writer):
-        stats = self.peer(writer.get_extra_info("sockname")[0])
+        # Counted per BNG Blaster address: the local address of accepted
+        # connections, the remote address of connections made with --connect.
+        if self.args.connect:
+            stats = self.peer(writer.get_extra_info("peername")[0])
+        else:
+            stats = self.peer(writer.get_extra_info("sockname")[0])
         stats["connections"] += 1
         writer.write(open_message(self.args.asn, self.args.hold_time, self.args.router_id))
         writer.write(message(MSG_KEEPALIVE))
@@ -100,7 +109,31 @@ class Sink:
                 json.dump(self.peers, f)
             os.replace(tmp, self.args.stats)
 
+    async def connect(self, address):
+        """Connect actively to a BNG Blaster address until it accepts,
+        and again whenever the connection is closed."""
+        while True:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.setsockopt(socket.SOL_SOCKET, socket.SO_RCVBUF, self.args.rcvbuf)
+            sock.setblocking(False)
+            try:
+                await asyncio.wait_for(
+                    asyncio.get_running_loop().sock_connect(sock, (address, 179)), 5)
+            except (OSError, asyncio.TimeoutError):
+                sock.close()
+                await asyncio.sleep(1)
+                continue
+            reader, writer = await asyncio.open_connection(sock=sock, limit=self.args.rcvbuf)
+            await self.handle(reader, writer)
+            await asyncio.sleep(1)
+
     async def run(self):
+        asyncio.ensure_future(self.write_stats())
+        if self.args.connect:
+            first = ipaddress.ip_address(self.args.connect[0])
+            await asyncio.gather(*[self.connect(str(first + i))
+                                   for i in range(int(self.args.connect[1]))])
+            return
         sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         sock.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
         # Inherited by accepted sockets, limits the advertised window.
@@ -108,7 +141,6 @@ class Sink:
         sock.bind(("0.0.0.0", 179))
         server = await asyncio.start_server(self.handle, sock=sock, backlog=4096,
                                             limit=self.args.rcvbuf)
-        asyncio.ensure_future(self.write_stats())
         async with server:
             await server.serve_forever()
 
@@ -122,6 +154,9 @@ def main():
     parser.add_argument("--pause", type=float, default=0.2)
     parser.add_argument("--pause-probability", type=float, default=0.01)
     parser.add_argument("--stats", required=True)
+    parser.add_argument("--connect", nargs=2, metavar=("FIRST", "COUNT"),
+                        help="connect to COUNT consecutive addresses from FIRST "
+                             "instead of listening")
     args = parser.parse_args()
     asyncio.run(Sink(args).run())
 

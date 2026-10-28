@@ -19,6 +19,9 @@ size_t g_netif_count = 0;
  * ext_arg id in bbl_tcp_ao.c. */
 static u8_t g_tcp_listen_ext_id = LWIP_TCP_PCB_NUM_EXT_ARG_ID_INVALID;
 
+err_t
+bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t *ipaddr);
+
 /* Contexts queued by bbl_tcp_ctx_free_deferred(), drained by bbl_tcp_timer(). */
 static bbl_tcp_ctx_s *g_tcp_free_list = NULL;
 
@@ -475,6 +478,7 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
 {
     bbl_tcp_ctx_s *listen = arg;
     bbl_tcp_ctx_s *tcpc;
+    struct netif *netif;
 
     if(tpcb == NULL || err != ERR_OK) {
         if(listen->af == AF_INET) {
@@ -498,9 +502,17 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
     if(!tcpc) {
         return ERR_MEM;
     }
-    tcpc->ifname = strdup(listen->ifname);
     tcpc->interface = listen->interface;
-    tcpc->af = listen->af;
+    if(!tcpc->interface && tpcb->netif_idx != NETIF_NO_INDEX) {
+        /* Network interface selected by pre_accept_cb. */
+        netif = netif_get_by_index(tpcb->netif_idx);
+        if(netif && netif->output == bbl_tcp_netif_output_ipv4) {
+            tcpc->interface = netif->state;
+        }
+    }
+    tcpc->ifname = strdup(tcpc->interface ? tcpc->interface->name : listen->ifname);
+    /* Listen sockets of any address type accept both families. */
+    tcpc->af = IP_IS_V6_VAL(tpcb->remote_ip) ? AF_INET6 : AF_INET;
     tcpc->local_port = listen->local_port;
     tcpc->remote_port = tpcb->remote_port;
 
@@ -513,13 +525,8 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
     tcpc->poll_interval = listen->poll_interval;
     tcpc->arg = listen->arg;
 
-    /* Copy TTL and TOS from listen socket. */
-    if(listen->pcb) {
-        if(listen->pcb->ttl) {
-            tpcb->ttl = listen->pcb->ttl;
-        }
-        tpcb->tos = listen->pcb->tos;
-    }
+    /* TTL and TOS are copied from the listen socket by lwIP
+     * (tcp_listen_input) and may be changed by pre_accept_cb. */
 
     tcpc->pcb = tpcb;
     tcp_arg(tpcb, tcpc);
@@ -708,8 +715,65 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address,
 }
 
 /**
- * bbl_tcp_ipv4_connect 
- * 
+ * bbl_tcp_listen_any
+ *
+ * Listen on all local IPv4 and IPv6 addresses of all network
+ * interfaces. The pre_accept_cb must bind accepted connections
+ * to the network interface (tcp_bind_netif) used for sending.
+ *
+ * @param port local port
+ * @return TCP context
+ */
+bbl_tcp_ctx_s *
+bbl_tcp_listen_any(uint16_t port)
+{
+    bbl_tcp_ctx_s *tcpc;
+    struct tcp_pcb *lpcb;
+
+    if(!g_ctx->tcp) {
+        /* TCP not enabled! */
+        return NULL;
+    }
+
+    tcpc = calloc(1, sizeof(bbl_tcp_ctx_s));
+    if(!tcpc) {
+        return NULL;
+    }
+    tcpc->ifname = strdup("any");
+    tcpc->pcb = tcp_new_ip_type(IPADDR_TYPE_ANY);
+    if(!tcpc->pcb) {
+        bbl_tcp_ctx_free(tcpc);
+        return NULL;
+    }
+    tcp_arg(tcpc->pcb, tcpc);
+
+    if(tcp_bind(tcpc->pcb, IP_ANY_TYPE, port) != ERR_OK) {
+        bbl_tcp_ctx_free(tcpc);
+        return NULL;
+    }
+    lpcb = tcp_listen(tcpc->pcb);
+    if(!lpcb) {
+        bbl_tcp_ctx_free(tcpc);
+        return NULL;
+    }
+    tcpc->pcb = lpcb;
+
+    tcp_accept(tcpc->pcb, bbl_tcp_listen_accepted);
+    if(g_tcp_listen_ext_id != LWIP_TCP_PCB_NUM_EXT_ARG_ID_INVALID) {
+        tcp_ext_arg_set_callbacks(tcpc->pcb, g_tcp_listen_ext_id, &bbl_tcp_listen_ext_callbacks);
+    }
+
+    tcpc->listen = true;
+    tcpc->local_port = port;
+    tcpc->state = BBL_TCP_STATE_LISTEN;
+    LOG(TCP, "TCP (any:%u) listen\n", port);
+
+    return tcpc;
+}
+
+/**
+ * bbl_tcp_ipv4_connect
+ *
  * @param interface interface
  * @param src source address
  * @param dst destination address

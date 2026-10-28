@@ -123,6 +123,9 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address,
                      uint16_t port, uint8_t ttl, uint8_t tos);
 
 bbl_tcp_ctx_s *
+bbl_tcp_listen_any(uint16_t port);
+
+bbl_tcp_ctx_s *
 bbl_tcp_ipv4_connect(bbl_network_interface_s *interface, ipv4addr_t *src, ipv4addr_t *dst,
                      uint16_t port, uint8_t ttl, uint8_t tos, bbl_tcp_ao_key_s *ao);
 
