@@ -43,6 +43,8 @@ Functional tests over veth pairs between network namespaces:
   announcements and `network-announce` (`test_network_announce.py`)
 * Control socket session arguments out of range and commands executed
   by the main loop (`test_ctrl_socket.py`)
+* BGP control command IPv4/IPv6 address filters with sessions of both
+  address families (`test_bgp_ctrl_filter.py`)
 * ICMP client on a network interface pinging the Linux peer with small
   data sizes (`test_icmp_client.py`)
 * Configuration values out of range or of the wrong type rejected on
