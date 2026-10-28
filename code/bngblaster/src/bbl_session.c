@@ -1472,8 +1472,8 @@ bbl_session_json(bbl_session_s *session, bool debug)
             "dhcp-ari", session->a10nsp_session->dhcp_ari,
             "dhcpv6-aci", session->a10nsp_session->dhcpv6_aci,
             "dhcpv6-ari", session->a10nsp_session->dhcpv6_ari,
-            "tx-packets", session->a10nsp_session->stats.packets_tx,
-            "rx-packets", session->a10nsp_session->stats.packets_rx);
+            "tx-packets", (json_int_t)session->a10nsp_session->stats.packets_tx,
+            "rx-packets", (json_int_t)session->a10nsp_session->stats.packets_rx);
     }
     if(session->l2tp_session) {
         l2tp_session = l2tp_session_json(session->l2tp_session);
@@ -1512,15 +1512,15 @@ bbl_session_json(bbl_session_s *session, bool debug)
             "dhcpv6-state", dhcp_state_string(session->dhcpv6_state),
             "dhcpv6-dns1", dhcpv6_dns1,
             "dhcpv6-dns2", dhcpv6_dns2,
-            "tx-packets", session->stats.packets_tx,
-            "rx-packets", session->stats.packets_rx,
+            "tx-packets", (json_int_t)session->stats.packets_tx,
+            "rx-packets", (json_int_t)session->stats.packets_rx,
             "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
-            "tx-bytes", session->stats.bytes_tx,
-            "rx-bytes", session->stats.bytes_rx,
-            "tx-accounting-packets", session->stats.accounting_packets_tx,
-            "rx-accounting-packets", session->stats.accounting_packets_rx,
-            "tx-accounting-bytes", session->stats.accounting_bytes_tx,
-            "rx-accounting-bytes", session->stats.accounting_bytes_rx,
+            "tx-bytes", (json_int_t)session->stats.bytes_tx,
+            "rx-bytes", (json_int_t)session->stats.bytes_rx,
+            "tx-accounting-packets", (json_int_t)session->stats.accounting_packets_tx,
+            "rx-accounting-packets", (json_int_t)session->stats.accounting_packets_rx,
+            "tx-accounting-bytes", (json_int_t)session->stats.accounting_bytes_tx,
+            "rx-accounting-bytes", (json_int_t)session->stats.accounting_bytes_rx,
             "tx-igmp", session->stats.igmp_tx,
             "rx-igmp-wrong-state", session->stats.igmp_rx_wrong_state,
             "rx-igmp", session->stats.igmp_rx,
@@ -1615,15 +1615,15 @@ bbl_session_json(bbl_session_s *session, bool debug)
             "dhcpv6-tx-release", session->stats.dhcpv6_tx_release,
             "dhcpv6-dns1", dhcpv6_dns1,
             "dhcpv6-dns2", dhcpv6_dns2,
-            "tx-packets", session->stats.packets_tx,
-            "rx-packets", session->stats.packets_rx,
+            "tx-packets", (json_int_t)session->stats.packets_tx,
+            "rx-packets", (json_int_t)session->stats.packets_rx,
             "rx-fragmented-packets", session->stats.ipv4_fragmented_rx,
-            "tx-bytes", session->stats.bytes_tx,
-            "rx-bytes", session->stats.bytes_rx,
-            "tx-accounting-packets", session->stats.accounting_packets_tx,
-            "rx-accounting-packets", session->stats.accounting_packets_rx,
-            "tx-accounting-bytes", session->stats.accounting_bytes_tx,
-            "rx-accounting-bytes", session->stats.accounting_bytes_rx,
+            "tx-bytes", (json_int_t)session->stats.bytes_tx,
+            "rx-bytes", (json_int_t)session->stats.bytes_rx,
+            "tx-accounting-packets", (json_int_t)session->stats.accounting_packets_tx,
+            "rx-accounting-packets", (json_int_t)session->stats.accounting_packets_rx,
+            "tx-accounting-bytes", (json_int_t)session->stats.accounting_bytes_tx,
+            "rx-accounting-bytes", (json_int_t)session->stats.accounting_bytes_rx,
             "tx-arp", session->stats.arp_tx,
             "rx-arp", session->stats.arp_rx,
             "tx-igmp", session->stats.igmp_tx,
@@ -1694,8 +1694,8 @@ bbl_session_summary_json(bbl_session_s *session)
             "ipcp-state", ppp_state_string(session->ipcp_state),
             "ip6cp-state", ppp_state_string(session->ip6cp_state),
             "dhcpv6-state", dhcp_state_string(session->dhcpv6_state),
-            "tx-packets", session->stats.packets_tx,
-            "rx-packets", session->stats.packets_rx);
+            "tx-packets", (json_int_t)session->stats.packets_tx,
+            "rx-packets", (json_int_t)session->stats.packets_rx);
 
         if(root && session->access_type == ACCESS_TYPE_PPPOL2TP) {
             /* There is no PPPoE server in front of a PPPoL2TP session. */
@@ -1719,8 +1719,8 @@ bbl_session_summary_json(bbl_session_s *session)
             "agent-remote-id", session->agent_remote_id,
             "dhcp-state", dhcp_state_string(session->dhcp_state),
             "dhcpv6-state", dhcp_state_string(session->dhcpv6_state),
-            "tx-packets", session->stats.packets_tx,
-            "rx-packets", session->stats.packets_rx);
+            "tx-packets", (json_int_t)session->stats.packets_tx,
+            "rx-packets", (json_int_t)session->stats.packets_rx);
     }
     return root;
 }

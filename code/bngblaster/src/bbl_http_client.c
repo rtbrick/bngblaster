@@ -358,17 +358,17 @@ bbl_http_client_json(bbl_http_client_s *client)
     }
 
     root = json_pack("{sI sI ss* ss* ss* sI ss* ss* s{sI, sI, ss* so*}}",
-        "session-id", client->session->session_id,
-        "http-client-group-id", config->http_client_group_id,
+        "session-id", (json_int_t)client->session->session_id,
+        "http-client-group-id", (json_int_t)config->http_client_group_id,
         "name", config->name,
         "url", config->url,
         "destination-address", destination,
-        "destination-port", config->dst_port,
+        "destination-port", (json_int_t)config->dst_port,
         "state", bbl_http_client_state_string(client->state),
         "tcp-error", client->error_string,
         "response",
-        "minor-version", client->http.minor_version,
-        "status", client->http.status,
+        "minor-version", (json_int_t)client->http.minor_version,
+        "status", (json_int_t)client->http.status,
         "msg", client->http.msg,
         "headers", headers);
 

@@ -542,21 +542,21 @@ bbl_icmp_client_ping_result_json(bbl_icmp_client_result_ping_s *result)
     switch(result->state) {
         case ICMP_RESULT_OKAY:
             root = json_pack("{sI sI sI sI ss*}",
-                "seq", result->seq,
-                "size", result->size,
-                "ttl", result->ttl,
-                "rtt-ms", result->rtt,
+                "seq", (json_int_t)result->seq,
+                "size", (json_int_t)result->size,
+                "ttl", (json_int_t)result->ttl,
+                "rtt-ms", (json_int_t)result->rtt,
                 "state", bbl_icmp_client_result_string(result->state));
             break;
         case ICMP_RESULT_FRAGMENTATION_NEEDED:
             root = json_pack("{sI sI ss*}",
-                "seq", result->seq,
-                "mtu", result->size,
+                "seq", (json_int_t)result->seq,
+                "mtu", (json_int_t)result->size,
                 "state", bbl_icmp_client_result_string(result->state));
             break;
         default:
             root = json_pack("{sI ss*}",
-                "seq", result->seq,
+                "seq", (json_int_t)result->seq,
                 "state", bbl_icmp_client_result_string(result->state));
             break;
     }
@@ -597,14 +597,14 @@ bbl_icmp_client_json(bbl_icmp_client_s *client, bool detail)
 
     if(client->session) {
         root = json_pack("{sI sI ss* ss* ss* sI sI sI ss* so*}",
-            "session-id", client->session->session_id,
-            "icmp-client-group-id", config->icmp_client_group_id,
+            "session-id", (json_int_t)client->session->session_id,
+            "icmp-client-group-id", (json_int_t)config->icmp_client_group_id,
             "source-address", format_ipv4_address(&client->src),
             "destination-address", format_ipv4_address(&client->dst),
             "state", bbl_icmp_client_state_string(client->state),
-            "send", client->send,
-            "received", client->received,
-            "errors", client->errors,
+            "send", (json_int_t)client->send,
+            "received", (json_int_t)client->received,
+            "errors", (json_int_t)client->errors,
             "result", bbl_icmp_client_result_string(client->last_result),
             "results", results);
     } else {
@@ -613,9 +613,9 @@ bbl_icmp_client_json(bbl_icmp_client_s *client, bool detail)
             "source-address", format_ipv4_address(&client->src),
             "destination-address", format_ipv4_address(&client->dst),
             "state", bbl_icmp_client_state_string(client->state),
-            "send", client->send,
-            "received", client->received,
-            "errors", client->errors,
+            "send", (json_int_t)client->send,
+            "received", (json_int_t)client->received,
+            "errors", (json_int_t)client->errors,
             "result", bbl_icmp_client_result_string(client->last_result),
             "results", results);
     }

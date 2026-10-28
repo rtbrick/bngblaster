@@ -366,10 +366,10 @@ bbl_interface_ctrl(int fd, uint32_t session_id __attribute__((unused)), json_t *
             "type", interface_type_string(interface->type),
             "state", interface_state_string(interface->state),
             "state-transitions", interface->state_transitions,
-            "tx-packets", tx_packets,
-            "tx-bytes", tx_bytes,
-            "rx-packets", rx_packets,
-            "rx-bytes", rx_bytes);
+            "tx-packets", (json_int_t)tx_packets,
+            "tx-bytes", (json_int_t)tx_bytes,
+            "rx-packets", (json_int_t)rx_packets,
+            "rx-bytes", (json_int_t)rx_bytes);
         if(jobj) {
             json_array_append_new(jobj_array, jobj);
         }

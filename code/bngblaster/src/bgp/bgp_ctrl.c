@@ -95,7 +95,7 @@ bgp_ctrl_session_json(bgp_session_s *session)
      * is raw network order from inet_pton; convert before formatting. */
     peer_id_be = htobe32(session->peer.id);
 
-    root = json_pack("{ss ss ss sI si ss ss sI si ss ss* ss* sI sI si si si ss so* so*}",
+    root = json_pack("{ss ss ss sI si ss ss sI si ss ss* ss* sI sI sI sI sI ss so* so*}",
                      "interface", session->interface->name,
                      "local-address", session->local_address_str,
                      "local-id", format_ipv4_address(&session->config->id),
@@ -110,9 +110,9 @@ bgp_ctrl_session_json(bgp_session_s *session)
                      "raw-update-file", raw_update_file,
                      "raw-update-bytes", (json_int_t)raw_update_bytes,
                      "raw-update-bytes-acked", (json_int_t)raw_update_bytes_acked,
-                     "raw-update-start-epoch", session->update_start_timestamp.tv_sec,
-                     "raw-update-stop-epoch", session->update_stop_timestamp.tv_sec,
-                     "raw-update-duration", session->update_duration.tv_sec,
+                     "raw-update-start-epoch", (json_int_t)session->update_start_timestamp.tv_sec,
+                     "raw-update-stop-epoch", (json_int_t)session->update_stop_timestamp.tv_sec,
+                     "raw-update-duration", (json_int_t)session->update_duration.tv_sec,
                      "tcp-auth", session->config->tcp_ao_enabled ?
                                  bbl_tcp_ao_algo_string(session->config->tcp_ao_algo) : "none",
                      "tcp", tcp,

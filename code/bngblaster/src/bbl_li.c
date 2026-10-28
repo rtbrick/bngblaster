@@ -168,18 +168,18 @@ bbl_li_ctrl_flows(int fd, uint32_t session_id __attribute__((unused)), json_t *a
                                 "packet-type", bbl_li_packet_type_string(li_flow->packet_type),
                                 "sub-packet-type", bbl_li_sub_packet_type_string(li_flow->sub_packet_type),
                                 "liid", li_flow->liid,
-                                "bytes-rx", li_flow->bytes_rx,
-                                "packets-rx", li_flow->packets_rx,
-                                "packets-rx-bbl", li_flow->packets_rx_bbl,
-                                "packets-rx-ipv4", li_flow->packets_rx_ipv4,
-                                "packets-rx-ipv4-tcp", li_flow->packets_rx_ipv4_tcp,
-                                "packets-rx-ipv4-udp", li_flow->packets_rx_ipv4_udp,
-                                "packets-rx-ipv4-host-internal", li_flow->packets_rx_ipv4_internal,
-                                "packets-rx-ipv6", li_flow->packets_rx_ipv6,
-                                "packets-rx-ipv6-tcp", li_flow->packets_rx_ipv6_tcp,
-                                "packets-rx-ipv6-udp", li_flow->packets_rx_ipv6_udp,
-                                "packets-rx-ipv6-host-internal", li_flow->packets_rx_ipv6_internal,
-                                "packets-rx-ipv6-no-next-header", li_flow->packets_rx_ipv6_no_next_header);
+                                "bytes-rx", (json_int_t)li_flow->bytes_rx,
+                                "packets-rx", (json_int_t)li_flow->packets_rx,
+                                "packets-rx-bbl", (json_int_t)li_flow->packets_rx_bbl,
+                                "packets-rx-ipv4", (json_int_t)li_flow->packets_rx_ipv4,
+                                "packets-rx-ipv4-tcp", (json_int_t)li_flow->packets_rx_ipv4_tcp,
+                                "packets-rx-ipv4-udp", (json_int_t)li_flow->packets_rx_ipv4_udp,
+                                "packets-rx-ipv4-host-internal", (json_int_t)li_flow->packets_rx_ipv4_internal,
+                                "packets-rx-ipv6", (json_int_t)li_flow->packets_rx_ipv6,
+                                "packets-rx-ipv6-tcp", (json_int_t)li_flow->packets_rx_ipv6_tcp,
+                                "packets-rx-ipv6-udp", (json_int_t)li_flow->packets_rx_ipv6_udp,
+                                "packets-rx-ipv6-host-internal", (json_int_t)li_flow->packets_rx_ipv6_internal,
+                                "packets-rx-ipv6-no-next-header", (json_int_t)li_flow->packets_rx_ipv6_no_next_header);
             json_array_append_new(flows, flow);
         }
     }

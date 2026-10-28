@@ -124,13 +124,13 @@ bbl_arp_client_json(bbl_arp_client_s *client)
 {
     if(!client) return NULL;  
     return json_pack("{sI ss* ss* ss* ss* sI sI}",
-        "session-id", client->session->session_id,
+        "session-id", (json_int_t)client->session->session_id,
         "sender-ip", format_ipv4_address(&client->session->ip_address),
         "sender-mac", format_mac_address(client->session->client_mac),
         "target-ip", format_ipv4_address(&client->target_ip),
         "target-mac", format_mac_address(client->target_mac),
-        "tx", client->tx,
-        "rx", client->rx);
+        "tx", (json_int_t)client->tx,
+        "rx", (json_int_t)client->rx);
 }
 
 int

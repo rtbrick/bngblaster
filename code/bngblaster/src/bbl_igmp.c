@@ -382,8 +382,8 @@ bbl_igmp_ctrl_info(int fd, uint32_t session_id, json_t *arguments __attribute__(
                 record = json_pack("{ss so sI sI}",
                                    "group", format_ipv4_address(&group->group),
                                    "sources", sources,
-                                   "packets", group->packets,
-                                   "loss", group->loss);
+                                   "packets", (json_int_t)group->packets,
+                                   "loss", (json_int_t)group->loss);
 
                 switch (group->state) {
                     case IGMP_GROUP_IDLE:

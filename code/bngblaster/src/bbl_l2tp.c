@@ -2146,10 +2146,10 @@ l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
                      "peer-rx-bps", (json_int_t)l2tp_session->peer_rx_bps,
                      "peer-ari", string_or_na(l2tp_session->peer_ari),
                      "peer-aci", string_or_na(l2tp_session->peer_aci),
-                     "data-packets-rx", l2tp_session->stats.data_rx,
-                     "data-packets-tx", l2tp_session->stats.data_tx,
-                     "data-ipv4-packets-rx", l2tp_session->stats.data_ipv4_rx,
-                     "data-ipv4-packets-tx", l2tp_session->stats.data_ipv4_tx);
+                     "data-packets-rx", (json_int_t)l2tp_session->stats.data_rx,
+                     "data-packets-tx", (json_int_t)l2tp_session->stats.data_tx,
+                     "data-ipv4-packets-rx", (json_int_t)l2tp_session->stats.data_ipv4_rx,
+                     "data-ipv4-packets-tx", (json_int_t)l2tp_session->stats.data_ipv4_tx);
 }
 
 /* Control Socket Commands */
@@ -2432,8 +2432,8 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
                                 "control-packets-rx-out-of-order", l2tp_tunnel->stats.control_rx_ooo,
                                 "control-packets-tx", l2tp_tunnel->stats.control_tx,
                                 "control-packets-tx-retry", l2tp_tunnel->stats.control_retry,
-                                "data-packets-rx", l2tp_tunnel->stats.data_rx,
-                                "data-packets-tx", l2tp_tunnel->stats.data_tx);
+                                "data-packets-rx", (json_int_t)l2tp_tunnel->stats.data_rx,
+                                "data-packets-tx", (json_int_t)l2tp_tunnel->stats.data_tx);
             json_array_append_new(tunnels, tunnel);
         }
         l2tp_server = l2tp_server->next;
@@ -2457,8 +2457,8 @@ bbl_l2tp_ctrl_tunnels(int fd, uint32_t session_id __attribute__((unused)), json_
                                 "control-packets-rx-out-of-order", l2tp_tunnel->stats.control_rx_ooo,
                                 "control-packets-tx", l2tp_tunnel->stats.control_tx,
                                 "control-packets-tx-retry", l2tp_tunnel->stats.control_retry,
-                                "data-packets-rx", l2tp_tunnel->stats.data_rx,
-                                "data-packets-tx", l2tp_tunnel->stats.data_tx);
+                                "data-packets-rx", (json_int_t)l2tp_tunnel->stats.data_rx,
+                                "data-packets-tx", (json_int_t)l2tp_tunnel->stats.data_tx);
             json_array_append_new(tunnels, tunnel);
         }
         l2tp_client = l2tp_client->next;

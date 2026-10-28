@@ -240,7 +240,7 @@ bbl_ctrl_test_info(int fd, uint32_t session_id __attribute__((unused)), json_t *
                      "code", 200,
                      "test-info",
                      "state", test_state(),
-                     "duration", test_duration(),
+                     "duration", (int)(test_duration()),
                      "status", test_status(),
                      "task", test_task(),
                      "pid", getpid());

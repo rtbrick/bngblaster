@@ -404,8 +404,8 @@ bbl_lag_json(bbl_lag_s *lag)
             "interface", member->interface->name,
             "state", interface_state_string(member->interface->state),
             "state-transitions", member->interface->state_transitions,
-            "packets-rx", member->interface->io.rx->stats.packets,
-            "packets-tx", member->interface->io.tx->stats.packets,
+            "packets-rx", (json_int_t)member->interface->io.rx->stats.packets,
+            "packets-tx", (json_int_t)member->interface->io.tx->stats.packets,
             "stream-count", member->interface->io.tx->stream_count,
             "stream-pps", bbl_round(member->interface->io.tx->stream_pps, 100),
             "lacp-state", lacp_state_string(member->lacp_state),
@@ -420,7 +420,7 @@ bbl_lag_json(bbl_lag_s *lag)
         "interface", lag->interface->name,
         "state", interface_state_string(lag->interface->state),
         "state-transitions", lag->interface->state_transitions,
-        "stream-count", lag->stream_count,
+        "stream-count", (json_int_t)lag->stream_count,
         "members-active", lag->active_count,
         "members", jobj_array);
     

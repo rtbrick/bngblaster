@@ -147,22 +147,22 @@ ospf_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t
             "name", ospf_interface->interface->name,
             "type", ospf_interface_type_string(ospf_interface->type),
             "state", ospf_interface_state_string(ospf_interface->state),
-            "id", ospf_interface->id,
+            "id", (json_int_t)ospf_interface->id,
             "dr", format_ipv4_address(&ospf_interface->dr),
             "bdr", format_ipv4_address(&ospf_interface->bdr),
             "neighbors", ospf_interface->neighbors_count,
             "neighbors-full", ospf_interface->neighbors_full,
             "stats", 
-            "hello-rx",  ospf_interface->stats.hello_rx,
-            "hello-tx", ospf_interface->stats.hello_tx,
-            "dbd-rx", ospf_interface->stats.db_des_rx,
-            "dbd-tx", ospf_interface->stats.db_des_tx,
-            "ls-req-rx", ospf_interface->stats.ls_req_rx,
-            "ls-req-tx", ospf_interface->stats.ls_req_tx,
-            "ls-update-rx", ospf_interface->stats.ls_upd_rx,
-            "ls-update-tx", ospf_interface->stats.ls_upd_tx,
-            "ls-ack-rx", ospf_interface->stats.ls_ack_rx,
-            "ls-ack-tx", ospf_interface->stats.ls_ack_tx);
+            "hello-rx",  (json_int_t)ospf_interface->stats.hello_rx,
+            "hello-tx", (json_int_t)ospf_interface->stats.hello_tx,
+            "dbd-rx", (json_int_t)ospf_interface->stats.db_des_rx,
+            "dbd-tx", (json_int_t)ospf_interface->stats.db_des_tx,
+            "ls-req-rx", (json_int_t)ospf_interface->stats.ls_req_rx,
+            "ls-req-tx", (json_int_t)ospf_interface->stats.ls_req_tx,
+            "ls-update-rx", (json_int_t)ospf_interface->stats.ls_upd_rx,
+            "ls-update-tx", (json_int_t)ospf_interface->stats.ls_upd_tx,
+            "ls-ack-rx", (json_int_t)ospf_interface->stats.ls_ack_rx,
+            "ls-ack-tx", (json_int_t)ospf_interface->stats.ls_ack_tx);
         if(interface) {
             json_array_append_new(interfaces, interface);
         }
