@@ -14,6 +14,7 @@ typedef struct bbl_interface_ bbl_interface_s;
 
 typedef struct bbl_li_flow_
 {
+    uint32_t     header; /* flow dictionary key */
     uint32_t     src_ipv4;
     uint32_t     dst_ipv4;
     uint32_t     src_port;

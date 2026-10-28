@@ -55,6 +55,7 @@ bbl_arp_client_add(bbl_arp_client_config_s *config, bbl_session_s *session)
 {
     bbl_arp_client_s *client = calloc(1, sizeof(bbl_arp_client_s));
     client->target_ip = config->target_ip;
+    client->vlan_priority = config->vlan_priority;
     client->session = session;
 
     /* Add to session ARP client list */

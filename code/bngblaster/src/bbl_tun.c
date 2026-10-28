@@ -20,7 +20,7 @@ bbl_tun_add(char *dev, int flags)
     int fd = 0;
 
     ifr.ifr_flags = flags;
-    strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+    strncpy(ifr.ifr_name, dev, IFNAMSIZ-1);
 
     if ((fd = open("/dev/net/tun", O_RDWR)) < 0) {
         return -1;
@@ -53,10 +53,10 @@ bbl_tun_config(char *dev, bool up, uint32_t ip, uint16_t mtu)
     if ((sockfd = socket(AF_INET, SOCK_DGRAM, 0)) < 0) {
         LOG_NOARG(ERROR, "Failed to crate a socket for performing ioctls\n");
         perror("socket");
-        return -1;
+        return false;
     }
     
-    strncpy(ifr.ifr_name, dev, IFNAMSIZ);
+    strncpy(ifr.ifr_name, dev, IFNAMSIZ-1);
 
     /* Set IP address */
     addr.sin_family = AF_INET;

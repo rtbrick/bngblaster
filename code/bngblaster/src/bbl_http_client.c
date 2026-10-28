@@ -75,7 +75,7 @@ bbl_http_client_parse_response(bbl_http_client_s *client)
     if(phr_parse_response(client->response, client->response_idx, 
         &client->http.minor_version, &client->http.status, 
         &client->http.msg, &client->http.msg_len, 
-        client->http.headers, &client->http.num_headers, 0)) {
+        client->http.headers, &client->http.num_headers, 0) > 0) {
 
         LOG(HTTP, "HTTP (ID: %u Name: %s) response received with code %d\n", 
             client->session->session_id, client->config->name, 

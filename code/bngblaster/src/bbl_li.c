@@ -76,7 +76,10 @@ bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s 
         li_flow->packet_type = qmx_li->packet_type;
         li_flow->sub_packet_type = qmx_li->sub_packet_type;
         li_flow->liid = qmx_li->liid;
-        result = dict_insert(g_ctx->li_flow_dict, &qmx_li->header);
+        /* The key must be stored in the flow, as the
+         * decoded packet is overwritten by the next one. */
+        li_flow->header = qmx_li->header;
+        result = dict_insert(g_ctx->li_flow_dict, &li_flow->header);
         if(!result.inserted) {
             free(li_flow);
             return;
