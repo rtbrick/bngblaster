@@ -72,6 +72,7 @@ typedef struct bbl_ctx_
     dict *vlan_session_dict; /* hashtable for 1:1 vlan sessions */
     dict *l2tp_session_dict; /* hashtable for L2TP sessions */
     dict *li_flow_dict; /* hashtable for LI flows */
+    dict *bgp_session_dict; /* hashtable for BGP sessions by local/peer address */
 
     bbl_stream_s **stream_index;
     bbl_stream_s *stream_head;

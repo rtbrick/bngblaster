@@ -91,6 +91,7 @@ bbl_ctx_add()
     g_ctx->vlan_session_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key64, bbl_key64_hash, BBL_SESSION_HASHTABLE_SIZE);
     g_ctx->l2tp_session_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_SESSION_HASHTABLE_SIZE);
     g_ctx->li_flow_dict = hashtable_dict_new((dict_compare_func)bbl_compare_key32, bbl_key32_hash, BBL_LI_HASHTABLE_SIZE);
+    g_ctx->bgp_session_dict = hashtable_dict_new((dict_compare_func)bgp_session_key_compare, bgp_session_key_hash, BGP_SESSION_HASHTABLE_SIZE);
 
     return true;
 }
@@ -137,6 +138,7 @@ bbl_ctx_del() {
     dict_free(g_ctx->vlan_session_dict, NULL);
     dict_free(g_ctx->l2tp_session_dict, NULL);
     dict_free(g_ctx->li_flow_dict, NULL);
+    dict_free(g_ctx->bgp_session_dict, NULL);
 
     pcapng_free();
     pthread_rwlock_destroy(&g_ctx->label_db_lock);

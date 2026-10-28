@@ -26,6 +26,70 @@ bgp_session_state_string(bgp_state_t state)
     }
 }
 
+int
+bgp_session_key_compare(void *key1, void *key2)
+{
+    return memcmp(key1, key2, sizeof(bgp_session_key_s));
+}
+
+uint32_t
+bgp_session_key_hash(const void *k)
+{
+    const uint8_t *key = k;
+    uint32_t hash = 2166136261U;
+    size_t i;
+
+    /* FNV-1a */
+    for(i = 0; i < sizeof(bgp_session_key_s); i++) {
+        hash ^= key[i];
+        hash *= 16777619U;
+    }
+    return hash;
+}
+
+static bgp_session_s *
+bgp_session_find_key(bgp_session_key_s *key)
+{
+    void **search = dict_search(g_ctx->bgp_session_dict, key);
+    if(search) {
+        return *search;
+    }
+    return NULL;
+}
+
+/**
+ * bgp_session_index
+ *
+ * Add the session to the hashtable searched for received TCP
+ * packets. If several sessions have the same addresses, the
+ * first one is found as before with the session list.
+ *
+ * @param session BGP session with addresses set
+ * @return false if out of memory
+ */
+bool
+bgp_session_index(bgp_session_s *session)
+{
+    dict_insert_result result;
+
+    session->key.af = session->af;
+    if(session->af == AF_INET) {
+        memcpy(session->key.local_address, &session->ipv4_local_address, sizeof(ipv4addr_t));
+        memcpy(session->key.peer_address, &session->ipv4_peer_address, sizeof(ipv4addr_t));
+    } else {
+        memcpy(session->key.local_address, session->ipv6_local_address, IPV6_ADDR_LEN);
+        memcpy(session->key.peer_address, session->ipv6_peer_address, IPV6_ADDR_LEN);
+    }
+    result = dict_insert(g_ctx->bgp_session_dict, &session->key);
+    if(!result.datum_ptr) {
+        return false;
+    }
+    if(result.inserted) {
+        *result.datum_ptr = session;
+    }
+    return true;
+}
+
 /**
  * bgp_session_find_ipv4
  *
@@ -39,16 +103,12 @@ bgp_session_state_string(bgp_state_t state)
 bgp_session_s *
 bgp_session_find_ipv4(ipv4addr_t local_address, ipv4addr_t peer_address)
 {
-    bgp_session_s *bgp_session = g_ctx->bgp_sessions;
-    while(bgp_session) {
-        if(bgp_session->af == AF_INET &&
-           bgp_session->ipv4_local_address == local_address &&
-           bgp_session->ipv4_peer_address == peer_address) {
-            return bgp_session;
-        }
-        bgp_session = bgp_session->next;
-    }
-    return NULL;
+    bgp_session_key_s key = {0};
+
+    key.af = AF_INET;
+    memcpy(key.local_address, &local_address, sizeof(ipv4addr_t));
+    memcpy(key.peer_address, &peer_address, sizeof(ipv4addr_t));
+    return bgp_session_find_key(&key);
 }
 
 /**
@@ -64,17 +124,12 @@ bgp_session_find_ipv4(ipv4addr_t local_address, ipv4addr_t peer_address)
 bgp_session_s *
 bgp_session_find_ipv6(ipv6addr_t *local_address, ipv6addr_t *peer_address)
 {
-    bgp_session_s *bgp_session = g_ctx->bgp_sessions;
-    while(bgp_session) {
-        if(bgp_session->af == AF_INET6 &&
-           bgp_session->ipv6_local_address && bgp_session->ipv6_peer_address &&
-           memcmp(bgp_session->ipv6_local_address, local_address, IPV6_ADDR_LEN) == 0 &&
-           memcmp(bgp_session->ipv6_peer_address, peer_address, IPV6_ADDR_LEN) == 0) {
-            return bgp_session;
-        }
-        bgp_session = bgp_session->next;
-    }
-    return NULL;
+    bgp_session_key_s key;
+
+    key.af = AF_INET6;
+    memcpy(key.local_address, local_address, IPV6_ADDR_LEN);
+    memcpy(key.peer_address, peer_address, IPV6_ADDR_LEN);
+    return bgp_session_find_key(&key);
 }
 
 static bgp_listen_s *g_bgp_listen_sockets = NULL;

@@ -18,6 +18,15 @@ bgp_session_reset_read_buffer(bgp_session_s *session);
 void
 bgp_session_reset_write_buffer(bgp_session_s *session);
 
+int
+bgp_session_key_compare(void *key1, void *key2);
+
+uint32_t
+bgp_session_key_hash(const void *k);
+
+bool
+bgp_session_index(bgp_session_s *session);
+
 bgp_session_s *
 bgp_session_find_ipv4(ipv4addr_t local_address, ipv4addr_t peer_address);
 

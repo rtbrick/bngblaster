@@ -69,6 +69,9 @@ bgp_init()
             session->local_address_str = strdup(format_ipv6_address(session->ipv6_local_address));
             session->peer_address_str = strdup(format_ipv6_address(session->ipv6_peer_address));
         }
+        if(!bgp_session_index(session)) {
+            return false;
+        }
 
         /* Init read/write buffer */
         session->read_buf.data = malloc(BGP_BUF_SIZE);

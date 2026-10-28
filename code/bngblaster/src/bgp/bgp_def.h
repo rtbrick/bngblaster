@@ -17,6 +17,7 @@
 #define BGP_MIN_MESSAGE_SIZE        19U
 #define BGP_MAX_MESSAGE_SIZE        4096U
 #define BGP_BUF_SIZE                256*1024
+#define BGP_SESSION_HASHTABLE_SIZE  32771 /* is a prime number */
 #define BGP_DEFAULT_AS              65000
 #define BGP_DEFAULT_HOLD_TIME       90
 #define BGP_DEFAULT_TEARDOWN_TIME   5
@@ -222,10 +223,18 @@ typedef struct bgp_listen_ {
     struct bgp_listen_ *next;
 } bgp_listen_s;
 
+/* Key of the BGP session hashtable (IPv4 addresses in the first 4 bytes). */
+typedef struct bgp_session_key_ {
+    uint8_t af;
+    uint8_t local_address[IPV6_ADDR_LEN];
+    uint8_t peer_address[IPV6_ADDR_LEN];
+} bgp_session_key_s;
+
 /*
  * BGP Session
  */
 typedef struct bgp_session_ {
+    bgp_session_key_s key; /* g_ctx->bgp_session_dict */
     uint8_t  af; /* address family */
     uint32_t ipv4_local_address;
     uint32_t ipv4_peer_address;
