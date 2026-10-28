@@ -68,9 +68,10 @@ extern unsigned char debug_flags;
    but are faster that way! */
 #define MEM_ALIGNMENT            4
 
-/* MEM_SIZE: the size of the heap memory. If the application will send
-   a lot of data that needs to be copied, this should be set high. */
-#define MEM_SIZE                 16*1024*1024
+/* MEM_LIBC_MALLOC: use malloc() instead of the lwIP heap (MEM_SIZE),
+   whose first fit search was the main TCP send cost with many
+   connections (one header pbuf per segment). */
+#define MEM_LIBC_MALLOC          1
 /* MEMP_NUM_PBUF: the number of memp struct pbufs. If the application
    sends a lot of data out of ROM (or other static memory), this
    should be set high. */
@@ -90,7 +91,7 @@ extern unsigned char debug_flags;
 /* MEMP_NUM_TCP_SEG: the number of simultaneously queued TCP
    segments. Sized for 1000 connections with a full send buffer
    (TCP_SND_BUF/TCP_MSS segments), each segment also needs a pbuf
-   (MEMP_NUM_PBUF) and its headers from the heap (MEM_SIZE). */
+   (MEMP_NUM_PBUF) and its headers from malloc(). */
 #define MEMP_NUM_TCP_SEG         32768
 /* MEMP_NUM_SYS_TIMEOUT: the number of simultaneously active
    timeouts. */
@@ -135,7 +136,7 @@ extern unsigned char debug_flags;
 #define TCP_QUEUE_OOSEQ          0
 
 /* TCP Maximum segment size. */
-#define TCP_MSS                  1024
+#define TCP_MSS                  1460
 
 /* TCP sender buffer space (bytes). */
 #define TCP_SND_BUF              (32 * TCP_MSS)

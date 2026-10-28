@@ -85,7 +85,11 @@ bbl_tcp_close(bbl_tcp_ctx_s *tcpc)
                 tcp_err(tcpc->pcb, NULL);
                 tcp_poll(tcpc->pcb, NULL, 0);
             }
-            tcp_close(tcpc->pcb);
+            if(tcp_close(tcpc->pcb) != ERR_OK) {
+                /* No memory for the FIN, the pcb would stay open
+                 * without any owner. */
+                tcp_abort(tcpc->pcb);
+            }
         }
         if(tcpc->sp) {
             free(tcpc->sp);
@@ -278,7 +282,7 @@ err_t
 bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
 {
     bbl_tcp_ctx_s *tcpc = arg;
-    uint16_t tx;
+    uint32_t tx;
     err_t result = ERR_OK;
 
     UNUSED(len);
@@ -294,10 +298,14 @@ bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
                 result = ERR_MEM;
                 break;
             }
+            if(tx > UINT16_MAX) {
+                /* tcp_write() length is 16 bit. */
+                tx = UINT16_MAX;
+            }
             if((tcpc->tx.offset + tx) > tcpc->tx.len) {
                 tx = tcpc->tx.len - tcpc->tx.offset;
             }
-            result = tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, tx, tcpc->tx.flags);
+            result = tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, (u16_t)tx, tcpc->tx.flags);
             if(result != ERR_OK) {
                 break;
             }
@@ -1251,8 +1259,44 @@ bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len)
 
     if(tcpc->state == BBL_TCP_STATE_IDLE) {
         bbl_tcp_sent_cb(tcpc, tcpc->pcb, 0);
+        /* Send now instead of with the next TCP timer. This is
+         * ignored by lwIP while processing input for this pcb,
+         * which is followed by output anyway. */
+        tcp_output(tcpc->pcb);
     }
     return true;
+}
+
+/**
+ * bbl_tcp_txq_resume
+ *
+ * Resend TCP segments that could not be sent because the
+ * TXQ was full, once this TXQ is drained.
+ *
+ * @param txq TXQ
+ */
+void
+bbl_tcp_txq_resume(bbl_txq_s *txq)
+{
+    if(txq->tcp_blocked && bbl_txq_is_empty(txq)) {
+        txq->tcp_blocked = false;
+        tcp_txnow();
+    }
+}
+
+static err_t
+bbl_tcp_txq_output(bbl_txq_s *txq, bbl_ethernet_header_s *eth)
+{
+    switch(bbl_txq_to_buffer(txq, eth)) {
+        case BBL_TXQ_OK:
+            return ERR_OK;
+        case BBL_TXQ_FULL:
+            /* lwIP keeps the segment, see bbl_tcp_txq_resume(). */
+            txq->tcp_blocked = true;
+            return ERR_IF;
+        default:
+            return ERR_IF;
+    }
 }
 
 /**
@@ -1273,7 +1317,7 @@ bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t 
     eth.type = ETH_TYPE_IPV4;
     eth.lwip = true;
     eth.next = p;
-    if(bbl_txq_to_buffer(interface->txq, &eth) != BBL_TXQ_OK) {
+    if(bbl_tcp_txq_output(interface->txq, &eth) != ERR_OK) {
         return ERR_IF;
     }
     interface->stats.tcp_tx++;
@@ -1320,7 +1364,7 @@ bbl_tcp_netif_output_ipv4_session(struct netif *netif, struct pbuf *p, const ip4
     }
     eth.vlan_inner_priority = eth.vlan_outer_priority;
 
-    if(bbl_txq_to_buffer(session->access_interface->txq, &eth) != BBL_TXQ_OK) {
+    if(bbl_tcp_txq_output(session->access_interface->txq, &eth) != ERR_OK) {
         return ERR_IF;
     }
     return ERR_OK;
@@ -1344,7 +1388,7 @@ bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t 
     eth.type = ETH_TYPE_IPV6;
     eth.lwip = true;
     eth.next = p;
-    if(bbl_txq_to_buffer(interface->txq, &eth) != BBL_TXQ_OK) {
+    if(bbl_tcp_txq_output(interface->txq, &eth) != ERR_OK) {
         return ERR_IF;
     }
     interface->stats.tcp_tx++;
@@ -1391,7 +1435,7 @@ bbl_tcp_netif_output_ipv6_session(struct netif *netif, struct pbuf *p, const ip6
     }
     eth.vlan_inner_priority = eth.vlan_outer_priority;
 
-    if(bbl_txq_to_buffer(session->access_interface->txq, &eth) != BBL_TXQ_OK) {
+    if(bbl_tcp_txq_output(session->access_interface->txq, &eth) != ERR_OK) {
         return ERR_IF;
     }
     return ERR_OK;

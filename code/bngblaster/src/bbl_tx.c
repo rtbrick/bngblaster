@@ -1791,6 +1791,7 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         access_interface = interface->access;
         if(!bbl_txq_is_empty(access_interface->txq)) {
             *len = bbl_txq_from_buffer(access_interface->txq, buf);
+            bbl_tcp_txq_resume(access_interface->txq);
             if(*len) {
                 access_interface->stats.packets_tx++;
                 access_interface->stats.bytes_tx += *len;
@@ -1828,6 +1829,7 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         a10nsp_interface = interface->a10nsp;
         if(!bbl_txq_is_empty(a10nsp_interface->txq)) {
             *len = bbl_txq_from_buffer(a10nsp_interface->txq, buf);
+            bbl_tcp_txq_resume(a10nsp_interface->txq);
             if(*len) {
                 a10nsp_interface->stats.packets_tx++;
                 a10nsp_interface->stats.bytes_tx += *len;
@@ -1846,6 +1848,7 @@ bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len)
         }
         if(!bbl_txq_is_empty(network_interface->txq)) {
             *len = bbl_txq_from_buffer(network_interface->txq, buf);
+            bbl_tcp_txq_resume(network_interface->txq);
             if(*len) {
                 network_interface->stats.packets_tx++;
                 network_interface->stats.bytes_tx += *len;

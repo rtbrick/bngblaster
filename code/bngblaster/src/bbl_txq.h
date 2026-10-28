@@ -38,6 +38,7 @@ typedef struct bbl_txq_ {
 
     atomic_uint_least16_t write; /* current write slot */
     atomic_uint_least16_t next; /* next write slot */
+    bool tcp_blocked; /* TCP (lwIP) output failed with TXQ full */
     struct {
         uint32_t full; 
         uint32_t encode_error;
