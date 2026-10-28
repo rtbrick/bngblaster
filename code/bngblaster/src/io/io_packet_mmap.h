@@ -12,6 +12,9 @@
 bool
 io_packet_mmap_init(io_handle_s *io);
 
+uint32_t
+io_packet_mmap_frame_size();
+
 void
 io_packet_mmap_set_max_stream_len();
 

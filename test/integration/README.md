@@ -28,6 +28,8 @@ Functional tests over veth pairs between network namespaces:
 * LDP label withdraw and session down, and BGP L2VPN label blocks,
   with streams sent by the main loop and by TX threads
   (`test_ldp.py`, `test_bgp_l2vpn.py`)
+* Jumbo frames (9000 byte stream packets) with PACKET_MMAP
+  (`test_jumbo_frames.py`)
 * Stream capture with TX/RX threads including PCAP stop/start at
   runtime, and restored VLAN of received packets with PACKET_MMAP
   (`test_capture_streams.py`)

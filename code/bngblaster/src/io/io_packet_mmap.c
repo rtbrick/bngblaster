@@ -461,17 +461,25 @@ io_packet_mmap_init(io_handle_s *io)
     return true;
 }
 
+/* Each ring block holds one frame and must be a multiple of the
+ * page size, which is 16K or 64K on some aarch64 systems. */
+uint32_t
+io_packet_mmap_frame_size()
+{
+    uint32_t page_size = getpagesize();
+
+    if(g_ctx->config.jumbo_frames) {
+        return (IO_JUMBO_BLOCK_SIZE + page_size - 1) / page_size * page_size;
+    }
+    return page_size;
+}
+
 void
 io_packet_mmap_set_max_stream_len()
 {
-    uint16_t len;
+    uint32_t len;
 
-    if(g_ctx->config.jumbo_frames) {
-        len = IO_JUMBO_BLOCK_SIZE - BBL_MAX_STREAM_OVERHEAD - (TPACKET2_HDRLEN - sizeof(struct sockaddr_ll));
-    } else {
-        len = getpagesize() - BBL_MAX_STREAM_OVERHEAD - (TPACKET2_HDRLEN - sizeof(struct sockaddr_ll));
-    }
-
+    len = io_packet_mmap_frame_size() - BBL_MAX_STREAM_OVERHEAD - (TPACKET2_HDRLEN - sizeof(struct sockaddr_ll));
     if(len < g_ctx->config.io_max_stream_len) {
         LOG(DEBUG, "Set max allowed stream length to %u because of packet_mmap limitations\n", len);
         g_ctx->config.io_max_stream_len = len;
