@@ -2143,6 +2143,7 @@ bbl_stream_select_io_lag(bbl_stream_s *stream)
     if(!member) {
         LOG(ERROR, "Failed to add stream %s to LAG %s (no member interfaces)\n", 
             stream->config->name, lag->interface->name);
+        return;
     }
     io = member->interface->io.tx;
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
@@ -3307,6 +3308,18 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
 
 /* Control Socket Commands */
 
+/* Get stream from flow-id array element, converting
+ * out of range numbers is undefined behaviour. */
+static bbl_stream_s *
+bbl_stream_ctrl_flow_get(json_t *jobj)
+{
+    double flow_id = json_number_value(jobj);
+    if(!(flow_id >= 1 && flow_id <= UINT32_MAX)) {
+        return NULL;
+    }
+    return bbl_stream_index_get(flow_id);
+}
+
 /**
  * bbl_stream_ctrl_args
  *
@@ -3530,7 +3543,7 @@ bbl_stream_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
         for(int i = 0; i < args.flows_array_len; i++) {
             jobj = json_array_get(args.flows, i);
             if(json_is_number(jobj)) {
-                stream = bbl_stream_index_get(json_number_value(jobj));
+                stream = bbl_stream_ctrl_flow_get(jobj);
                 if(stream) {
                     jobj = bbl_stream_summary_json(stream);
                     if(jobj) json_array_append_new(jobj_array, jobj);
@@ -3702,7 +3715,7 @@ bbl_stream_ctrl_enabled(int fd, uint32_t session_id, json_t *arguments,
         for(int i = 0; i < args.flows_array_len; i++) {
             jobj = json_array_get(args.flows, i);
             if(json_is_number(jobj)) {
-                stream = bbl_stream_index_get(json_number_value(jobj));
+                stream = bbl_stream_ctrl_flow_get(jobj);
                 if(stream && !(stream->tx_flags & STREAM_FLAG_SESSION_TRAFFIC) &&
                    stream->type != BBL_TYPE_MULTICAST) {
                     stream->enabled = enabled;
@@ -3760,7 +3773,10 @@ bbl_stream_ctrl_update_stream(bbl_stream_s *stream, uint8_t tcp_flags, double pp
     if(pps) {
         stream->update_pps = true;
         stream->pps = pps;
-        stream->io->update_streams = true;
+        /* Streams without IO get the new rate when added to an IO. */
+        if(stream->io) {
+            stream->io->update_streams = true;
+        }
     }
 }
 
@@ -3802,7 +3818,12 @@ bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json
         }
     }
     jobj = json_object_get(arguments, "pps");
-    if(jobj) pps = json_number_value(jobj);
+    if(jobj) {
+        pps = json_number_value(jobj);
+        if(!json_is_number(jobj) || pps < 0) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid pps");
+        }
+    }
 
     if(args.stream) {
         bbl_stream_ctrl_update_stream(args.stream, tcp_flags, pps);
@@ -3810,7 +3831,7 @@ bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json
         for(int i = 0; i < args.flows_array_len; i++) {
             jobj = json_array_get(args.flows, i);
             if(json_is_number(jobj)) {
-                stream = bbl_stream_index_get(json_number_value(jobj));
+                stream = bbl_stream_ctrl_flow_get(jobj);
                 if(stream) bbl_stream_ctrl_update_stream(stream, tcp_flags, pps);
             }
         }

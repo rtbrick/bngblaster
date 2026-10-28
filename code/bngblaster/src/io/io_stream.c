@@ -14,7 +14,9 @@ bucket_new(io_handle_s *io, double pps)
     io_bucket_s *iter_bucket;
     io_bucket_s *io_bucket = calloc(1, sizeof(io_bucket_s));
     io_bucket->pps = pps;
-    io_bucket->nsec = SEC / pps;
+    /* Limit the interval to about 31 years, as converting
+     * larger values to integer is undefined behaviour. */
+    io_bucket->nsec = SEC / pps > 1e18 ? 1e18 : SEC / pps;
 
     iter_bucket = io->bucket_head;
     if(iter_bucket && iter_bucket->pps > pps) {
@@ -171,7 +173,8 @@ io_stream_update_pps(io_handle_s *io)
                 io_bucket->stream_count--;
                 io_bucket->stream_cur = io_bucket->stream_head;
                 io->stream_count--;
-                io->stream_pps -= stream->pps;
+                /* The stream has the new pps already. */
+                io->stream_pps -= io_bucket->pps;
                 stream->io_next = NULL;
                 /* Add stream to new bucket. */
                 if(io == stream->io) {

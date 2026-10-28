@@ -22,8 +22,9 @@ Functional tests over veth pairs between network namespaces:
   (`test_cpu_placement.py`)
 * AF_XDP instances started in parallel on a veth pair, skipped if the
   BNG Blaster is built without AF_XDP (`test_af_xdp_parallel.py`)
-* Static LAG interfaces over loopback links with stream traffic,
-  running on the host without namespaces (`test_lag_loopback.py`)
+* Static LAG interfaces over loopback links with stream traffic and
+  stream updates of LACP LAG interfaces which are not up, running on
+  the host without namespaces (`test_lag_loopback.py`)
 * Stream capture with TX/RX threads including PCAP stop/start at
   runtime, and restored VLAN of received packets with PACKET_MMAP
   (`test_capture_streams.py`)

@@ -143,3 +143,22 @@ def test_lacp_standby(tmp_path, processes):
                message="stream traffic on former standby member")
 
     assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_stream_update_lacp_down(tmp_path, processes):
+    """Streams of a LACP LAG interface, which is not up as the peer
+    does not run LACP, have no IO assigned yet. Updating their rate
+    must not crash and the new rate is used once the LAG comes up."""
+    config = lag_config(False, True)
+    config["interfaces"]["lag"][1]["lacp"] = False
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
+    processes.append(instance)
+    wait_until(lambda: instance.ctrl("stream-stats")["code"] == 200, 5, 0.1, message="started")
+    lag = {l["interface"]: l["state"] for l in instance.ctrl("lag-info")["lag-info"]}
+    assert lag["lagA"] != "Up"
+
+    assert instance.ctrl("stream-update", pps=200)["code"] == 200
+    assert instance.ctrl("stream-update", pps=-1)["code"] == 400
+    assert instance.ctrl("stream-update", pps="fast")["code"] == 400
+    assert instance.ctrl("stream-update", flows=[-1, 1e12, 1], pps=300)["code"] == 200
+    assert instance.terminate(EXIT_TIMEOUT) == 0
