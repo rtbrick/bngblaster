@@ -40,6 +40,8 @@ Functional tests over veth pairs between network namespaces:
   by the main loop (`test_ctrl_socket.py`)
 * ICMP client on a network interface pinging the Linux peer with small
   data sizes (`test_icmp_client.py`)
+* Configuration values out of range or of the wrong type rejected on
+  start (`test_config_invalid.py`)
 
 Each test creates two namespaces `bbl-it-<n>-a` and `bbl-it-<n>-b`
 connected by a veth pair. Configs, logs, pcaps and JSON reports of all

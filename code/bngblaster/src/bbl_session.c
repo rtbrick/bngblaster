@@ -2344,7 +2344,8 @@ bbl_session_ctrl_summary(int fd, uint32_t session_id, json_t *arguments)
         size = json_array_size(sessions);
         for(int i = 0; i < size; i++) {
             jobj = json_array_get(sessions, i);
-            if(json_is_number(jobj)) {
+            if(json_is_number(jobj) && json_number_value(jobj) >= 1 &&
+               json_number_value(jobj) <= UINT32_MAX) {
                 session = bbl_session_get(json_number_value(jobj));
                 if(session) {
                     jobj = bbl_session_summary_json(session);

@@ -758,14 +758,14 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         link_config->qdisc_bypass = g_ctx->config.qdisc_bypass;
     }
 
-    value = json_object_get(link, "tx-interval");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(link, value, "links", "tx-interval", 0.0001, 1000);
+    if(value) {
         link_config->tx_interval = json_number_value(value) * MSEC;
     } else {
         link_config->tx_interval = g_ctx->config.tx_interval;
     }
-    value = json_object_get(link, "rx-interval");
-    if(json_is_number(value)) {
+    JSON_OBJ_GET_NUMBER(link, value, "links", "rx-interval", 0.0001, 1000);
+    if(value) {
         link_config->rx_interval = json_number_value(value) * MSEC;
     } else {
         link_config->rx_interval = g_ctx->config.rx_interval;
@@ -804,7 +804,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         link_config->rx_cpuset = calloc(size, sizeof(uint16_t));
         for(i = 0; i < size; i++) {
             sub = json_array_get(value, i);
-            if(json_is_number(sub)) {
+            if(json_is_number(sub) && json_number_value(sub) >= 0 && json_number_value(sub) <= 4095) {
                 link_config->rx_cpuset[i] = json_number_value(sub);
             } else {
                 fprintf(stderr, "JSON config error: Invalid value for links->rx-cpuset\n");
@@ -812,6 +812,10 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             }
         }
     } else if(json_is_number(value)) {
+        if(!(json_number_value(value) >= 0 && json_number_value(value) <= 4095)) {
+            fprintf(stderr, "JSON config error: Invalid value for links->rx-cpuset\n");
+            return false;
+        }
         link_config->rx_cpuset = calloc(1, sizeof(uint16_t));
         link_config->rx_cpuset[0] = json_number_value(value);
         link_config->rx_cpuset_count = 1;
@@ -826,7 +830,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         link_config->tx_cpuset = calloc(size, sizeof(uint16_t));
         for(i = 0; i < size; i++) {
             sub = json_array_get(value, i);
-            if(json_is_number(sub)) {
+            if(json_is_number(sub) && json_number_value(sub) >= 0 && json_number_value(sub) <= 4095) {
                 link_config->tx_cpuset[i] = json_number_value(sub);
             } else {
                 fprintf(stderr, "JSON config error: Invalid value for links->tx-cpuset\n");
@@ -834,6 +838,10 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
             }
         }
     } else if(json_is_number(value)) {
+        if(!(json_number_value(value) >= 0 && json_number_value(value) <= 4095)) {
+            fprintf(stderr, "JSON config error: Invalid value for links->tx-cpuset\n");
+            return false;
+        }
         link_config->tx_cpuset = calloc(1, sizeof(uint16_t));
         link_config->tx_cpuset[0] = json_number_value(value);
         link_config->tx_cpuset_count = 1;
@@ -2280,7 +2288,8 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->area_count = json_array_size(value);
         isis_config->area = calloc(isis_config->area_count, sizeof(isis_area_s));
         for(i = 0; i < isis_config->area_count; i++) {
-            if(!isis_str_to_area(json_string_value(json_array_get(value, i)), &isis_config->area[i])) {
+            if(!json_is_string(json_array_get(value, i)) ||
+               !isis_str_to_area(json_string_value(json_array_get(value, i)), &isis_config->area[i])) {
                 fprintf(stderr, "JSON config error: Invalid value for isis->area\n");
                 return false;
             }
@@ -2335,11 +2344,17 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->sr_algo = calloc(isis_config->sr_algo_count, sizeof(uint8_t));
         for(i = 0; i < isis_config->sr_algo_count; i++) {
             sub = json_array_get(value, i);
-            if(json_is_number(sub)) {
-                isis_config->sr_algo[i] = json_number_value(sub);
+            if(!(json_is_number(sub) && json_number_value(sub) >= 0 && json_number_value(sub) <= 255)) {
+                fprintf(stderr, "JSON config error: Invalid value for isis->sr-algo\n");
+                return false;
             }
+            isis_config->sr_algo[i] = json_number_value(sub);
         }
     } else if(json_is_number(value)) {
+        if(!(json_number_value(value) >= 0 && json_number_value(value) <= 255)) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->sr-algo\n");
+            return false;
+        }
         isis_config->sr_algo = calloc(1, sizeof(uint8_t));
         isis_config->sr_algo[0] = json_number_value(value);
         isis_config->sr_algo_count = 1;
@@ -5008,12 +5023,12 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.qdisc_bypass = json_boolean_value(value);
         }
-        value = json_object_get(section, "tx-interval");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(section, value, "interfaces", "tx-interval", 0.0001, 1000);
+        if(value) {
             g_ctx->config.tx_interval = json_number_value(value) * MSEC;
         }
-        value = json_object_get(section, "rx-interval");
-        if(json_is_number(value)) {
+        JSON_OBJ_GET_NUMBER(section, value, "interfaces", "rx-interval", 0.0001, 1000);
+        if(value) {
             g_ctx->config.rx_interval = json_number_value(value) * MSEC;
         }
         JSON_OBJ_GET_NUMBER(section, value, "interfaces", "tx-threads", 0, 255);

@@ -449,6 +449,9 @@ isis_ctrl_lsp_flap(int fd, uint32_t session_id __attribute__((unused)), json_t *
 
     value = json_object_get(arguments, "timer");
     if(json_is_number(value)) {
+        if(!(json_number_value(value) >= 0 && json_number_value(value) <= UINT32_MAX)) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid timer");
+        }
         timer = json_number_value(value);
     }
 
