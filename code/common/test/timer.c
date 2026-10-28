@@ -80,6 +80,15 @@ rearm_from_callback_cb(timer_s *timer)
 }
 
 static void
+rearm_other_interval_cb(timer_s *timer)
+{
+    timer_root_s *root = timer->data;
+
+    g_callback_counter++;
+    timer_add(root, timer->ptimer, "REARM-OTHER", 0, 50 * MSEC, root, single_shot_cb);
+}
+
+static void
 sleep_ms(long ms)
 {
     struct timespec ts;
@@ -197,6 +206,36 @@ test_timer_rearm_from_callback(void **state)
     assert_null(timer);
 }
 
+/* A timer restarted with another interval in its callback moves to
+ * another bucket, which must not be walked as the current bucket. */
+static void
+test_timer_rearm_other_interval_from_callback(void **state)
+{
+    timer_root_s *root = *state;
+    timer_s *timer_a = NULL;
+    timer_s *timer_b = NULL;
+    timer_s *a, *b;
+
+    timer_add(root, &timer_a, "A", 0, 5 * MSEC, root, rearm_other_interval_cb);
+    timer_add(root, &timer_b, "B", 0, 5 * MSEC, root, single_shot_cb);
+    a = timer_a;
+    b = timer_b;
+    sleep_ms(15);
+    timer_walk(root);
+    timer_walk(root);
+    /* A fired and is restarted, single shot B fired and is deleted. */
+    assert_int_equal(g_callback_counter, 2);
+    assert_ptr_equal(timer_a, a);
+    assert_ptr_equal(g_last_timer, b);
+    assert_null(timer_b);
+
+    sleep_ms(60);
+    timer_walk(root);
+    assert_int_equal(g_callback_counter, 3);
+    assert_ptr_equal(g_last_timer, a);
+    timer_flush_root(root);
+}
+
 /* The owner of the timer reference may be freed directly after
  * timer_del, before the deletion is processed. */
 static void
@@ -308,6 +347,9 @@ main(void)
                                         setup_timer_root,
                                         teardown_timer_root),
         cmocka_unit_test_setup_teardown(test_timer_rearm_from_callback,
+                                        setup_timer_root,
+                                        teardown_timer_root),
+        cmocka_unit_test_setup_teardown(test_timer_rearm_other_interval_from_callback,
                                         setup_timer_root,
                                         teardown_timer_root),
         cmocka_unit_test_setup_teardown(test_timer_del_clears_reference,

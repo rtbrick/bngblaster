@@ -557,6 +557,13 @@ timer_walk(timer_root_s *root)
                  * Those timer gets deleted. */
                 timer_del(timer);
             }
+            if(timer->timer_bucket != timer_bucket) {
+                /* Timers restarted in callback with another interval are
+                 * moved to another bucket. Stop walking this bucket, as the
+                 * next node belongs to the other bucket. The remaining
+                 * expired timers are processed by the next walk. */
+                break;
+            }
         }
 
         /* If the bucket is empty, remove it. */
