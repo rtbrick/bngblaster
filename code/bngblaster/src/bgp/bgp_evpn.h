@@ -16,6 +16,9 @@ bool
 bgp_evpn_update(bgp_session_s *session, bgp_update_s *update);
 
 void
+bgp_evpn_version_increment();
+
+void
 bgp_evpn_session_down(bgp_session_s *session);
 
 bgp_evpn_entry_s *

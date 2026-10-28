@@ -30,6 +30,16 @@ ldb_db_init(ldp_instance_s *instance)
     return true;
 }
 
+/* Traffic streams (TX threads) read the state and version without
+ * lock and rebuild their packets (with lock) if the version changes,
+ * so the version must be updated after all other fields. */
+static void
+ldb_db_set_active(ldp_db_entry_s *entry, bool active)
+{
+    __atomic_store_n(&entry->active, active, __ATOMIC_RELAXED);
+    __atomic_store_n(&entry->version, entry->version + 1, __ATOMIC_RELEASE);
+}
+
 bool
 ldb_db_add_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label)
 {
@@ -38,10 +48,10 @@ ldb_db_add_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label)
     ldp_db_entry_s *entry;
     dict_insert_result result;
 
+    pthread_rwlock_wrlock(&g_ctx->label_db_lock);
     search = hb_tree_search(instance->db.ipv4, &prefix->address);
     if(search) {
         entry = *search;
-        entry->version++;
     } else {
         entry = calloc(1, sizeof(ldp_db_entry_s));
         entry->afi = IANA_AFI_IPV4;
@@ -50,16 +60,19 @@ ldb_db_add_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label)
         if(result.inserted) {
             *result.datum_ptr = entry;
         } else {
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
+            free(entry);
             LOG(ERROR, "LDP (%s - %s) failed to add IPv4 entry to database\n",
                 ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
                 ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
             return false;
         }
     }
-    entry->active = true;
     entry->prefix.ipv4.len = prefix->len;
     entry->label = label;
     entry->source = session;
+    ldb_db_set_active(entry, true);
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
     return true;
 }
 
@@ -85,10 +98,10 @@ ldb_db_add_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label)
     ldp_db_entry_s *entry;
     dict_insert_result result;
 
+    pthread_rwlock_wrlock(&g_ctx->label_db_lock);
     search = hb_tree_search(instance->db.ipv6, &prefix->address);
     if(search) {
         entry = *search;
-        entry->version++;
     } else {
         entry = calloc(1, sizeof(ldp_db_entry_s));
         entry->afi = IANA_AFI_IPV6;
@@ -97,6 +110,7 @@ ldb_db_add_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label)
         if(result.inserted) {
             *result.datum_ptr = entry;
         } else {
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
             free(entry);
             LOG(ERROR, "LDP (%s - %s) failed to add IPv6 entry to database\n",
                 ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
@@ -104,12 +118,12 @@ ldb_db_add_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label)
             return false;
         }
     }
-    entry->active = true;
     entry->prefix.ipv6.len = prefix->len;
     entry->label = label;
     entry->source = session;
+    ldb_db_set_active(entry, true);
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
     return true;
-
 }
 
 ldp_db_entry_s *
@@ -132,8 +146,7 @@ static void
 ldb_db_deactivate(ldp_session_s *session, ldp_db_entry_s *entry, uint32_t label, bool any_label)
 {
     if(entry->active && entry->source == session && (any_label || entry->label == label)) {
-        entry->active = false;
-        entry->version++;
+        ldb_db_set_active(entry, false);
     }
 }
 
@@ -142,7 +155,9 @@ ldb_db_withdraw_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label
 {
     ldp_db_entry_s *entry = ldb_db_lookup_ipv4(session->instance, prefix->address);
     if(entry) {
+        pthread_rwlock_wrlock(&g_ctx->label_db_lock);
         ldb_db_deactivate(session, entry, label, any_label);
+        pthread_rwlock_unlock(&g_ctx->label_db_lock);
     }
 }
 
@@ -151,7 +166,9 @@ ldb_db_withdraw_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label
 {
     ldp_db_entry_s *entry = ldb_db_lookup_ipv6(session->instance, &prefix->address);
     if(entry) {
+        pthread_rwlock_wrlock(&g_ctx->label_db_lock);
         ldb_db_deactivate(session, entry, label, any_label);
+        pthread_rwlock_unlock(&g_ctx->label_db_lock);
     }
 }
 
@@ -175,6 +192,7 @@ ldb_db_withdraw_session(ldp_session_s *session, uint32_t label, bool any_label)
     bool next;
     size_t i;
 
+    pthread_rwlock_wrlock(&g_ctx->label_db_lock);
     for(i = 0; i < sizeof(trees)/sizeof(trees[0]); i++) {
         if(!trees[i]) continue;
         itor = hb_itor_new(trees[i]);
@@ -185,4 +203,5 @@ ldb_db_withdraw_session(ldp_session_s *session, uint32_t label, bool any_label)
         }
         hb_itor_free(itor);
     }
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
 }

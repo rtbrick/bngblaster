@@ -351,6 +351,7 @@ bgp_evpn_db_add(bgp_session_s *session, bgp_evpn_route_s *route, bgp_evpn_entry_
     update.source = session;
     update.active = true;
 
+    pthread_rwlock_wrlock(&g_ctx->label_db_lock);
     search = hb_tree_search(session->rib.evpn_db, &route->key);
     if(search) {
         entry = *search;
@@ -362,11 +363,13 @@ bgp_evpn_db_add(bgp_session_s *session, bgp_evpn_route_s *route, bgp_evpn_entry_
         memcpy((uint8_t*)entry + BGP_EVPN_ENTRY_DATA_OFFSET,
                (uint8_t*)&update + BGP_EVPN_ENTRY_DATA_OFFSET,
                sizeof(bgp_evpn_entry_s) - BGP_EVPN_ENTRY_DATA_OFFSET);
-        __atomic_store_n(&entry->active, true, __ATOMIC_RELEASE);
+        __atomic_store_n(&entry->active, true, __ATOMIC_RELAXED);
+        bgp_evpn_version_increment();
         __atomic_store_n(&entry->version, entry->version + 1, __ATOMIC_RELEASE);
     } else {
         entry = malloc(sizeof(bgp_evpn_entry_s));
         if(!entry) {
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
             LOG(ERROR, "BGP (%s %s - %s) failed to add EVPN route to database (out of memory)\n",
                 session->interface->name,
                 session->local_address_str,
@@ -377,6 +380,7 @@ bgp_evpn_db_add(bgp_session_s *session, bgp_evpn_route_s *route, bgp_evpn_entry_
         entry->version = 1;
         result = hb_tree_insert(session->rib.evpn_db, &entry->key);
         if(!result.inserted) {
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
             free(entry);
             LOG(ERROR, "BGP (%s %s - %s) failed to add EVPN route to database\n",
                 session->interface->name,
@@ -386,8 +390,9 @@ bgp_evpn_db_add(bgp_session_s *session, bgp_evpn_route_s *route, bgp_evpn_entry_
         }
         *result.datum_ptr = entry;
         session->rib.evpn++;
+        bgp_evpn_version_increment();
     }
-    g_ctx->bgp_evpn_version++;
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
 }
 
 static void
@@ -400,10 +405,12 @@ bgp_evpn_db_withdraw(bgp_session_s *session, bgp_evpn_route_s *route)
     if(search) {
         entry = *search;
         if(entry->active) {
-            entry->active = false;
-            entry->version++;
+            pthread_rwlock_wrlock(&g_ctx->label_db_lock);
+            __atomic_store_n(&entry->active, false, __ATOMIC_RELAXED);
             session->rib.evpn--;
-            g_ctx->bgp_evpn_version++;
+            bgp_evpn_version_increment();
+            __atomic_store_n(&entry->version, entry->version + 1, __ATOMIC_RELEASE);
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
         }
     }
 }
@@ -515,6 +522,20 @@ bgp_evpn_update(bgp_session_s *session, bgp_update_s *update)
 }
 
 /**
+ * bgp_evpn_version_increment
+ *
+ * Signal an EVPN or L2VPN route change to the traffic streams.
+ * Called with the label database lock held, before the version
+ * of the changed entries is updated, so that streams which see
+ * the new entry version also see the new global version.
+ */
+void
+bgp_evpn_version_increment()
+{
+    __atomic_add_fetch(&g_ctx->bgp_evpn_version, 1, __ATOMIC_RELEASE);
+}
+
+/**
  * bgp_evpn_session_down
  *
  * Mark all EVPN routes learned from this session as inactive.
@@ -532,19 +553,21 @@ bgp_evpn_session_down(bgp_session_s *session)
     if(!(session->rib.evpn_db && session->rib.evpn)) {
         return;
     }
+    pthread_rwlock_wrlock(&g_ctx->label_db_lock);
+    bgp_evpn_version_increment();
     itor = hb_itor_new(session->rib.evpn_db);
     next = hb_itor_first(itor);
     while(next) {
         entry = *hb_itor_datum(itor);
         if(entry->active) {
-            entry->active = false;
-            entry->version++;
+            __atomic_store_n(&entry->active, false, __ATOMIC_RELAXED);
+            __atomic_store_n(&entry->version, entry->version + 1, __ATOMIC_RELEASE);
         }
         next = hb_itor_next(itor);
     }
     hb_itor_free(itor);
     session->rib.evpn = 0;
-    g_ctx->bgp_evpn_version++;
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
 }
 
 /**

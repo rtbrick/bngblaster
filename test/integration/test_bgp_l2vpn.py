@@ -67,7 +67,8 @@ def stream(name, interface, rd, ce_id, local_ce_id, rx_label):
     }
 
 
-def test_l2vpn(local_veth, bbl, tmp_path):
+@pytest.mark.parametrize("threads", [False, True], ids=["main", "threads"])
+def test_l2vpn(local_veth, bbl, tmp_path, threads):
     update_a, update_b = str(tmp_path / "a.bgp"), str(tmp_path / "b.bgp")
     withdraw_b = str(tmp_path / "b-withdraw.bgp")
     l2vpn_update(update_a, PE_A, RD_A, LABEL_A, CE_A, "--end-of-rib")
@@ -82,7 +83,10 @@ def test_l2vpn(local_veth, bbl, tmp_path):
             "network": [
                 {"interface": local_veth.if1, "address": PE_A + "/24", "gateway": PE_B},
                 {"interface": local_veth.if2, "address": PE_B + "/24", "gateway": PE_A}
-            ]
+            ],
+            # Streams sent by TX threads, which read the labels while updated.
+            "links": [{"interface": i, "tx-threads": 1, "rx-threads": 1}
+                      for i in (local_veth.if1, local_veth.if2)] if threads else []
         },
         "bgp": [session(PE_A, PE_B, update_a), session(PE_B, PE_A, update_b)],
         "streams": [

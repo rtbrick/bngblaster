@@ -115,6 +115,7 @@ bgp_l2vpn_db_add(bgp_session_s *session, bgp_l2vpn_entry_s *update)
     update->source = session;
     update->active = true;
 
+    pthread_rwlock_wrlock(&g_ctx->label_db_lock);
     search = hb_tree_search(session->rib.l2vpn_db, &update->key);
     if(search) {
         entry = *search;
@@ -126,11 +127,13 @@ bgp_l2vpn_db_add(bgp_session_s *session, bgp_l2vpn_entry_s *update)
         memcpy((uint8_t*)entry + BGP_L2VPN_ENTRY_DATA_OFFSET,
                (uint8_t*)update + BGP_L2VPN_ENTRY_DATA_OFFSET,
                sizeof(bgp_l2vpn_entry_s) - BGP_L2VPN_ENTRY_DATA_OFFSET);
-        __atomic_store_n(&entry->active, true, __ATOMIC_RELEASE);
+        __atomic_store_n(&entry->active, true, __ATOMIC_RELAXED);
+        bgp_evpn_version_increment();
         __atomic_store_n(&entry->version, entry->version + 1, __ATOMIC_RELEASE);
     } else {
         entry = malloc(sizeof(bgp_l2vpn_entry_s));
         if(!entry) {
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
             LOG(ERROR, "BGP (%s %s - %s) failed to add L2VPN route to database (out of memory)\n",
                 session->interface->name,
                 session->local_address_str,
@@ -141,6 +144,7 @@ bgp_l2vpn_db_add(bgp_session_s *session, bgp_l2vpn_entry_s *update)
         entry->version = 1;
         result = hb_tree_insert(session->rib.l2vpn_db, &entry->key);
         if(!result.inserted) {
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
             free(entry);
             LOG(ERROR, "BGP (%s %s - %s) failed to add L2VPN route to database\n",
                 session->interface->name,
@@ -150,8 +154,9 @@ bgp_l2vpn_db_add(bgp_session_s *session, bgp_l2vpn_entry_s *update)
         }
         *result.datum_ptr = entry;
         session->rib.l2vpn++;
+        bgp_evpn_version_increment();
     }
-    g_ctx->bgp_evpn_version++;
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
 }
 
 static void
@@ -164,10 +169,12 @@ bgp_l2vpn_db_withdraw(bgp_session_s *session, bgp_l2vpn_key_s *key)
     if(search) {
         entry = *search;
         if(entry->active) {
-            entry->active = false;
-            entry->version++;
+            pthread_rwlock_wrlock(&g_ctx->label_db_lock);
+            __atomic_store_n(&entry->active, false, __ATOMIC_RELAXED);
             session->rib.l2vpn--;
-            g_ctx->bgp_evpn_version++;
+            bgp_evpn_version_increment();
+            __atomic_store_n(&entry->version, entry->version + 1, __ATOMIC_RELEASE);
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
         }
     }
 }
@@ -292,19 +299,21 @@ bgp_l2vpn_session_down(bgp_session_s *session)
     if(!(session->rib.l2vpn_db && session->rib.l2vpn)) {
         return;
     }
+    pthread_rwlock_wrlock(&g_ctx->label_db_lock);
+    bgp_evpn_version_increment();
     itor = hb_itor_new(session->rib.l2vpn_db);
     next = hb_itor_first(itor);
     while(next) {
         entry = *hb_itor_datum(itor);
         if(entry->active) {
-            entry->active = false;
-            entry->version++;
+            __atomic_store_n(&entry->active, false, __ATOMIC_RELAXED);
+            __atomic_store_n(&entry->version, entry->version + 1, __ATOMIC_RELEASE);
         }
         next = hb_itor_next(itor);
     }
     hb_itor_free(itor);
     session->rib.l2vpn = 0;
-    g_ctx->bgp_evpn_version++;
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
 }
 
 static bool

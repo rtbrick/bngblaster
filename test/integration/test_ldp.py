@@ -25,6 +25,15 @@ def prefix(i):
     return "13.37.0.%d" % i
 
 
+def links(local_veth, threads):
+    """Streams sent by the main loop or by TX threads, which
+    read the labels while updated by the main loop."""
+    if not threads:
+        return []
+    return [{"interface": i, "tx-threads": 1, "rx-threads": 1}
+            for i in (local_veth.if1, local_veth.if2)]
+
+
 @pytest.fixture
 def bbl(local_veth, processes, tmp_path):
     def start(config):
@@ -34,7 +43,8 @@ def bbl(local_veth, processes, tmp_path):
     return start
 
 
-def test_ldp_withdraw(local_veth, bbl, tmp_path):
+@pytest.mark.parametrize("threads", [False, True], ids=["main", "threads"])
+def test_ldp_withdraw(local_veth, bbl, tmp_path, threads):
     update, withdraw = str(tmp_path / "update.ldp"), str(tmp_path / "withdraw.ldp")
     common = ["-l", LSR_ID_1, "-p", prefix(0) + "/32", "-m", str(LABEL_BASE), "-M", str(PREFIXES)]
     ldpupdate(common + ["-P", str(PREFIXES), "-f", update])
@@ -47,7 +57,8 @@ def test_ldp_withdraw(local_veth, bbl, tmp_path):
                  "ldp-instance-id": 1},
                 {"interface": local_veth.if2, "address": "10.0.0.2/24", "gateway": "10.0.0.1",
                  "ldp-instance-id": 2}
-            ]
+            ],
+            "links": links(local_veth, threads)
         },
         "ldp": [
             {"instance-id": 1, "lsr-id": LSR_ID_1, "raw-update-file": update},

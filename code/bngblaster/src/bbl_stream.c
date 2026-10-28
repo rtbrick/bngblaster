@@ -766,11 +766,13 @@ bbl_stream_network_labels(bbl_stream_s *stream, bbl_stream_vpn_s *vpn,
                           bbl_mpls_s *mpls1, bbl_mpls_s *mpls2)
 {
     bbl_stream_config_s *config = stream->config;
+    /* Set by the TX thread, also used by the main thread (VPWS). */
+    ldp_db_entry_s *ldp_entry = __atomic_load_n(&stream->ldp_entry, __ATOMIC_RELAXED);
 
-    if(config->tx_mpls1 || stream->ldp_entry) {
+    if(config->tx_mpls1 || ldp_entry) {
         eth->mpls = mpls1;
-        if(stream->ldp_entry) {
-            mpls1->label = stream->ldp_entry->label;
+        if(ldp_entry) {
+            mpls1->label = ldp_entry->label;
         } else {
             mpls1->label = config->tx_mpls1_label;
         }
@@ -1654,26 +1656,47 @@ bbl_stream_final()
     }
 }
 
+/*
+ * The label databases (LDP, BGP EVPN and L2VPN) are updated by the main
+ * thread, so TX threads search them only with the label database lock,
+ * which they only try to take to never block traffic. Entries are never
+ * freed, only deactivated, and every change increments the entry version
+ * after all other fields. Therefore the state and version of the current
+ * entry are checked without lock for every packet, and all other fields
+ * are read with lock only after a version change (packet rebuild).
+ */
 static bool
 bbl_stream_ldp_lookup(bbl_stream_s *stream)
 {
-    if(!stream->ldp_entry) {
+    ldp_db_entry_s *entry = stream->ldp_entry;
+    uint32_t version;
+
+    if(!entry) {
+        if(pthread_rwlock_tryrdlock(&g_ctx->label_db_lock) != 0) {
+            return false;
+        }
         if(stream->config->ipv4_ldp_lookup_address) {
-            stream->ldp_entry = ldb_db_lookup_ipv4(
+            entry = ldb_db_lookup_ipv4(
                 stream->tx_network_interface->ldp_adjacency->instance, 
                 stream->config->ipv4_ldp_lookup_address);
         } else if (*(uint64_t*)stream->config->ipv6_ldp_lookup_address) {
-            stream->ldp_entry = ldb_db_lookup_ipv6(
+            entry = ldb_db_lookup_ipv6(
                 stream->tx_network_interface->ldp_adjacency->instance, 
                 &stream->config->ipv6_ldp_lookup_address);
         }
+        pthread_rwlock_unlock(&g_ctx->label_db_lock);
+        if(!entry) {
+            return false;
+        }
+        __atomic_store_n(&stream->ldp_entry, entry, __ATOMIC_RELAXED);
     }
 
-    if(!(stream->ldp_entry && stream->ldp_entry->active)) {
+    if(!__atomic_load_n(&entry->active, __ATOMIC_RELAXED)) {
         return false;
     }
-    if(stream->ldp_entry->version != stream->ldp_entry_version) {
-        stream->ldp_entry_version = stream->ldp_entry->version;
+    version = __atomic_load_n(&entry->version, __ATOMIC_ACQUIRE);
+    if(version != stream->ldp_entry_version) {
+        stream->ldp_entry_version = version;
         /* Free packet if LDP entry has changed. */
         if(stream->tx_buf) {
             free(stream->tx_buf);
@@ -1719,30 +1742,43 @@ bbl_stream_vpws_mac_ready(bbl_stream_s *stream)
  * all sessions again, but only if any EVPN route has changed since
  * the last search. E-LAN streams flooded with the IMET label (unknown
  * unicast) search again for the MAC/IP route of the destination.
+ *
+ * The entry version is only taken over while the entry is usable, so
+ * an unchanged version means still usable. The global EVPN version is
+ * incremented before the entry version, so an unchanged global version
+ * means that no entry has changed since the last search.
  */
 static bool
 bbl_stream_evpn_lookup(bbl_stream_s *stream)
 {
     bbl_stream_config_s *config = stream->config;
     bgp_evpn_entry_s *entry = stream->evpn_entry;
+    uint32_t lookup_version;
+    bool unchanged;
 
+    unchanged = entry && __atomic_load_n(&entry->version, __ATOMIC_ACQUIRE) == stream->evpn_entry_version;
+    if(unchanged && entry->key.route_type != BGP_EVPN_ROUTE_IMET) {
+        return bbl_stream_vpws_mac_ready(stream);
+    }
+    lookup_version = __atomic_load_n(&g_ctx->bgp_evpn_version, __ATOMIC_ACQUIRE);
+    if(lookup_version == stream->evpn_lookup_version ||
+       pthread_rwlock_tryrdlock(&g_ctx->label_db_lock) != 0) {
+        return unchanged && bbl_stream_vpws_mac_ready(stream);
+    }
+    stream->evpn_lookup_version = lookup_version;
     if(!(entry && bbl_stream_evpn_usable(config, entry) &&
          entry->key.route_type != BGP_EVPN_ROUTE_IMET)) {
-        if(stream->evpn_lookup_version == g_ctx->bgp_evpn_version) {
-            return entry && bbl_stream_evpn_usable(config, entry);
-        }
-        stream->evpn_lookup_version = g_ctx->bgp_evpn_version;
         entry = bbl_stream_evpn_resolve(config);
-        if(!entry) {
-            return false;
-        }
-        if(entry != stream->evpn_entry) {
-            stream->evpn_entry = entry;
+        if(entry && entry != stream->evpn_entry) {
+            __atomic_store_n(&stream->evpn_entry, entry, __ATOMIC_RELAXED);
             stream->evpn_entry_version = entry->version - 1;
         }
     }
-    bbl_stream_vpn_version(stream, entry->version);
-    return bbl_stream_vpws_mac_ready(stream);
+    if(entry) {
+        bbl_stream_vpn_version(stream, entry->version);
+    }
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
+    return entry && bbl_stream_vpws_mac_ready(stream);
 }
 
 /* Like bbl_stream_evpn_lookup for the label block of the remote CE. */
@@ -1751,23 +1787,29 @@ bbl_stream_l2vpn_lookup(bbl_stream_s *stream)
 {
     bbl_stream_config_s *config = stream->config;
     bgp_l2vpn_entry_s *entry = stream->l2vpn_entry;
+    uint32_t lookup_version;
 
+    if(entry && __atomic_load_n(&entry->version, __ATOMIC_ACQUIRE) == stream->evpn_entry_version) {
+        return bbl_stream_vpws_mac_ready(stream);
+    }
+    lookup_version = __atomic_load_n(&g_ctx->bgp_evpn_version, __ATOMIC_ACQUIRE);
+    if(lookup_version == stream->evpn_lookup_version ||
+       pthread_rwlock_tryrdlock(&g_ctx->label_db_lock) != 0) {
+        return false;
+    }
+    stream->evpn_lookup_version = lookup_version;
     if(!(entry && bgp_l2vpn_usable(entry, config->bgp_l2vpn_local_ce_id))) {
-        if(stream->evpn_lookup_version == g_ctx->bgp_evpn_version) {
-            return false;
-        }
-        stream->evpn_lookup_version = g_ctx->bgp_evpn_version;
         entry = bbl_stream_l2vpn_resolve(config);
-        if(!entry) {
-            return false;
-        }
-        if(entry != stream->l2vpn_entry) {
-            stream->l2vpn_entry = entry;
+        if(entry && entry != stream->l2vpn_entry) {
+            __atomic_store_n(&stream->l2vpn_entry, entry, __ATOMIC_RELAXED);
             stream->evpn_entry_version = entry->version - 1;
         }
     }
-    bbl_stream_vpn_version(stream, entry->version);
-    return bbl_stream_vpws_mac_ready(stream);
+    if(entry) {
+        bbl_stream_vpn_version(stream, entry->version);
+    }
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
+    return entry && bbl_stream_vpws_mac_ready(stream);
 }
 
 static bool
@@ -1851,6 +1893,7 @@ bbl_stream_io_send(bbl_stream_s *stream)
     bbl_session_s *session;
     io_handle_s *io = stream->io;
     uint8_t *ptr;
+    bool build;
 
     if(unlikely(stream->reset)) {
         stream->reset = false;
@@ -1921,7 +1964,17 @@ bbl_stream_io_send(bbl_stream_s *stream)
     }
 
     if(!stream->tx_buf) {
-        if(!bbl_stream_build_packet(stream)) {
+        if(unlikely(stream->tx_flags & (STREAM_FLAG_LDP|STREAM_FLAG_EVPN))) {
+            /* Labels are read from the label databases. */
+            if(pthread_rwlock_tryrdlock(&g_ctx->label_db_lock) != 0) {
+                return STREAM_WAIT;
+            }
+            build = bbl_stream_build_packet(stream);
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
+        } else {
+            build = bbl_stream_build_packet(stream);
+        }
+        if(!build) {
             LOG(ERROR, "Failed to build packet for stream %s\n", stream->config->name);
             return ENCODE_ERROR;
         }
@@ -2855,6 +2908,7 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
     bbl_network_interface_s *network_interface = stream->tx_network_interface;
     bgp_evpn_entry_s *entry;
     bgp_l2vpn_entry_s *l2vpn_entry;
+    ldp_db_entry_s *ldp_entry;
     bbl_stream_vpn_s vpn = {0};
 
     bbl_ethernet_header_s eth = {0};
@@ -2877,8 +2931,8 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
         }
         bbl_stream_vpn_evpn(config, entry, &vpn);
     }
-    if((stream->tx_flags & STREAM_FLAG_LDP) &&
-       !(stream->ldp_entry && stream->ldp_entry->active)) {
+    ldp_entry = __atomic_load_n(&stream->ldp_entry, __ATOMIC_RELAXED);
+    if((stream->tx_flags & STREAM_FLAG_LDP) && !(ldp_entry && ldp_entry->active)) {
         /* Transport label not resolved or withdrawn. */
         return false;
     }
@@ -3240,8 +3294,11 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
         if(stream->reverse) {
             json_object_set_new(root, "reverse-flow-id", json_integer(stream->reverse->flow_id));
         }
+        if(stream->tx_flags & STREAM_FLAG_EVPN) {
+            pthread_rwlock_rdlock(&g_ctx->label_db_lock);
+        }
         if((stream->tx_flags & STREAM_FLAG_EVPN) && stream->config->bgp_l2vpn) {
-            bgp_l2vpn_entry_s *entry = stream->l2vpn_entry;
+            bgp_l2vpn_entry_s *entry = __atomic_load_n(&stream->l2vpn_entry, __ATOMIC_RELAXED);
             uint16_t local_ce_id = stream->config->bgp_l2vpn_local_ce_id;
             bool resolved = entry && bgp_l2vpn_usable(entry, local_ce_id);
             json_object_set_new(root, "l2vpn-resolved", json_boolean(resolved));
@@ -3255,7 +3312,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
                                     json_string(format_mac_address(stream->vpws_mac)) : json_null());
             }
         } else if(stream->tx_flags & STREAM_FLAG_EVPN) {
-            bgp_evpn_entry_s *entry = stream->evpn_entry;
+            bgp_evpn_entry_s *entry = __atomic_load_n(&stream->evpn_entry, __ATOMIC_RELAXED);
             bool resolved = entry && bbl_stream_evpn_usable(stream->config, entry);
             json_object_set_new(root, "evpn-resolved", json_boolean(resolved));
             if(resolved) {
@@ -3267,6 +3324,9 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
                 json_object_set_new(root, "vpws-mac", stream->vpws_mac_version ?
                                     json_string(format_mac_address(stream->vpws_mac)) : json_null());
             }
+        }
+        if(stream->tx_flags & STREAM_FLAG_EVPN) {
+            pthread_rwlock_unlock(&g_ctx->label_db_lock);
         }
         if((stream->tx_flags & STREAM_FLAG_LAG) && io && io->interface) {
             json_object_set_new(root, "lag-member-interface", json_string(io->interface->name));

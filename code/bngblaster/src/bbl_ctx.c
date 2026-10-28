@@ -53,10 +53,21 @@ bbl_key64_hash(const void* k)
 bool
 bbl_ctx_add()
 {
+    pthread_rwlockattr_t attr;
+
     g_ctx = calloc(1, sizeof(bbl_ctx_s));
     if(!g_ctx) {
         return false;
     }
+
+    /* The TX threads only try to lock, the main thread must not
+     * be blocked by them while updating the databases. */
+    pthread_rwlockattr_init(&attr);
+#ifdef __GLIBC__
+    pthread_rwlockattr_setkind_np(&attr, PTHREAD_RWLOCK_PREFER_WRITER_NONRECURSIVE_NP);
+#endif
+    pthread_rwlock_init(&g_ctx->label_db_lock, &attr);
+    pthread_rwlockattr_destroy(&attr);
 
     /* Allocate scratchpad memory. */
     g_ctx->sp = malloc(SCRATCHPAD_LEN);
@@ -128,6 +139,7 @@ bbl_ctx_del() {
     dict_free(g_ctx->li_flow_dict, NULL);
 
     pcapng_free();
+    pthread_rwlock_destroy(&g_ctx->label_db_lock);
     free(g_ctx);
     g_ctx = NULL;
     return;

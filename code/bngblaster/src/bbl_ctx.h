@@ -97,6 +97,10 @@ typedef struct bbl_ctx_
     bgp_session_s *bgp_sessions;
     bgp_raw_update_s *bgp_raw_updates;
     uint32_t bgp_evpn_version; /* incremented with every EVPN or L2VPN route change */
+
+    /* Protects the LDP databases and BGP EVPN/L2VPN RIBs, which are
+     * written by the main thread and searched by the TX threads. */
+    pthread_rwlock_t label_db_lock;
     isis_instance_s *isis_instances;
     ospf_instance_s *ospf_instances;
     ldp_instance_s *ldp_instances;

@@ -25,6 +25,9 @@ Functional tests over veth pairs between network namespaces:
 * Static LAG interfaces over loopback links with stream traffic and
   stream updates of LACP LAG interfaces which are not up, running on
   the host without namespaces (`test_lag_loopback.py`)
+* LDP label withdraw and session down, and BGP L2VPN label blocks,
+  with streams sent by the main loop and by TX threads
+  (`test_ldp.py`, `test_bgp_l2vpn.py`)
 * Stream capture with TX/RX threads including PCAP stop/start at
   runtime, and restored VLAN of received packets with PACKET_MMAP
   (`test_capture_streams.py`)
