@@ -17,6 +17,12 @@
  */
 #include "io.h"
 
+/* The frame status hands over the frame between kernel and user space,
+ * the frame content must not be accessed before (acquire) or after
+ * (release) the status, see smp_rmb/smp_wmb in packet_mmap.txt. */
+#define TP_STATUS_LOAD(_tphdr) __atomic_load_n(&(_tphdr)->tp_status, __ATOMIC_ACQUIRE)
+#define TP_STATUS_STORE(_tphdr, _status) __atomic_store_n(&(_tphdr)->tp_status, _status, __ATOMIC_RELEASE)
+
 extern bool g_init_phase;
 extern bool g_traffic;
 
@@ -58,7 +64,7 @@ io_packet_mmap_rx_job(timer_s *timer)
 
     frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
     tphdr = (struct tpacket2_hdr*)frame_ptr;
-    if(!(tphdr->tp_status & TP_STATUS_USER)) {
+    if(!(TP_STATUS_LOAD(tphdr) & TP_STATUS_USER)) {
         /* If no buffer is available poll kernel */
         poll_kernel(io, POLLIN);
         return;
@@ -68,7 +74,7 @@ io_packet_mmap_rx_job(timer_s *timer)
     //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-    while(tphdr->tp_status & TP_STATUS_USER) {
+    while(TP_STATUS_LOAD(tphdr) & TP_STATUS_USER) {
         io->buf = (uint8_t*)tphdr + tphdr->tp_mac;
         io->buf_len = tphdr->tp_snaplen;
         io->stats.packets++;
@@ -110,7 +116,7 @@ io_packet_mmap_rx_job(timer_s *timer)
             }
         }
         /* Return ownership back to kernel */
-        tphdr->tp_status = TP_STATUS_KERNEL; 
+        TP_STATUS_STORE(tphdr, TP_STATUS_KERNEL);
         /* Get next packet */
         io->cursor = (io->cursor + 1) % io->req.tp_frame_nr;
         frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
@@ -150,7 +156,7 @@ io_packet_mmap_tx_job(timer_s *timer)
 
     frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
     tphdr = (struct tpacket2_hdr*)frame_ptr;
-    if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
+    if(TP_STATUS_LOAD(tphdr) != TP_STATUS_AVAILABLE) {
         /* If no buffer is available poll kernel */
         poll_kernel(io, POLLOUT);
         io->stats.no_buffer++;
@@ -162,7 +168,7 @@ io_packet_mmap_tx_job(timer_s *timer)
         now = timespec_to_nsec(timer->timestamp);
         while(burst) {
             /* Check if this slot available for writing. */
-            if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
+            if(TP_STATUS_LOAD(tphdr) != TP_STATUS_AVAILABLE) {
                 io->stats.no_buffer++;
                 break;
             }
@@ -189,7 +195,7 @@ io_packet_mmap_tx_job(timer_s *timer)
                 stream->flow_seq++;
             } 
             tphdr->tp_len = io->buf_len;
-            tphdr->tp_status = TP_STATUS_SEND_REQUEST;
+            TP_STATUS_STORE(tphdr, TP_STATUS_SEND_REQUEST);
 
             io->queued++;
             io->stats.packets++;
@@ -259,7 +265,7 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
     while(thread->active) {
         frame_ptr = ring + (cursor * frame_size);
         tphdr = (struct tpacket2_hdr*)frame_ptr;
-        if(!(tphdr->tp_status & TP_STATUS_USER)) {
+        if(!(TP_STATUS_LOAD(tphdr) & TP_STATUS_USER)) {
             /* If no buffer is available poll kernel */
             //poll_kernel(io, POLLIN);
             if(++idle_rounds >= idle_spin_rounds) {
@@ -272,7 +278,7 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
 
         /* Get RX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
-        while(tphdr->tp_status & TP_STATUS_USER) {
+        while(TP_STATUS_LOAD(tphdr) & TP_STATUS_USER) {
             io->buf = (uint8_t*)tphdr + tphdr->tp_mac;
             io->buf_len = tphdr->tp_snaplen;
             if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
@@ -287,7 +293,7 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
                 break;
             }
             /* Return ownership back to kernel */
-            tphdr->tp_status = TP_STATUS_KERNEL; 
+            TP_STATUS_STORE(tphdr, TP_STATUS_KERNEL);
             /* Get next packet */
             cursor = (cursor + 1) % frame_nr;
             frame_ptr = ring + (cursor * frame_size);
@@ -339,7 +345,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
 
         frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
         tphdr = (struct tpacket2_hdr *)frame_ptr;
-        if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
+        if(TP_STATUS_LOAD(tphdr) != TP_STATUS_AVAILABLE) {
             /* If no buffer is available poll kernel. */
             io->stats.no_buffer++;
             poll_kernel(io, POLLOUT);
@@ -353,7 +359,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
         ctrl = true;
         now = timespec_to_nsec(&io->timestamp);
         while(burst) {
-            if(tphdr->tp_status != TP_STATUS_AVAILABLE) {
+            if(TP_STATUS_LOAD(tphdr) != TP_STATUS_AVAILABLE) {
                 io->stats.no_buffer++;
                 poll_kernel(io, POLLOUT);
                 break;
@@ -389,7 +395,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
 
             if(unlikely(io_capture_active(thread)) && !ctrl) io_capture_packet(io, io->buf, io->buf_len);
             tphdr->tp_len = io->buf_len;
-            tphdr->tp_status = TP_STATUS_SEND_REQUEST;
+            TP_STATUS_STORE(tphdr, TP_STATUS_SEND_REQUEST);
 
             io->queued++;
             io->stats.packets++;
