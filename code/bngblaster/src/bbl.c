@@ -66,14 +66,31 @@ teardown_request()
     LOG(INFO, "Teardown request (%u)\n", g_teardown_request_count);
 }
 
+static volatile sig_atomic_t g_teardown_signal = 0;
+
+/* Only async-signal-safe operations are allowed in the signal
+ * handler, the signal is logged later by teardown_log_signal. */
 void
 teardown_handler(int sig)
 {
-    LOG(INFO, "Received signal %s (%d), initiating teardown\n", strsignal(sig), sig);
-    teardown_request();
-
+    g_teardown_signal = sig;
+    g_teardown = true;
+    g_teardown_request = true;
     if(sig == SIGHUP || sig == SIGTERM) {
         g_teardown_request_count = BBL_TEARDOWN_REQUSTS_MAX;
+    } else if(g_teardown_request_count < BBL_TEARDOWN_REQUSTS_MAX) {
+        g_teardown_request_count++;
+    }
+}
+
+static void
+teardown_log_signal()
+{
+    int sig = g_teardown_signal;
+    if(sig) {
+        g_teardown_signal = 0;
+        LOG(INFO, "Received signal %s (%d), initiating teardown (%u)\n",
+            strsignal(sig), sig, g_teardown_request_count);
     }
 }
 
@@ -322,6 +339,8 @@ bbl_ctrl_job(timer_s *timer)
 
     struct timespec timestamp;
     struct timespec time_diff;
+
+    teardown_log_signal();
 
     /* Setup phase ...
      * Wait for all network interfaces to be resolved. */
@@ -958,6 +977,7 @@ main(int argc, char *argv[])
     clock_gettime(CLOCK_MONOTONIC, &g_ctx->timestamp_stop);
 
     /* Stop threads. */
+    teardown_log_signal();
     bbl_task(BBL_STATUS_STOPPING, "stop-threads");
     io_thread_stop_all();
 

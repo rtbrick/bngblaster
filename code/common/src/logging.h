@@ -69,6 +69,8 @@ extern bool g_interactive; /* interactive mode using ncurses */
 extern char *g_log_buf;
 extern uint8_t g_log_buf_cur;
 
+/* The ncurses log window and the log buffer are shared by all
+ * threads and therefore protected by the (recursive) log lock. */
 #define LOG(log_id_, fmt_, ...) \
     do { \
         if(g_log_fp) { \
@@ -76,20 +78,24 @@ extern uint8_t g_log_buf_cur;
                 fprintf(g_log_fp, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
             }\
         } \
-        if(g_interactive) { \
-            if (log_id[log_id_].enable) { \
-                wprintw(log_win, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
-                wrefresh(log_win); \
-            } \
-        } else { \
-            if (log_id[log_id_].enable) { \
-                fprintf(stdout, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
-                if(g_log_buf) { \
-                    snprintf((g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN)), (LOG_BUF_STR_LEN-1), "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
-                    if(g_log_buf_cur >= LOG_BUF_LINES) { \
-                        g_log_buf_cur = 0; \
+        if (log_id[log_id_].enable) { \
+            if(g_interactive || g_log_buf) { \
+                log_lock(); \
+                if(g_interactive) { \
+                    wprintw(log_win, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
+                    wrefresh(log_win); \
+                } else { \
+                    fprintf(stdout, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
+                    if(g_log_buf) { \
+                        snprintf((g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN)), (LOG_BUF_STR_LEN-1), "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
+                        if(g_log_buf_cur >= LOG_BUF_LINES) { \
+                            g_log_buf_cur = 0; \
+                        } \
                     } \
                 } \
+                log_unlock(); \
+            } else { \
+                fprintf(stdout, "%s "fmt_, log_format_timestamp(), ##__VA_ARGS__); \
             } \
         } \
     } while(0)
@@ -101,20 +107,24 @@ extern uint8_t g_log_buf_cur;
                 fprintf(g_log_fp, "%s "fmt_, log_format_timestamp()); \
             }\
         } \
-        if(g_interactive) { \
-            if (log_id[log_id_].enable) { \
-                wprintw(log_win, "%s "fmt_, log_format_timestamp()); \
-                wrefresh(log_win); \
-            } \
-        } else { \
-            if (log_id[log_id_].enable) { \
-                fprintf(stdout, "%s "fmt_, log_format_timestamp()); \
-                if(g_log_buf) { \
-                    snprintf((g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN)), (LOG_BUF_STR_LEN-1), "%s "fmt_, log_format_timestamp()); \
-                    if(g_log_buf_cur >= LOG_BUF_LINES) { \
-                        g_log_buf_cur = 0; \
+        if (log_id[log_id_].enable) { \
+            if(g_interactive || g_log_buf) { \
+                log_lock(); \
+                if(g_interactive) { \
+                    wprintw(log_win, "%s "fmt_, log_format_timestamp()); \
+                    wrefresh(log_win); \
+                } else { \
+                    fprintf(stdout, "%s "fmt_, log_format_timestamp()); \
+                    if(g_log_buf) { \
+                        snprintf((g_log_buf+((g_log_buf_cur++)*LOG_BUF_STR_LEN)), (LOG_BUF_STR_LEN-1), "%s "fmt_, log_format_timestamp()); \
+                        if(g_log_buf_cur >= LOG_BUF_LINES) { \
+                            g_log_buf_cur = 0; \
+                        } \
                     } \
                 } \
+                log_unlock(); \
+            } else { \
+                fprintf(stdout, "%s "fmt_, log_format_timestamp()); \
             } \
         } \
     } while(0)
@@ -166,5 +176,11 @@ log_format_timestamp(void);
 
 char *
 log_usage();
+
+void
+log_lock(void);
+
+void
+log_unlock(void);
 
 #endif

@@ -8,6 +8,7 @@
  * SPDX-License-Identifier: BSD-3-Clause
  */
 #include "logging.h"
+#include <pthread.h>
 
 /* Globals */
 
@@ -15,6 +16,36 @@ struct log_id_ log_id[LOG_ID_MAX];
 
 FILE *g_log_fp = NULL;
 char *g_log_file = NULL;
+
+static pthread_mutex_t g_log_mutex;
+static pthread_once_t g_log_mutex_once = PTHREAD_ONCE_INIT;
+
+static void
+log_mutex_init(void)
+{
+    pthread_mutexattr_t attr;
+    pthread_mutexattr_init(&attr);
+    pthread_mutexattr_settype(&attr, PTHREAD_MUTEX_RECURSIVE);
+    pthread_mutex_init(&g_log_mutex, &attr);
+    pthread_mutexattr_destroy(&attr);
+}
+
+/*
+ * Lock shared log output (e.g. ncurses log window),
+ * which may be used recursively by the same thread.
+ */
+void
+log_lock(void)
+{
+    pthread_once(&g_log_mutex_once, log_mutex_init);
+    pthread_mutex_lock(&g_log_mutex);
+}
+
+void
+log_unlock(void)
+{
+    pthread_mutex_unlock(&g_log_mutex);
+}
 
 /*
  * Format the logging timestamp.

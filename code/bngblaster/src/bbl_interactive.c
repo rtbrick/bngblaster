@@ -159,12 +159,10 @@ bbl_interactive_init_window()
 /*
  * Interactive keyboard reader
  */
-void
-bbl_interactive_read_key_job(timer_s *timer)
+static void
+bbl_interactive_read_key(void)
 {
     int ch;
-
-    UNUSED(timer);
 
     ch = getch();
     switch (ch) {
@@ -274,10 +272,9 @@ bbl_interactive_read_key_job(timer_s *timer)
 /*
  * Display meaningful stats in a curses window.
  */
-void
-bbl_interactive_window_job(timer_s *timer)
+static void
+bbl_interactive_window_update(void)
 {
-    UNUSED(timer);
     bbl_access_interface_s *access_if;
     bbl_network_interface_s *network_if;
     bbl_a10nsp_interface_s *a10nsp_if;
@@ -808,12 +805,33 @@ bbl_interactive_window_job(timer_s *timer)
     wrefresh(stats_win);
 }
 
+/* ncurses is not thread safe, the log lock serializes the
+ * windows with log messages of other threads. */
+void
+bbl_interactive_read_key_job(timer_s *timer)
+{
+    UNUSED(timer);
+    log_lock();
+    bbl_interactive_read_key();
+    log_unlock();
+}
+
+void
+bbl_interactive_window_job(timer_s *timer)
+{
+    UNUSED(timer);
+    log_lock();
+    bbl_interactive_window_update();
+    log_unlock();
+}
+
 /*
  * Curses init.
  */
 void
 bbl_interactive_init()
 {
+    log_lock();
     initscr();
     cbreak();
     noecho();
@@ -845,6 +863,7 @@ bbl_interactive_init()
 
     bbl_interactive_log_buf_free();
     g_interactive = true;
+    log_unlock();
 }
 
 void
