@@ -35,6 +35,8 @@ Functional tests over veth pairs between network namespaces:
 * Gratuitous ARP and unsolicited NA of primary and secondary addresses
   overriding stale neighbor entries of the Linux peer, periodic
   announcements and `network-announce` (`test_network_announce.py`)
+* Control socket session arguments out of range and commands executed
+  by the main loop (`test_ctrl_socket.py`)
 
 Each test creates two namespaces `bbl-it-<n>-a` and `bbl-it-<n>-b`
 connected by a veth pair. Configs, logs, pcaps and JSON reports of all

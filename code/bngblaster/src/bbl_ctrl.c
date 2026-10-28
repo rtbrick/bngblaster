@@ -348,7 +348,7 @@ static const struct action actions[] = {
     {"interface-enable", bbl_interface_ctrl_enable, schema_interface, false},
     {"interface-disable", bbl_interface_ctrl_disable, schema_interface, false},
     {"sessions-pending", bbl_session_ctrl_pending, schema_no_args, true},
-    {"session-info", bbl_session_ctrl_info, schema_session_id_debug, true},
+    {"session-info", bbl_session_ctrl_info, schema_session_id_debug, false},
     {"session-counters", bbl_session_ctrl_counters, schema_no_args, true},
     {"session-start", bbl_session_ctrl_start, schema_session_group_id, false},
     {"session-stop", bbl_session_ctrl_stop, schema_session_group_id, false},
@@ -363,9 +363,9 @@ static const struct action actions[] = {
     {"zapping-start", bbl_igmp_ctrl_zapping_start, schema_igmp, true},
     {"zapping-stop", bbl_igmp_ctrl_zapping_stop, schema_igmp, false},
     {"zapping-stats", bbl_igmp_ctrl_zapping_stats, schema_igmp, true},
-    {"li-flows", bbl_li_ctrl_flows, schema_no_args, true},
-    {"l2tp-tunnels", bbl_l2tp_ctrl_tunnels, schema_l2tp, true},
-    {"l2tp-sessions", bbl_l2tp_ctrl_sessions, schema_l2tp, true},
+    {"li-flows", bbl_li_ctrl_flows, schema_no_args, false},
+    {"l2tp-tunnels", bbl_l2tp_ctrl_tunnels, schema_l2tp, false},
+    {"l2tp-sessions", bbl_l2tp_ctrl_sessions, schema_l2tp, false},
     {"l2tp-csurq", bbl_l2tp_ctrl_csurq, schema_l2tp, false},
     {"l2tp-tunnel-terminate", bbl_l2tp_ctrl_tunnel_terminate, schema_l2tp, false},
     {"l2tp-session-terminate", bbl_l2tp_ctrl_session_terminate, schema_l2tp, false},
@@ -375,7 +375,7 @@ static const struct action actions[] = {
     {"ip6cp-open", bbl_session_ctrl_ip6cp_open, schema_session_group_id, false},
     {"ip6cp-close", bbl_session_ctrl_ip6cp_close, schema_session_group_id, false},
     {"isis-adjacencies", isis_ctrl_adjacencies, schema_isis, true},
-    {"isis-database", isis_ctrl_database, schema_isis, true},
+    {"isis-database", isis_ctrl_database, schema_isis, false},
     {"isis-load-mrt", isis_ctrl_load_mrt, schema_isis, false},
     {"isis-lsp-update", isis_ctrl_lsp_update, schema_isis, false},
     {"isis-lsp-purge", isis_ctrl_lsp_purge, schema_isis, false},
@@ -384,7 +384,7 @@ static const struct action actions[] = {
     {"isis-update-priority", isis_ctrl_update_priority, schema_isis, false},
     {"ospf-interfaces", ospf_ctrl_interfaces, schema_ospf, true},
     {"ospf-neighbors", ospf_ctrl_neighbors, schema_ospf, true},
-    {"ospf-database", ospf_ctrl_database, schema_ospf, true},
+    {"ospf-database", ospf_ctrl_database, schema_ospf, false},
     {"ospf-load-mrt", ospf_ctrl_load_mrt, schema_ospf, false},
     {"ospf-lsa-update", ospf_ctrl_lsa_update, schema_ospf, false},
     {"ospf-pdu-update", ospf_ctrl_pdu_update, schema_ospf, false},
@@ -400,7 +400,7 @@ static const struct action actions[] = {
     {"bgp-routes-stats", bgp_ctrl_routes_stats, schema_bgp, false},
     {"ldp-adjacencies", ldp_ctrl_adjacencies, schema_ldp, true},
     {"ldp-sessions", ldp_ctrl_sessions, schema_ldp, true},
-    {"ldp-database", ldb_ctrl_database, schema_ldp, true},
+    {"ldp-database", ldb_ctrl_database, schema_ldp, false},
     {"ldp-disconnect", ldp_ctrl_disconnect, schema_ldp, false},
     {"ldp-teardown", ldp_ctrl_teardown, schema_ldp, false},
     {"ldp-raw-update-list", ldp_ctrl_raw_update_list, schema_ldp, true},
@@ -532,24 +532,45 @@ bbl_ctrl_commands(int fd, uint32_t session_id __attribute__((unused)), json_t *a
 }
 
 static void
-bbl_ctrl_socket_main(bbl_ctrl_thread_s *ctrl)
+bbl_ctrl_socket_main(bbl_ctrl_thread_s *ctrl, bool execute)
 {
+    pthread_mutex_lock(&ctrl->mutex);
     if(ctrl->main.fd) {
-        pthread_mutex_lock(&ctrl->mutex);
-        actions[ctrl->main.action].fn(ctrl->main.fd, ctrl->main.session_id, (json_t*)ctrl->main.arguments);
+        if(execute) {
+            actions[ctrl->main.action].fn(ctrl->main.fd, ctrl->main.session_id, (json_t*)ctrl->main.arguments);
+        } else {
+            bbl_ctrl_status(ctrl->main.fd, "warning", 503, "not available while stopping");
+        }
         ctrl->main.action = 0;
         ctrl->main.fd = 0;
         ctrl->main.session_id = 0;
         ctrl->main.arguments = NULL;
         pthread_cond_signal(&ctrl->cond);
-        pthread_mutex_unlock(&ctrl->mutex);
     }
+    pthread_mutex_unlock(&ctrl->mutex);
 }
 
 void
 bbl_ctrl_socket_main_job(timer_s *timer)
 {
-    bbl_ctrl_socket_main(timer->data);
+    bbl_ctrl_socket_main(timer->data, true);
+}
+
+/* Get unsigned number argument, converting out of
+ * range numbers is undefined behaviour. */
+static bool
+bbl_ctrl_number(json_t *value, uint32_t max, uint32_t *number)
+{
+    double d;
+    if(!json_is_number(value)) {
+        return false;
+    }
+    d = json_number_value(value);
+    if(!(d >= 0 && d <= max)) {
+        return false;
+    }
+    *number = d;
+    return true;
 }
 
 void *
@@ -565,8 +586,9 @@ bbl_ctrl_socket_thread(void *thread_data)
     json_t* value = NULL;
     const char *command = NULL;
     uint32_t session_id = 0;
+    uint32_t number;
 
-    fd_set read_fds;
+    struct pollfd pfd;
 
     bbl_access_interface_s *access_interface;
 
@@ -579,11 +601,6 @@ bbl_ctrl_socket_thread(void *thread_data)
      * to create a connection manager. */
     static int fd = 0;
 
-    // Set timeout for 1s
-    struct timeval timeout;
-    timeout.tv_sec = 1;
-    timeout.tv_usec = 0;
-
     struct timespec sleep, rem;
     sleep.tv_sec = 0;
     sleep.tv_nsec = 10 * MSEC;
@@ -593,8 +610,6 @@ bbl_ctrl_socket_thread(void *thread_data)
         fd = accept(ctrl->socket, 0, 0);
         if(fd > 0) {
             /* New connection. */
-            FD_ZERO(&read_fds);
-            FD_SET(fd, &read_fds);
             root = json_loadfd(fd, flags, &error);
             if(!root) {
                 LOG(ERROR, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
@@ -623,9 +638,7 @@ bbl_ctrl_socket_thread(void *thread_data)
                     if(arguments) {
                         value = json_object_get(arguments, "session-id");
                         if(value) {
-                            if(json_is_number(value)) {
-                                session_id = json_number_value(value);
-                            } else {
+                            if(!bbl_ctrl_number(value, UINT32_MAX, &session_id)) {
                                 bbl_ctrl_status(fd, "error", 400, "invalid session-id");
                                 goto CLOSE;
                             }
@@ -636,8 +649,8 @@ bbl_ctrl_socket_thread(void *thread_data)
                              * new session-id. */
                             value = json_object_get(arguments, "ifindex");
                             if(value) {
-                                if(json_is_number(value)) {
-                                    key.ifindex = json_number_value(value);
+                                if(bbl_ctrl_number(value, UINT32_MAX, &number)) {
+                                    key.ifindex = number;
                                 } else {
                                     bbl_ctrl_status(fd, "error", 400, "invalid ifindex");
                                     goto CLOSE;
@@ -656,8 +669,8 @@ bbl_ctrl_socket_thread(void *thread_data)
                             }
                             value = json_object_get(arguments, "outer-vlan");
                             if(value) {
-                                if(json_is_number(value)) {
-                                    key.outer_vlan_id = json_number_value(value);
+                                if(bbl_ctrl_number(value, UINT16_MAX, &number)) {
+                                    key.outer_vlan_id = number;
                                 } else {
                                     bbl_ctrl_status(fd, "error", 400, "invalid outer-vlan");
                                     goto CLOSE;
@@ -665,8 +678,8 @@ bbl_ctrl_socket_thread(void *thread_data)
                             }
                             value = json_object_get(arguments, "inner-vlan");
                             if(value) {
-                                if(json_is_number(value)) {
-                                    key.inner_vlan_id = json_number_value(value);
+                                if(bbl_ctrl_number(value, UINT16_MAX, &number)) {
+                                    key.inner_vlan_id = number;
                                 } else {
                                     bbl_ctrl_status(fd, "error", 400, "invalid inner-vlan");
                                     goto CLOSE;
@@ -712,7 +725,9 @@ bbl_ctrl_socket_thread(void *thread_data)
                                 ctrl->main.action = i;
                                 ctrl->main.session_id = session_id;
                                 ctrl->main.arguments = (void*)arguments;
-                                pthread_cond_wait(&ctrl->cond, &ctrl->mutex);
+                                while(ctrl->main.fd) {
+                                    pthread_cond_wait(&ctrl->cond, &ctrl->mutex);
+                                }
                                 pthread_mutex_unlock(&ctrl->mutex);
                             }
                             break;
@@ -723,8 +738,11 @@ CLOSE:
                 json_decref(root);
                 root = NULL;
             }
+            /* Wait up to 1s for the client to close the connection. */
             shutdown(fd, SHUT_WR);
-            select(fd + 1, &read_fds, NULL, NULL, &timeout);
+            pfd.fd = fd;
+            pfd.events = POLLIN;
+            poll(&pfd, 1, 1000);
             close(fd);
         } else {
             nanosleep(&sleep, &rem);
@@ -804,7 +822,8 @@ bbl_ctrl_socket_close()
         ctrl = g_ctx->ctrl_thread;
         if(ctrl->active) {
             ctrl->active = false;
-            bbl_ctrl_socket_main(ctrl);
+            /* Reject a command still waiting for the main loop. */
+            bbl_ctrl_socket_main(ctrl, false);
             pthread_join(ctrl->thread, NULL);
             pthread_mutex_destroy(&ctrl->mutex);
             pthread_cond_destroy(&ctrl->cond);
