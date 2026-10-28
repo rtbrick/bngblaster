@@ -231,8 +231,8 @@ keyval_get_key (struct keyval_ *keyval, uint32_t val)
 char *
 format_mac_address(uint8_t *mac) 
 {
-    static char buffer[16][MAC_STR_LEN];
-    static int idx = 0;
+    static __thread char buffer[16][MAC_STR_LEN];
+    static __thread int idx = 0;
     char *ret;
     ret = buffer[idx];
     idx = (idx+1) & 15;
@@ -251,8 +251,8 @@ format_mac_address(uint8_t *mac)
 char *
 format_ipv4_address(uint32_t *addr4)
 {
-    static char buffer[32][IPV4_DOTTED_STR_LEN];
-    static int idx = 0;
+    static __thread char buffer[32][IPV4_DOTTED_STR_LEN];
+    static __thread int idx = 0;
     char *ret;
     ret = buffer[idx];
     *ret = '\0';
@@ -272,8 +272,8 @@ format_ipv4_address(uint32_t *addr4)
 char *
 format_ipv4_prefix(ipv4_prefix *addr4)
 {
-    static char buffer[16][IPV4_DOTTED_PREFIX_STR_LEN];
-    static int idx = 0;
+    static __thread char buffer[16][IPV4_DOTTED_PREFIX_STR_LEN];
+    static __thread int idx = 0;
     char *ret;
     ret = buffer[idx];
     *ret = '\0';
@@ -294,8 +294,8 @@ format_ipv4_prefix(ipv4_prefix *addr4)
 char *
 format_ipv6_address(ipv6addr_t *addr6)
 {
-    static char buffer[16][IPV6_STR_LEN];
-    static int idx = 0;
+    static __thread char buffer[16][IPV6_STR_LEN];
+    static __thread int idx = 0;
     char *ret;
     ret = buffer[idx];
     *ret = '\0';
@@ -315,8 +315,8 @@ format_ipv6_address(ipv6addr_t *addr6)
 char *
 format_ipv6_prefix(ipv6_prefix *addr6)
 {
-    static char buffer[16][IPV6_PREFIX_STR_LEN];
-    static int idx = 0;
+    static __thread char buffer[16][IPV6_PREFIX_STR_LEN];
+    static __thread int idx = 0;
     char *ret;
     ret = buffer[idx];
     *ret = '\0';
@@ -341,8 +341,8 @@ format_iso_prefix(iso_prefix *iso)
     uint8_t hi_byte, lo_byte;
     uint16_t i, buf_idx, prefix_len;
 
-    static char buffer[16][ISO_STR_LEN];
-    static int idx = 0;
+    static __thread char buffer[16][ISO_STR_LEN];
+    static __thread int idx = 0;
     char *ret;
 
     ret = buffer[idx];
@@ -384,16 +384,17 @@ scan_ipv4_prefix(const char *str, ipv4_prefix *ipv4)
 {
     char *s = strdup(str);
     char *p;
+    unsigned int len;
     int   r = 0;
 
     p = strchr(s, '/');
     if(p) {
-        sscanf(p, "/%hhu", &ipv4->len);
         *p = '\0';
-        if(ipv4->len > 32) {
+        if(sscanf(p+1, "%u", &len) != 1 || len > 32) {
             free(s);
             return false;
         }
+        ipv4->len = len;
     } else {
         ipv4->len = 24;
     }
@@ -438,16 +439,17 @@ scan_ipv6_prefix(const char *str, ipv6_prefix *ipv6)
 {
     char *s = strdup(str);
     char *p;
+    unsigned int len;
     int   r;
 
     p = strchr(s, '/');
     if(p) {
-        sscanf(p, "/%hhu", &ipv6->len);
         *p = '\0';
-        if(ipv6->len > 128) {
+        if(sscanf(p+1, "%u", &len) != 1 || len > 128) {
             free(s);
             return false;
         }
+        ipv6->len = len;
     } else {
         ipv6->len = 64;
     }
@@ -524,11 +526,11 @@ scan_iso_prefix(const char *str, iso_prefix *iso)
             digit++;
         }
         if (c >= 'a' && c <= 'f') {
-            val = (val << 4) | (c - 'a');
+            val = (val << 4) | (c - 'a' + 10);
             digit++;
         }
         if (c >= 'A' && c <= 'F') {
-            val = (val << 4) | (c - 'A');
+            val = (val << 4) | (c - 'A' + 10);
             digit++;
         }
 
@@ -684,8 +686,8 @@ replace_substring(const char* source,
         return NULL;
     }
 
-    static char buffer[4][SUB_STR_LEN];
-    static int idx = 0;
+    static __thread char buffer[4][SUB_STR_LEN];
+    static __thread int idx = 0;
     char  *result = buffer[idx];
     char  *result_pos = result;
     size_t result_len = 0;
@@ -763,7 +765,7 @@ ipv4_len_to_mask(uint8_t len)
 {
     if(len >= 32) return UINT32_MAX;
     if(len == 0) return 0;
-    return htobe32(~((1 << (32 - len)) - 1));
+    return htobe32(UINT32_MAX << (32 - len));
 }
 
 /*

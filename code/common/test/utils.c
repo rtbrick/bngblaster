@@ -210,6 +210,31 @@ test_scan_iso_prefix(void **unused) {
     scan_iso_prefix("49.4902/24", &iso_test);
 
     assert_memory_equal(&iso_test,&iso,sizeof(iso_prefix));
+
+    /* Hex digits a-f and A-F */
+    iso.address[1] = 0xab;
+    iso.address[2] = 0x0f;
+    assert_true(scan_iso_prefix("49.ab0F/24", &iso_test));
+    assert_memory_equal(&iso_test,&iso,sizeof(iso_prefix));
+}
+
+static void
+test_scan_prefix_len(void **unused) {
+    (void) unused;
+
+    ipv4_prefix ipv4 = {0};
+    ipv6_prefix ipv6 = {0};
+
+    assert_true(scan_ipv4_prefix("10.0.0.0/32", &ipv4));
+    assert_int_equal(ipv4.len, 32);
+    assert_false(scan_ipv4_prefix("10.0.0.0/33", &ipv4));
+    /* 288 must not wrap to 32 */
+    assert_false(scan_ipv4_prefix("10.0.0.0/288", &ipv4));
+    assert_false(scan_ipv4_prefix("10.0.0.0/x", &ipv4));
+    assert_true(scan_ipv6_prefix("fc00::/128", &ipv6));
+    assert_int_equal(ipv6.len, 128);
+    assert_false(scan_ipv6_prefix("fc00::/129", &ipv6));
+    assert_false(scan_ipv6_prefix("fc00::/384", &ipv6));
 }
 
 static void
@@ -301,6 +326,10 @@ test_ipv4_len_to_mask(void **unused) {
 
     inet_pton(AF_INET, "0.0.0.0", &mask_a);
     mask_b = ipv4_len_to_mask(0);
+    assert_int_equal(mask_a, mask_b);
+
+    inet_pton(AF_INET, "128.0.0.0", &mask_a);
+    mask_b = ipv4_len_to_mask(1);
     assert_int_equal(mask_a, mask_b);
 
     inet_pton(AF_INET, "255.255.255.0", &mask_a);
@@ -417,6 +446,7 @@ int main() {
         cmocka_unit_test(test_ipv6_prefix_not_zero),
         cmocka_unit_test(test_format_iso_prefix),
         cmocka_unit_test(test_scan_iso_prefix),
+        cmocka_unit_test(test_scan_prefix_len),
         cmocka_unit_test(test_replace_substring),
         cmocka_unit_test(test_string_or_na),
         cmocka_unit_test(test_ipv4_multicast_mac),

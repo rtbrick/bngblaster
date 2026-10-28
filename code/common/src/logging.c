@@ -22,7 +22,7 @@ char *g_log_file = NULL;
 char *
 log_format_timestamp(void)
 {
-    static char ts_str[sizeof("Jun 19 08:07:13.711541")];
+    static __thread char ts_str[sizeof("Jun 19 08:07:13.711541")];
     struct timespec now;
     struct tm tm;
     int len;
