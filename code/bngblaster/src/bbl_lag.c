@@ -277,6 +277,11 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
                 link_config->interface, link_config->lag_interface);
             return false;
         }
+        if(!lag->config->lacp_enable && lag->active_count >= LAG_MEMBER_ACTIVE_MAX) {
+            LOG(ERROR, "Failed to add link %s to lag-interface %s (max %u links without LACP)\n", 
+                link_config->interface, link_config->lag_interface, LAG_MEMBER_ACTIVE_MAX);
+            return false;
+        }
         member = calloc(1, sizeof(bbl_lag_member_s));
         member->lag = lag;
         member->interface = interface;
