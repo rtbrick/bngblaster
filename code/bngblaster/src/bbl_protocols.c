@@ -2728,7 +2728,7 @@ decode_igmp(uint8_t *buf, uint16_t len,
                 BUMP_BUFFER(buf, len, sizeof(uint16_t));
                 sources = be16toh(*(uint16_t*)buf);
                 BUMP_BUFFER(buf, len, sizeof(uint16_t));
-                if(sources) {
+                if(sources && len >= sizeof(uint32_t)) {
                     igmp->source = *(uint32_t*)buf;
                 }
             }
@@ -3546,7 +3546,7 @@ decode_ospf(uint8_t *buf, uint16_t len,
     }
 
     /* Init OSPF */
-    ospf = (bbl_ospf_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_isis_s));
+    ospf = (bbl_ospf_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_ospf_s));
     memset(ospf, 0x0, sizeof(bbl_ospf_s));
 
     ospf->pdu = buf;

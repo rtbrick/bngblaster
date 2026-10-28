@@ -682,6 +682,37 @@ test_protocols_pppoe_max_payload(void **unused) {
 }
 
 static void
+test_protocols_igmpv3_query_short(void **unused) {
+    (void) unused;
+
+    /* IGMPv3 query without space for the announced source. */
+    uint16_t ip_len = sizeof(struct iphdr) + 12;
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t *buf = calloc(1, ETH_HDR_LEN + ip_len);
+    uint8_t *igmp_hdr = buf + ETH_HDR_LEN + sizeof(struct iphdr);
+    struct ether_header *eth_hdr = (struct ether_header*)buf;
+    struct iphdr *ip_hdr = (struct iphdr*)(buf + ETH_HDR_LEN);
+    bbl_ethernet_header_s *eth;
+    bbl_igmp_s *igmp;
+
+    eth_hdr->ether_type = htobe16(ETH_TYPE_IPV4);
+    ip_hdr->version = 4;
+    ip_hdr->ihl = sizeof(struct iphdr) / 4;
+    ip_hdr->tot_len = htobe16(ip_len);
+    ip_hdr->ttl = 1;
+    ip_hdr->protocol = PROTOCOL_IPV4_IGMP;
+    igmp_hdr[0] = IGMP_TYPE_QUERY;
+    igmp_hdr[11] = 1; /* number of sources */
+
+    assert_int_equal(decode_ethernet(buf, ETH_HDR_LEN + ip_len, sp, SCRATCHPAD_LEN, &eth), PROTOCOL_SUCCESS);
+    igmp = (bbl_igmp_s*)((bbl_ipv4_s*)eth->next)->next;
+    assert_int_equal(igmp->version, IGMP_VERSION_3);
+    assert_int_equal(igmp->source, 0);
+    free(buf);
+    free(sp);
+}
+
+static void
 test_protocols_lacp_invalid_tlv(void **unused) {
     (void) unused;
 
@@ -747,6 +778,7 @@ int main() {
         cmocka_unit_test(test_protocols_unsolicited_na),
         cmocka_unit_test(test_protocols_pppoe_max_payload),
         cmocka_unit_test(test_protocols_lacp_invalid_tlv),
+        cmocka_unit_test(test_protocols_igmpv3_query_short),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

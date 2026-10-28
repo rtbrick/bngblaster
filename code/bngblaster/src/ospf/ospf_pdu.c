@@ -15,6 +15,10 @@ uint32_t g_crypt_seq = 0;
 static protocol_error_t
 ospf_pdu_load_v2(ospf_pdu_s *pdu)
 {
+    /* The OSPFv2 header (24 byte) is larger than the OSPFv3 header. */
+    if(pdu->packet_len < OSPFV2_OFFSET_PACKET) {
+        return DECODE_ERROR;
+    }
     pdu->auth_type = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_AUTH_TYPE));
     return PROTOCOL_SUCCESS;
 }
