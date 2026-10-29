@@ -188,6 +188,35 @@ def test_l2tp_session_terminate_from_lac(lac_lns):
     assert_clean_exit(lac, lns)
 
 
+def tunnel_session_counts(bbl):
+    """Return (sessions, sessions-established) summed over all tunnels and
+    check that the counts of each tunnel match its l2tp-sessions."""
+    sessions = established = 0
+    for tunnel in bbl.ctrl("l2tp-tunnels")["l2tp-tunnels"]:
+        listed = bbl.ctrl("l2tp-sessions", **{"tunnel-id": tunnel["tunnel-id"]})["l2tp-sessions"]
+        assert tunnel["sessions"] == len(listed), tunnel
+        assert tunnel["sessions-established"] == \
+            len([s for s in listed if s["state"] == "Established"]), tunnel
+        sessions += tunnel["sessions"]
+        established += tunnel["sessions-established"]
+    return sessions, established
+
+
+def test_tunnel_session_counts(lac_lns):
+    """l2tp-tunnels reports the sessions of each tunnel on LNS and LAC."""
+    lac, lns = lac_lns()
+    for bbl in (lns, lac):
+        assert tunnel_session_counts(bbl) == (SESSIONS, SESSIONS)
+
+    for session_id in (1, 2):
+        response = lac.ctrl("l2tp-session-terminate", **{"session-id": session_id})
+        assert response["code"] == 200, response
+    for bbl in (lns, lac):
+        wait_until(lambda: tunnel_session_counts(bbl) == (SESSIONS - 2, SESSIONS - 2), 10,
+                   message="tunnel sessions after terminate")
+    assert_clean_exit(lac, lns)
+
+
 def test_csurq(lac_lns):
     """Connect speed update requests are limited to the number of AVPs
     fitting into a control message, invalid session IDs are ignored."""

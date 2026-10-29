@@ -354,10 +354,16 @@ with ``client-name`` instead of ``server-name``.
                 "control-packets-tx": 102,
                 "control-packets-tx-retry": 0,
                 "data-packets-rx": 1406,
-                "data-packets-tx": 206
+                "data-packets-tx": 206,
+                "sessions": 2,
+                "sessions-established": 2
             }
         ]
     }
+
+The ``sessions`` of a tunnel are those listed by ``l2tp-sessions``
+with its ``tunnel-id``, ``sessions-established`` only those in
+state ``Established``.
 
 The ``l2tp-sessions`` :ref:`command <api>` returns all L2TP sessions
 of both LNS and LAC tunnels.
