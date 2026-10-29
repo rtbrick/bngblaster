@@ -307,8 +307,8 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "tx-mbps-l2": 8.24,
                     "rx-mbps-l2": 8.112,
                     "rx-mbps-l3": 8.0,
-                    "rx-first-epoch": 1700000001,
-                    "rx-last-epoch": 1700000055
+                    "rx-first-epoch": 12001,
+                    "rx-last-epoch": 12055
                 },
                 {
                     "name": "BestEffort",
@@ -336,8 +336,8 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "tx-mbps-l2": 8.112,
                     "rx-mbps-l2": 8.208,
                     "rx-mbps-l3": 8.0,
-                    "rx-first-epoch": 1700000001,
-                    "rx-last-epoch": 1700000055
+                    "rx-first-epoch": 12001,
+                    "rx-last-epoch": 12055
                 },
                 {
                     "name": "Voice",
@@ -365,8 +365,8 @@ The ``session-streams`` command returns detailed stream statistics per session.
                     "tx-mbps-l2": 0.8112,
                     "rx-mbps-l2": 0.8208,
                     "rx-mbps-l3": 0.8,
-                    "rx-first-epoch": 1700000001,
-                    "rx-last-epoch": 1700000055
+                    "rx-first-epoch": 12001,
+                    "rx-last-epoch": 12055
                 }
             ]
         }
@@ -425,8 +425,8 @@ Each flow can be queried separately using jsonpath expression with name and dire
         "tx-mbps-l2": 0.09047,
         "rx-mbps-l2": 0.099993,
         "rx-mbps-l3": 0.07936,
-        "rx-first-epoch": 1700000001,
-        "rx-last-epoch": 1700000273
+        "rx-first-epoch": 12001,
+        "rx-last-epoch": 12273
     }
 
 The stream rates ``rx-pps`` and ``tx-pps`` and the rates in bits per second
@@ -441,6 +441,15 @@ The JSON report is generated after all streams are stopped, so the rates
 in the report may already be lower than during the test. The average rate
 over the whole test can be calculated from the stream output as
 ``rx-packets / (rx-last-epoch - rx-first-epoch)``.
+
+All ``*-epoch`` values (``tx-first-epoch``, ``rx-first-epoch``,
+``rx-last-epoch`` and ``rx-interface-changed-epoch``) are seconds of the
+monotonic system clock (time since boot), not Unix time. They are not
+affected by NTP or manual clock changes and are only meaningful relative
+to each other, for example as differences between streams or against the
+BGP ``raw-update-start-epoch`` and ``raw-update-stop-epoch`` values,
+which use the same clock. A value of 0 means that the event has not
+happened yet.
 
 Start/Stop Traffic
 ~~~~~~~~~~~~~~~~~~

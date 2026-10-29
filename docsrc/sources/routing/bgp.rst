@@ -248,6 +248,18 @@ the receive window of the peer (``peer-window``). A ``peer-window`` of
 zero means that the peer does not accept further data at the moment
 (receiver backpressure).
 
+The ``raw-update-start-epoch`` and ``raw-update-stop-epoch`` values show
+when sending of the current RAW update file started and when it was
+completely acknowledged, ``raw-update-duration`` the time in between.
+Like the traffic stream ``*-epoch`` values, these are seconds of the
+monotonic system clock (time since boot), not Unix time. This allows
+convergence measurements by comparing the start of a RAW update with
+the ``rx-first-epoch``, ``rx-interface-changed-epoch`` or
+``rx-last-epoch`` of traffic streams. While a further RAW update is
+sent, ``raw-update-stop-epoch`` and ``raw-update-duration`` still show
+the previous update, so check ``raw-update-state`` for ``done`` before
+using them.
+
 BGP RAW Update Generator
 ~~~~~~~~~~~~~~~~~~~~~~~~
 
