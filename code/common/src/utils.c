@@ -502,6 +502,7 @@ scan_iso_prefix(const char *str, iso_prefix *iso)
     uint16_t digit = 0;
     uint16_t val = 0;
     uint16_t prefix_idx = 0;
+    unsigned int plen;
 
     if(!(str && iso)) {
         return false;
@@ -547,7 +548,11 @@ scan_iso_prefix(const char *str, iso_prefix *iso)
 
     tok = strtok_r(NULL, "/", &save);
     if (tok) {
-        iso->len = atoi(tok);
+        if (sscanf(tok, "%u", &plen) != 1 || plen > sizeof(iso->address) * 8) {
+            free(s);
+            return false;
+        }
+        iso->len = plen;
     }
     free(s);
     return true;

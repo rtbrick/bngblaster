@@ -919,7 +919,10 @@ lspgen_read_iso_area_config(lsdb_node_t *node, json_t *obj)
     s = json_string_value(obj);
 
     lsdb_reset_attr_template(&attr_template);
-    scan_iso_prefix(s, &attr_template.key.area);
+    if (!scan_iso_prefix(s, &attr_template.key.area)) {
+        LOG(ERROR, "Ignore invalid ISO area %s\n", s);
+        return;
+    }
     attr_template.key.ordinal = 1;
     attr_template.key.attr_type = ISIS_TLV_AREA;
     lsdb_add_node_attr(node, &attr_template);

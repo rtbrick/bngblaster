@@ -1716,7 +1716,10 @@ main(int argc, char *argv[])
             case 'a':
                 if (ctx->protocol_id == PROTO_ISIS) {
                     if (ctx->num_area < 3) {
-                        scan_iso_prefix(optarg, &ctx->area[ctx->num_area++]);
+                        if (!scan_iso_prefix(optarg, &ctx->area[ctx->num_area++])) {
+                            LOG(ERROR, "Invalid ISO area %s\n", optarg);
+                            exit(EXIT_FAILURE);
+                        }
                     }
                 } else {
                     /* ospf2 and ospf3 */

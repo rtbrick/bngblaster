@@ -216,6 +216,14 @@ test_scan_iso_prefix(void **unused) {
     iso.address[2] = 0x0f;
     assert_true(scan_iso_prefix("49.ab0F/24", &iso_test));
     assert_memory_equal(&iso_test,&iso,sizeof(iso_prefix));
+
+    /* Prefix length limited to the address size (160 bits) */
+    assert_true(scan_iso_prefix("49.0001/160", &iso_test));
+    assert_int_equal(iso_test.len, 160);
+    assert_false(scan_iso_prefix("49.0001/161", &iso_test));
+    assert_false(scan_iso_prefix("49.0001/255", &iso_test));
+    assert_false(scan_iso_prefix("49.0001/-1", &iso_test));
+    assert_false(scan_iso_prefix("49.0001/x", &iso_test));
 }
 
 static void
