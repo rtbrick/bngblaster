@@ -11,6 +11,7 @@
 #define __BBL_LAG_H__
 
 #define LAG_MEMBER_ACTIVE_MAX 64
+#define LAG_MONKEY_INTERVAL 30
 
 typedef struct bbl_lag_
 {
@@ -22,6 +23,8 @@ typedef struct bbl_lag_
     bbl_lag_member_s *active_list[LAG_MEMBER_ACTIVE_MAX];
     bbl_stream_s *stream_head;
     uint32_t stream_count;
+
+    struct timer_ *monkey_timer;
 
     CIRCLEQ_ENTRY(bbl_lag_) lag_qnode;
     CIRCLEQ_HEAD(lag_member_, bbl_lag_member_ ) lag_member_qhead; /* list of member interfaces */
@@ -75,6 +78,12 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
 
 void
 bbl_lag_member_lacp_reset(bbl_interface_s *interface);
+
+void
+bbl_lag_member_enable(bbl_interface_s *interface);
+
+void
+bbl_lag_member_disable(bbl_interface_s *interface);
 
 void
 bbl_lag_rx_lacp(bbl_interface_s *interface, bbl_ethernet_header_s *eth);

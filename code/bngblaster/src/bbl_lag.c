@@ -8,7 +8,13 @@
  */
 #include "bbl.h"
 
+extern volatile bool g_teardown;
+extern volatile bool g_monkey;
+
 uint16_t g_lag_port_id = 1;
+
+static void
+bbl_lag_monkey_job(timer_s *timer);
 
 const char *
 lacp_state_string(lacp_state_t type)
@@ -72,6 +78,11 @@ bbl_lag_add()
         CIRCLEQ_INIT(&lag->lag_member_qhead);
         CIRCLEQ_INSERT_TAIL(&g_ctx->lag_qhead, lag, lag_qnode);
         CIRCLEQ_INSERT_TAIL(&g_ctx->interface_qhead, interface, interface_qnode);
+
+        if(config->monkey) {
+            timer_add_periodic(&g_ctx->timer_root, &lag->monkey_timer, "LAG MONKEY",
+                               LAG_MONKEY_INTERVAL, 0, lag, &bbl_lag_monkey_job);
+        }
 
         LOG(LAG, "LAG (%s) New lag-interface created\n", interface->name);
         config = config->next;
@@ -153,7 +164,18 @@ bbl_lag_select(bbl_lag_s *lag)
              * once the partner is in sync and distributes once the partner
              * collects as well. Collecting only once distributing would let
              * two BNG Blaster instances wait for each other forever. */
-            if(member->lacp_state != LACP_CURRENT) {
+            if(member->lacp_state == LACP_DISABLED) {
+                /* Without LACP, all enabled members are active. */
+                if(active_count >= LAG_MEMBER_ACTIVE_MAX) {
+                    bbl_lag_member_update_state(member, INTERFACE_STANDBY);
+                } else {
+                    if(active_count == 0) {
+                        member->primary = true;
+                    }
+                    lag->active_list[active_count++] = member;
+                    bbl_lag_member_update_state(member, INTERFACE_UP);
+                }
+            } else if(member->lacp_state != LACP_CURRENT) {
                 bbl_lag_member_update_state(member, INTERFACE_DOWN);
                 member->actor_state &= ~(LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
             } else if(selected_count >= LAG_MEMBER_ACTIVE_MAX ||
@@ -339,6 +361,95 @@ bbl_lag_member_lacp_reset(bbl_interface_s *interface)
         LOG(LAG, "LAG (%s) LACP defaulted on interface %s\n", 
             member->lag->interface->name, interface->name);
         bbl_lag_select(member->lag);
+    }
+}
+
+/**
+ * bbl_lag_member_enable
+ *
+ * @brief Enable a disabled LAG member interface. With LACP,
+ * the member is selected again once LACP is current, without
+ * LACP it is selected immediately.
+ */
+void
+bbl_lag_member_enable(bbl_interface_s *interface)
+{
+    bbl_lag_member_s *member = interface->lag_member;
+
+    if(!member || interface->state != INTERFACE_DISABLED) {
+        return;
+    }
+    if(member->lacp_state) {
+        interface->state = INTERFACE_DOWN;
+        interface->send_requests |= BBL_SEND_LACP;
+    } else {
+        /* Set to down so that the selection reports the transition to up. */
+        interface->state = INTERFACE_DOWN;
+        bbl_lag_select(member->lag);
+    }
+}
+
+/**
+ * bbl_lag_member_disable
+ *
+ * @brief Disable a LAG member interface, which
+ * removes the member from the active members.
+ */
+void
+bbl_lag_member_disable(bbl_interface_s *interface)
+{
+    bbl_lag_member_s *member = interface->lag_member;
+
+    if(!member || interface->state == INTERFACE_DISABLED) {
+        return;
+    }
+    if(member->lacp_state) {
+        bbl_lag_member_lacp_reset(interface);
+        interface->state = INTERFACE_DISABLED;
+    } else {
+        interface->state = INTERFACE_DISABLED;
+        bbl_lag_select(member->lag);
+    }
+}
+
+/**
+ * bbl_lag_monkey_job
+ *
+ * @brief Flap (disable/enable) one random member of the LAG.
+ * Members are toggled independently, so all members
+ * can be disabled at the same time.
+ */
+static void
+bbl_lag_monkey_job(timer_s *timer)
+{
+    bbl_lag_s *lag = timer->data;
+    bbl_lag_member_s *member;
+    bbl_interface_s *interface;
+    uint32_t count = 0;
+    uint32_t key;
+
+    if(g_teardown || !g_monkey) {
+        return;
+    }
+
+    CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
+        count++;
+    }
+    if(!count) {
+        return;
+    }
+    key = rand() % count;
+    CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
+        if(key-- == 0) break;
+    }
+
+    interface = member->interface;
+    if(interface->state == INTERFACE_DISABLED) {
+        LOG(LAG, "LAG (%s) Monkey enables interface %s\n", lag->interface->name, interface->name);
+        bbl_lag_member_enable(interface);
+    } else {
+        LOG(LAG, "LAG (%s) Monkey disables interface %s\n", lag->interface->name, interface->name);
+        bbl_lag_member_disable(interface);
     }
 }
 

@@ -290,8 +290,8 @@ bbl_interface_ctrl_enable_disable(int fd, json_t *arguments, bool enable)
             }
             if(enable) {
                 if(interface->state == INTERFACE_DISABLED) {
-                    if(interface->lag_member && interface->lag_member->lacp_state) {
-                        interface->state = INTERFACE_DOWN;
+                    if(interface->lag_member) {
+                        bbl_lag_member_enable(interface);
                     } else {
                         interface->state = INTERFACE_UP;
                     }
@@ -299,8 +299,11 @@ bbl_interface_ctrl_enable_disable(int fd, json_t *arguments, bool enable)
                 }
             } else {
                 if(interface->state != INTERFACE_DISABLED) {
-                    bbl_lag_member_lacp_reset(interface);
-                    interface->state = INTERFACE_DISABLED;
+                    if(interface->lag_member) {
+                        bbl_lag_member_disable(interface);
+                    } else {
+                        interface->state = INTERFACE_DISABLED;
+                    }
                     LOG(INFO, "Interface (%s) disabled\n", interface->name);
                 }
             }

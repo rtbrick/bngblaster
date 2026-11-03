@@ -258,6 +258,7 @@ typedef struct bbl_lag_config_
     uint16_t lacp_system_priority;
     uint8_t lacp_system_id[ETH_ADDR_LEN];
     uint8_t mac[ETH_ADDR_LEN];
+    bool monkey;
     void *next; /* pointer to next lag config element */
 } bbl_lag_config_s;
 

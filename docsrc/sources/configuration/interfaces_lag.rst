@@ -28,6 +28,12 @@
 | **mac**                           | | LAG interface MAC address.                                         |
 |                                   | | Default: 02:ff:ff:ff:ff:<interface-id>                             |
 +-----------------------------------+----------------------------------------------------------------------+
+| **monkey**                        | | Flap (disable/enable) one random member interface every 30 seconds.|
+|                                   | | Members flap independently, so all members can be down at the same |
+|                                   | | time. The commands monkey-start and monkey-stop control it as well |
+|                                   | | as the session monkey (sessions->monkey-autostart).                |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
 
 .. note::
 

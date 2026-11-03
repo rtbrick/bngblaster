@@ -498,7 +498,7 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
     const char *schema[] = {
         "interface", "lacp", "lacp-timeout-short",
         "lacp-system-priority", "lacp-system-id", "lacp-min-active-links",
-        "lacp-max-active-links", "mac"
+        "lacp-max-active-links", "mac", "monkey"
     };
     if(!schema_validate(lag, "lag", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -519,6 +519,10 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
     JSON_OBJ_GET_BOOL(lag, value, "lag", "lacp-timeout-short");
     if(value) {
         lag_config->lacp_timeout_short = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_BOOL(lag, value, "lag", "monkey");
+    if(value) {
+        lag_config->monkey = json_boolean_value(value);
     }
     JSON_OBJ_GET_NUMBER(lag, value, "lag", "lacp-system-priority", 0, 65535);
     if(value) {
