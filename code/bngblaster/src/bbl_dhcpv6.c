@@ -201,11 +201,25 @@ bbl_dhcpv6_s2(timer_s *timer)
     }
 }
 
+/**
+ * bbl_dhcpv6_validate_ia
+ *
+ * A DHCPv6 Advertise or Reply is accepted if at least one of the
+ * requested IAs is bound (RFC 8415 18.2.9 and 18.2.10.1), e.g. the
+ * IA_NA address if the IA_PD has status NoPrefixAvail. The other IA
+ * is requested again with the next Renew.
+ *
+ * @param session session
+ * @param dhcpv6 received DHCPv6 Advertise or Reply
+ * @return true if accepted
+ */
 static bool
 bbl_dhcpv6_validate_ia(bbl_session_s *session, bbl_dhcpv6_s *dhcpv6)
 {
     bool ia_na = false;
     bool ia_pd = false;
+    bool bound = false;
+
     switch (session->dhcpv6_state) {
         case BBL_DHCP_SELECTING:
         case BBL_DHCP_REQUESTING:
@@ -224,32 +238,37 @@ bbl_dhcpv6_validate_ia(bbl_session_s *session, bbl_dhcpv6_s *dhcpv6)
         default:
             break;
     }
-
-    if(ia_na && dhcpv6->ia_na_status_code) {
-        LOG(DHCP, "DHCPv6 (ID: %u) IA_NA received with status code %u (%s)\n", 
-            session->session_id, dhcpv6->ia_na_status_code, 
-            bbl_dhcpv6_status_code_string(dhcpv6->ia_na_status_code));
-        return false;
+    ia_na = ia_na && session->dhcpv6_ia_na_iaid;
+    ia_pd = ia_pd && session->dhcpv6_ia_pd_iaid;
+    if(!(ia_na || ia_pd)) {
+        return true;
     }
 
-    if(ia_na && session->dhcpv6_ia_na_iaid && !dhcpv6->ia_na_address) {
-        LOG(DHCP, "DHCPv6 (ID: %u) missing IA_NA address\n", session->session_id);
-        return false;
+    if(ia_na) {
+        if(dhcpv6->ia_na_status_code) {
+            LOG(DHCP, "DHCPv6 (ID: %u) IA_NA received with status code %u (%s)\n", 
+                session->session_id, dhcpv6->ia_na_status_code, 
+                bbl_dhcpv6_status_code_string(dhcpv6->ia_na_status_code));
+        } else if(!dhcpv6->ia_na_address) {
+            LOG(DHCP, "DHCPv6 (ID: %u) missing IA_NA address\n", session->session_id);
+        } else {
+            bound = true;
+        }
     }
 
-    if(ia_pd && dhcpv6->ia_pd_status_code) {
-        LOG(DHCP, "DHCPv6 (ID: %u) IA_PD received with status code %u (%s)\n", 
-            session->session_id, dhcpv6->ia_pd_status_code, 
-            bbl_dhcpv6_status_code_string(dhcpv6->ia_pd_status_code));
-        return false;
+    if(ia_pd) {
+        if(dhcpv6->ia_pd_status_code) {
+            LOG(DHCP, "DHCPv6 (ID: %u) IA_PD received with status code %u (%s)\n", 
+                session->session_id, dhcpv6->ia_pd_status_code, 
+                bbl_dhcpv6_status_code_string(dhcpv6->ia_pd_status_code));
+        } else if(!(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len)) {
+            LOG(DHCP, "DHCPv6 (ID: %u) missing IA_PD prefix\n", session->session_id);
+        } else {
+            bound = true;
+        }
     }
 
-    if(ia_pd && session->dhcpv6_ia_pd_iaid && !(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len)) {
-        LOG(DHCP, "DHCPv6 (ID: %u) missing IA_PD prefix\n", session->session_id);
-        return false;
-    }
-
-    return true;
+    return bound;
 }
 
 /**
