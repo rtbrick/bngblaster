@@ -5259,7 +5259,7 @@ json_parse_config(json_t *root)
                 "data-control-priority", "data-length", "data-offset",
                 "control-tos", "data-control-tos", "hello-interval",
                 "lcp-padding", "lcp-keepalive-interval", "lcp-keepalive-retry",
-                "lcp-conf-request"
+                "lcp-conf-request", "proxy-auth"
             };
             if(!schema_validate(sub, "l2tp-server", schema, 
             sizeof(schema)/sizeof(schema[0]))) {
@@ -5312,6 +5312,12 @@ json_parse_config(json_t *root)
                 l2tp_server->lcp_conf_request = json_boolean_value(value);
             } else {
                 l2tp_server->lcp_conf_request = true;
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-server", "proxy-auth");
+            if(value) {
+                l2tp_server->proxy_auth = json_boolean_value(value);
+            } else {
+                l2tp_server->proxy_auth = true;
             }
         }
     } else if(json_is_object(section)) {

@@ -63,6 +63,11 @@
 |                                           | | responds with a configuration NAK for CHAP.                       |
 |                                           | | Default: true                                                     |
 +-------------------------------------------+---------------------------------------------------------------------+
+| **proxy-auth**                            | | Accept PAP or CHAP proxy authentication from the LAC by sending   |
+|                                           | | PAP Authenticate-Ack or CHAP Success immediately after ICCN.      |
+|                                           | | If disabled, the LNS waits for the request of the client.         |
+|                                           | | Default: true                                                     |
++-------------------------------------------+---------------------------------------------------------------------+
 | **client-auth-id**                        | | Add optional check based on client-auth-id to support multiple    |
 |                                           | | LNS server configurations with the same IP address.               |
 +-------------------------------------------+---------------------------------------------------------------------+

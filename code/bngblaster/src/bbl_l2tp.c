@@ -1077,6 +1077,65 @@ bbl_l2tp_lcp_echo(timer_s *timer)
 }
 
 static void
+bbl_l2tp_auth_success_tx(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, uint8_t identifier)
+{
+    bbl_pap_s pap_tx = {0};
+    bbl_chap_s chap_tx = {0};
+    char reply_message[sizeof(L2TP_REPLY_MESSAGE)+16];
+    uint16_t reply_message_len;
+
+    reply_message_len = snprintf(reply_message, sizeof(reply_message), L2TP_REPLY_MESSAGE,
+                                 l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
+    if(protocol == PROTOCOL_PAP) {
+        pap_tx.code = PAP_CODE_ACK;
+        pap_tx.identifier = identifier;
+        pap_tx.reply_message = reply_message;
+        pap_tx.reply_message_len = reply_message_len;
+        bbl_l2tp_send_data(l2tp_session, PROTOCOL_PAP, &pap_tx);
+    } else {
+        chap_tx.code = CHAP_CODE_SUCCESS;
+        chap_tx.identifier = identifier;
+        chap_tx.reply_message = reply_message;
+        chap_tx.reply_message_len = reply_message_len;
+        bbl_l2tp_send_data(l2tp_session, PROTOCOL_CHAP, &chap_tx);
+    }
+}
+
+/**
+ * bbl_l2tp_proxy_auth
+ *
+ * Accept the PAP or CHAP authentication already done by the LAC
+ * (RFC 2661 proxy authentication) by sending the PAP Authenticate-Ack
+ * or CHAP Success with the identifier of the Proxy Authen ID AVP,
+ * instead of waiting for the client to retransmit its request.
+ */
+static void
+bbl_l2tp_proxy_auth(bbl_l2tp_session_s *l2tp_session)
+{
+    uint16_t protocol;
+
+    if(!l2tp_session->proxy_auth_id_received) {
+        return;
+    }
+    switch(l2tp_session->proxy_auth_type) {
+        case L2TP_PROXY_AUTH_TYPE_PAP:
+            protocol = PROTOCOL_PAP;
+            break;
+        case L2TP_PROXY_AUTH_TYPE_CHAP:
+            protocol = PROTOCOL_CHAP;
+            break;
+        default:
+            return;
+    }
+    LOG(L2TP, "L2TP Info (%s) Tunnel (%u) session (%u) accept proxy %s authentication of %s\n",
+        l2tp_tunnel_hostname(l2tp_session->tunnel), l2tp_session->key.tunnel_id,
+        l2tp_session->key.session_id, protocol == PROTOCOL_PAP ? "PAP" : "CHAP",
+        string_or_na(l2tp_session->proxy_auth_name));
+    /* The ID is carried in the low order octet. */
+    bbl_l2tp_auth_success_tx(l2tp_session, protocol, l2tp_session->proxy_auth_id & 0xff);
+}
+
+static void
 bbl_l2tp_iccn_rx(bbl_network_interface_s *interface,
                  bbl_l2tp_session_s *l2tp_session,
                  bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp)
@@ -1113,6 +1172,9 @@ bbl_l2tp_iccn_rx(bbl_network_interface_s *interface,
             timer_add_periodic(&g_ctx->timer_root, &l2tp_session->timer_lcp_echo, "L2TP LCP ECHO",
                                 l2tp_tunnel->server->lcp_keepalive_interval, 1,
                                 l2tp_session, &bbl_l2tp_lcp_echo);
+        }
+        if(!l2tp_tunnel->is_lac && l2tp_tunnel->server->proxy_auth) {
+            bbl_l2tp_proxy_auth(l2tp_session);
         }
     }
 }
@@ -1296,9 +1358,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
 {
     bbl_lcp_s   *lcp_rx;
     bbl_pap_s   *pap_rx;
-    bbl_pap_s    pap_tx;
     bbl_chap_s  *chap_rx;
-    bbl_chap_s   chap_tx;
     bbl_ipcp_s  *ipcp_rx;
     bbl_ipcp_s   ipcp_tx;
     bbl_ip6cp_s *ip6cp_rx;
@@ -1306,8 +1366,6 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
 
     UNUSED(eth);
     UNUSED(interface);
-
-    char reply_message[sizeof(L2TP_REPLY_MESSAGE)+16];
 
     if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
         return;
@@ -1374,24 +1432,12 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
             }
             break;
         case PROTOCOL_PAP:
-            memset(&pap_tx, 0x0, sizeof(bbl_pap_s));
             pap_rx = (bbl_pap_s*)l2tp->next;
-            pap_tx.code = PAP_CODE_ACK;
-            pap_tx.identifier = pap_rx->identifier;
-            pap_tx.reply_message = reply_message;
-            pap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message),
-                L2TP_REPLY_MESSAGE, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
-            bbl_l2tp_send_data(l2tp_session, PROTOCOL_PAP, &pap_tx);
+            bbl_l2tp_auth_success_tx(l2tp_session, PROTOCOL_PAP, pap_rx->identifier);
             break;
         case PROTOCOL_CHAP:
-            memset(&chap_tx, 0x0, sizeof(bbl_chap_s));
             chap_rx = (bbl_chap_s*)l2tp->next;
-            chap_tx.code = CHAP_CODE_SUCCESS;
-            chap_tx.identifier = chap_rx->identifier;
-            chap_tx.reply_message = reply_message;
-            chap_tx.reply_message_len = snprintf(reply_message, sizeof(reply_message),
-                L2TP_REPLY_MESSAGE, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
-            bbl_l2tp_send_data(l2tp_session, PROTOCOL_CHAP, &chap_tx);
+            bbl_l2tp_auth_success_tx(l2tp_session, PROTOCOL_CHAP, chap_rx->identifier);
             break;
         case PROTOCOL_IPCP:
             ipcp_rx = (bbl_ipcp_s*)l2tp->next;

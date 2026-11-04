@@ -1279,6 +1279,11 @@
                         "description": "Send LCP configuration request from LNS after receiving an LCP configuration request from client",
                         "default": true
                     },
+                    "proxy-auth": {
+                        "type": "boolean",
+                        "description": "Accept PAP or CHAP proxy authentication from LAC by sending authentication success immediately after ICCN",
+                        "default": true
+                    },
                     "client-auth-id": {
                         "type": "string",
                         "description": "Optional check for client-auth-id"

@@ -8,11 +8,16 @@ which verifies the L2TP teardown (CDN/StopCCN) of LAC and LNS.
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import json
 import struct
+import subprocess
+import sys
 import time
+from pathlib import Path
 
 import pytest
 
+import helpers
 from helpers import BngBlaster, wait_until
 
 SESSIONS = 10
@@ -291,6 +296,43 @@ def test_lcp_conf_request_disabled(topology, processes, tmp_path):
     time.sleep(3)
     assert lac_counters(lac)["sessions-established"] == 0
     assert_clean_exit(lac, lns)
+
+
+PAP, CHAP = 0xc023, 0xc223
+PAP_ACK, CHAP_SUCCESS = 2, 3
+
+
+@pytest.mark.parametrize("auth,auth_id,proxy_auth,expected", [
+    ("pap", 7, None, [(PAP, PAP_ACK, 7)]),
+    ("chap", 42, None, [(CHAP, CHAP_SUCCESS, 42)]),
+    # Without the Proxy Authen ID the identifier of the client request
+    # is unknown, so the LNS waits for the request of the client.
+    ("pap", None, None, []),
+    ("pap", 7, False, []),
+    ("chap", 42, False, []),
+])
+def test_proxy_auth(topology, processes, tmp_path, auth, auth_id, proxy_auth, expected):
+    """With proxy authentication (RFC 2661) the LNS sends PAP
+    Authenticate-Ack or CHAP Success immediately after the ICCN instead
+    of waiting for a retransmitted request of the client (issue #154)."""
+    config = lns_config(topology.if_b)
+    del config["l2tp-server"][0]["secret"]
+    if proxy_auth is not None:
+        config["l2tp-server"][0]["proxy-auth"] = proxy_auth
+    lns = BngBlaster(topology.b, tmp_path, "lns").start(config, logging=("info", "l2tp"))
+    processes.append(lns)
+    helpers.kernel_address(topology.a, topology.if_a, LAC_ADDRESS + "/24")
+
+    cmd = [sys.executable, "-I", str(Path(__file__).parent / "l2tp_proxy_lac.py"),
+           "--local", LAC_ADDRESS, "--server", LNS_ADDRESS, "--auth", auth]
+    if auth_id is not None:
+        cmd += ["--auth-id", str(auth_id)]
+    result = subprocess.run(topology.a.cmd(cmd), capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    assert [tuple(p) for p in json.loads(result.stdout)] == expected
+
+    session = lns_sessions(lns)[0]
+    assert session["peer-proxy-auth-name"] == "user@proxy"
 
 
 def lns_sessions_by_lac(lns):

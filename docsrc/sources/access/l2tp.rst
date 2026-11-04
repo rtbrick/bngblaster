@@ -322,6 +322,19 @@ are supported and stored for each session if received. Received
 CSUN messages are processed correctly and via the control socket,
 it is also possible to send CSURQ requests to the LAC.
 
+Proxy Authentication
+~~~~~~~~~~~~~~~~~~~~
+
+If the LAC has already authenticated the client and sends the
+Proxy Authen AVPs in the ICCN, the LNS accepts this authentication.
+For proxy authentication type PAP or CHAP with Proxy Authen ID AVP,
+the LNS immediately sends a PAP Authenticate-Ack or CHAP Success with
+this ID instead of waiting for a retransmitted request of the client.
+Without Proxy Authen ID, the LNS waits for the request of the client.
+Credentials are not verified, as with all PAP and CHAP requests
+received by the LNS. This behaviour can be disabled with the
+``l2tp-server`` option ``proxy-auth``.
+
 L2TP Commands
 ~~~~~~~~~~~~~
 

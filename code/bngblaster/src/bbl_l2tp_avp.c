@@ -410,6 +410,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                             return false;
                         }
                         l2tp_session->proxy_auth_id = be16toh(*(uint16_t*)avp.value);
+                        l2tp_session->proxy_auth_id_received = true;
                         break;
                     case L2TP_AVP_PROXY_AUTHEN_RESPONSE:
                         if(!l2tp_session->proxy_auth_response && avp.len) {

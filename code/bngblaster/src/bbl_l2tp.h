@@ -17,6 +17,7 @@
 
 #define L2TP_TX_WAIT_MS             10
 
+#define L2TP_PROXY_AUTH_TYPE_CHAP   2
 #define L2TP_PROXY_AUTH_TYPE_PAP    3
 
 #define L2TP_REPLY_MESSAGE          "BNG Blaster L2TP LNS %d:%d"
@@ -101,6 +102,7 @@ typedef struct bbl_l2tp_server_
     uint16_t lcp_keepalive_interval;
     uint8_t  lcp_keepalive_retry;
     bool     lcp_conf_request;
+    bool     proxy_auth;
 
     char *host_name;
     char *client_auth_id;
@@ -291,6 +293,7 @@ typedef struct bbl_l2tp_session_
 
     bool data_sequencing;
     bool connect_speed_update_enabled;
+    bool proxy_auth_id_received;
 
     uint32_t peer_tx_bps;
     uint32_t peer_rx_bps;
