@@ -2718,10 +2718,78 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
 }
 
 static bool
+json_parse_ldp_targeted_neighbor(json_t *neighbor, ldp_config_s *ldp_config)
+{
+    ldp_targeted_neighbor_config_s *neighbor_config;
+    ldp_targeted_neighbor_config_s *next;
+    const char *s = NULL;
+
+    const char *schema[] = {
+        "address", "source-address", "network-interface"
+    };
+    if(!schema_validate(neighbor, "targeted-neighbors", schema,
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
+    if(json_unpack(neighbor, "{s:s}", "address", &s) != 0) {
+        fprintf(stderr, "JSON config error: Missing value for ldp->targeted-neighbors->address\n");
+        return false;
+    }
+    neighbor_config = calloc(1, sizeof(ldp_targeted_neighbor_config_s));
+    if(inet_pton(AF_INET6, s, &neighbor_config->ipv6_address)) {
+        neighbor_config->ipv6 = true;
+    } else if(!inet_pton(AF_INET, s, &neighbor_config->ipv4_address)) {
+        fprintf(stderr, "JSON config error: Invalid value for ldp->targeted-neighbors->address\n");
+        free(neighbor_config);
+        return false;
+    }
+    next = ldp_config->targeted_neighbors;
+    while(next) {
+        if(next->ipv6 == neighbor_config->ipv6 &&
+           next->ipv4_address == neighbor_config->ipv4_address &&
+           memcmp(&next->ipv6_address, &neighbor_config->ipv6_address, sizeof(ipv6addr_t)) == 0) {
+            fprintf(stderr, "JSON config error: Duplicate ldp->targeted-neighbors->address %s\n", s);
+            free(neighbor_config);
+            return false;
+        }
+        next = next->next;
+    }
+    if(json_unpack(neighbor, "{s:s}", "source-address", &s) == 0) {
+        if(neighbor_config->ipv6 ?
+           !inet_pton(AF_INET6, s, &neighbor_config->ipv6_source_address) :
+           !inet_pton(AF_INET, s, &neighbor_config->ipv4_source_address)) {
+            fprintf(stderr, "JSON config error: Invalid value for ldp->targeted-neighbors->source-address "
+                            "(address family must match address)\n");
+            free(neighbor_config);
+            return false;
+        }
+    }
+    if(neighbor_config->ipv6) {
+        if(!ipv6_addr_not_zero(&ldp_config->ipv6_transport_address)) {
+            fprintf(stderr, "JSON config error: LDP IPv6 targeted neighbors require ldp->ipv6-transport-address\n");
+            free(neighbor_config);
+            return false;
+        }
+    } else if(ldp_config->no_ipv4_transport) {
+        fprintf(stderr, "JSON config error: LDP IPv4 targeted neighbors require IPv4 transport\n");
+        free(neighbor_config);
+        return false;
+    }
+    if(json_unpack(neighbor, "{s:s}", "network-interface", &s) == 0) {
+        neighbor_config->network_interface = strdup(s);
+    }
+    neighbor_config->next = ldp_config->targeted_neighbors;
+    ldp_config->targeted_neighbors = neighbor_config;
+    return true;
+}
+
+static bool
 json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
 {
     json_t *value = NULL;
     const char *s = NULL;
+    size_t i;
     
     g_ctx->tcp = true;
 
@@ -2730,7 +2798,8 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         "teardown-time", "hostname", "lsr-id", "tos",
         "ipv6-transport-address", "ipv4-transport-address",
         "no-ipv4-transport", "prefer-ipv4-transport",
-        "raw-update-file"
+        "raw-update-file", "targeted-neighbors",
+        "targeted-hold-time", "targeted-hello-accept"
     };
     if(!schema_validate(ldp, "ldp", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -2818,6 +2887,31 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
     JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "tos", 0, 255);
     if(value) {
         ldp_config->tos = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "targeted-hold-time", 1, 65535);
+    if(value) {
+        ldp_config->targeted_hold_time = json_number_value(value);
+    } else {
+        ldp_config->targeted_hold_time = LDP_DEFAULT_TARGETED_HOLD_TIME;
+    }
+
+    JSON_OBJ_GET_BOOL(ldp, value, "ldp", "targeted-hello-accept");
+    if(value) {
+        ldp_config->targeted_hello_accept = json_boolean_value(value);
+    }
+
+    value = json_object_get(ldp, "targeted-neighbors");
+    if(value) {
+        if(!json_is_array(value)) {
+            fprintf(stderr, "JSON config error: List expected for ldp->targeted-neighbors\n");
+            return false;
+        }
+        for(i = 0; i < json_array_size(value); i++) {
+            if(!json_parse_ldp_targeted_neighbor(json_array_get(value, i), ldp_config)) {
+                return false;
+            }
+        }
     }
 
     return true;

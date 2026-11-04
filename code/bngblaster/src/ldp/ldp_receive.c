@@ -143,7 +143,13 @@ ldp_label_message(ldp_session_s *session, uint8_t *start, uint16_t length, bool 
                     break;
                 }
                 if(*fec_element != LDP_FEC_ELEMENT_TYPE_PREFIX) {
-                    return false;
+                    /* Unknown FEC (e.g. PWid FEC 128 over targeted
+                     * sessions) is not a fatal error (RFC 5036). */
+                    LOG(LDP, "LDP (%s - %s) ignore label message with FEC element type %u\n",
+                        ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
+                        *fec_element);
+                    return true;
                 }
                 break;
             case LDP_TLV_TYPE_GENERIC_LABEL:

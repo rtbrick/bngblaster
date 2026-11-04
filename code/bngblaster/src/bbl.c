@@ -881,6 +881,12 @@ main(int argc, char *argv[])
         goto CLEANUP;
     }
 
+    /* Init LDP targeted neighbors. */
+    if(!ldp_targeted_init()) {
+        fprintf(stderr, "Error: Failed to init LDP targeted neighbors\n");
+        goto CLEANUP;
+    }
+
     /* Init BGP sessions. */
     bbl_task(BBL_STATUS_STARTING, "init-bgp");
     if(!bgp_init()) {

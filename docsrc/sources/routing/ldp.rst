@@ -50,10 +50,70 @@ Limitations
 The following LDP functionalities are currently 
 not supported:
 
-+ Targeted LDP
 + LDP TCP authentication
 + Multiple links between LDP instance and DUT (ECMP)
 + Label release messages for label withdraw messages received
+
+Targeted LDP
+~~~~~~~~~~~~
+
+Targeted LDP (extended discovery) sends unicast targeted hellos
+to the configured ``targeted-neighbors``, typically the loopback
+address of a remote LSR. IPv4 and IPv6 targeted neighbors are
+supported, where IPv6 requires the ``ipv6-transport-address``.
+The targeted hellos are sent to the gateway of the network interface,
+from the transport address of the address family or the configured
+``source-address``. The DUT needs a route to this address and to the
+transport address used for the session (static or IGP), except for
+directly connected addresses like the network interface address.
+The targeted hello hold time is ``targeted-hold-time`` (default 45
+seconds), the minimum of both proposals is used.
+
+Targeted hellos of a configured neighbor are accepted if sent to its
+source or the transport address. With ``targeted-hello-accept``,
+targeted hellos sent from other neighbors to the transport address
+are accepted and answered, e.g. if the DUT initiates targeted LDP
+for a pseudowire. The hellos to such a neighbor stop when its
+adjacency times out.
+
+Link and targeted adjacencies, IPv4 and IPv6, to the same peer share
+one LDP session. If both IPv4 and IPv6 transport are enabled, the
+targeted hellos carry the dual-stack capability (RFC 7552) with the
+preferred transport like the link hellos (``prefer-ipv4-transport``).
+Label messages with FEC elements other than prefix (e.g. PWid FEC 128
+of pseudowires) are ignored.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "network": {
+                "interface": "eth1",
+                "address": "10.0.1.2/24",
+                "gateway": "10.0.1.1",
+                "address-ipv6": "fc00:1::2/64",
+                "gateway-ipv6": "fc00:1::1"
+            }
+        },
+        "ldp": {
+            "instance-id": 1,
+            "lsr-id": "10.10.10.2",
+            "ipv6-transport-address": "fc00:10::2",
+            "targeted-neighbors": [
+                {
+                    "address": "10.0.0.1",
+                    "network-interface": "eth1"
+                },
+                {
+                    "address": "fc00::1",
+                    "source-address": "fc00:1::2",
+                    "network-interface": "eth1"
+                }
+            ]
+        }
+    }
+
+.. include:: ../configuration/ldp_targeted_neighbors.rst
 
 LDP Adjacencies
 ~~~~~~~~~~~~~~~~
@@ -71,8 +131,19 @@ an LDP adjacency is set up between the two peers.
         "ldp-adjacencies": [
             {
                 "ldp-instance-id": 1,
+                "type": "link",
                 "interface": "eth0",
                 "state": "up"
+            },
+            {
+                "ldp-instance-id": 1,
+                "type": "targeted",
+                "peer-address": "10.0.0.1",
+                "source-address": "10.10.10.2",
+                "interface": "eth0",
+                "configured": true,
+                "state": "up",
+                "hold-time": 45
             }
         ]
     }

@@ -621,6 +621,8 @@ typedef struct bbl_ldp_hello_ {
     uint32_t    lsr_id;
     uint16_t    label_space_id;
     uint16_t    hold_time;
+    bool        targeted; /* T flag: targeted hello */
+    bool        request_targeted; /* R flag: request targeted hellos */
     uint32_t    msg_id;
     uint32_t    ipv4_transport_address;
     ipv6addr_t *ipv6_transport_address;

@@ -19,6 +19,11 @@ ldp_hello_ipv6_encode(bbl_network_interface_s *interface,
                       uint8_t *buf, uint16_t *len, 
                       bbl_ethernet_header_s *eth);
 
+protocol_error_t
+ldp_hello_targeted_encode(bbl_network_interface_s *interface,
+                          uint8_t *buf, uint16_t *len,
+                          bbl_ethernet_header_s *eth);
+
 void
 ldp_hello_start(ldp_adjacency_s *adjacency);
 

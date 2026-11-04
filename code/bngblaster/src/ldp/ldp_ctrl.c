@@ -49,14 +49,30 @@ ldp_ctrl_adjacencies(int fd, uint32_t session_id __attribute__((unused)), json_t
         }
         ldp_adjacency = ldp_instance->adjacencies;
         while(ldp_adjacency) {
-            adjacency = json_pack("{si ss ss si si si si}",
-                                  "ldp-instance-id", ldp_adjacency->instance->config->id,
-                                  "interface", ldp_adjacency->interface->name,
-                                  "state", ldp_adjacency->state == LDP_ADJACENCY_STATE_UP ? "up" : "down",
-                                  "state-transitions", ldp_adjacency->state_transitions,
-                                  "rx-discovery", ldp_adjacency->interface->stats.ldp_udp_rx,
-                                  "rx-discovery-error", ldp_adjacency->interface->stats.ldp_udp_rx_error,
-                                  "tx-discovery", ldp_adjacency->interface->stats.ldp_udp_tx);
+            if(ldp_adjacency->targeted) {
+                adjacency = json_pack("{si ss ss ss ss sb ss si si si si}",
+                                      "ldp-instance-id", ldp_adjacency->instance->config->id,
+                                      "type", "targeted",
+                                      "peer-address", ldp_targeted_peer_address(ldp_adjacency),
+                                      "source-address", ldp_targeted_local_address(ldp_adjacency),
+                                      "interface", ldp_adjacency->interface->name,
+                                      "configured", ldp_adjacency->targeted_configured,
+                                      "state", ldp_adjacency->state == LDP_ADJACENCY_STATE_UP ? "up" : "down",
+                                      "state-transitions", ldp_adjacency->state_transitions,
+                                      "hold-time", ldp_adjacency->hold_time,
+                                      "rx-discovery", ldp_adjacency->hello_rx,
+                                      "tx-discovery", ldp_adjacency->hello_tx);
+            } else {
+                adjacency = json_pack("{si ss ss ss si si si si}",
+                                      "ldp-instance-id", ldp_adjacency->instance->config->id,
+                                      "type", "link",
+                                      "interface", ldp_adjacency->interface->name,
+                                      "state", ldp_adjacency->state == LDP_ADJACENCY_STATE_UP ? "up" : "down",
+                                      "state-transitions", ldp_adjacency->state_transitions,
+                                      "rx-discovery", ldp_adjacency->interface->stats.ldp_udp_rx,
+                                      "rx-discovery-error", ldp_adjacency->interface->stats.ldp_udp_rx_error,
+                                      "tx-discovery", ldp_adjacency->interface->stats.ldp_udp_tx);
+            }
             if(adjacency) {
                 json_array_append_new(adjacencies, adjacency);
             }

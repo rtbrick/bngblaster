@@ -51,6 +51,9 @@
 #define LDP_TLV_TYPE_LABEL_REQUEST_ID               0x0600
 #define LDP_TLV_TYPE_DUAL_STACK_CAPABILITY          0x0701
 
+#define LDP_HELLO_FLAG_TARGETED                     0x8000
+#define LDP_HELLO_FLAG_REQUEST_TARGETED             0x4000
+
 #define LDP_TLV_LEN_MIN                             4
 #define LDP_FEC_LEN_MIN                             4
 #define LDP_FEC_ELEMENT_TYPE_WILDCARD               1
@@ -77,6 +80,7 @@
 
 #define LDP_DEFAULT_KEEPALIVE_TIME                  15
 #define LDP_DEFAULT_HOLD_TIME                       15
+#define LDP_DEFAULT_TARGETED_HOLD_TIME              45
 #define LDP_DEFAULT_TEARDOWN_TIME                   5
 
 typedef enum ldp_state_ {
@@ -138,6 +142,20 @@ typedef struct ldp_raw_update_ {
 } ldp_raw_update_s;
 
 /*
+ * LDP Targeted Neighbor Configuration (extended discovery).
+ */
+typedef struct ldp_targeted_neighbor_config_ {
+    bool ipv6;
+    uint32_t   ipv4_address;
+    uint32_t   ipv4_source_address; /* Zero for transport address. */
+    ipv6addr_t ipv6_address;
+    ipv6addr_t ipv6_source_address; /* Zero for transport address. */
+    char *network_interface;
+
+    struct ldp_targeted_neighbor_config_ *next;
+} ldp_targeted_neighbor_config_s;
+
+/*
  * LDP Instance Configuration.
  */
 typedef struct ldp_config_ {
@@ -156,10 +174,14 @@ typedef struct ldp_config_ {
 
     uint16_t keepalive_time;
     uint16_t hold_time;
+    uint16_t targeted_hold_time;
     uint16_t teardown_time;
     uint8_t  tos; /* IPv4 TOS or IPv6 TC */
 
     char *raw_update_file;
+
+    ldp_targeted_neighbor_config_s *targeted_neighbors;
+    bool targeted_hello_accept; /* Accept targeted hellos from any peer. */
 
     /* Pointer to next instance. */
     struct ldp_config_ *next; 
@@ -251,6 +273,20 @@ typedef struct ldp_adjacency_ {
     bool hello_ipv4;
     bool hello_ipv6;
     bool prefer_ipv4_transport;
+
+    /* Targeted adjacency (extended discovery) of address family
+     * hello_ipv4 or hello_ipv6, configured or accepted from a peer
+     * (targeted-hello-accept). The local address is the hello source. */
+    bool targeted;
+    bool targeted_configured;
+    bool targeted_hello_pending;
+    bool targeted_wait_resolve; /* Hello timer retries until gateway is resolved. */
+    uint32_t   peer_ipv4_address;
+    uint32_t   local_ipv4_address;
+    ipv6addr_t peer_ipv6_address;
+    ipv6addr_t local_ipv6_address;
+    uint32_t hello_rx;
+    uint32_t hello_tx;
 
     struct timer_ *hello_timer;
     struct timer_ *hold_timer;

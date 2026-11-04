@@ -47,3 +47,34 @@ def test_config_invalid(topology, tmp_path, args, message):
         instance.start(config(topology.if_a, **args))
     with open(instance.path("stdout")) as f:
         assert "Invalid value for %s" % message in f.read()
+
+
+@pytest.mark.parametrize("ldp,message", [
+    ({"targeted-neighbors": [{"address": "10.0.0.256"}]},
+     "Invalid value for ldp->targeted-neighbors->address"),
+    ({"targeted-neighbors": [{"network-interface": "eth1"}]},
+     "Missing value for ldp->targeted-neighbors->address"),
+    ({"targeted-neighbors": [{"address": "10.0.0.1"}, {"address": "10.0.0.1"}]},
+     "Duplicate ldp->targeted-neighbors->address 10.0.0.1"),
+    ({"targeted-neighbors": [{"address": "10.0.0.1", "network-interface": "unknown"}]},
+     "Failed to init LDP targeted neighbors"),
+    ({"targeted-neighbors": [{"address": "fc00::1"}, {"address": "fc00::1"}],
+      "ipv6-transport-address": "fc00::2"},
+     "Duplicate ldp->targeted-neighbors->address fc00::1"),
+    ({"targeted-neighbors": [{"address": "10.0.0.1", "source-address": "fc00::1"}]},
+     "Invalid value for ldp->targeted-neighbors->source-address"),
+    ({"targeted-neighbors": [{"address": "10.0.0.1"}], "no-ipv4-transport": True,
+      "ipv6-transport-address": "fc00::2"},
+     "LDP IPv4 targeted neighbors require IPv4 transport"),
+    ({"targeted-neighbors": [{"address": "fc00::1"}]},
+     "LDP IPv6 targeted neighbors require ldp->ipv6-transport-address"),
+], ids=["address", "missing-address", "duplicate", "unknown-interface", "duplicate-ipv6",
+        "source-family", "no-ipv4-transport", "no-ipv6-transport"])
+def test_config_invalid_ldp_targeted(topology, tmp_path, ldp, message):
+    cfg = config(topology.if_a)
+    cfg["ldp"] = [dict({"instance-id": 1, "lsr-id": "10.10.10.2"}, **ldp)]
+    instance = BngBlaster(topology.a, tmp_path, "bbl")
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start(cfg)
+    with open(instance.path("stdout")) as f:
+        assert message in f.read()

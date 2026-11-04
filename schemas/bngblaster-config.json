@@ -3385,6 +3385,40 @@
                     "default": 0,
                     "minimum": 0,
                     "maximum": 255
+                },
+                "targeted-neighbors": {
+                    "type": "array",
+                    "description": "Targeted LDP neighbors (extended discovery with unicast targeted hellos)",
+                    "items": {
+                        "type": "object",
+                        "required": ["address"],
+                        "properties": {
+                            "address": {
+                                "type": "string",
+                                "description": "Targeted neighbor IPv4/6 address (typically the loopback of the neighbor)"
+                            },
+                            "source-address": {
+                                "type": "string",
+                                "description": "Targeted hello source IPv4/6 address of the same address family (default: transport address)"
+                            },
+                            "network-interface": {
+                                "type": "string",
+                                "description": "Network interface used to send targeted hellos and the session (default: first network interface)"
+                            }
+                        }
+                    }
+                },
+                "targeted-hold-time": {
+                    "type": "integer",
+                    "description": "Targeted hello hold time in seconds",
+                    "default": 45,
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "targeted-hello-accept": {
+                    "type": "boolean",
+                    "description": "Accept targeted hellos sent to the transport address from neighbors which are not configured",
+                    "default": false
                 }
             }
         },

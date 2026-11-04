@@ -1689,6 +1689,8 @@ bbl_tx_encode_network_packet(bbl_network_interface_s *interface, uint8_t *buf, u
     } else if(interface->send_requests & BBL_IF_SEND_LDP_HELLO_IPV4) {
         interface->send_requests &= ~BBL_IF_SEND_LDP_HELLO_IPV4;
         result = ldp_hello_ipv4_encode(interface, buf, len, &eth);
+    } else if(interface->send_requests & BBL_IF_SEND_LDP_TARGETED_HELLO) {
+        result = ldp_hello_targeted_encode(interface, buf, len, &eth);
     } else if(interface->send_requests & BBL_IF_SEND_OSPFV2_HELLO) {
         interface->send_requests &= ~BBL_IF_SEND_OSPFV2_HELLO;
         result = ospf_hello_v2_encode(interface, buf, len, &eth);

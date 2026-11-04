@@ -709,7 +709,8 @@ encode_ldp_hello(uint8_t *buf, uint16_t *len, bbl_ldp_hello_s *ldp)
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     *(uint16_t*)buf = htobe16(ldp->hold_time);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
-    *(uint16_t*)buf = 0;
+    *(uint16_t*)buf = htobe16((ldp->targeted ? LDP_HELLO_FLAG_TARGETED : 0) |
+                              (ldp->request_targeted ? LDP_HELLO_FLAG_REQUEST_TARGETED : 0));
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
 
     /* IPv4 transport address TLV */
@@ -3375,6 +3376,8 @@ decode_ldp_hello(uint8_t *buf, uint16_t len,
                     return DECODE_ERROR;
                 }
                 ldp->hold_time = be16toh(*(uint16_t*)buf);
+                ldp->targeted = be16toh(*(uint16_t*)(buf+2)) & LDP_HELLO_FLAG_TARGETED;
+                ldp->request_targeted = be16toh(*(uint16_t*)(buf+2)) & LDP_HELLO_FLAG_REQUEST_TARGETED;
                 break;
             case LDP_TLV_TYPE_IPV4_TRANSPORT_ADDRESS:
                 if(tlv_len != sizeof(uint32_t)) {

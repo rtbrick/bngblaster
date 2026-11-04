@@ -14,4 +14,19 @@ ldp_interface_init(bbl_network_interface_s *interface,
                    bbl_network_config_s *interface_config,
                    ldp_instance_s *instance);
 
+char *
+ldp_targeted_peer_address(ldp_adjacency_s *adjacency);
+
+char *
+ldp_targeted_local_address(ldp_adjacency_s *adjacency);
+
+ldp_adjacency_s *
+ldp_targeted_adjacency_add(ldp_instance_s *instance,
+                           bbl_network_interface_s *interface,
+                           ldp_targeted_neighbor_config_s *neighbor,
+                           bool configured);
+
+bool
+ldp_targeted_init();
+
 #endif

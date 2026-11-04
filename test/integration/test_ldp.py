@@ -113,3 +113,129 @@ def test_ldp_withdraw(local_veth, bbl, tmp_path, threads):
     # Labels of a session which went down are not used anymore.
     instance.ctrl("ldp-disconnect", **{"ldp-instance-id": 2})
     wait_until(lambda: not active(), 4, 0.2, message="labels removed with session down")
+
+
+# Interface and transport addresses of the targeted LDP tests.
+TARGETED = {
+    "ipv4": {"if": ("10.0.0.1", "10.0.0.2"), "transport": (LSR_ID_1, LSR_ID_2)},
+    "ipv6": {"if": ("fc00::1", "fc00::2"), "transport": ("fc00:1::1", "fc00:1::2")},
+}
+
+
+def targeted_interfaces(local_veth):
+    a, b = TARGETED["ipv4"]["if"]
+    a6, b6 = TARGETED["ipv6"]["if"]
+    return [
+        {"interface": local_veth.if1, "address": a + "/24", "gateway": b,
+         "address-ipv6": a6 + "/64", "gateway-ipv6": b6},
+        {"interface": local_veth.if2, "address": b + "/24", "gateway": a,
+         "address-ipv6": b6 + "/64", "gateway-ipv6": a6},
+    ]
+
+
+@pytest.mark.parametrize("family", ["ipv4", "ipv6"])
+@pytest.mark.parametrize("mode", ["configured", "accept", "source"])
+def test_ldp_targeted(local_veth, bbl, tmp_path, family, mode):
+    """Targeted LDP (extended discovery) without link hellos: LDP instance
+    1 sends targeted hellos to instance 2, which has the reverse targeted
+    neighbor configured or accepts targeted hellos. Hellos are sent to and
+    from the transport addresses, or with mode source between the interface
+    addresses (source-address) while the session uses the transport
+    addresses."""
+    local1, local2 = TARGETED[family]["transport"]
+    if mode == "source":
+        source1, source2 = TARGETED[family]["if"]
+    else:
+        source1, source2 = local1, local2
+    update = str(tmp_path / "update.ldp")
+    ldpupdate(["-l", LSR_ID_1, "-p", prefix(0) + "/32", "-m", str(LABEL_BASE),
+               "-M", str(PREFIXES), "-P", str(PREFIXES), "-f", update])
+    neighbor1 = {"address": source2, "network-interface": local_veth.if1}
+    neighbor2 = {"address": source1, "network-interface": local_veth.if2}
+    if mode == "source":
+        neighbor1["source-address"] = source1
+        neighbor2["source-address"] = source2
+    ldp1 = {"instance-id": 1, "lsr-id": LSR_ID_1, "raw-update-file": update,
+            "targeted-neighbors": [neighbor1]}
+    ldp2 = {"instance-id": 2, "lsr-id": LSR_ID_2, "targeted-hold-time": 30}
+    if mode == "accept":
+        ldp2["targeted-hello-accept"] = True
+    else:
+        ldp2["targeted-neighbors"] = [neighbor2]
+    if family == "ipv6":
+        ldp1["ipv6-transport-address"] = local1
+        ldp2["ipv6-transport-address"] = local2
+    instance = bbl({"interfaces": {"network": targeted_interfaces(local_veth)}, "ldp": [ldp1, ldp2]})
+
+    def sessions(instance_id):
+        return instance.ctrl("ldp-sessions", **{"ldp-instance-id": instance_id})["ldp-sessions"]
+
+    def adjacencies(instance_id):
+        return instance.ctrl("ldp-adjacencies", **{"ldp-instance-id": instance_id})["ldp-adjacencies"]
+
+    def active():
+        db = instance.ctrl("ldp-database", **{"ldp-instance-id": 2})["ldp-database"]
+        return {e["prefix"].split("/")[0] for e in db if e["active"] and e["prefix"].startswith("13.37.")}
+
+    wait_until(lambda: [s["state"] for s in sessions(1)] == ["operational"] and
+               [s["state"] for s in sessions(2)] == ["operational"], 30,
+               message="targeted LDP sessions operational")
+    assert (sessions(1)[0]["local-address"], sessions(1)[0]["peer-address"]) == (local1, local2)
+    wait_until(lambda: active() == {prefix(i) for i in range(PREFIXES)}, 10, message="labels learned")
+
+    adjacency1, = adjacencies(1)
+    assert (adjacency1["type"], adjacency1["peer-address"], adjacency1["source-address"],
+            adjacency1["state"]) == ("targeted", source2, source1, "up")
+    assert adjacency1["configured"] and adjacency1["rx-discovery"] > 0
+    # The hold time is the minimum of both proposals.
+    assert adjacency1["hold-time"] == 30
+    adjacency2, = adjacencies(2)
+    assert (adjacency2["type"], adjacency2["peer-address"], adjacency2["source-address"],
+            adjacency2["state"]) == ("targeted", source1, source2, "up")
+    assert adjacency2["configured"] != (mode == "accept") and adjacency2["tx-discovery"] > 0
+
+
+def test_ldp_targeted_dual_stack(local_veth, bbl):
+    """IPv4 and IPv6 targeted adjacencies to the same peer share one
+    session, using the preferred transport (IPv6 per default)."""
+    v4, v6 = TARGETED["ipv4"]["transport"], TARGETED["ipv6"]["transport"]
+    ldp = []
+    for i in (0, 1):
+        ldp.append({"instance-id": i + 1, "lsr-id": v4[i], "ipv6-transport-address": v6[i],
+                    "targeted-neighbors": [{"address": v4[1 - i]}, {"address": v6[1 - i]}]})
+    instance = bbl({"interfaces": {"network": targeted_interfaces(local_veth)}, "ldp": ldp})
+
+    def sessions(instance_id):
+        return instance.ctrl("ldp-sessions", **{"ldp-instance-id": instance_id})["ldp-sessions"]
+
+    wait_until(lambda: [s["state"] for s in sessions(1)] == ["operational"] and
+               [s["state"] for s in sessions(2)] == ["operational"], 30,
+               message="targeted LDP session operational")
+    assert (sessions(1)[0]["local-address"], sessions(1)[0]["peer-address"]) == v6
+    adjacencies = instance.ctrl("ldp-adjacencies", **{"ldp-instance-id": 1})["ldp-adjacencies"]
+    assert sorted((a["peer-address"], a["state"]) for a in adjacencies) == \
+        sorted([(v4[1], "up"), (v6[1], "up")])
+
+
+def test_ldp_targeted_ignored(local_veth, bbl):
+    """Targeted hellos from a peer which is neither configured nor
+    accepted are ignored: no adjacency and no session."""
+    instance = bbl({
+        "interfaces": {
+            "network": [
+                {"interface": local_veth.if1, "address": "10.0.0.1/24", "gateway": "10.0.0.2"},
+                {"interface": local_veth.if2, "address": "10.0.0.2/24", "gateway": "10.0.0.1"}
+            ]
+        },
+        "ldp": [
+            {"instance-id": 1, "lsr-id": LSR_ID_1, "targeted-hold-time": 3,
+             "targeted-neighbors": [{"address": LSR_ID_2, "network-interface": local_veth.if1}]},
+            {"instance-id": 2, "lsr-id": LSR_ID_2}
+        ]
+    })
+    time.sleep(3)
+    adjacency1, = instance.ctrl("ldp-adjacencies", **{"ldp-instance-id": 1})["ldp-adjacencies"]
+    assert adjacency1["state"] == "down" and adjacency1["tx-discovery"] >= 2
+    assert adjacency1["rx-discovery"] == 0
+    assert instance.ctrl("ldp-adjacencies", **{"ldp-instance-id": 2})["ldp-adjacencies"] == []
+    assert instance.ctrl("ldp-sessions")["ldp-sessions"] == []
