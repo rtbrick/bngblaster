@@ -144,6 +144,9 @@ bbl_access_rx_handler(bbl_access_interface_s *interface,
                       bbl_ethernet_header_s *eth);
 
 void
+bbl_access_lcp_restart(bbl_session_s *session, bool peer);
+
+void
 bbl_ppp_rx(bbl_access_interface_s *interface,
            bbl_session_s *session,
            bbl_ethernet_header_s *eth,

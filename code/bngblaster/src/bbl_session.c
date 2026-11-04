@@ -2116,6 +2116,60 @@ bbl_session_ctrl_lcp_echo_request_accept(int fd, uint32_t session_id, json_t *ar
     return bbl_session_ctrl_lcp_echo_request(fd, session_id, arguments, false);
 }
 
+static bool
+bbl_session_lcp_restart(bbl_session_s *session)
+{
+    if(session->access_type != ACCESS_TYPE_PPPOE ||
+       session->lcp_state != BBL_PPP_OPENED ||
+       session->session_state < BBL_PPP_AUTH ||
+       session->session_state > BBL_ESTABLISHED) {
+        return false;
+    }
+    bbl_access_lcp_restart(session, false);
+    return true;
+}
+
+int
+bbl_session_ctrl_lcp_restart(int fd, uint32_t session_id, json_t *arguments)
+{
+    bbl_session_s *session;
+    uint32_t i;
+
+    int session_group_id = -1;
+
+    if(json_unpack(arguments, "{s:i}", "session-group-id", &session_group_id) == 0) {
+        if(session_group_id < 0 || session_group_id > UINT16_MAX) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-group-id");
+        }
+    }
+
+    if(session_id) {
+        session = bbl_session_get(session_id);
+        if(session) {
+            if(session->access_type != ACCESS_TYPE_PPPOE) {
+                return bbl_ctrl_status(fd, "warning", 400, "matching session is not of type pppoe");
+            }
+            if(!bbl_session_lcp_restart(session)) {
+                return bbl_ctrl_status(fd, "error", 405, "wrong session state");
+            }
+            return bbl_ctrl_status(fd, "ok", 200, NULL);
+        } else {
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+    } else {
+        /* Iterate over all sessions */
+        for(i = 0; i < g_ctx->sessions; i++) {
+            session = &g_ctx->session_list[i];
+            if(session_group_id >= 0 && session->session_group_id != session_group_id) {
+                /* Skip sessions with wrong session-group-id if present. */
+                continue;
+            }
+            bbl_session_lcp_restart(session);
+        }
+        return bbl_ctrl_status(fd, "ok", 200, NULL);
+    }
+}
+
 static int
 bbl_session_ctrl_traffic(int fd, uint32_t session_id, json_t *arguments, bool enabled)
 {

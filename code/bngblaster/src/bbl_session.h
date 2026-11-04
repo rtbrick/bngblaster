@@ -432,6 +432,9 @@ int
 bbl_session_ctrl_ip6cp_close(int fd, uint32_t session_id, json_t *arguments);
 
 int
+bbl_session_ctrl_lcp_restart(int fd, uint32_t session_id, json_t *arguments);
+
+int
 bbl_session_ctrl_lcp_echo_request_ignore(int fd, uint32_t session_id, json_t *arguments);
 
 int

@@ -25,6 +25,16 @@
 |                                   | | ``session-id``                                                     |
 |                                   | | ``session-group-id`` (ignored if session-id is present)            |
 +-----------------------------------+----------------------------------------------------------------------+
+| **lcp-restart**                   | | Restart LCP of established sessions.                               |
+|                                   | | Sends a new LCP configure-request without PADT, which resets       |
+|                                   | | the session to the link phase. Authentication, IPCP and IP6CP      |
+|                                   | | are negotiated again after LCP is opened.                          |
+|                                   | | This feature can be used to test LCP renegotiation on the BNG.     |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``session-id``                                                     |
+|                                   | | ``session-group-id`` (ignored if session-id is present)            |
++-----------------------------------+----------------------------------------------------------------------+
 | **lcp-echo-request-ignore**       | | Ignore LCP echo-request from BNG.                                  |
 |                                   | | This feature can be used to enforce LCP timeouts on the BNG.       |
 |                                   | |                                                                    |

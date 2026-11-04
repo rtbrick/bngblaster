@@ -1383,11 +1383,20 @@ bbl_access_lcp_echo(timer_s *timer)
     }
 }
 
-static void
-bbl_access_lcp_restart(bbl_session_s *session)
+/**
+ * bbl_access_lcp_restart
+ *
+ * Reset the PPP session to the link phase and send
+ * a new LCP configure-request.
+ *
+ * @param session session
+ * @param peer true if restarted by a configure-request of the peer
+ */
+void
+bbl_access_lcp_restart(bbl_session_s *session, bool peer)
 {
-    LOG(PPPOE, "LCP RESTART (ID: %u) PPP session reset to link phase\n", 
-        session->session_id);
+    LOG(PPPOE, "LCP RESTART (ID: %u) PPP session reset to link phase (%s)\n", 
+        session->session_id, peer ? "peer" : "local");
 
     /* Stop upper layer session timers */
     timer_del(session->timer_auth);
@@ -1395,8 +1404,9 @@ bbl_access_lcp_restart(bbl_session_s *session)
     timer_del(session->timer_ipcp);
     timer_del(session->timer_ip6cp);
 
-    /* Reset reset upper layer session states */
-    session->lcp_state = BBL_PPP_PEER_ACK;
+    /* Reset upper layer session states, the configure-request
+     * of the peer is acknowledged by the caller. */
+    session->lcp_state = peer ? BBL_PPP_PEER_ACK : BBL_PPP_INIT;
     session->lcp_request_code = PPP_CODE_CONF_REQUEST;
     session->lcp_retries = 0;
     session->auth_retries = 0;
@@ -1460,6 +1470,9 @@ bbl_access_lcp_restart(bbl_session_s *session)
 
     bbl_session_update_state(session, BBL_PPP_LINK);
     session->send_requests = BBL_SEND_LCP_REQUEST;
+    if(!peer) {
+        bbl_session_tx_qnode_insert(session);
+    }
 }
 
 static void
@@ -1566,7 +1579,7 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                 /* LAC/LNS handoff case:
                  * The peer starts a fresh LCP negotiation after an earlier
                  * PPP phase already reached OPENED on the PPPoE side. */
-                bbl_access_lcp_restart(session);
+                bbl_access_lcp_restart(session, true);
             }
 
             session->lcp_options_len = 0;

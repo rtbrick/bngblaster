@@ -420,6 +420,7 @@ static const struct action actions[] = {
     {"cfm-cc-stop", bbl_cfm_ctrl_cc_stop, schema_cfm, false},
     {"cfm-cc-rdi-on", bbl_cfm_ctrl_cc_rdi_on, schema_cfm, false},
     {"cfm-cc-rdi-off", bbl_cfm_ctrl_cc_rdi_off, schema_cfm, false},
+    {"lcp-restart", bbl_session_ctrl_lcp_restart, schema_session_group_id, false},
     {"lcp-echo-request-ignore", bbl_session_ctrl_lcp_echo_request_ignore, schema_session_group_id, true},
     {"lcp-echo-request-accept", bbl_session_ctrl_lcp_echo_request_accept, schema_session_group_id, true},
     {"session-update", bbl_session_ctrl_update, schema_session_update, false},
