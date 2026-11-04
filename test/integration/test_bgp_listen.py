@@ -64,6 +64,9 @@ def test_passive_sessions(topology, processes, tmp_path):
         down = [s["local-address"] for s in sessions() if s["state"] != "established"]
         raise AssertionError("%d of %d sessions not established: %s" % (
             len(down), SESSIONS, ", ".join(down[:20])))
+    # The sink writes its counters once per second.
+    expected = {str(FIRST_LOCAL + i) for i in range(SESSIONS)}
+    wait_until(lambda: expected <= set(sink.stats()), 5, message="BGP sink counters")
     stats = sink.stats()
     assert sorted(stats) == sorted(str(FIRST_LOCAL + i) for i in range(SESSIONS))
     assert all(p["open"] == 1 for p in stats.values())
