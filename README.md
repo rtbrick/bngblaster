@@ -41,7 +41,7 @@ can be found on YouTube.
 
 Please check out the [documentation](https://rtbrick.github.io/bngblaster/) for details.
 
-![BBL Interactive](docsrc/sources/images/bbl_interactive.png "BNG Blaster (Interactive Mode)")
+![BNG Blaster UI/Terminal](docsrc/sources/images/bbl_title.png "BNG Blaster UI/Terminal")
 
 This project will be actively maintained and further evolved by RtBrick. We are fully committed to 
 building a project for the community and take issue and enhancement requests seriously. We are 

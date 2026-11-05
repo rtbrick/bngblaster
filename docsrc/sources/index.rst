@@ -82,16 +82,13 @@ can be found on YouTube. There are even more videos and articles
 listed below.
 
 .. image:: images/bbl_interactive.png
-    :alt: BNG Blaster Interactive
+    :alt: BNG Blaster UI/Terminal
 
 The BNG Blaster has been completely built from scratch in **C**. This includes user-space implementations 
 of the entire protocol stack. The core is based on a very simple event loop that serves timers and 
 signals. The timers have been built using a lightweight constant time (*O(1)*) library. The 
 `timer library <https://github.com/rtbrick/bngblaster/blob/main/code/common/src/timer.h>`_
 was built to start, restart and delete the protocol session FSM timers quickly and at scale.
-
-.. image:: images/bbl_arch.png
-    :alt: BNG Blaster Architecture
 
 This project will be actively maintained and further evolved by RtBrick. We are fully committed to building 
 a project for the community and take issue and enhancement requests seriously. We are looking forward to any 
