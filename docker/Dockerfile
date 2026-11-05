@@ -78,8 +78,13 @@ FROM debian:${DEBIAN_VERSION}-slim
 RUN apt-get update && apt-get install -y --no-install-recommends \
         libssl3t64 libncurses6 libjansson4 \
         python3 python3-scapy \
-        iproute2 ethtool tini \
+        iproute2 ethtool tini bash-completion \
     && rm -rf /var/lib/apt/lists/*
+
+# Enable bash completion (e.g. bngblaster-cli) for interactive shells
+# like docker exec, which do not read the login profile.
+RUN sed -i '/^# enable bash completion/,/^#fi/ { /^# enable/! s/^#// }' /etc/bash.bashrc \
+    && grep -q '^if ! shopt -oq posix' /etc/bash.bashrc
 
 COPY --from=bngblaster-build /install/usr/ /usr/
 COPY --from=controller-build /bngblasterctrl /usr/bin/bngblasterctrl
