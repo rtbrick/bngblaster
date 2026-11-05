@@ -264,7 +264,8 @@ bbl_a10nsp_pppoed_handler(bbl_a10nsp_interface_s *interface,
             break;
         case PPPOE_PADR:
             pppoed->code = PPPOE_PADS;
-            pppoed->session_id = (uint16_t)session->session_id;
+            /* Map to 1..65534, 0 and 0xffff are reserved (RFC 2516). */
+            pppoed->session_id = ((session->session_id - 1) % 0xfffe) + 1;
             break;
         default:
             return;
