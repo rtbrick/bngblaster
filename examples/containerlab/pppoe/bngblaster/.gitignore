@@ -1,0 +1,6 @@
+# Files created by the BNG Blaster controller and test runs.
+*
+!.gitignore
+!clab/
+!clab/config.json
+!clab/run.json

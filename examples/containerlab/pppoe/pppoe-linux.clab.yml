@@ -1,0 +1,43 @@
+# BNG Blaster PPPoE back-to-back test in containerlab (kind linux)
+#
+# One BNG Blaster node with eth1 connected to eth2: the A10NSP interface
+# eth1 emulates the PPPoE server and eth2 the PPPoE clients, so no DUT is
+# required. Replace one side with the device under test for real tests.
+#
+#   sudo containerlab deploy -t pppoe-linux.clab.yml
+#
+# Stop the node before destroying the lab. containerlab removes the links
+# of a linux node before stopping it, so the sessions could not be torn
+# down and the report (bngblaster/clab/run_report.json) would be missing.
+#
+#   docker stop clab-bngblaster-pppoe-bngblaster
+#   sudo containerlab destroy -t pppoe-linux.clab.yml
+name: bngblaster-pppoe
+
+topology:
+  nodes:
+    bngblaster:
+      kind: linux
+      image: ghcr.io/rtbrick/bngblaster:latest
+      env:
+        # Start the instance clab (bngblaster/clab/config.json with
+        # bngblaster/clab/run.json as start arguments) once eth1 and
+        # eth2 are attached.
+        BNGBLASTERCTRL_AUTOSTART: clab
+        BNGBLASTERCTRL_WAIT_INTERFACES: "2"
+      sysctls:
+        # No IPv6 on the data interfaces attached after the start
+        # (never set net.ipv6.conf.all, which also overwrites default).
+        net.ipv6.conf.default.disable_ipv6: 1
+      binds:
+        # Instance directory with configuration, logs and reports.
+        - bngblaster:/var/bngblaster
+      healthcheck:
+        # Healthy while the test runs or after it finished without error.
+        test: ["CMD", "/usr/bin/bngblasterctrl", "-health"]
+        interval: 5
+        retries: 3
+        start-period: 300
+
+  links:
+    - endpoints: ["bngblaster:eth1", "bngblaster:eth2"]
