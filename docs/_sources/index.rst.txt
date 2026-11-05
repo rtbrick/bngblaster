@@ -81,7 +81,7 @@ A short introduction from `DENOG15 <https://youtu.be/4rmwf6livyI>`_
 can be found on YouTube. There are even more videos and articles 
 listed below.
 
-.. image:: images/bbl_interactive.png
+.. image:: images/bbl_title.png
     :alt: BNG Blaster UI/Terminal
 
 The BNG Blaster has been completely built from scratch in **C**. This includes user-space implementations 
