@@ -142,9 +142,13 @@ for LAG members.
 
 With LACP, a member link starts collecting once the partner is in sync and
 distributing (state ``Up``) once the partner collects as well, as defined
-by IEEE 802.1AX. Changes of the own LACP state are sent immediately, without
-waiting for the next periodic LACP PDU. This also allows to connect two
+by IEEE 802.1AX. The first LACP PDU and changes of the own LACP state are sent
+immediately, without waiting for the next periodic LACP PDU. This also allows to connect two
 BNG Blaster LAG interfaces with LACP back to back.
+
+LACP is active by default. With ``lacp-passive``, the member links do not
+send LACP PDUs before an LACP PDU of an active partner is received.
+Two passive partners therefore never form the LAG.
 
 With ``lacp-max-active-links``, the member links with the best ``lacp-priority``
 are selected up to this number, while further member links are standby (state

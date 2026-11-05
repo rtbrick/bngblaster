@@ -13,6 +13,10 @@
 | **lacp-timeout-short**            | | Enable LACP short timeout (3x1s)                                   |
 |                                   | | Default: false (3x30s)                                             |
 +-----------------------------------+----------------------------------------------------------------------+
+| **lacp-passive**                  | | Enable LACP passive mode, which sends LACP PDUs only to an active  |
+|                                   | | partner.                                                           |
+|                                   | | Default: false (active)                                            |
++-----------------------------------+----------------------------------------------------------------------+
 | **lacp-system-priority**          | | LACP system priority.                                              |
 |                                   | | Default: 32768                                                     |
 +-----------------------------------+----------------------------------------------------------------------+

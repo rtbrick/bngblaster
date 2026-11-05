@@ -253,6 +253,7 @@ typedef struct bbl_lag_config_
     char *interface;
     bool lacp_enable;
     bool lacp_timeout_short;
+    bool lacp_passive;
     uint8_t lacp_min_active_links;
     uint8_t lacp_max_active_links;
     uint16_t lacp_system_priority;

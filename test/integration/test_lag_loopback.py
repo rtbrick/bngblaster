@@ -12,6 +12,8 @@ placement, which crashed for LAG interfaces).
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import time
+
 import pytest
 
 from helpers import BngBlaster, wait_until
@@ -142,6 +144,56 @@ def test_lacp_standby(tmp_path, processes):
     wait_until(lambda: tx_packets(instance)["lolA2"] - before["lolA2"] > 10 * STREAMS, 10,
                message="stream traffic on former standby member")
 
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+ACTIVE = 0x01
+
+
+def test_lacp_timeout_long(tmp_path, processes):
+    """The first LACP PDU is sent at startup, so that the LAG comes up
+    without waiting for the periodic interval (30s with long timeout)."""
+    config = lag_config(False, True)
+    for lag in config["interfaces"]["lag"]:
+        lag["lacp-timeout-short"] = False
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
+    processes.append(instance)
+    wait_until(lambda: lags_up(instance), 5, 0.1, message="LAG interfaces up")
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def lacp_tx(instance):
+    return {m["interface"]: m["lacp"]["bpdu-tx"]
+            for lag in instance.ctrl("lag-info")["lag-info"] for m in lag["members"]}
+
+
+def test_lacp_passive(tmp_path, processes):
+    """A passive LAG (lagB) does not signal LACP activity but follows the
+    active partner (lagA) and sends its state changes immediately, so that
+    the LAG comes up without waiting for the periodic LACP PDU of the
+    passive side (long timeout)."""
+    config = lag_config(False, True)
+    config["interfaces"]["lag"][1].update({"lacp-passive": True, "lacp-timeout-short": False})
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
+    processes.append(instance)
+    wait_until(lambda: lags_up(instance), 5, 0.1, message="LAG interfaces up")
+    for interface, (state, actor_state) in members(instance).items():
+        assert bool(actor_state & ACTIVE) == interface.startswith("lolA"), (interface, actor_state)
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_lacp_passive_both(tmp_path, processes):
+    """Two passive partners send no LACP PDUs, so the LAG stays down."""
+    config = lag_config(False, True)
+    for lag in config["interfaces"]["lag"]:
+        lag["lacp-passive"] = True
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
+    processes.append(instance)
+    wait_until(lambda: instance.ctrl("lag-info")["code"] == 200, 5, 0.1, message="started")
+    # Wait longer than a few periodic intervals (short timeout 1s).
+    time.sleep(3)
+    assert all(tx == 0 for tx in lacp_tx(instance).values()), lacp_tx(instance)
+    assert all(l["state"] != "Up" for l in instance.ctrl("lag-info")["lag-info"])
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 

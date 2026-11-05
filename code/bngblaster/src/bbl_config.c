@@ -496,7 +496,7 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
     static uint8_t lag_id = 0;
 
     const char *schema[] = {
-        "interface", "lacp", "lacp-timeout-short",
+        "interface", "lacp", "lacp-timeout-short", "lacp-passive",
         "lacp-system-priority", "lacp-system-id", "lacp-min-active-links",
         "lacp-max-active-links", "mac", "monkey"
     };
@@ -519,6 +519,10 @@ json_parse_lag(json_t *lag, bbl_lag_config_s *lag_config)
     JSON_OBJ_GET_BOOL(lag, value, "lag", "lacp-timeout-short");
     if(value) {
         lag_config->lacp_timeout_short = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_BOOL(lag, value, "lag", "lacp-passive");
+    if(value) {
+        lag_config->lacp_passive = json_boolean_value(value);
     }
     JSON_OBJ_GET_BOOL(lag, value, "lag", "monkey");
     if(value) {

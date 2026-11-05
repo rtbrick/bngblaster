@@ -137,6 +137,16 @@ bbl_lag_update_state(bbl_lag_s *lag, interface_state_t state)
     interface->state = state;
 }
 
+/* A passive member sends LACP PDUs only if the
+ * partner is active (IEEE 802.1AX periodic machine). */
+static void
+bbl_lag_lacp_send(bbl_lag_member_s *member)
+{
+    if((member->actor_state | member->partner_state) & LACP_STATE_FLAG_ACTIVE) {
+        member->interface->send_requests |= BBL_SEND_LACP;
+    }
+}
+
 static void
 bbl_lag_select(bbl_lag_s *lag)
 {
@@ -204,7 +214,7 @@ bbl_lag_select(bbl_lag_s *lag)
             if(member->lacp_state != LACP_DISABLED && member->actor_state != actor_state) {
                 /* Inform the partner immediately instead of
                  * waiting for the next periodic LACP PDU. */
-                member->interface->send_requests |= BBL_SEND_LACP;
+                bbl_lag_lacp_send(member);
             }
         }
     }
@@ -237,7 +247,7 @@ bbl_lag_lacp_job(timer_s *timer)
     bbl_interface_s *interface = timer->data;
     bbl_lag_member_s *member = interface->lag_member;
 
-    interface->send_requests |= BBL_SEND_LACP;
+    bbl_lag_lacp_send(member);
     member->timeout++;
     if(member->timeout > 3) {
         if(!(member->actor_state & LACP_STATE_FLAG_EXPIRED)) {
@@ -320,7 +330,10 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
             member->actor_key = lag->id;
             member->actor_port_priority = interface->config->lacp_priority;
             member->actor_port_id = g_lag_port_id++;
-            member->actor_state = LACP_STATE_FLAG_ACTIVE|LACP_STATE_FLAG_IN_SYNC|LACP_STATE_FLAG_AGGREGATION|LACP_STATE_FLAG_EXPIRED|LACP_STATE_FLAG_DEFAULTED;
+            member->actor_state = LACP_STATE_FLAG_IN_SYNC|LACP_STATE_FLAG_AGGREGATION|LACP_STATE_FLAG_EXPIRED|LACP_STATE_FLAG_DEFAULTED;
+            if(!lag->config->lacp_passive) {
+                member->actor_state |= LACP_STATE_FLAG_ACTIVE;
+            }
             if(lag->config->lacp_timeout_short) {
                 timer_sec = 1;
                 member->actor_state |= LACP_STATE_FLAG_SHORT_TIMEOUT;
@@ -329,6 +342,9 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
             }
             timer_add_periodic(&g_ctx->timer_root, &member->lacp_timer, "LACP",
                                timer_sec, 0, interface, &bbl_lag_lacp_job);
+            /* Send the first LACP PDU immediately
+             * instead of after the periodic interval. */
+            bbl_lag_lacp_send(member);
         } else {
             member->lacp_state = LACP_DISABLED;
             lag->interface->state = INTERFACE_UP;
@@ -381,7 +397,7 @@ bbl_lag_member_enable(bbl_interface_s *interface)
     }
     if(member->lacp_state) {
         interface->state = INTERFACE_DOWN;
-        interface->send_requests |= BBL_SEND_LACP;
+        bbl_lag_lacp_send(member);
     } else {
         /* Set to down so that the selection reports the transition to up. */
         interface->state = INTERFACE_DOWN;

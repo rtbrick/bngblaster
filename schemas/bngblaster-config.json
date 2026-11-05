@@ -2278,6 +2278,11 @@
                     "description": "Enable LACP short timeout (3x1s)",
                     "default": false
                 },
+                "lacp-passive": {
+                    "type": "boolean",
+                    "description": "Enable LACP passive mode",
+                    "default": false
+                },
                 "lacp-system-priority": {
                     "type": "integer",
                     "description": "LACP system priority",
