@@ -60,7 +60,7 @@ RtBrick and many more.
         * Emulate ISIS and OSPFv2/3 topologies with thousands of nodes 
         * Support for ISIS and OSPFv2/3 Segment Routing
         * Support for LDP and traffic streams with dynamically resolved labels
-        * Support for BGP EVPN
+        * Support for BGP EVPN (L3, E-LINE and E-LAN) and BGP L2VPN (RFC 6624)
         * Support for BGP TCP authentication (TCP-AO and MD5)
         * Support all routing protocols with link aggregation (LAG)
         * ...
@@ -70,7 +70,7 @@ RtBrick and many more.
         * Generate and track millions of traffic flows
         * Verify your QoS configuration 
         * Verify all forwarding states
-        * Verify EVPN VPWS services
+        * Verify EVPN E-LINE (VPWS), E-LAN and BGP L2VPN services
         * Measure convergence times and loss
         * Capture traffic
         * Emulate HTTP clients and servers
@@ -82,16 +82,13 @@ can be found on YouTube. There are even more videos and articles
 listed below.
 
 .. image:: images/bbl_interactive.png
-    :alt: BNG Blaster Interactive
+    :alt: BNG Blaster UI/Terminal
 
 The BNG Blaster has been completely built from scratch in **C**. This includes user-space implementations 
 of the entire protocol stack. The core is based on a very simple event loop that serves timers and 
 signals. The timers have been built using a lightweight constant time (*O(1)*) library. The 
 `timer library <https://github.com/rtbrick/bngblaster/blob/main/code/common/src/timer.h>`_
 was built to start, restart and delete the protocol session FSM timers quickly and at scale.
-
-.. image:: images/bbl_arch.png
-    :alt: BNG Blaster Architecture
 
 This project will be actively maintained and further evolved by RtBrick. We are fully committed to building 
 a project for the community and take issue and enhancement requests seriously. We are looking forward to any 

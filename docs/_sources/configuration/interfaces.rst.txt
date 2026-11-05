@@ -52,6 +52,12 @@
 |                                   | | :ref:`CPU pinning <cpu-pinning>`.                                  |
 +-----------------------------------+----------------------------------------------------------------------+
 | **capture-include-streams**       | | Include traffic streams in the capture.                            |
+|                                   | | With TX/RX threads, stream packets are copied to per thread        |
+|                                   | | queues (size of io-slots) and written by the main thread,          |
+|                                   | | which adds CPU, memory and disk load and can limit the             |
+|                                   | | throughput. Packets lost in the capture (queue full) are           |
+|                                   | | logged as incomplete stream capture. TX captures show packets      |
+|                                   | | submitted to the NIC, which does not prove the transmission.       |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **mac-modifier**                  | | Third byte of access session MAC address (0-255). This option      |

@@ -1,19 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Configuration &mdash; BNG Blaster 1.0 documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <title>Configuration &mdash; BNG Blaster 1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
+      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
+
   
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
+  
+        <script src="../_static/jquery.js?v=8dae8fb0"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -26,15 +29,19 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search"  style="background: #fcfcfc" >
-            <a href="../index.html" class="icon icon-home"> BNG Blaster
-            <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                1.0.X
+                1.1.X
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -91,7 +98,10 @@
 <li class="toctree-l3"><a class="reference internal" href="#ospf-external-connections">OSPF External Connections</a></li>
 </ul>
 </li>
-<li class="toctree-l2"><a class="reference internal" href="#ldp">LDP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#ldp">LDP</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#ldp-targeted-neighbors">LDP Targeted Neighbors</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#bgp">BGP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#http-client">HTTP-Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#http-server">HTTP-Server</a></li>
@@ -119,8 +129,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Configuration</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Configuration</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/configuration/index.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -131,18 +141,18 @@
            <div itemprop="articleBody">
              
   <link rel="stylesheet" type="text/css" href="_static/custom.css"><section id="id1">
-<h1>Configuration<a class="headerlink" href="#id1" title="Permalink to this headline"></a></h1>
+<h1>Configuration<a class="headerlink" href="#id1" title="Link to this heading"></a></h1>
 <p>The BNG Blaster configuration is presented as a JSON file.
 This configuration must include at least one interface function.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.10/24&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.10/24&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.2&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>In order to minimize the size of this configuration, you have the option
@@ -155,11 +165,11 @@ into distinct files, you can maintain a more organized and manageable
 configuration while ensuring that the combined streams are effectively utilized
 in your testing scenarios. This flexibility in configuration empowers you to
 handle large-scale traffic simulations with ease.</p>
-<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bngblaster -C config.json -T streams.json
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>bngblaster<span class="w"> </span>-C<span class="w"> </span>config.json<span class="w"> </span>-T<span class="w"> </span>streams.json
 </pre></div>
 </div>
 <section id="variables">
-<span id="id2"></span><h2>Variables<a class="headerlink" href="#variables" title="Permalink to this headline"></a></h2>
+<span id="id2"></span><h2>Variables<a class="headerlink" href="#variables" title="Link to this heading"></a></h2>
 <p>Some configuration attributes like <strong>username</strong>, <strong>password</strong>, <strong>agent-remote-id</strong>,
 <strong>agent-circuit-id</strong>, <strong>cfm-md-name</strong> or <strong>cfm-ma-name</strong> support variable substitution.
 The variable <strong>{session-global}</strong> will be replaced with the actual session-id
@@ -168,28 +178,24 @@ is incremented per-interface section. The variables <strong>{outer-vlan}</strong
 will be replaced with the corresponding VLAN identifier or 0 if not defined.
 The two variables <strong>{i1}</strong> and <strong>{i2}</strong> are configurable per-interface sections
 with user-defined start values and steps.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user{session-global}@rtbrick.com&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;agent-circuit-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0/0.0.0.0 eth {outer-vlan}:{inner-vlan}&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;agent-remote-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DEU.RTBRICK.{i1}&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;i1-start&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;i1-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;username&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;user{session-global}@rtbrick.com&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;agent-circuit-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0.0.0.0/0.0.0.0 eth {outer-vlan}:{inner-vlan}&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;agent-remote-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DEU.RTBRICK.{i1}&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;i1-start&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10000</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;i1-step&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>
 <section id="interfaces">
-<h2>Interfaces<a class="headerlink" href="#interfaces" title="Permalink to this headline"></a></h2>
+<h2>Interfaces<a class="headerlink" href="#interfaces" title="Link to this heading"></a></h2>
 <p>The BNG Blaster interfaces are explained detailed in the
 <a class="reference internal" href="../interfaces.html#interfaces"><span class="std std-ref">interfaces section</span></a>.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -285,6 +291,12 @@ with user-defined start values and steps.</p>
 <tr class="row-even"><td><p><strong>capture-include-streams</strong></p></td>
 <td><div class="line-block">
 <div class="line">Include traffic streams in the capture.</div>
+<div class="line">With TX/RX threads, stream packets are copied to per thread</div>
+<div class="line">queues (size of io-slots) and written by the main thread,</div>
+<div class="line">which adds CPU, memory and disk load and can limit the</div>
+<div class="line">throughput. Packets lost in the capture (queue full) are</div>
+<div class="line">logged as incomplete stream capture. TX captures show packets</div>
+<div class="line">submitted to the NIC, which does not prove the transmission.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
@@ -324,18 +336,14 @@ with user-defined start values and steps.</p>
 </tbody>
 </table>
 <section id="links">
-<h3>Links<a class="headerlink" href="#links" title="Permalink to this headline"></a></h3>
+<h3>Links<a class="headerlink" href="#links" title="Link to this heading"></a></h3>
 <p>The link configuration is optional and allows defining per interface link configurations. An explicit
 link configuration with the global default settings is automatically generated if no link is defined
 for interface links referenced by interface functions.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -454,10 +462,11 @@ for interface links referenced by interface functions.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>af-xdp-mode</strong></p></td>
 <td><div class="line-block">
-<div class="line">AF_XDP socket mode: <code class="docutils literal notranslate"><span class="pre">auto</span></code>, <code class="docutils literal notranslate"><span class="pre">zero-copy</span></code>, <code class="docutils literal notranslate"><span class="pre">copy</span></code></div>
-<div class="line">or <code class="docutils literal notranslate"><span class="pre">generic</span></code>. <code class="docutils literal notranslate"><span class="pre">auto</span></code> prefers native zero-copy mode</div>
-<div class="line">and falls back to copy or generic mode. <code class="docutils literal notranslate"><span class="pre">copy</span></code></div>
-<div class="line">avoids the zero-copy mode of the driver.</div>
+<div class="line">AF_XDP socket mode: <code class="docutils literal notranslate"><span class="pre">auto</span></code>, <code class="docutils literal notranslate"><span class="pre">zero-copy</span></code>, <code class="docutils literal notranslate"><span class="pre">copy</span></code>,</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">copy-rx</span></code> or <code class="docutils literal notranslate"><span class="pre">generic</span></code>. <code class="docutils literal notranslate"><span class="pre">auto</span></code> prefers native zero-copy</div>
+<div class="line">mode and falls back to copy or generic mode. <code class="docutils literal notranslate"><span class="pre">copy</span></code></div>
+<div class="line">avoids the zero-copy mode of the driver. <code class="docutils literal notranslate"><span class="pre">copy-rx</span></code> uses copy</div>
+<div class="line">mode for RX queues only and <code class="docutils literal notranslate"><span class="pre">auto</span></code> for TX queues.</div>
 <div class="line">Default: auto</div>
 </div>
 </td>
@@ -496,15 +505,11 @@ for interface links referenced by interface functions.</p>
 </table>
 </section>
 <section id="link-aggregation-lag">
-<h3>Link Aggregation (LAG)<a class="headerlink" href="#link-aggregation-lag" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>Link Aggregation (LAG)<a class="headerlink" href="#link-aggregation-lag" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lag&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -531,38 +536,56 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lacp-system-priority</strong></p></td>
+<tr class="row-odd"><td><p><strong>lacp-passive</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable LACP passive mode, which sends LACP PDUs only to an active</div>
+<div class="line">partner.</div>
+<div class="line">Default: false (active)</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>lacp-system-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">LACP system priority.</div>
 <div class="line">Default: 32768</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lacp-system-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>lacp-system-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">LACP system identifier</div>
 <div class="line">Default: 02:ff:ff:ff:ff:00</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lacp-min-active-links</strong></p></td>
+<tr class="row-even"><td><p><strong>lacp-min-active-links</strong></p></td>
 <td><div class="line-block">
 <div class="line">Define the minimum number of active links.</div>
 <div class="line">Default: 0</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lacp-max-active-links</strong></p></td>
+<tr class="row-odd"><td><p><strong>lacp-max-active-links</strong></p></td>
 <td><div class="line-block">
 <div class="line">Limit the maximum number of active links.</div>
 <div class="line">Default: 255</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>mac</strong></p></td>
+<tr class="row-even"><td><p><strong>mac</strong></p></td>
 <td><div class="line-block">
 <div class="line">LAG interface MAC address.</div>
 <div class="line">Default: 02:ff:ff:ff:ff:&lt;interface-id&gt;</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>monkey</strong></p></td>
+<td><div class="line-block">
+<div class="line">Flap (disable/enable) one random member interface every 30 seconds.</div>
+<div class="line">Members flap independently, so all members can be down at the same</div>
+<div class="line">time. The commands monkey-start and monkey-stop control it as well</div>
+<div class="line">as the session monkey (sessions-&gt;monkey-autostart).</div>
+<div class="line">Default: false</div>
 </div>
 </td>
 </tr>
@@ -574,15 +597,11 @@ for interface links referenced by interface functions.</p>
 </div>
 </section>
 <section id="network-interfaces">
-<h3>Network Interfaces<a class="headerlink" href="#network-interfaces" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>Network Interfaces<a class="headerlink" href="#network-interfaces" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -672,136 +691,163 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-instance-id</strong></p></td>
+<tr class="row-even"><td><p><strong>gratuitous-arp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Announce the IPv4 address and all secondary IPv4 addresses</div>
+<div class="line">with gratuitous ARP (ARP request with sender and target IP set to</div>
+<div class="line">the announced address) on start.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>unsolicited-na</strong></p></td>
+<td><div class="line-block">
+<div class="line">Announce the IPv6 address and all secondary IPv6 addresses</div>
+<div class="line">with unsolicited neighbor advertisements (ICMPv6 NA with override</div>
+<div class="line">flag to ff02::1) on start.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>announce-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Repeat the announcements of <strong>gratuitous-arp</strong> and</div>
+<div class="line"><strong>unsolicited-na</strong> every N seconds, with 0 announcing on start</div>
+<div class="line">only.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>isis-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an ISIS instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-level</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-level</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS interface level.</div>
 <div class="line">Default: 3 Range: 1 - 3</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-p2p</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-p2p</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS P2P interface.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-l1-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-l1-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 1 interface metric.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-l2-metric</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-l2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 2 interface metric.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-l1-priority</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-l1-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 1 interface priority.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-l2-priority</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-l2-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 2 interface priority.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-te-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-te-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS Flex-Algo TE metric.</div>
 <div class="line">Default: 0 (disabled) Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-delay</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-delay</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS Flex-Algo min/max link delay in microseconds.</div>
 <div class="line">Default: 0 (disabled) Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-admin-group</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-admin-group</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS Flex-Algo admin group (32 bit mask).</div>
 <div class="line">Default: 0 (disabled)</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv2-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv2-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an OSPFv2 instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv2-type</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv2-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface type (p2p or broadcast).</div>
 <div class="line">Default: broadcast</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv2-metric</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface metric.</div>
 <div class="line">Default: 1</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv3-instance-id</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv3-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an OSPFv3 instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv3-type</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv3-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv3 interface type (p2p or broadcast).</div>
 <div class="line">Default: broadcast</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv3-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv3-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv3 interface metric.</div>
 <div class="line">Default: 1</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ldp-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>ldp-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to a LDP instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-cc</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-cc</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable EOAM CFM CC.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-level</strong></p></td>
+<tr class="row-odd"><td><p><strong>cfm-level</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance domain level.</div>
 <div class="line">Default: 0 Range: 0 - 7</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM CCM interval (IEEE 802.1Q encoding).</div>
 <div class="line">Values: <cite>3.33ms</cite>, <cite>10ms</cite>, <cite>100ms</cite>, <cite>1s</cite>, <cite>10s</cite>, <cite>1min</cite>, <cite>10min</cite></div>
@@ -809,7 +855,7 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-md-name</strong>
+<tr class="row-odd"><td><p><strong>cfm-md-name</strong>
 <strong>cfm-md-name</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance domain name (string).</div>
@@ -817,7 +863,7 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-md-name-format</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-md-name-format</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM MD name format.</div>
 <div class="line">Default: <code class="docutils literal notranslate"><span class="pre">NONE</span></code></div>
@@ -831,14 +877,14 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-ma-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>cfm-ma-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance association identifier.</div>
 <div class="line">Default: 0 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-ma-name</strong>
+<tr class="row-even"><td><p><strong>cfm-ma-name</strong>
 <strong>cfm-ma-name</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance association short name (string).</div>
@@ -846,7 +892,7 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-ma-name-format</strong></p></td>
+<tr class="row-odd"><td><p><strong>cfm-ma-name-format</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM MA name format.</div>
 <div class="line">Default: <code class="docutils literal notranslate"><span class="pre">STRING</span></code></div>
@@ -861,28 +907,28 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-seq</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-seq</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable EOAM CFM CC sequence numbers.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-vlan-priority</strong></p></td>
+<tr class="row-odd"><td><p><strong>cfm-vlan-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM CC VLAN priority (PCP).</div>
 <div class="line">Default: 0 Range: 0 - 7</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>a10nsp</strong></p></td>
+<tr class="row-even"><td><p><strong>a10nsp</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable A10NSP switch emulation (experimental).</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>a10nsp-tx-label</strong></p></td>
+<tr class="row-odd"><td><p><strong>a10nsp-tx-label</strong></p></td>
 <td><div class="line-block">
 <div class="line">Transport label used for A10NSP services in downstream direction.</div>
 <div class="line">Default: 0</div>
@@ -893,15 +939,11 @@ for interface links referenced by interface functions.</p>
 </table>
 </section>
 <section id="access-interfaces">
-<h3>Access Interfaces<a class="headerlink" href="#access-interfaces" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>Access Interfaces<a class="headerlink" href="#access-interfaces" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1386,7 +1428,7 @@ for interface links referenced by interface functions.</p>
 </table>
 </section>
 <section id="a10nsp-interfaces">
-<h3>A10NSP Interfaces<a class="headerlink" href="#a10nsp-interfaces" title="Permalink to this headline"></a></h3>
+<h3>A10NSP Interfaces<a class="headerlink" href="#a10nsp-interfaces" title="Link to this heading"></a></h3>
 <p>The <a class="reference internal" href="../access/l2bsa.html#l2bsa"><span class="std std-ref">L2BSA</span></a> specification defines two interfaces.
 The so-called U interface (User Interface) at the customer location
 and the A10-NSP interface (A10 Network Service Provider)
@@ -1394,14 +1436,10 @@ between the service provider networks.</p>
 <p>The BNG Blaster A10NSP interface emulates such a layer two provider interface.
 This interface type accepts all DHCPv4 and PPPoE sessions that are received, to verify
 forwarding and header enrichment.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1433,15 +1471,11 @@ forwarding and header enrichment.</p>
 </section>
 </section>
 <section id="sessions">
-<h2>Sessions<a class="headerlink" href="#sessions" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>Sessions<a class="headerlink" href="#sessions" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 28%" />
-<col style="width: 72%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1530,15 +1564,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="ipoe">
-<h2>IPoE<a class="headerlink" href="#ipoe" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ipoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>IPoE<a class="headerlink" href="#ipoe" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ipoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1587,15 +1617,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="pppoe">
-<h2>PPPoE<a class="headerlink" href="#pppoe" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>PPPoE<a class="headerlink" href="#pppoe" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 26%" />
-<col style="width: 74%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1662,15 +1688,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="ppp">
-<h2>PPP<a class="headerlink" href="#ppp" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>PPP<a class="headerlink" href="#ppp" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 16%" />
-<col style="width: 84%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1680,6 +1702,9 @@ forwarding and header enrichment.</p>
 <tr class="row-even"><td><p><strong>mru</strong></p></td>
 <td><div class="line-block">
 <div class="line">Define the maximum receive unit proposed via PPP.</div>
+<div class="line">For PPPoE, a peer MRU above 1492, or above the PPP-Max-Payload</div>
+<div class="line">echoed by the server (RFC4638), is rejected with LCP</div>
+<div class="line">configure-nak suggesting the maximum.</div>
 <div class="line">Default: 1492 Range: 0 - 65535</div>
 </div>
 </td>
@@ -1687,15 +1712,11 @@ forwarding and header enrichment.</p>
 </tbody>
 </table>
 <section id="ppp-authentication">
-<h3>PPP Authentication<a class="headerlink" href="#ppp-authentication" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;authentication&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>PPP Authentication<a class="headerlink" href="#ppp-authentication" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;authentication&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 20%" />
-<col style="width: 80%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1742,15 +1763,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="ppp-lcp">
-<h3>PPP LCP<a class="headerlink" href="#ppp-lcp" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>PPP LCP<a class="headerlink" href="#ppp-lcp" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;lcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 32%" />
-<col style="width: 68%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1810,15 +1827,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="ppp-ipcp-ipv4">
-<h3>PPP IPCP (IPv4)<a class="headerlink" href="#ppp-ipcp-ipv4" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ipcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>PPP IPCP (IPv4)<a class="headerlink" href="#ppp-ipcp-ipv4" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ipcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 28%" />
-<col style="width: 72%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1879,15 +1892,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="ppp-ip6cp-ipv6">
-<h3>PPP IP6CP (IPv6)<a class="headerlink" href="#ppp-ip6cp-ipv6" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ip6cp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>PPP IP6CP (IPv6)<a class="headerlink" href="#ppp-ip6cp-ipv6" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ppp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ip6cp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 34%" />
-<col style="width: 66%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -1920,15 +1929,11 @@ forwarding and header enrichment.</p>
 </section>
 </section>
 <section id="dhcp">
-<h2>DHCP<a class="headerlink" href="#dhcp" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;dhcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>DHCP<a class="headerlink" href="#dhcp" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;dhcp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -2018,15 +2023,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="dhcpv6">
-<h2>DHCPv6<a class="headerlink" href="#dhcpv6" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>DHCPv6<a class="headerlink" href="#dhcpv6" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -2113,15 +2114,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="igmp">
-<h2>IGMP<a class="headerlink" href="#igmp" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;igmp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>IGMP<a class="headerlink" href="#igmp" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;igmp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -2289,15 +2286,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="l2tpv2-server-lns">
-<h2>L2TPv2 Server (LNS)<a class="headerlink" href="#l2tpv2-server-lns" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;l2tp-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>L2TPv2 Server (LNS)<a class="headerlink" href="#l2tpv2-server-lns" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;l2tp-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 38%" />
-<col style="width: 62%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -2332,7 +2325,7 @@ forwarding and header enrichment.</p>
 <tr class="row-even"><td><p><strong>max-retry</strong></p></td>
 <td><div class="line-block">
 <div class="line">Control messages max retry.</div>
-<div class="line">Default: 5 Range: 1 - 65535</div>
+<div class="line">Default: 5 Range: 1 - 255</div>
 </div>
 </td>
 </tr>
@@ -2426,7 +2419,16 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>client-auth-id</strong></p></td>
+<tr class="row-even"><td><p><strong>proxy-auth</strong></p></td>
+<td><div class="line-block">
+<div class="line">Accept PAP or CHAP proxy authentication from the LAC by sending</div>
+<div class="line">PAP Authenticate-Ack or CHAP Success immediately after ICCN.</div>
+<div class="line">If disabled, the LNS waits for the request of the client.</div>
+<div class="line">Default: true</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>client-auth-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Add optional check based on client-auth-id to support multiple</div>
 <div class="line">LNS server configurations with the same IP address.</div>
@@ -2437,15 +2439,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="l2tpv2-client-lac">
-<h2>L2TPv2 Client (LAC)<a class="headerlink" href="#l2tpv2-client-lac" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;l2tp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>L2TPv2 Client (LAC)<a class="headerlink" href="#l2tpv2-client-lac" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;l2tp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 38%" />
-<col style="width: 62%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -2506,7 +2504,7 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>max-retry</strong></p></td>
 <td><div class="line-block">
 <div class="line">Control messages max retry.</div>
-<div class="line">Default: 5 Range: 1 - 65535</div>
+<div class="line">Default: 5 Range: 1 - 255</div>
 </div>
 </td>
 </tr>
@@ -2623,15 +2621,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="traffic">
-<h2>Traffic<a class="headerlink" href="#traffic" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>Traffic<a class="headerlink" href="#traffic" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 37%" />
-<col style="width: 63%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -2738,15 +2732,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="traffic-streams">
-<h2>Traffic-Streams<a class="headerlink" href="#traffic-streams" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>Traffic-Streams<a class="headerlink" href="#traffic-streams" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -3112,15 +3102,16 @@ forwarding and header enrichment.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>vpws-vlan</strong></p></td>
 <td><div class="line-block">
-<div class="line">Customer VLAN within the EVPN VPWS service. All vpws-*</div>
-<div class="line">options require EVPN VPWS.</div>
+<div class="line">Customer VLAN within the EVPN VPWS, E-LAN or L2VPN service.</div>
+<div class="line">All vpws-* options require EVPN VPWS, E-LAN or L2VPN.</div>
 <div class="line">Range: 1 - 4094</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>vpws-inner-vlan</strong></p></td>
 <td><div class="line-block">
-<div class="line">Customer inner VLAN within the EVPN VPWS service.</div>
+<div class="line">Customer inner VLAN within the EVPN VPWS, E-LAN or L2VPN</div>
+<div class="line">service.</div>
 <div class="line">Requires vpws-vlan.</div>
 <div class="line">Range: 1 - 4094</div>
 </div>
@@ -3152,10 +3143,11 @@ forwarding and header enrichment.</p>
 <td><div class="line-block">
 <div class="line">Reply to ARP, IPv6 neighbor solicitation and ICMP/ICMPv6</div>
 <div class="line">echo requests for the network-ipv4-address or</div>
-<div class="line">network-ipv6-address received within the EVPN VPWS service.</div>
-<div class="line">Without destination-mac, the stream waits until the customer</div>
-<div class="line">MAC is learned from those requests. Requires stream type ipv4</div>
-<div class="line">with network-ipv4-address or ipv6 with network-ipv6-address.</div>
+<div class="line">network-ipv6-address received within the EVPN VPWS, E-LAN or</div>
+<div class="line">L2VPN service. Without destination-mac (not E-LAN), the stream</div>
+<div class="line">waits until the customer MAC is learned from those requests.</div>
+<div class="line">Requires stream type ipv4 with network-ipv4-address or ipv6</div>
+<div class="line">with network-ipv6-address.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
@@ -3163,25 +3155,76 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>rx-control-word</strong></p></td>
 <td><div class="line-block">
 <div class="line">Expect pseudowire control word for received Ethernet over</div>
-<div class="line">MPLS traffic (e.g. EVPN VPWS).</div>
+<div class="line">MPLS traffic (e.g. EVPN VPWS or E-LAN).</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>bgp-evpn-mac</strong></p></td>
+<tr class="row-even"><td><p><strong>tx-control-word</strong></p></td>
+<td><div class="line-block">
+<div class="line">Send pseudowire control word for EVPN VPWS, E-LAN or L2VPN</div>
+<div class="line">traffic. EVPN VPWS and L2VPN streams add the control word also</div>
+<div class="line">if requested by the remote PE, which is not signaled for EVPN</div>
+<div class="line">E-LAN.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bgp-evpn-elan</strong></p></td>
+<td><div class="line-block">
+<div class="line">EVPN E-LAN where stream packets are sent as Ethernet over MPLS</div>
+<div class="line">to the destination-mac (required) using label1 of the MAC/IP</div>
+<div class="line">advertisement route (type 2) of this MAC address (known</div>
+<div class="line">unicast) or the ingress replication label of the IMET route</div>
+<div class="line">(type 3) with the same route distinguisher and Ethernet tag</div>
+<div class="line">(unknown unicast). Requires RAW streams. Not supported with</div>
+<div class="line">bgp-evpn-mac, bgp-evpn-prefix or bgp-evpn-esi.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>bgp-l2vpn-rd</strong></p></td>
+<td><div class="line-block">
+<div class="line">Dynamically resolve the pseudowire label from the BGP L2VPN</div>
+<div class="line">label block (RFC 6624) of the remote CE with this route</div>
+<div class="line">distinguisher. Stream packets are sent as Ethernet over MPLS</div>
+<div class="line">to the destination-mac (unless vpws-arp is enabled). Requires</div>
+<div class="line">a BGP session with learn-routes and family l2vpn, RAW streams,</div>
+<div class="line">bgp-l2vpn-ce-id and bgp-l2vpn-local-ce-id. Not supported with</div>
+<div class="line">bgp-evpn-rd or tx-label2.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bgp-l2vpn-ce-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">CE ID of the remote CE (L2VPN site identifier of the DUT).</div>
+<div class="line">Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>bgp-l2vpn-local-ce-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">CE ID of the local CE emulated by the BNG Blaster, which must</div>
+<div class="line">be covered by the label block of the remote CE. The label is</div>
+<div class="line">label base + local CE ID - label block offset.</div>
+<div class="line">Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bgp-evpn-mac</strong></p></td>
 <td><div class="line-block">
 <div class="line">Use label2 of the MAC/IP advertisement route (type 2).</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>bgp-evpn-ip</strong></p></td>
+<tr class="row-even"><td><p><strong>bgp-evpn-ip</strong></p></td>
 <td><div class="line-block">
 <div class="line">IP address of the MAC/IP advertisement route (type 2).</div>
 <div class="line">Requires bgp-evpn-mac.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>bgp-evpn-prefix</strong></p></td>
+<tr class="row-odd"><td><p><strong>bgp-evpn-prefix</strong></p></td>
 <td><div class="line-block">
 <div class="line">Use the label of the IP prefix route (type 5). The address</div>
 <div class="line">family must match the stream type. Not supported with</div>
@@ -3189,14 +3232,14 @@ forwarding and header enrichment.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>nat</strong></p></td>
+<tr class="row-even"><td><p><strong>nat</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable NAT support.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>raw-tcp</strong></p></td>
+<tr class="row-odd"><td><p><strong>raw-tcp</strong></p></td>
 <td><div class="line-block">
 <div class="line">Send RAW TCP traffic (UDP-like traffic with TCP header).</div>
 <div class="line">Default: false</div>
@@ -3207,15 +3250,11 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="session-traffic">
-<h2>Session-Traffic<a class="headerlink" href="#session-traffic" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;session-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>Session-Traffic<a class="headerlink" href="#session-traffic" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;session-traffic&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 21%" />
-<col style="width: 79%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -3286,20 +3325,16 @@ forwarding and header enrichment.</p>
 </table>
 </section>
 <section id="access-line">
-<h2>Access-Line<a class="headerlink" href="#access-line" title="Permalink to this headline"></a></h2>
+<h2>Access-Line<a class="headerlink" href="#access-line" title="Link to this heading"></a></h2>
 <p>This feature is designed to simulate various access line attributes defined by the Broadband Forum,
 which are subsequently employed in protocols such as PPPoE discovery, DHCPv4, and DHCPv6 packets.</p>
 <p>The values defined in <strong>access-line</strong> section apply globally but can be overwritten in the
 access interface section. The strings agent-remote-id, agent-circuit-id, and
 access-aggregation-circuit-id support <a class="reference internal" href="#variables"><span class="std std-ref">variable substitution</span></a>.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access-line&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access-line&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 43%" />
-<col style="width: 57%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -3358,18 +3393,14 @@ Therefore, the DHCPv6 configuration section provides the option to either disabl
 as an alternative, enable LDRA (Lightweight DHCPv6 Relay Agent).</p>
 </section>
 <section id="access-line-profiles">
-<h2>Access-Line-Profiles<a class="headerlink" href="#access-line-profiles" title="Permalink to this headline"></a></h2>
+<h2>Access-Line-Profiles<a class="headerlink" href="#access-line-profiles" title="Link to this heading"></a></h2>
 <p>Attributes within the <strong>access-line-profiles</strong> are treated analogous to those within the
 <strong>access-line</strong> section but they provide the capability to apply different profiles to
 each access interface.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access-line-profiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;access-line-profiles&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -3619,15 +3650,11 @@ each access interface.</p>
 provided here.</p>
 </section>
 <section id="isis">
-<h2>ISIS<a class="headerlink" href="#isis" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>ISIS<a class="headerlink" href="#isis" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 34%" />
-<col style="width: 66%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -3917,18 +3944,25 @@ provided here.</p>
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>teardown-delay</strong></p></td>
+<td><div class="line-block">
+<div class="line">ISIS teardown delay in seconds before the withdraw</div>
+<div class="line">(purge) of the own and external database entries. The</div>
+<div class="line">withdraw waits also until BGP and LDP sessions are</div>
+<div class="line">closed, plus one second, as those might be routed via</div>
+<div class="line">this IGP.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 <section id="isis-external">
-<h3>ISIS External<a class="headerlink" href="#isis-external" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>ISIS External<a class="headerlink" href="#isis-external" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -3960,15 +3994,11 @@ provided here.</p>
 </table>
 </section>
 <section id="isis-external-connections">
-<h3>ISIS External Connections<a class="headerlink" href="#isis-external-connections" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>ISIS External Connections<a class="headerlink" href="#isis-external-connections" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -4021,15 +4051,11 @@ provided here.</p>
 </section>
 </section>
 <section id="ospf">
-<h2>OSPF<a class="headerlink" href="#ospf" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>OSPF<a class="headerlink" href="#ospf" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 34%" />
-<col style="width: 66%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -4153,18 +4179,25 @@ provided here.</p>
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>teardown-delay</strong></p></td>
+<td><div class="line-block">
+<div class="line">OSPF teardown delay in seconds before the withdraw</div>
+<div class="line">(purge) of the own and external database entries. The</div>
+<div class="line">withdraw waits also until BGP and LDP sessions are</div>
+<div class="line">closed, plus one second, as those might be routed via</div>
+<div class="line">this IGP.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 <section id="ospf-external">
-<h3>OSPF External<a class="headerlink" href="#ospf-external" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>OSPF External<a class="headerlink" href="#ospf-external" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 21%" />
-<col style="width: 79%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -4188,15 +4221,11 @@ provided here.</p>
 </table>
 </section>
 <section id="ospf-external-connections">
-<h3>OSPF External Connections<a class="headerlink" href="#ospf-external-connections" title="Permalink to this headline"></a></h3>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h3>OSPF External Connections<a class="headerlink" href="#ospf-external-connections" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ospf&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;external&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;connections&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 34%" />
-<col style="width: 66%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -4241,15 +4270,11 @@ provided here.</p>
 </section>
 </section>
 <section id="ldp">
-<h2>LDP<a class="headerlink" href="#ldp" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ldp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>LDP<a class="headerlink" href="#ldp" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ldp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 36%" />
-<col style="width: 64%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -4354,25 +4379,81 @@ provided here.</p>
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>targeted-neighbors</strong></p></td>
+<td><div class="line-block">
+<div class="line">List of targeted LDP neighbors, see</div>
+<div class="line">LDP targeted neighbors.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>targeted-hold-time</strong></p></td>
+<td><div class="line-block">
+<div class="line">Targeted hello hold time in seconds.</div>
+<div class="line">Default: 45 Range: 1 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>targeted-hello-accept</strong></p></td>
+<td><div class="line-block">
+<div class="line">Accept targeted hellos sent to the transport address</div>
+<div class="line">from neighbors which are not configured and respond</div>
+<div class="line">with targeted hellos.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<section id="ldp-targeted-neighbors">
+<h3>LDP Targeted Neighbors<a class="headerlink" href="#ldp-targeted-neighbors" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;ldp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;targeted-neighbors&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory targeted neighbor IPv4 or IPv6 address.</div>
+<div class="line">IPv6 requires the LDP <code class="docutils literal notranslate"><span class="pre">ipv6-transport-address</span></code>.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>source-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Source address of the targeted hellos, of the same address</div>
+<div class="line">family as <code class="docutils literal notranslate"><span class="pre">address</span></code>.</div>
+<div class="line">Default: IPv4 or IPv6 transport address</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>network-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Network interface used for the targeted hellos and the session.</div>
+<div class="line">Default: first network interface</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 </section>
+</section>
 <section id="bgp">
-<h2>BGP<a class="headerlink" href="#bgp" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>BGP<a class="headerlink" href="#bgp" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p>Every configured BGP peer both actively connects and passively listens on
 TCP port 179, matching real router behavior. If the peer also connects
 towards BNG Blaster at the same time, the resulting connection collision is
-resolved automatically per <span class="target" id="index-0"></span><a class="rfc reference external" href="https://tools.ietf.org/html/rfc4271.html#section-6.8"><strong>RFC 4271#section-6.8</strong></a> by comparing BGP
+resolved automatically per <span class="target" id="index-0"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc4271.html#section-6.8"><strong>RFC 4271#section-6.8</strong></a> by comparing BGP
 Identifiers, with the losing TCP connection closed via a NOTIFICATION
 (Cease, Connection Collision Resolution).</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -4482,14 +4563,23 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>reconnect</strong></p></td>
+<tr class="row-odd"><td><p><strong>tcp-ao-exclude-options</strong></p></td>
+<td><div class="line-block">
+<div class="line">Exclude TCP options other than TCP-AO from the TCP-AO MAC</div>
+<div class="line">(RFC 5925 section 3.1), which must match the peer configuration.</div>
+<div class="line">Not supported for md5.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>reconnect</strong></p></td>
 <td><div class="line-block">
 <div class="line">Reconnect BGP session automatically.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>start-traffic</strong></p></td>
+<tr class="row-odd"><td><p><strong>start-traffic</strong></p></td>
 <td><div class="line-block">
 <div class="line">Start global traffic after RAW update finished.</div>
 <div class="line">If enabled, the control command <strong>traffic-start</strong> is automatically</div>
@@ -4498,28 +4588,33 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>learn-routes</strong></p></td>
+<tr class="row-even"><td><p><strong>learn-routes</strong></p></td>
 <td><div class="line-block">
-<div class="line">Store received IPv4/IPv6 unicast, labeled unicast and EVPN routes.</div>
+<div class="line">Store received IPv4/IPv6 unicast, labeled unicast, EVPN and</div>
+<div class="line">L2VPN routes.</div>
 <div class="line">If disabled, received updates are not parsed.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>teardown-time</strong></p></td>
+<tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP teardown time in seconds.</div>
+<div class="line">The session is closed after the notification at the</div>
+<div class="line">latest after this time or after 3 seconds. A session</div>
+<div class="line">with pending data (e.g. RAW update not read by the peer)</div>
+<div class="line">is reset (TCP RST) instead of closed (TCP FIN).</div>
 <div class="line">Default: 5 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>raw-update-file</strong></p></td>
+<tr class="row-even"><td><p><strong>raw-update-file</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP RAW update file.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>family</strong></p></td>
+<tr class="row-odd"><td><p><strong>family</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP families to be send in open message.</div>
 <div class="line">Default: ipv4/6-unicast, ipv4/6-labeled-unicast</div>
@@ -4529,11 +4624,11 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 <div class="line">ipv4-labeled-unicast, ipv6-labeled-unicast,</div>
 <div class="line">ipv4-vpn-unicast, ipv6-vpn-unicast,</div>
 <div class="line">ipv4-vpn-multicast, ipv6-vpn-multicast,</div>
-<div class="line">ipv4-flow, ipv6-flow, evpn</div>
+<div class="line">ipv4-flow, ipv6-flow, evpn, l2vpn</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>extended-nexthop</strong></p></td>
+<tr class="row-even"><td><p><strong>extended-nexthop</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP extended-nexthop families to be send in open message.</div>
 <div class="line">Default: None</div>
@@ -4545,15 +4640,11 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </table>
 </section>
 <section id="http-client">
-<h2>HTTP-Client<a class="headerlink" href="#http-client" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>HTTP-Client<a class="headerlink" href="#http-client" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -4619,15 +4710,11 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </table>
 </section>
 <section id="http-server">
-<h2>HTTP-Server<a class="headerlink" href="#http-server" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>HTTP-Server<a class="headerlink" href="#http-server" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;http-server&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -4672,15 +4759,11 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </table>
 </section>
 <section id="icmp-client">
-<h2>ICMP-Client<a class="headerlink" href="#icmp-client" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;icmp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>ICMP-Client<a class="headerlink" href="#icmp-client" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;icmp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -4785,15 +4868,11 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </table>
 </section>
 <section id="arp-client">
-<h2>ARP-Client<a class="headerlink" href="#arp-client" title="Permalink to this headline"></a></h2>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;arp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<h2>ARP-Client<a class="headerlink" href="#arp-client" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;arp-client&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>

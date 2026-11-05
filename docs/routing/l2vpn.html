@@ -1,0 +1,449 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BGP L2VPN &mdash; BNG Blaster 1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
+      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
+
+  
+  
+        <script src="../_static/jquery.js?v=8dae8fb0"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="LDP" href="ldp.html" />
+    <link rel="prev" title="EVPN" href="evpn.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #fcfcfc" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                1.1.X
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../access/index.html">Access Protocols</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Routing Protocols</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="isis.html">ISIS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ospf.html">OSPF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mpls.html">MPLS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bgp.html">BGP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="evpn.html">EVPN</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">BGP L2VPN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#label-blocks">Label Blocks</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#routes">Routes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#traffic-streams">Traffic Streams</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#testing-bgp-l2vpn">Testing BGP L2VPN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="ldp.html">LDP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lspgen.html">LSPGEN</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../icmp.html">ICMP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller and Web UI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #fcfcfc" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Routing Protocols</a></li>
+      <li class="breadcrumb-item active">BGP L2VPN</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/routing/l2vpn.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="bgp-l2vpn">
+<span id="l2vpn"></span><h1>BGP L2VPN<a class="headerlink" href="#bgp-l2vpn" title="Link to this heading"></a></h1>
+<p>The BNG Blaster supports BGP auto-discovery and signaling for Layer 2 VPNs
+(<span class="target" id="index-0"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc6624.html"><strong>RFC 6624</strong></a>), also known as BGP L2VPN, Kompella L2VPN or BGP VPWS, where
+point-to-point pseudowires between the CEs of an L2VPN are signaled with
+label blocks using the BGP NLRI of <span class="target" id="index-1"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc4761.html"><strong>RFC 4761</strong></a> (AFI 25, SAFI 65).</p>
+<ul class="simple">
+<li><p>Learn the label blocks received from the DUT</p></li>
+<li><p>Advertise label blocks of an emulated PE using <a class="reference internal" href="bgp.html#bgp"><span class="std std-ref">RAW update files</span></a>
+generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--l2vpn</span></code></p></li>
+<li><p>Send traffic streams as Ethernet over MPLS with the pseudowire label
+resolved from the label block of the remote CE</p></li>
+<li><p>Verify the traffic received from the DUT including the label
+advertised by the BNG Blaster</p></li>
+<li><p>Reply to ARP, IPv6 neighbor solicitation and ICMP echo requests of a real CE</p></li>
+</ul>
+<section id="label-blocks">
+<h2>Label Blocks<a class="headerlink" href="#label-blocks" title="Link to this heading"></a></h2>
+<p>Each CE of an L2VPN has a unique CE ID (site identifier). The PE advertises
+for each local CE one or more label blocks, where a label block with label
+block offset <code class="docutils literal notranslate"><span class="pre">O</span></code>, label block size <code class="docutils literal notranslate"><span class="pre">S</span></code> and label base <code class="docutils literal notranslate"><span class="pre">L</span></code> contains the
+labels <code class="docutils literal notranslate"><span class="pre">L</span></code> to <code class="docutils literal notranslate"><span class="pre">L</span> <span class="pre">+</span> <span class="pre">S</span> <span class="pre">-</span> <span class="pre">1</span></code> for the remote CE IDs <code class="docutils literal notranslate"><span class="pre">O</span></code> to <code class="docutils literal notranslate"><span class="pre">O</span> <span class="pre">+</span> <span class="pre">S</span> <span class="pre">-</span> <span class="pre">1</span></code>.</p>
+<p>A PE with local CE <code class="docutils literal notranslate"><span class="pre">W</span></code> sends traffic to the remote CE <code class="docutils literal notranslate"><span class="pre">V</span></code> with the label
+<code class="docutils literal notranslate"><span class="pre">L</span> <span class="pre">+</span> <span class="pre">W</span> <span class="pre">-</span> <span class="pre">O</span></code> of the label block of CE <code class="docutils literal notranslate"><span class="pre">V</span></code> which covers CE <code class="docutils literal notranslate"><span class="pre">W</span></code> and
+expects traffic from CE <code class="docutils literal notranslate"><span class="pre">V</span></code> with the label of its own label block
+covering CE <code class="docutils literal notranslate"><span class="pre">V</span></code> (<span class="target" id="index-2"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc4761.html"><strong>RFC 4761</strong></a> section 3.2.3).</p>
+<p>The label blocks are advertised with the route targets of the L2VPN and
+the Layer2 Info extended community, which signals the encapsulation type
+(e.g. 4 for Ethernet VLAN or 5 for Ethernet), the control flags (control
+word and sequenced delivery) and the Layer 2 MTU. The circuit status vector
+TLV (<span class="target" id="index-3"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc6624.html"><strong>RFC 6624</strong></a>) signals the status of the pseudowire to each remote CE
+of the label block.</p>
+</section>
+<section id="routes">
+<h2>Routes<a class="headerlink" href="#routes" title="Link to this heading"></a></h2>
+<p>BGP sessions with <code class="docutils literal notranslate"><span class="pre">learn-routes</span></code> enabled and the family <code class="docutils literal notranslate"><span class="pre">l2vpn</span></code> learn all
+label blocks received from the peer, which can be displayed with the
+<code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-routes</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>. Withdrawn routes and routes of
+sessions which went down are kept as inactive entries.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock bgp-l2vpn-routes
+{
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;code&quot;: 200,
+    &quot;bgp-l2vpn-routes&quot;: [
+        {
+            &quot;interface&quot;: &quot;eth1&quot;,
+            &quot;local-address&quot;: &quot;10.0.1.2&quot;,
+            &quot;peer-address&quot;: &quot;10.0.1.1&quot;,
+            &quot;routes&quot;: [
+                {
+                    &quot;rd&quot;: &quot;10.0.0.1:300&quot;,
+                    &quot;ce-id&quot;: 1,
+                    &quot;active&quot;: true,
+                    &quot;version&quot;: 1,
+                    &quot;label-block-offset&quot;: 1,
+                    &quot;label-block-size&quot;: 2,
+                    &quot;label-base&quot;: 29,
+                    &quot;nexthop&quot;: &quot;10.0.1.1&quot;,
+                    &quot;route-targets&quot;: [
+                        &quot;65000:300&quot;
+                    ],
+                    &quot;layer2-info&quot;: {
+                        &quot;encapsulation-type&quot;: 4,
+                        &quot;encapsulation&quot;: &quot;ethernet-vlan&quot;,
+                        &quot;flags&quot;: 2,
+                        &quot;control-word&quot;: true,
+                        &quot;sequencing&quot;: false,
+                        &quot;mtu&quot;: 0
+                    },
+                    &quot;circuit-status&quot;: [
+                        true,
+                        true
+                    ]
+                }
+            ]
+        }
+    ]
+}
+</pre></div>
+</div>
+</section>
+<section id="traffic-streams">
+<h2>Traffic Streams<a class="headerlink" href="#traffic-streams" title="Link to this heading"></a></h2>
+<p>Traffic streams with <code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-rd</span></code>, <code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-ce-id</span></code> (remote CE) and
+<code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-local-ce-id</span></code> (local CE emulated by the BNG Blaster) resolve the
+pseudowire label from the active label block of the remote CE which covers
+the local CE ID and send the stream packets as Ethernet frames over MPLS to
+the <code class="docutils literal notranslate"><span class="pre">destination-mac</span></code> of the remote CE. The control word is added if requested
+by the remote PE (control word flag) or enabled with <code class="docutils literal notranslate"><span class="pre">tx-control-word</span></code>.</p>
+<p>Streams wait until a matching label block is learned and are rebuilt
+automatically if the label block changes. The <code class="docutils literal notranslate"><span class="pre">stream-info</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>
+shows if the label is resolved (<code class="docutils literal notranslate"><span class="pre">l2vpn-resolved</span></code>), the resolved label
+(<code class="docutils literal notranslate"><span class="pre">l2vpn-label</span></code>) and the circuit status signaled by the remote PE for the
+local CE (<code class="docutils literal notranslate"><span class="pre">l2vpn-circuit-up</span></code>). The circuit status is only displayed, streams
+are sent independent of the status.</p>
+<p>The options <code class="docutils literal notranslate"><span class="pre">vpws-vlan</span></code>, <code class="docutils literal notranslate"><span class="pre">vpws-inner-vlan</span></code>, <code class="docutils literal notranslate"><span class="pre">vpws-qinq</span></code>, <code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code> and
+<code class="docutils literal notranslate"><span class="pre">rx-control-word</span></code> are supported as for <a class="reference internal" href="evpn.html#evpn"><span class="std std-ref">EVPN VPWS</span></a>. Received traffic
+can be verified with <code class="docutils literal notranslate"><span class="pre">rx-label1</span></code> (or <code class="docutils literal notranslate"><span class="pre">rx-label2</span></code> with transport label).</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;L2VPN-PE-CE&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;destination-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:02&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bgp-l2vpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1:300&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bgp-l2vpn-ce-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bgp-l2vpn-local-ce-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;vpws-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The label blocks of the emulated PE are generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--l2vpn</span></code>,
+with one label block for the local CE <code class="docutils literal notranslate"><span class="pre">--ce-id</span></code> per L2VPN instance
+(<code class="docutils literal notranslate"><span class="pre">--service-num</span></code>). The label block covers the remote CE IDs
+<code class="docutils literal notranslate"><span class="pre">--label-block-offset</span></code> (default 1) to <code class="docutils literal notranslate"><span class="pre">--label-block-offset</span></code> +
+<code class="docutils literal notranslate"><span class="pre">--label-block-size</span></code> (default 8) - 1, where the label block of instance <code class="docutils literal notranslate"><span class="pre">n</span></code>
+starts with label <code class="docutils literal notranslate"><span class="pre">--label-base</span></code> + <code class="docutils literal notranslate"><span class="pre">n</span></code> * <code class="docutils literal notranslate"><span class="pre">--label-block-size</span></code>. The
+encapsulation type is set with <code class="docutils literal notranslate"><span class="pre">--encapsulation</span></code> (<code class="docutils literal notranslate"><span class="pre">ethernet-vlan</span></code> or
+<code class="docutils literal notranslate"><span class="pre">ethernet</span></code>), the control word flag with <code class="docutils literal notranslate"><span class="pre">--control-word</span></code> and the MTU with
+<code class="docutils literal notranslate"><span class="pre">--mtu</span></code>. All circuits are signaled up in the circuit status vector.</p>
+<p>The option <code class="docutils literal notranslate"><span class="pre">--streams</span></code> generates the corresponding streams named
+<code class="docutils literal notranslate"><span class="pre">l2vpn-&lt;n&gt;-pe-ce</span></code> and <code class="docutils literal notranslate"><span class="pre">l2vpn-&lt;n&gt;-ce-pe</span></code>, where <code class="docutils literal notranslate"><span class="pre">--stream-l2vpn-rd</span></code> is the
+route distinguisher and <code class="docutils literal notranslate"><span class="pre">--stream-l2vpn-ce-id</span></code> the CE ID of the DUT. The
+CE to PE streams expect the label of the label block of the BNG Blaster which
+covers the CE ID of the DUT. All other stream options (<code class="docutils literal notranslate"><span class="pre">--stream-*</span></code>) are the
+same as for EVPN VPWS.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate --l2vpn -n 10.0.1.2 -l 100 --rd 10.0.1.2:300 --rt 65000:300 \
+    -m 7000 --ce-id 2 --label-block-size 2 --control-word --end-of-rib -f l2vpn.bgp \
+    -s streams.json --stream-direction both --stream-pps 1000 \
+    --stream-interface eth1 --stream-ce-interface eth2 --stream-ce-vlan 300 \
+    --stream-l2vpn-rd 10.0.0.1:300 --stream-l2vpn-ce-id 1 \
+    --stream-destination-mac 02:00:00:00:00:02 --stream-vpws-vlan 300 --stream-vpws-arp
+</pre></div>
+</div>
+</section>
+<section id="testing-bgp-l2vpn">
+<h2>Testing BGP L2VPN<a class="headerlink" href="#testing-bgp-l2vpn" title="Link to this heading"></a></h2>
+<p>The test setup is the same as for <a class="reference internal" href="evpn.html#evpn"><span class="std std-ref">EVPN services</span></a>, where the
+BNG Blaster emulates the remote PE with an internal BGP session (family <code class="docutils literal notranslate"><span class="pre">l2vpn</span></code>)
+and an MPLS network interface, and the CE connected to the attachment
+circuit of the DUT with a second network interface.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>+----------------------------------+                         +-------------------+
+|           BNG Blaster            |                         |        DUT        |
+|                                  |                         |       (PE)        |
+|  remote PE    eth1  10.0.1.2/24  |--- BGP L2VPN + MPLS ----| 10.0.1.1          |
+|  CE ID 2      02:00:00:00:00:01  |                         | CE ID 1           |
+|                                  |                         |                   |
+|  CE           eth2  VLAN 300     |--- L2VPN (VLAN 300) ----| AC                |
+|               02:00:00:00:00:02  |                         |                   |
++----------------------------------+                         +-------------------+
+</pre></div>
+</div>
+<p><strong>Step 1: Configure the DUT</strong></p>
+<ul class="simple">
+<li><p>Internal BGP session to the emulated PE (<code class="docutils literal notranslate"><span class="pre">10.0.1.2</span></code>) with family L2VPN
+(AFI 25, SAFI 65)</p></li>
+<li><p>MPLS on the interface to the emulated PE and an MPLS path to the BGP next-hop
+of the emulated PE (e.g. LDP, segment routing or a static route)</p></li>
+<li><p>L2VPN instance with route distinguisher <code class="docutils literal notranslate"><span class="pre">10.0.0.1:300</span></code>, route target
+<code class="docutils literal notranslate"><span class="pre">65000:300</span></code> and Ethernet VLAN encapsulation</p></li>
+<li><p>Local CE with CE ID (site identifier) 1 and the attachment circuit on VLAN 300
+of the CE interface connected to the remote CE ID 2</p></li>
+</ul>
+<p><strong>Step 2: Generate the label block and streams of the emulated PE</strong></p>
+<p>Generate the RAW update file and streams with the <code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code> command shown
+above. The label block of the BNG Blaster (CE ID 2) must cover the CE ID of
+the DUT (1) and the encapsulation, control word and MTU must match the
+configuration of the DUT.</p>
+<p><strong>Step 3: Configure the BNG Blaster</strong></p>
+<p>The generated streams are added to the BNG Blaster configuration. The CE
+interface resolves the gateway address <code class="docutils literal notranslate"><span class="pre">192.0.2.1</span></code> of the emulated PE via ARP
+through the L2VPN, which is answered by the BNG Blaster (<code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code>). The option
+<code class="docutils literal notranslate"><span class="pre">gateway-resolve-wait</span></code> must be disabled for the CE interface because the
+gateway is only reachable after the BGP session is established.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway-resolve-wait&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;learn-routes&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;family&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;l2vpn&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;l2vpn.bgp&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;l2vpn-1-pe-ce&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-l2vpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1:300&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-l2vpn-ce-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-l2vpn-local-ce-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:02&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;vpws-arp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;vpws-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">300</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;l2vpn-1-ce-pe&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2:300&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;rx-label1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;rx-control-word&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Step 4: Verify the control plane</strong></p>
+<p>Verify that the BGP session is established and the label block of the DUT
+is learned (<code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-routes</span></code>). On the DUT, the pseudowire to the remote
+CE ID 2 should be up, using the label 7000 of the BNG Blaster to send traffic
+and expecting the label of its own label block which covers CE ID 2.</p>
+<p><strong>Step 5: Verify the traffic</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">stream-info</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> shows the resolved label of the PE to
+CE stream, which must be the label expected by the DUT.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock stream-info flow-id 1
+{
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;code&quot;: 200,
+    &quot;stream-info&quot;: {
+        &quot;name&quot;: &quot;l2vpn-1-pe-ce&quot;,
+        ...
+        &quot;l2vpn-resolved&quot;: true,
+        &quot;l2vpn-label&quot;: 30,
+        &quot;l2vpn-circuit-up&quot;: true
+    }
+}
+</pre></div>
+</div>
+<p>All streams should be received without loss. Further tests can withdraw
+the label block of the emulated PE with a RAW update file generated with
+<code class="docutils literal notranslate"><span class="pre">--withdraw</span></code> (<code class="docutils literal notranslate"><span class="pre">bgp-raw-update</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>) or scale the number
+of L2VPN instances with <code class="docutils literal notranslate"><span class="pre">--service-num</span></code>.</p>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Problem</p></th>
+<th class="head"><p>Possible Cause and Solution</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Stream <code class="docutils literal notranslate"><span class="pre">l2vpn-resolved</span></code> is false</p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-rd</span></code> and <code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-ce-id</span></code> must be the route
+distinguisher and CE ID of the DUT, and the label block of the
+DUT must cover <code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-local-ce-id</span></code>. Check the learned
+label blocks with <code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-routes</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Pseudowire is down on the DUT</p></td>
+<td><p>The label block of the BNG Blaster must cover the CE ID of the
+DUT and the encapsulation type, control word flag and MTU must
+match the configuration of the DUT (<span class="target" id="index-4"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc6624.html"><strong>RFC 6624</strong></a> section 5.1).
+Routes of internal BGP sessions require the local preference
+(<code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">-l</span> <span class="pre">100</span></code>).</p></td>
+</tr>
+<tr class="row-even"><td><p>PE to CE frames are received by
+the CE with 4 additional bytes or
+are dropped by the DUT</p></td>
+<td><p>Control word mismatch. Generate the label blocks with
+<code class="docutils literal notranslate"><span class="pre">--control-word</span></code> if the DUT uses the control word and enable
+<code class="docutils literal notranslate"><span class="pre">rx-control-word</span></code> for the CE to PE streams.</p></td>
+</tr>
+<tr class="row-odd"><td><p>PE to CE frames are dropped by
+the DUT</p></td>
+<td><p>With Ethernet VLAN encapsulation, the DUT may expect the
+customer VLAN within the pseudowire, add <code class="docutils literal notranslate"><span class="pre">vpws-vlan</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p>BNG Blaster does not start traffic
+(resolve network interfaces)</p></td>
+<td><p>The CE interface waits for the gateway, which is only reachable
+through the L2VPN. Disable <code class="docutils literal notranslate"><span class="pre">gateway-resolve-wait</span></code>.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="evpn.html" class="btn btn-neutral float-left" title="EVPN" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="ldp.html" class="btn btn-neutral float-right" title="LDP" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2026, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

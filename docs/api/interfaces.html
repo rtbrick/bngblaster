@@ -1,19 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; BNG Blaster 1.0 documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <title>&lt;no title&gt; &mdash; BNG Blaster 1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
+      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
+
   
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
+  
+        <script src="../_static/jquery.js?v=8dae8fb0"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -24,15 +27,19 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search"  style="background: #fcfcfc" >
-            <a href="../index.html" class="icon icon-home"> BNG Blaster
-            <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                1.0.X
+                1.1.X
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -70,8 +77,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>&lt;no title&gt;</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/api/interfaces.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -82,10 +89,6 @@
            <div itemprop="articleBody">
              
   <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Command</p></th>
 <th class="head"><p>Description</p></th>
@@ -120,13 +123,24 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>a10nsp-interfaces</strong></p></td>
+<tr class="row-even"><td><p><strong>network-announce</strong></p></td>
+<td><div class="line-block">
+<div class="line">Restart gratuitous ARP and unsolicited NA announcements of all</div>
+<div class="line">addresses for network interfaces with <strong>gratuitous-arp</strong> or</div>
+<div class="line"><strong>unsolicited-na</strong> enabled.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">interface</span></code> (all network interfaces if not set)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>a10nsp-interfaces</strong></p></td>
 <td><div class="line-block">
 <div class="line">List all a10nsp interface functions.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lag-info</strong></p></td>
+<tr class="row-even"><td><p><strong>lag-info</strong></p></td>
 <td><div class="line-block">
 <div class="line">List all link aggregation (LAG) interfaces.</div>
 <div class="line"><br /></div>
@@ -135,7 +149,7 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>interface-enable</strong></p></td>
+<tr class="row-odd"><td><p><strong>interface-enable</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable interface.</div>
 <div class="line"><br /></div>
@@ -144,7 +158,7 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>interface-disable</strong></p></td>
+<tr class="row-even"><td><p><strong>interface-disable</strong></p></td>
 <td><div class="line-block">
 <div class="line">Disable interface.</div>
 <div class="line"><br /></div>
@@ -153,7 +167,7 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>interface-topology</strong></p></td>
+<tr class="row-odd"><td><p><strong>interface-topology</strong></p></td>
 <td><div class="line-block">
 <div class="line">Display NUMA node, local CPU set and I/O thread pinning</div>
 <div class="line">(CPU, queue and state) per interface.</div>
@@ -170,7 +184,9 @@ and timeout counters. The counter
 <code class="docutils literal notranslate"><span class="pre">lcp-echo-timeout</span></code> is incremented for each LCP echo request without
 response and <code class="docutils literal notranslate"><span class="pre">lcp-echo-expired</span></code> for each session terminated because
 all LCP echo requests (<code class="docutils literal notranslate"><span class="pre">lcp</span></code> <code class="docutils literal notranslate"><span class="pre">keepalive-retry</span></code>) remained without
-response.</p>
+response. The counter <code class="docutils literal notranslate"><span class="pre">lcp-mru-invalid</span></code> is incremented for each LCP
+configure-request or configure-nak of a PPPoE server with an MRU above
+1492, or above the PPP-Max-Payload echoed by the server (RFC4638).</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">access-protocol-stats</span> <span class="pre">interface</span> <span class="pre">eth1</span></code></p>
 <p>The interface topology command helps to verify NUMA locality and CPU
 pinning of the RX and TX threads configured with <code class="docutils literal notranslate"><span class="pre">rx-cpuset</span></code>,

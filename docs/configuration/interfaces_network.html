@@ -1,19 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>&lt;no title&gt; &mdash; BNG Blaster 1.0 documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <title>&lt;no title&gt; &mdash; BNG Blaster 1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
+      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
+
   
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
+  
+        <script src="../_static/jquery.js?v=8dae8fb0"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -24,15 +27,19 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search"  style="background: #fcfcfc" >
-            <a href="../index.html" class="icon icon-home"> BNG Blaster
-            <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                1.0.X
+                1.1.X
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -70,8 +77,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>&lt;no title&gt;</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">&lt;no title&gt;</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/configuration/interfaces_network.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -81,14 +88,10 @@
           <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
            <div itemprop="articleBody">
              
-  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+  <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -178,136 +181,163 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-instance-id</strong></p></td>
+<tr class="row-even"><td><p><strong>gratuitous-arp</strong></p></td>
+<td><div class="line-block">
+<div class="line">Announce the IPv4 address and all secondary IPv4 addresses</div>
+<div class="line">with gratuitous ARP (ARP request with sender and target IP set to</div>
+<div class="line">the announced address) on start.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>unsolicited-na</strong></p></td>
+<td><div class="line-block">
+<div class="line">Announce the IPv6 address and all secondary IPv6 addresses</div>
+<div class="line">with unsolicited neighbor advertisements (ICMPv6 NA with override</div>
+<div class="line">flag to ff02::1) on start.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>announce-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Repeat the announcements of <strong>gratuitous-arp</strong> and</div>
+<div class="line"><strong>unsolicited-na</strong> every N seconds, with 0 announcing on start</div>
+<div class="line">only.</div>
+<div class="line">Default: 0 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>isis-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an ISIS instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-level</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-level</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS interface level.</div>
 <div class="line">Default: 3 Range: 1 - 3</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-p2p</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-p2p</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS P2P interface.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-l1-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-l1-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 1 interface metric.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-l2-metric</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-l2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 2 interface metric.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-l1-priority</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-l1-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 1 interface priority.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-l2-priority</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-l2-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 2 interface priority.</div>
 <div class="line">Default: 10</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-te-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-te-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS Flex-Algo TE metric.</div>
 <div class="line">Default: 0 (disabled) Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>isis-delay</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-delay</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS Flex-Algo min/max link delay in microseconds.</div>
 <div class="line">Default: 0 (disabled) Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>isis-admin-group</strong></p></td>
+<tr class="row-even"><td><p><strong>isis-admin-group</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS Flex-Algo admin group (32 bit mask).</div>
 <div class="line">Default: 0 (disabled)</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv2-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv2-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an OSPFv2 instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv2-type</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv2-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface type (p2p or broadcast).</div>
 <div class="line">Default: broadcast</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv2-metric</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface metric.</div>
 <div class="line">Default: 1</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv3-instance-id</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv3-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an OSPFv3 instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv3-type</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv3-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv3 interface type (p2p or broadcast).</div>
 <div class="line">Default: broadcast</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv3-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv3-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv3 interface metric.</div>
 <div class="line">Default: 1</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ldp-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>ldp-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to a LDP instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-cc</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-cc</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable EOAM CFM CC.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-level</strong></p></td>
+<tr class="row-odd"><td><p><strong>cfm-level</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance domain level.</div>
 <div class="line">Default: 0 Range: 0 - 7</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM CCM interval (IEEE 802.1Q encoding).</div>
 <div class="line">Values: <cite>3.33ms</cite>, <cite>10ms</cite>, <cite>100ms</cite>, <cite>1s</cite>, <cite>10s</cite>, <cite>1min</cite>, <cite>10min</cite></div>
@@ -315,7 +345,7 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-md-name</strong>
+<tr class="row-odd"><td><p><strong>cfm-md-name</strong>
 <strong>cfm-md-name</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance domain name (string).</div>
@@ -323,7 +353,7 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-md-name-format</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-md-name-format</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM MD name format.</div>
 <div class="line">Default: <code class="docutils literal notranslate"><span class="pre">NONE</span></code></div>
@@ -337,14 +367,14 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-ma-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>cfm-ma-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance association identifier.</div>
 <div class="line">Default: 0 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-ma-name</strong>
+<tr class="row-even"><td><p><strong>cfm-ma-name</strong>
 <strong>cfm-ma-name</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM maintenance association short name (string).</div>
@@ -352,7 +382,7 @@
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-ma-name-format</strong></p></td>
+<tr class="row-odd"><td><p><strong>cfm-ma-name-format</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM MA name format.</div>
 <div class="line">Default: <code class="docutils literal notranslate"><span class="pre">STRING</span></code></div>
@@ -367,28 +397,28 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>cfm-seq</strong></p></td>
+<tr class="row-even"><td><p><strong>cfm-seq</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable EOAM CFM CC sequence numbers.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>cfm-vlan-priority</strong></p></td>
+<tr class="row-odd"><td><p><strong>cfm-vlan-priority</strong></p></td>
 <td><div class="line-block">
 <div class="line">Set EOAM CFM CC VLAN priority (PCP).</div>
 <div class="line">Default: 0 Range: 0 - 7</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>a10nsp</strong></p></td>
+<tr class="row-even"><td><p><strong>a10nsp</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable A10NSP switch emulation (experimental).</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>a10nsp-tx-label</strong></p></td>
+<tr class="row-odd"><td><p><strong>a10nsp-tx-label</strong></p></td>
 <td><div class="line-block">
 <div class="line">Transport label used for A10NSP services in downstream direction.</div>
 <div class="line">Default: 0</div>

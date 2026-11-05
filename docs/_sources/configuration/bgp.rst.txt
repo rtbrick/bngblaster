@@ -63,6 +63,11 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | received segments. Not supported for md5.                          |
 |                                   | | Default: tcp-ao-key-id Range: 0 - 255                              |
 +-----------------------------------+----------------------------------------------------------------------+
+| **tcp-ao-exclude-options**        | | Exclude TCP options other than TCP-AO from the TCP-AO MAC          |
+|                                   | | (RFC 5925 section 3.1), which must match the peer configuration.   |
+|                                   | | Not supported for md5.                                             |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
 | **reconnect**                     | | Reconnect BGP session automatically.                               |
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -71,11 +76,16 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | executed as soon as the BGP RAW update has finished.               |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
-| **learn-routes**                  | | Store received IPv4/IPv6 unicast, labeled unicast and EVPN routes. |
+| **learn-routes**                  | | Store received IPv4/IPv6 unicast, labeled unicast, EVPN and        |
+|                                   | | L2VPN routes.                                                      |
 |                                   | | If disabled, received updates are not parsed.                      |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **teardown-time**                 | | BGP teardown time in seconds.                                      |
+|                                   | | The session is closed after the notification at the                |
+|                                   | | latest after this time or after 3 seconds. A session               |
+|                                   | | with pending data (e.g. RAW update not read by the peer)           |
+|                                   | | is reset (TCP RST) instead of closed (TCP FIN).                    |
 |                                   | | Default: 5 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **raw-update-file**               | | BGP RAW update file.                                               |
@@ -88,7 +98,7 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | ipv4-labeled-unicast, ipv6-labeled-unicast,                        |
 |                                   | | ipv4-vpn-unicast, ipv6-vpn-unicast,                                |
 |                                   | | ipv4-vpn-multicast, ipv6-vpn-multicast,                            |
-|                                   | | ipv4-flow, ipv6-flow, evpn                                         |
+|                                   | | ipv4-flow, ipv6-flow, evpn, l2vpn                                  |
 +-----------------------------------+----------------------------------------------------------------------+
 | **extended-nexthop**              | | BGP extended-nexthop families to be send in open message.          |
 |                                   | | Default: None                                                      |

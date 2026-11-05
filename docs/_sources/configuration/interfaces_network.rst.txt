@@ -38,6 +38,21 @@
 | **gateway-resolve-wait**          | | Sessions and protocols will not start until gateways are resolved. |
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
+| **gratuitous-arp**                | | Announce the IPv4 address and all secondary IPv4 addresses         |
+|                                   | | with gratuitous ARP (ARP request with sender and target IP set to  |
+|                                   | | the announced address) on start.                                   |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **unsolicited-na**                | | Announce the IPv6 address and all secondary IPv6 addresses         |
+|                                   | | with unsolicited neighbor advertisements (ICMPv6 NA with override  |
+|                                   | | flag to ff02::1) on start.                                         |
+|                                   | | Default: false                                                     |
++-----------------------------------+----------------------------------------------------------------------+
+| **announce-interval**             | | Repeat the announcements of **gratuitous-arp** and                 |
+|                                   | | **unsolicited-na** every N seconds, with 0 announcing on start     |
+|                                   | | only.                                                              |
+|                                   | | Default: 0 Range: 0 - 65535                                        |
++-----------------------------------+----------------------------------------------------------------------+
 | **isis-instance-id**              | | Assign the interface to an ISIS instance.                          |
 +-----------------------------------+----------------------------------------------------------------------+
 | **isis-level**                    | | ISIS interface level.                                              |

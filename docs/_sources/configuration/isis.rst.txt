@@ -127,3 +127,10 @@
 | **teardown-time**                | | ISIS teardown time in seconds.                                  |
 |                                  | | Default: 5 Range: 0 - 65535                                     |
 +----------------------------------+-------------------------------------------------------------------+
+| **teardown-delay**               | | ISIS teardown delay in seconds before the withdraw              |
+|                                  | | (purge) of the own and external database entries. The           |
+|                                  | | withdraw waits also until BGP and LDP sessions are              |
+|                                  | | closed, plus one second, as those might be routed via           |
+|                                  | | this IGP.                                                       |
+|                                  | | Default: 0 Range: 0 - 65535                                     |
++----------------------------------+-------------------------------------------------------------------+

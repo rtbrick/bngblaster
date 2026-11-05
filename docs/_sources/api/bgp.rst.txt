@@ -63,4 +63,15 @@
 |                                   | | ``route-type`` Filter by route type (1-5).                         |
 |                                   | | ``rd`` Filter by route distinguisher.                              |
 +-----------------------------------+----------------------------------------------------------------------+
+| **bgp-l2vpn-routes**              | | Display learned BGP L2VPN label blocks (RFC 6624) of all matching  |
+|                                   | | BGP sessions with learn-routes enabled.                            |
+|                                   | |                                                                    |
+|                                   | | **Arguments:**                                                     |
+|                                   | | ``local-ipv4-address``                                             |
+|                                   | | ``peer-ipv4-address``                                              |
+|                                   | | ``local-ipv6-address``                                             |
+|                                   | | ``peer-ipv6-address``                                              |
+|                                   | | ``ce-id`` Filter by CE ID.                                         |
+|                                   | | ``rd`` Filter by route distinguisher.                              |
++-----------------------------------+----------------------------------------------------------------------+
 

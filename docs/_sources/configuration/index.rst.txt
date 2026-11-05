@@ -201,6 +201,10 @@ LDP
 ---
 .. include:: ldp.rst
 
+LDP Targeted Neighbors
+~~~~~~~~~~~~~~~~~~~~~~
+.. include:: ldp_targeted_neighbors.rst
+
 BGP
 ---
 .. include:: bgp.rst

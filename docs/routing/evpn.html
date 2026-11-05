@@ -1,0 +1,783 @@
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>EVPN &mdash; BNG Blaster 1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
+      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
+
+  
+  
+        <script src="../_static/jquery.js?v=8dae8fb0"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="BGP L2VPN" href="l2vpn.html" />
+    <link rel="prev" title="BGP" href="bgp.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #fcfcfc" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+          </a>
+              <div class="version">
+                1.1.X
+              </div>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../access/index.html">Access Protocols</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Routing Protocols</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="isis.html">ISIS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ospf.html">OSPF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mpls.html">MPLS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bgp.html">BGP</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">EVPN</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#test-setup">Test Setup</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#evpn-routes">EVPN Routes</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#l3-evpn">L3 EVPN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#evpn-vpws-e-line">EVPN VPWS (E-LINE)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#evpn-e-lan">EVPN E-LAN</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#testing-evpn-services">Testing EVPN Services</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#virtual-lab">Virtual Lab</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="l2vpn.html">BGP L2VPN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ldp.html">LDP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="lspgen.html">LSPGEN</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../icmp.html">ICMP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller and Web UI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #fcfcfc" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Routing Protocols</a></li>
+      <li class="breadcrumb-item active">EVPN</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/routing/evpn.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="evpn">
+<span id="id1"></span><h1>EVPN<a class="headerlink" href="#evpn" title="Link to this heading"></a></h1>
+<p>The BNG Blaster can be used to test BGP EVPN services of a device under
+test (DUT), where the BNG Blaster emulates the remote provider edge
+router (PE) and the customer edge router (CE) at the same time.</p>
+<ul class="simple">
+<li><p>Learn all EVPN routes received from the DUT (route types 1 to 5)</p></li>
+<li><p>Advertise EVPN routes of the emulated PE using <a class="reference internal" href="bgp.html#bgp"><span class="std std-ref">RAW update files</span></a>
+generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code> (EVPN VPWS and E-LAN)</p></li>
+<li><p>Send traffic streams with labels dynamically resolved from the
+EVPN routes of the DUT (L3 EVPN, EVPN VPWS and E-LAN)</p></li>
+<li><p>Verify the traffic received from the DUT including the labels
+advertised by the BNG Blaster</p></li>
+<li><p>Reply to ARP, IPv6 neighbor solicitation and ICMP echo requests
+of a real CE within EVPN VPWS and E-LAN services</p></li>
+</ul>
+<p>The following services are supported for MPLS encapsulation. Routes with
+VNI based encapsulation like VXLAN are learned and displayed, but not used
+for traffic streams.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Service</p></th>
+<th class="head"><p>DUT route used by streams</p></th>
+<th class="head"><p>Routes of the emulated PE</p></th>
+<th class="head"><p>Stream options</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>EVPN VPWS
+(E-LINE)</p></td>
+<td><p>Ethernet A-D per EVI
+(type 1), Ethernet tag is
+the DUT local service ID</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--evpn-vpws</span></code>
+Ethernet A-D per EVI
+(type 1)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bgp-evpn-rd</span></code>
+<code class="docutils literal notranslate"><span class="pre">bgp-evpn-ethernet-tag</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p>EVPN E-LAN</p></td>
+<td><p>MAC/IP advertisement (type 2)
+of the CE MAC, otherwise
+IMET (type 3) ingress
+replication label</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--evpn-elan</span></code>
+IMET (type 3) and
+MAC/IP advertisement
+(type 2)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bgp-evpn-rd</span></code>
+<code class="docutils literal notranslate"><span class="pre">bgp-evpn-elan</span></code>
+<code class="docutils literal notranslate"><span class="pre">destination-mac</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p>L3 EVPN
+(IRB, IP-VRF)</p></td>
+<td><p>MAC/IP advertisement
+(type 2) label2 or
+IP prefix (type 5)</p></td>
+<td><p>not generated (e.g. use
+a <a class="reference internal" href="bgp.html#bgp"><span class="std std-ref">RAW update file</span></a> from another source)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bgp-evpn-rd</span></code>
+<code class="docutils literal notranslate"><span class="pre">bgp-evpn-mac</span></code>
+<code class="docutils literal notranslate"><span class="pre">bgp-evpn-prefix</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<section id="test-setup">
+<h2>Test Setup<a class="headerlink" href="#test-setup" title="Link to this heading"></a></h2>
+<p>In a typical setup, the BNG Blaster is connected with two network interfaces
+to the DUT. The first network interface emulates the remote PE with an
+internal BGP session (family <code class="docutils literal notranslate"><span class="pre">evpn</span></code>) and MPLS encapsulated traffic. The second
+network interface emulates the CE connected to the attachment circuits of the
+EVPN services of the DUT, usually with one VLAN per service.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>+----------------------------------+                         +-------------------+
+|           BNG Blaster            |                         |        DUT        |
+|                                  |                         |       (PE)        |
+|  remote PE    eth1  10.0.1.2/24  |--- BGP EVPN + MPLS -----| 10.0.1.1          |
+|               02:00:00:00:00:01  |                         |                   |
+|                                  |                         |                   |
+|  CE           eth2  VLAN 100     |--- E-LINE (VLAN 100) ---| AC                |
+|               02:00:00:00:00:02  |--- E-LAN (VLAN 200) ----| AC                |
++----------------------------------+                         +-------------------+
+</pre></div>
+</div>
+<p>Traffic is tested in both directions:</p>
+<ul class="simple">
+<li><p><strong>PE to CE</strong> streams are sent from the emulated PE interface with the
+label resolved from the EVPN route of the DUT. The DUT forwards the
+customer frames to the attachment circuit where the streams are received
+by the CE interface.</p></li>
+<li><p><strong>CE to PE</strong> streams are sent from the CE interface to the MAC address of
+the emulated PE interface (<code class="docutils literal notranslate"><span class="pre">gateway-mac</span></code>). The DUT forwards those frames
+with the label advertised by the BNG Blaster, which can be verified with
+<code class="docutils literal notranslate"><span class="pre">rx-label1</span></code> (<code class="docutils literal notranslate"><span class="pre">rx-label2</span></code> with transport label).</p></li>
+</ul>
+<p>The DUT must be able to resolve the BGP next-hop of the emulated PE to an MPLS
+path, for example using <a class="reference internal" href="ldp.html#ldp"><span class="std std-ref">LDP</span></a>, ISIS segment routing or a static
+route. If the DUT is directly connected and pops the transport label (implicit
+null), the EVPN label is the only label in both directions. Otherwise, the
+transport label towards the DUT can be set with <code class="docutils literal notranslate"><span class="pre">tx-label1</span></code> or resolved
+with <code class="docutils literal notranslate"><span class="pre">ldp-ipv4-lookup-address</span></code>.</p>
+<p>The emulated PE requires a BGP session with <code class="docutils literal notranslate"><span class="pre">learn-routes</span></code> and the family
+<code class="docutils literal notranslate"><span class="pre">evpn</span></code>. The routes of the emulated PE are sent with the <code class="docutils literal notranslate"><span class="pre">raw-update-file</span></code>
+as soon as the session is established.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;learn-routes&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;family&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;evpn&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;evpn.bgp&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="evpn-routes">
+<h2>EVPN Routes<a class="headerlink" href="#evpn-routes" title="Link to this heading"></a></h2>
+<p>With <code class="docutils literal notranslate"><span class="pre">learn-routes</span></code> enabled, the BNG Blaster learns all EVPN routes
+(<span class="target" id="index-0"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc7432.html"><strong>RFC 7432</strong></a>, <span class="target" id="index-1"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc9136.html"><strong>RFC 9136</strong></a>) received from the peer. This includes Ethernet
+auto-discovery (type 1), MAC/IP advertisement (type 2), inclusive multicast
+Ethernet tag (type 3), Ethernet segment (type 4) and IP prefix routes (type 5)
+together with the route targets, encapsulation, PMSI tunnel, router’s MAC,
+MAC mobility, ESI label and EVPN Layer 2 attributes. Other route types are
+ignored.</p>
+<p>Labels are decoded as 20 bit MPLS labels unless the encapsulation extended
+community signals a VNI based encapsulation like VXLAN (<span class="target" id="index-2"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc8365.html"><strong>RFC 8365</strong></a>).</p>
+<p>EVPN routes are stored per session (Adj-RIB-In), like IPv4 and IPv6 routes,
+and can be displayed with the <code class="docutils literal notranslate"><span class="pre">bgp-evpn-routes</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.
+Withdrawn routes and routes of sessions which went down are kept as
+inactive entries.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">bgp-evpn-routes</span> <span class="pre">route-type</span> <span class="pre">2</span></code></p>
+<p>Streams wait until a matching active route with an MPLS label is learned
+and are rebuilt automatically if the label changes. If the same route is
+received from multiple sessions (e.g. redundant route reflectors), streams
+use the route of the first session in configuration order and keep using it
+as long as it is active. If this route is withdrawn or the session goes down,
+streams switch to the same route of the next session.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">stream-info</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> shows for EVPN streams if the route
+is resolved (<code class="docutils literal notranslate"><span class="pre">evpn-resolved</span></code>), the resolved label (<code class="docutils literal notranslate"><span class="pre">evpn-label</span></code>) and the
+type of the used route (<code class="docutils literal notranslate"><span class="pre">evpn-route-type</span></code>). The route is resolved when the
+stream is scheduled for sending, so stopped streams show <code class="docutils literal notranslate"><span class="pre">evpn-resolved</span></code> false.</p>
+</section>
+<section id="l3-evpn">
+<h2>L3 EVPN<a class="headerlink" href="#l3-evpn" title="Link to this heading"></a></h2>
+<p>Traffic streams can dynamically resolve the inner (VPN) label of IP traffic
+from learned EVPN routes. The label2 of a MAC/IP advertisement route (symmetric IRB)
+is used if <code class="docutils literal notranslate"><span class="pre">bgp-evpn-mac</span></code> is set, or the label of an IP prefix route
+if <code class="docutils literal notranslate"><span class="pre">bgp-evpn-prefix</span></code> is set. The outer transport label can be set
+statically with <code class="docutils literal notranslate"><span class="pre">tx-label1</span></code> or resolved via LDP. Without outer label,
+the EVPN label is sent as the only label.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EVPN-T2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.1.1.10&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tx-label1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;65001:100&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;00:11:22:33:44:55&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.1.1.10&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EVPN-T5&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.10.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tx-label1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;65001:100&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.10.0/24&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="evpn-vpws-e-line">
+<h2>EVPN VPWS (E-LINE)<a class="headerlink" href="#evpn-vpws-e-line" title="Link to this heading"></a></h2>
+<p>EVPN VPWS (<span class="target" id="index-3"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc8214.html"><strong>RFC 8214</strong></a>) services are signaled with per-EVI Ethernet
+auto-discovery routes (type 1) with the local VPWS service identifier
+as Ethernet tag, the VPWS label and the EVPN Layer 2 Attributes extended
+community (control word, primary and backup flags and L2 MTU).</p>
+<p>The routes of the emulated PE are generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--evpn-vpws</span></code>.
+The Ethernet tag advertised by the BNG Blaster (<code class="docutils literal notranslate"><span class="pre">--service-id</span></code>) is the
+remote service identifier configured on the DUT and the stream uses the route
+of the DUT with its local service identifier (<code class="docutils literal notranslate"><span class="pre">--stream-evpn-service-id</span></code>).</p>
+<p>Traffic streams with <code class="docutils literal notranslate"><span class="pre">bgp-evpn-rd</span></code> and <code class="docutils literal notranslate"><span class="pre">bgp-evpn-ethernet-tag</span></code> (optionally
+<code class="docutils literal notranslate"><span class="pre">bgp-evpn-esi</span></code>) but without <code class="docutils literal notranslate"><span class="pre">bgp-evpn-mac</span></code> or <code class="docutils literal notranslate"><span class="pre">bgp-evpn-prefix</span></code> resolve
+the VPWS label of the DUT and send the stream packets as Ethernet frames
+over MPLS to the <code class="docutils literal notranslate"><span class="pre">destination-mac</span></code> of the CE. The control word is added if
+requested by the DUT or enabled with <code class="docutils literal notranslate"><span class="pre">tx-control-word</span></code>. Customer VLAN tags
+within the VPWS service can be added with <code class="docutils literal notranslate"><span class="pre">vpws-vlan</span></code> and <code class="docutils literal notranslate"><span class="pre">vpws-inner-vlan</span></code>.</p>
+<p>Received Ethernet over MPLS traffic is accepted on network interfaces with and
+without control word, where <code class="docutils literal notranslate"><span class="pre">rx-label1</span></code> or <code class="docutils literal notranslate"><span class="pre">rx-label2</span></code> can be used to verify
+the advertised VPWS label. Streams expecting a control word (control word flag
+advertised by the BNG Blaster) should enable <code class="docutils literal notranslate"><span class="pre">rx-control-word</span></code>. This is
+required to decode frames correctly where the presence of the control word is
+ambiguous (e.g. VLAN tagged frames with destination MAC address 00:…).</p>
+<p>With <code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code> enabled, the BNG Blaster replies to ARP, IPv6 neighbor
+solicitation and ICMP/ICMPv6 echo requests for the <code class="docutils literal notranslate"><span class="pre">network-ipv4-address</span></code>
+or <code class="docutils literal notranslate"><span class="pre">network-ipv6-address</span></code> of the stream, received within the VPWS service
+with the customer VLAN tags of the stream. This allows a real CE router to
+resolve and ping the emulated PE side. Replies are sent with the labels,
+control word and customer VLAN tags of the stream and the MAC address of
+the network interface. If <code class="docutils literal notranslate"><span class="pre">destination-mac</span></code> is not configured, the stream
+learns the CE MAC address from those requests and starts sending once the
+MAC address is learned (<code class="docutils literal notranslate"><span class="pre">vpws-mac</span></code> in <code class="docutils literal notranslate"><span class="pre">stream-info</span></code>, <code class="docutils literal notranslate"><span class="pre">null</span></code> until learned).</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;VPWS-1000-PE-CE&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1:100&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bgp-evpn-ethernet-tag&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;vpws-arp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>Without control word, CE frames with a destination MAC address starting
+with 4 or 6 in the first nibble can be misinterpreted as IPv4 or IPv6 over
+MPLS. The control word should be used if the network interface MAC address
+starts with such a nibble.</p>
+<p>The RAW update file and streams can be generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code>, where
+<code class="docutils literal notranslate"><span class="pre">--stream-evpn-rd</span></code> is the route distinguisher of the DUT routes. The generated
+streams are named <code class="docutils literal notranslate"><span class="pre">vpws-&lt;service-id&gt;-pe-ce</span></code> and <code class="docutils literal notranslate"><span class="pre">vpws-&lt;service-id&gt;-ce-pe</span></code>.
+The <code class="docutils literal notranslate"><span class="pre">--stream-direction</span></code> selects PE to CE (downstream, default), CE to PE
+(upstream) or both streams.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate --evpn-vpws -n 10.0.1.2 -l 100 --rd 10.0.1.2:100 --rt 65001:100 \
+    --service-id 1000 -m 5000 --mtu 1500 --primary --end-of-rib -f vpws.bgp \
+    -s streams.json --stream-direction both --stream-pps 1000 \
+    --stream-interface eth1 --stream-tx-label 16001 \
+    --stream-ce-interface eth2 --stream-ce-vlan 100 \
+    --stream-evpn-rd 10.0.0.1:100 --stream-destination-mac 02:00:00:00:00:02 \
+    --stream-pe-address 192.0.2.1 --stream-ce-address 192.0.2.2
+</pre></div>
+</div>
+<p>Multiple services are generated with <code class="docutils literal notranslate"><span class="pre">--service-num</span></code> where the service
+identifier, CE VLAN (<code class="docutils literal notranslate"><span class="pre">--stream-ce-vlan</span></code>) and customer VLAN within the VPWS
+service (<code class="docutils literal notranslate"><span class="pre">--stream-vpws-vlan</span></code>) are incremented per service. Different labels per
+service require <code class="docutils literal notranslate"><span class="pre">-M</span></code> (label count), different route distinguishers and
+route targets per service <code class="docutils literal notranslate"><span class="pre">--rd-increment</span></code> and <code class="docutils literal notranslate"><span class="pre">--rt-increment</span></code>.
+The option <code class="docutils literal notranslate"><span class="pre">--stream-vpws-arp</span></code> enables <code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code> for the PE to CE
+streams, where <code class="docutils literal notranslate"><span class="pre">--stream-destination-mac</span></code> becomes optional. Withdraw
+updates (<code class="docutils literal notranslate"><span class="pre">--withdraw</span></code>) require only <code class="docutils literal notranslate"><span class="pre">--rd</span></code> besides the
+mandatory <code class="docutils literal notranslate"><span class="pre">--next-hop-base</span></code>.</p>
+</section>
+<section id="evpn-e-lan">
+<h2>EVPN E-LAN<a class="headerlink" href="#evpn-e-lan" title="Link to this heading"></a></h2>
+<p>EVPN E-LAN (<span class="target" id="index-4"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc7432.html"><strong>RFC 7432</strong></a>) services with MPLS encapsulation are signaled
+with inclusive multicast Ethernet tag routes (IMET, type 3) with a PMSI
+tunnel attribute of type ingress replication for broadcast, unknown
+unicast and multicast (BUM) traffic and MAC/IP advertisement routes
+(type 2) for known unicast traffic.</p>
+<p>The routes of the emulated PE are generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--evpn-elan</span></code>,
+which includes an IMET route and MAC/IP routes for all MAC addresses
+given with <code class="docutils literal notranslate"><span class="pre">--mac</span></code> (e.g. the MAC address of the PE network interface)
+per EVI with the same label for unicast and BUM traffic. The DUT learns the
+MAC address of the emulated PE from those routes and forwards CE to PE
+traffic as known unicast.</p>
+<p>Traffic streams with <code class="docutils literal notranslate"><span class="pre">bgp-evpn-elan</span></code>, <code class="docutils literal notranslate"><span class="pre">bgp-evpn-rd</span></code> and <code class="docutils literal notranslate"><span class="pre">destination-mac</span></code>
+(optionally <code class="docutils literal notranslate"><span class="pre">bgp-evpn-ethernet-tag</span></code>) send the stream packets as Ethernet
+frames over MPLS to the CE. The label1 of the MAC/IP route of the DUT for the
+<code class="docutils literal notranslate"><span class="pre">destination-mac</span></code> (known unicast) is used if learned, otherwise the ingress
+replication label of the IMET route of the DUT with the same route distinguisher
+and Ethernet tag (unknown unicast flooded by the DUT). Streams switch automatically
+between both labels if the MAC/IP route is learned or withdrawn, where
+<code class="docutils literal notranslate"><span class="pre">evpn-route-type</span></code> in <code class="docutils literal notranslate"><span class="pre">stream-info</span></code> shows the used route type
+(2 for known unicast, 3 for unknown unicast).</p>
+<p>The control word is not signaled for EVPN E-LAN and must be enabled with
+<code class="docutils literal notranslate"><span class="pre">tx-control-word</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-control-word</span></code> if used by the DUT. The options
+<code class="docutils literal notranslate"><span class="pre">vpws-vlan</span></code>, <code class="docutils literal notranslate"><span class="pre">vpws-inner-vlan</span></code>, <code class="docutils literal notranslate"><span class="pre">vpws-qinq</span></code> and <code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code> are
+supported as for EVPN VPWS, where <code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code> replies to requests received
+with the ingress replication label (e.g. ARP broadcast) using the labels of
+the stream. EVPN E-LAN streams require <code class="docutils literal notranslate"><span class="pre">destination-mac</span></code>.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ELAN-PE-CE&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;198.51.100.1&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;198.51.100.2&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;destination-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:02&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1:200&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bgp-evpn-elan&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;tx-control-word&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The RAW update file and streams can be generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code>
+similar to EVPN VPWS, where the streams are named <code class="docutils literal notranslate"><span class="pre">elan-&lt;n&gt;-pe-ce</span></code> and
+<code class="docutils literal notranslate"><span class="pre">elan-&lt;n&gt;-ce-pe</span></code>. The option <code class="docutils literal notranslate"><span class="pre">--control-word</span></code> adds <code class="docutils literal notranslate"><span class="pre">tx-control-word</span></code> to the
+PE to CE streams and <code class="docutils literal notranslate"><span class="pre">rx-control-word</span></code> to the CE to PE streams. The Ethernet
+tag can be set with <code class="docutils literal notranslate"><span class="pre">--ethernet-tag</span></code> (default 0 for VLAN-based services).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate --evpn-elan -n 10.0.1.2 -l 100 --rd 10.0.1.2:200 --rt 65001:200 \
+    -m 6000 --mac 02:00:00:00:00:01 --control-word --end-of-rib -f elan.bgp \
+    -s streams.json --stream-direction both --stream-pps 1000 \
+    --stream-interface eth1 --stream-tx-label 16001 \
+    --stream-ce-interface eth2 --stream-ce-vlan 200 \
+    --stream-evpn-rd 10.0.0.1:200 --stream-destination-mac 02:00:00:00:00:02 \
+    --stream-pe-address 198.51.100.1 --stream-ce-address 198.51.100.2
+</pre></div>
+</div>
+</section>
+<section id="testing-evpn-services">
+<h2>Testing EVPN Services<a class="headerlink" href="#testing-evpn-services" title="Link to this heading"></a></h2>
+<p>The following steps describe how to test EVPN VPWS and E-LAN services
+of a DUT. The example tests one E-LINE and one E-LAN service against a
+directly connected DUT with the setup shown above.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"></th>
+<th class="head"><p>E-LINE</p></th>
+<th class="head"><p>E-LAN</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>DUT</p></td>
+<td><p>RD 10.0.0.1:100,
+RT 65000:100,
+local service ID 1000,
+remote service ID 2000,
+AC VLAN 100</p></td>
+<td><p>RD 10.0.0.1:200,
+RT 65000:200,
+VLAN-based service,
+AC VLAN 200</p></td>
+</tr>
+<tr class="row-odd"><td><p>BNG Blaster
+(remote PE)</p></td>
+<td><p>RD 10.0.1.2:100,
+service ID 2000, label 5000</p></td>
+<td><p>RD 10.0.1.2:200,
+label 6000,
+MAC 02:00:00:00:00:01</p></td>
+</tr>
+<tr class="row-even"><td><p>BNG Blaster
+(CE)</p></td>
+<td><p>192.0.2.2/24 (VLAN 100)</p></td>
+<td><p>198.51.100.2/24 (VLAN 200)</p></td>
+</tr>
+</tbody>
+</table>
+<p><strong>Step 1: Configure the DUT</strong></p>
+<p>Configure the following on the DUT with the parameters shown in the
+table above.</p>
+<ul class="simple">
+<li><p>Internal BGP session to the emulated PE (<code class="docutils literal notranslate"><span class="pre">10.0.1.2</span></code>) with family EVPN</p></li>
+<li><p>MPLS on the interface to the emulated PE and an MPLS path to the BGP next-hop
+of the emulated PE (e.g. LDP, segment routing or a static route)</p></li>
+<li><p>EVPN VPWS service with the attachment circuit on VLAN 100 of the CE interface</p></li>
+<li><p>VLAN-based EVPN E-LAN service with MPLS encapsulation and the attachment
+circuit on VLAN 200 of the CE interface</p></li>
+</ul>
+<p><strong>Step 2: Generate the routes and streams of the emulated PE</strong></p>
+<p>The RAW update file <code class="docutils literal notranslate"><span class="pre">evpn.bgp</span></code> and the streams are generated with
+<code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code>, where the second call appends the E-LAN routes and streams
+(<code class="docutils literal notranslate"><span class="pre">--append</span></code> and <code class="docutils literal notranslate"><span class="pre">--stream-append</span></code>). Only the last call should add the
+end-of-RIB marker.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate -l 100 -f evpn.bgp -s streams.json -n 10.0.1.2 --evpn-vpws \
+    --rd 10.0.1.2:100 --rt 65000:100 -m 5000 --service-id 2000 --control-word \
+    --stream-evpn-rd 10.0.0.1:100 --stream-evpn-service-id 1000 \
+    --stream-destination-mac 02:00:00:00:00:02 --stream-vpws-vlan 100 \
+    --stream-interface eth1 --stream-ce-interface eth2 --stream-ce-vlan 100 \
+    --stream-direction both --stream-pps 1000
+
+bgpupdate -l 100 -f evpn.bgp -s streams.json --append --stream-append \
+    -n 10.0.1.2 --evpn-elan --rd 10.0.1.2:200 --rt 65000:200 -m 6000 \
+    --mac 02:00:00:00:00:01 --control-word --stream-vpws-arp \
+    --stream-evpn-rd 10.0.0.1:200 --stream-destination-mac 02:00:00:00:00:02 \
+    --stream-interface eth1 --stream-ce-interface eth2 --stream-ce-vlan 200 \
+    --stream-pe-address 198.51.100.1 --stream-ce-address 198.51.100.2 \
+    --stream-direction both --stream-pps 1000 --end-of-rib
+</pre></div>
+</div>
+<p><strong>Step 3: Configure the BNG Blaster</strong></p>
+<p>The generated streams are added to the BNG Blaster configuration. The E-LINE
+CE interface uses the MAC address of the emulated PE interface as
+<code class="docutils literal notranslate"><span class="pre">gateway-mac</span></code>. The E-LAN CE interface resolves the gateway address
+<code class="docutils literal notranslate"><span class="pre">198.51.100.1</span></code> of the emulated PE via ARP through the E-LAN service,
+which is answered by the BNG Blaster (<code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code>). The option
+<code class="docutils literal notranslate"><span class="pre">gateway-resolve-wait</span></code> must be disabled for both CE interfaces because the
+gateway is only reachable after the BGP session is established.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:01&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway-resolve-wait&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;198.51.100.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;198.51.100.1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway-resolve-wait&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;learn-routes&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;family&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;evpn&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;evpn.bgp&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vpws-2000-pe-ce&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:02&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1:100&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-ethernet-tag&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;vpws-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vpws-2000-ce-pe&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2:100&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;rx-label1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;rx-control-word&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;elan-1-pe-ce&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;198.51.100.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;198.51.100.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:02&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1:200&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-ethernet-tag&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bgp-evpn-elan&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tx-control-word&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;vpws-arp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;elan-1-ce-pe&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2:200&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;198.51.100.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;198.51.100.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;rx-label1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;rx-control-word&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>Step 4: Verify the control plane</strong></p>
+<p>Start the BNG Blaster and verify that the BGP session is established
+and the EVPN routes of the DUT are learned. The DUT advertises the
+Ethernet A-D route of the E-LINE service with its local service ID as
+Ethernet tag, the IMET route of the E-LAN service and, as soon as the CE
+MAC address is learned on the attachment circuit, the MAC/IP routes.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster -C evpn.json -S run.sock -I
+$ sudo bngblaster-cli run.sock bgp-sessions
+$ sudo bngblaster-cli run.sock bgp-evpn-routes route-type 1
+$ sudo bngblaster-cli run.sock bgp-evpn-routes route-type 3
+</pre></div>
+</div>
+<p>On the DUT, the routes of the emulated PE must be active with a resolved
+next-hop. A route hidden by the DUT is often caused by a missing attribute
+(e.g. local preference) or an unresolved BGP next-hop.</p>
+<p><strong>Step 5: Verify the traffic</strong></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">stream-info</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> shows if the PE to CE streams are resolved
+and which label and route type are used.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock stream-info flow-id 3
+{
+    &quot;status&quot;: &quot;ok&quot;,
+    &quot;code&quot;: 200,
+    &quot;stream-info&quot;: {
+        &quot;name&quot;: &quot;elan-1-pe-ce&quot;,
+        ...
+        &quot;tx-packets&quot;: 100,
+        &quot;rx-packets&quot;: 100,
+        &quot;rx-loss&quot;: 0,
+        ...
+        &quot;evpn-resolved&quot;: true,
+        &quot;evpn-label&quot;: 17,
+        &quot;evpn-route-type&quot;: 2
+    }
+}
+</pre></div>
+</div>
+<p>All streams should be received without loss. The CE to PE streams verify the
+labels advertised by the BNG Blaster (<code class="docutils literal notranslate"><span class="pre">rx-label1</span></code>). For a lossless measurement,
+reset the stream counters after the services are established.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ sudo bngblaster-cli run.sock traffic-stop
+$ sudo bngblaster-cli run.sock stream-reset
+$ sudo bngblaster-cli run.sock traffic-start
+$ sudo bngblaster-cli run.sock stream-summary
+</pre></div>
+</div>
+<p>Further tests can be built on this setup, for example withdrawing the routes of
+the emulated PE with a RAW update file generated with <code class="docutils literal notranslate"><span class="pre">--withdraw</span></code> (<code class="docutils literal notranslate"><span class="pre">bgp-raw-update</span></code>
+<a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>) to verify that the DUT stops forwarding, scaling the number
+of services with <code class="docutils literal notranslate"><span class="pre">--service-num</span></code>, or measuring the convergence of the DUT.</p>
+</section>
+<section id="troubleshooting">
+<h2>Troubleshooting<a class="headerlink" href="#troubleshooting" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Problem</p></th>
+<th class="head"><p>Possible Cause and Solution</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Routes of the BNG Blaster are
+hidden by the DUT as malformed</p></td>
+<td><p>Internal BGP sessions require the local preference, generate
+the routes with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">-l</span> <span class="pre">100</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Routes of the BNG Blaster are
+hidden by the DUT as unusable</p></td>
+<td><p>The DUT can’t resolve the BGP next-hop of the emulated PE to an
+MPLS path (e.g. missing LDP label or inet.3 route).</p></td>
+</tr>
+<tr class="row-even"><td><p>Stream <code class="docutils literal notranslate"><span class="pre">evpn-resolved</span></code> is false</p></td>
+<td><p>The <code class="docutils literal notranslate"><span class="pre">bgp-evpn-rd</span></code> must be the route distinguisher of the DUT
+and <code class="docutils literal notranslate"><span class="pre">bgp-evpn-ethernet-tag</span></code> the local service ID of the DUT
+(E-LINE). Check the learned routes with <code class="docutils literal notranslate"><span class="pre">bgp-evpn-routes</span></code>.
+Routes with VXLAN encapsulation are not supported for streams.</p></td>
+</tr>
+<tr class="row-odd"><td><p>PE to CE frames are received by
+the CE with 4 additional bytes or
+are dropped by the DUT</p></td>
+<td><p>Control word mismatch. Some implementations (e.g. Junos) use
+the control word for EVPN VPWS only if both PEs set the
+control word flag (<code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--control-word</span></code>). EVPN E-LAN
+requires <code class="docutils literal notranslate"><span class="pre">tx-control-word</span></code> and <code class="docutils literal notranslate"><span class="pre">rx-control-word</span></code> if the
+DUT uses the control word.</p></td>
+</tr>
+<tr class="row-even"><td><p>E-LINE PE to CE frames are dropped
+by the DUT</p></td>
+<td><p>The DUT may expect the customer VLAN within the service
+(e.g. Junos <code class="docutils literal notranslate"><span class="pre">vlan-ccc</span></code>), add <code class="docutils literal notranslate"><span class="pre">vpws-vlan</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>E-LAN stream uses route type 3
+instead of 2</p></td>
+<td><p>The DUT has not learned the CE MAC address yet (no traffic
+from the CE). Start the CE to PE stream or enable <code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code>.</p></td>
+</tr>
+<tr class="row-even"><td><p>E-LAN stream to an unknown MAC
+address is not received</p></td>
+<td><p>Flooded frames are only counted by the CE interface if the
+<code class="docutils literal notranslate"><span class="pre">destination-mac</span></code> is the MAC address of this interface.</p></td>
+</tr>
+<tr class="row-odd"><td><p>DUT originates no E-LAN routes</p></td>
+<td><p>The attachment circuit is down in the EVPN instance of the DUT.
+Junos PTX requires <code class="docutils literal notranslate"><span class="pre">family</span> <span class="pre">ethernet-switching</span></code> instead of
+<code class="docutils literal notranslate"><span class="pre">encapsulation</span> <span class="pre">vlan-bridge</span></code> for the attachment circuit.</p></td>
+</tr>
+<tr class="row-even"><td><p>BNG Blaster does not start traffic
+(resolve network interfaces)</p></td>
+<td><p>The CE interfaces wait for the gateway, which is only reachable
+through the EVPN service. Disable <code class="docutils literal notranslate"><span class="pre">gateway-resolve-wait</span></code>.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Frames received over MPLS are
+decoded as IPv4 or IPv6</p></td>
+<td><p>Without control word, frames with a MAC address starting with 4
+or 6 are ambiguous. Use the control word or other MAC addresses.</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="virtual-lab">
+<h2>Virtual Lab<a class="headerlink" href="#virtual-lab" title="Link to this heading"></a></h2>
+<p>EVPN services can be tested against virtual routers, for example with
+<a class="reference external" href="https://containerlab.dev">containerlab</a>, where the BNG Blaster runs on
+the host connected to the virtual DUT using <code class="docutils literal notranslate"><span class="pre">host</span></code> links. The example above
+was verified with Juniper vJunosEvolved (PTX10001-36MR) which is available
+for free without license and supports EVPN VPWS and E-LAN with MPLS
+encapsulation (license alarms can be ignored in the lab).
+The container image is built with <a class="reference external" href="https://containerlab.dev/manual/vrnetlab/">vrnetlab</a>.</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">evpn</span>
+<span class="nt">topology</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">pe1</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">juniper_vjunosevolved</span>
+<span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vrnetlab/juniper_vjunosevolved:26.2R1.7-EVO</span>
+<span class="w">      </span><span class="nt">startup-config</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pe1.cfg</span>
+<span class="w">  </span><span class="nt">links</span><span class="p">:</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;pe1:et-0/0/0&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;host:eth1&quot;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;pe1:et-0/0/1&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;host:eth2&quot;</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+<p>The MAC addresses of the host interfaces can be set as used in the example
+above, and IPv6 should be disabled on those interfaces as the BNG Blaster
+interfaces must not have IP addresses configured in the host OS.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo containerlab deploy -t evpn.clab.yml
+sudo ip link set eth1 address 02:00:00:00:00:01
+sudo ip link set eth2 address 02:00:00:00:00:02
+sudo sysctl -w net.ipv6.conf.eth1.disable_ipv6=1 net.ipv6.conf.eth2.disable_ipv6=1
+</pre></div>
+</div>
+<p>The free container images of Nokia SR Linux support EVPN only with VXLAN
+encapsulation, while the BNG Blaster supports EVPN traffic streams only with
+MPLS encapsulation.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="bgp.html" class="btn btn-neutral float-left" title="BGP" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="l2vpn.html" class="btn btn-neutral float-right" title="BGP L2VPN" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2026, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

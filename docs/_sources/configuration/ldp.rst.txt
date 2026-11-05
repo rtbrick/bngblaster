@@ -54,3 +54,14 @@
 | **tos**                          | | TOS/TC for all LDP control traffic.                      |
 |                                  | | Default: 0 Range: 0 - 255                                |
 +----------------------------------+------------------------------------------------------------+
+| **targeted-neighbors**           | | List of targeted LDP neighbors, see                      |
+|                                  | | LDP targeted neighbors.                                  |
++----------------------------------+------------------------------------------------------------+
+| **targeted-hold-time**           | | Targeted hello hold time in seconds.                     |
+|                                  | | Default: 45 Range: 1 - 65535                             |
++----------------------------------+------------------------------------------------------------+
+| **targeted-hello-accept**        | | Accept targeted hellos sent to the transport address     |
+|                                  | | from neighbors which are not configured and respond      |
+|                                  | | with targeted hellos.                                    |
+|                                  | | Default: false                                           |
++----------------------------------+------------------------------------------------------------+

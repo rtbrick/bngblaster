@@ -1,23 +1,26 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="../">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>BGP &mdash; BNG Blaster 1.0 documentation</title>
-      <link rel="stylesheet" href="../_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/tabs.css" type="text/css" />
-      <link rel="stylesheet" href="../_static/custom.css" type="text/css" />
+  <title>BGP &mdash; BNG Blaster 1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
+      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
+
   
-        <script data-url_root="../" id="documentation_options" src="../_static/documentation_options.js"></script>
-        <script src="../_static/jquery.js"></script>
-        <script src="../_static/underscore.js"></script>
-        <script src="../_static/doctools.js"></script>
+  
+        <script src="../_static/jquery.js?v=8dae8fb0"></script>
+        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+        <script src="../_static/doctools.js?v=888ff710"></script>
+        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="LDP" href="ldp.html" />
+    <link rel="next" title="EVPN" href="evpn.html" />
     <link rel="prev" title="MPLS" href="mpls.html" /> 
 </head>
 
@@ -26,15 +29,19 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search"  style="background: #fcfcfc" >
-            <a href="../index.html" class="icon icon-home"> BNG Blaster
-            <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                1.0.X
+                1.1.X
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -55,12 +62,14 @@
 <li class="toctree-l3"><a class="reference internal" href="#authentication">Authentication</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#route-learning">Route Learning</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#evpn">EVPN</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#evpn-vpws-e-line">EVPN VPWS (E-LINE)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#bgp-l2vpn">BGP L2VPN</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#raw-update-files">RAW Update Files</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#bgp-raw-update-generator">BGP RAW Update Generator</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#bgp-convergence-testing">BGP Convergence Testing</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="evpn.html">EVPN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="l2vpn.html">BGP L2VPN</a></li>
 <li class="toctree-l2"><a class="reference internal" href="ldp.html">LDP</a></li>
 <li class="toctree-l2"><a class="reference internal" href="lspgen.html">LSPGEN</a></li>
 </ul>
@@ -91,9 +100,9 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="../index.html" class="icon icon-home"></a> &raquo;</li>
-          <li><a href="index.html">Routing Protocols</a> &raquo;</li>
-      <li>BGP</li>
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Routing Protocols</a></li>
+      <li class="breadcrumb-item active">BGP</li>
       <li class="wy-breadcrumbs-aside">
             <a href="../_sources/routing/bgp.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -104,52 +113,48 @@
            <div itemprop="articleBody">
              
   <section id="bgp">
-<span id="id1"></span><h1>BGP<a class="headerlink" href="#bgp" title="Permalink to this headline"></a></h1>
+<span id="id1"></span><h1>BGP<a class="headerlink" href="#bgp" title="Link to this heading"></a></h1>
 <p>The Border Gateway Protocol (BGP) is a standardized exterior gateway protocol
 designed to exchange routing and reachability information among autonomous systems
 (AS) on the internet. BGP is classified as a path-vector routing protocol, and it
 makes routing decisions based on paths, network policies, or rule sets configured
 by a network operator.</p>
 <section id="configuration">
-<h2>Configuration<a class="headerlink" href="#configuration" title="Permalink to this headline"></a></h2>
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
 <p>Following is an example of a BGP configuration with one session.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test.bgp&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;family&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;ipv4-unicast&quot;</span><span class="p">,</span><span class="w">  </span><span class="s2">&quot;ipv6-unicast&quot;</span><span class="w"> </span><span class="p">]</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;test.bgp&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;family&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;ipv4-unicast&quot;</span><span class="p">,</span><span class="w">  </span><span class="s2">&quot;ipv6-unicast&quot;</span><span class="w"> </span><span class="p">]</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{}</span><span class="w"> </span><span class="p">}</span>
 </pre></div>
 </div>
 <p>Every configured BGP peer both actively connects and passively listens on
 TCP port 179, matching real router behavior. If the peer also connects
 towards BNG Blaster at the same time, the resulting connection collision is
-resolved automatically per <span class="target" id="index-0"></span><a class="rfc reference external" href="https://tools.ietf.org/html/rfc4271.html#section-6.8"><strong>RFC 4271#section-6.8</strong></a> by comparing BGP
+resolved automatically per <span class="target" id="index-0"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc4271.html#section-6.8"><strong>RFC 4271#section-6.8</strong></a> by comparing BGP
 Identifiers, with the losing TCP connection closed via a NOTIFICATION
 (Cease, Connection Collision Resolution).</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 33%" />
-<col style="width: 67%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Attribute</p></th>
 <th class="head"><p>Description</p></th>
@@ -259,14 +264,23 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>reconnect</strong></p></td>
+<tr class="row-odd"><td><p><strong>tcp-ao-exclude-options</strong></p></td>
+<td><div class="line-block">
+<div class="line">Exclude TCP options other than TCP-AO from the TCP-AO MAC</div>
+<div class="line">(RFC 5925 section 3.1), which must match the peer configuration.</div>
+<div class="line">Not supported for md5.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>reconnect</strong></p></td>
 <td><div class="line-block">
 <div class="line">Reconnect BGP session automatically.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>start-traffic</strong></p></td>
+<tr class="row-odd"><td><p><strong>start-traffic</strong></p></td>
 <td><div class="line-block">
 <div class="line">Start global traffic after RAW update finished.</div>
 <div class="line">If enabled, the control command <strong>traffic-start</strong> is automatically</div>
@@ -275,28 +289,33 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>learn-routes</strong></p></td>
+<tr class="row-even"><td><p><strong>learn-routes</strong></p></td>
 <td><div class="line-block">
-<div class="line">Store received IPv4/IPv6 unicast, labeled unicast and EVPN routes.</div>
+<div class="line">Store received IPv4/IPv6 unicast, labeled unicast, EVPN and</div>
+<div class="line">L2VPN routes.</div>
 <div class="line">If disabled, received updates are not parsed.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>teardown-time</strong></p></td>
+<tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP teardown time in seconds.</div>
+<div class="line">The session is closed after the notification at the</div>
+<div class="line">latest after this time or after 3 seconds. A session</div>
+<div class="line">with pending data (e.g. RAW update not read by the peer)</div>
+<div class="line">is reset (TCP RST) instead of closed (TCP FIN).</div>
 <div class="line">Default: 5 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>raw-update-file</strong></p></td>
+<tr class="row-even"><td><p><strong>raw-update-file</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP RAW update file.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>family</strong></p></td>
+<tr class="row-odd"><td><p><strong>family</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP families to be send in open message.</div>
 <div class="line">Default: ipv4/6-unicast, ipv4/6-labeled-unicast</div>
@@ -306,11 +325,11 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 <div class="line">ipv4-labeled-unicast, ipv6-labeled-unicast,</div>
 <div class="line">ipv4-vpn-unicast, ipv6-vpn-unicast,</div>
 <div class="line">ipv4-vpn-multicast, ipv6-vpn-multicast,</div>
-<div class="line">ipv4-flow, ipv6-flow, evpn</div>
+<div class="line">ipv4-flow, ipv6-flow, evpn, l2vpn</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>extended-nexthop</strong></p></td>
+<tr class="row-even"><td><p><strong>extended-nexthop</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP extended-nexthop families to be send in open message.</div>
 <div class="line">Default: None</div>
@@ -322,7 +341,7 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </table>
 </section>
 <section id="bgp-sessions">
-<h2>BGP Sessions<a class="headerlink" href="#bgp-sessions" title="Permalink to this headline"></a></h2>
+<h2>BGP Sessions<a class="headerlink" href="#bgp-sessions" title="Link to this heading"></a></h2>
 <p>BGP sessions are opened with the capabilities for the following
 address families:</p>
 <ul class="simple">
@@ -334,25 +353,25 @@ address families:</p>
 <p>This can be changed using the <code class="docutils literal notranslate"><span class="pre">family</span></code> configuration option.</p>
 </section>
 <section id="authentication">
-<h2>Authentication<a class="headerlink" href="#authentication" title="Permalink to this headline"></a></h2>
+<h2>Authentication<a class="headerlink" href="#authentication" title="Link to this heading"></a></h2>
 <p>BGP sessions can be authenticated with the TCP Authentication Option
-(TCP-AO, <span class="target" id="index-1"></span><a class="rfc reference external" href="https://tools.ietf.org/html/rfc5925.html"><strong>RFC 5925</strong></a> and <span class="target" id="index-2"></span><a class="rfc reference external" href="https://tools.ietf.org/html/rfc5926.html"><strong>RFC 5926</strong></a>) using the algorithms hmac-sha-1-96,
+(TCP-AO, <span class="target" id="index-1"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5925.html"><strong>RFC 5925</strong></a> and <span class="target" id="index-2"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5926.html"><strong>RFC 5926</strong></a>) using the algorithms hmac-sha-1-96,
 hmac-sha-256-128 or aes-128-cmac-96, or with the legacy TCP MD5 signature
-option (<span class="target" id="index-3"></span><a class="rfc reference external" href="https://tools.ietf.org/html/rfc2385.html"><strong>RFC 2385</strong></a>) using the algorithm md5.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;tcp-ao-algorithm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hmac-sha-1-96&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;tcp-ao-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BNGBlasterTCPAOKey01&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;tcp-ao-key-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;tcp-ao-rnext-key-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+option (<span class="target" id="index-3"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc2385.html"><strong>RFC 2385</strong></a>) using the algorithm md5.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tcp-ao-algorithm&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;hmac-sha-1-96&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tcp-ao-key&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;BNGBlasterTCPAOKey01&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tcp-ao-key-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tcp-ao-rnext-key-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>The <code class="docutils literal notranslate"><span class="pre">tcp-ao-key-id</span></code> is sent as KeyID (SendID) and the <code class="docutils literal notranslate"><span class="pre">tcp-ao-rnext-key-id</span></code>
@@ -360,9 +379,13 @@ as RNextKeyID, which is also the KeyID (RecvID) expected in received segments.
 Both are equal by default. Authentication applies to connections initiated by
 the BNG Blaster and to connections accepted from the peer, including the
 initial SYN. Only a single static key per session is supported (no key rollover).</p>
+<p>TCP options other than TCP-AO are included in the MAC by default. Some
+implementations exclude them by default (e.g. Junos without <code class="docutils literal notranslate"><span class="pre">tcp-ao-option</span></code>
+enabled), which requires <code class="docutils literal notranslate"><span class="pre">tcp-ao-exclude-options</span></code> to be enabled. Otherwise,
+both sides reject the segments of the other side (MAC verification failed).</p>
 </section>
 <section id="route-learning">
-<h2>Route Learning<a class="headerlink" href="#route-learning" title="Permalink to this headline"></a></h2>
+<h2>Route Learning<a class="headerlink" href="#route-learning" title="Link to this heading"></a></h2>
 <p>Received routes are not stored by default. With <code class="docutils literal notranslate"><span class="pre">learn-routes</span></code> enabled,
 the BNG Blaster stores all IPv4 and IPv6 unicast and labeled unicast routes
 per session (Adj-RIB-In) together with next-hop, origin, AS path, MED,
@@ -370,18 +393,18 @@ local preference, communities, large communities and extended communities.
 Routes are added, replaced or deleted with every received update or withdraw
 and removed if the session goes down. Equal path attributes are stored
 once and shared between routes.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;learn-routes&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;family&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;ipv4-unicast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ipv6-unicast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;evpn&quot;</span><span class="w"> </span><span class="p">]</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;learn-routes&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;family&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;ipv4-unicast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;ipv6-unicast&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;evpn&quot;</span><span class="w"> </span><span class="p">]</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>The learned routes and counters can be displayed with the <code class="docutils literal notranslate"><span class="pre">bgp-routes</span></code>
@@ -396,206 +419,26 @@ the AS4_PATH attribute is not merged and 4-octet AS numbers are shown
 as AS_TRANS (23456).</p>
 </section>
 <section id="evpn">
-<h2>EVPN<a class="headerlink" href="#evpn" title="Permalink to this headline"></a></h2>
+<h2>EVPN<a class="headerlink" href="#evpn" title="Link to this heading"></a></h2>
 <p>With <code class="docutils literal notranslate"><span class="pre">learn-routes</span></code> enabled, the BNG Blaster learns all EVPN routes
-(RFC 7432, RFC 9136) received from the peer. This includes Ethernet
-auto-discovery (type 1), MAC/IP advertisement (type 2), inclusive multicast
-Ethernet tag (type 3), Ethernet segment (type 4) and IP prefix routes (type 5)
-together with the route targets, encapsulation, PMSI tunnel, router’s MAC,
-MAC mobility and ESI label attributes. Other route types are ignored.</p>
-<p>Labels are decoded as 20 bit MPLS labels unless the encapsulation extended
-community signals a VNI based encapsulation like VXLAN (RFC 8365).</p>
-<p>EVPN routes are stored per session (Adj-RIB-In), like IPv4 and IPv6 routes,
-and can be displayed with the <code class="docutils literal notranslate"><span class="pre">bgp-evpn-routes</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>.
-Withdrawn routes and routes of sessions which went down are kept as
-inactive entries.</p>
-<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">bgp-evpn-routes</span> <span class="pre">route-type</span> <span class="pre">2</span></code></p>
-<p>Traffic streams can dynamically resolve the inner (VPN) label from learned
-EVPN routes. The label2 of a MAC/IP advertisement route (symmetric IRB)
-is used if <code class="docutils literal notranslate"><span class="pre">bgp-evpn-mac</span></code> is set, or the label of an IP prefix route
-if <code class="docutils literal notranslate"><span class="pre">bgp-evpn-prefix</span></code> is set. The outer transport label can be set
-statically with <code class="docutils literal notranslate"><span class="pre">tx-label1</span></code> or resolved via LDP. Without outer label,
-the EVPN label is sent as the only label.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EVPN-T2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.1.1.10&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;tx-label1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;65001:100&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;bgp-evpn-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;00:11:22:33:44:55&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;bgp-evpn-ip&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.1.1.10&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;EVPN-T5&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.10.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;tx-label1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;65001:100&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;bgp-evpn-prefix&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.168.10.0/24&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-<p>Streams wait until a matching active route with an MPLS label is learned
-and are rebuilt automatically if the label changes. If the same route is
-received from multiple sessions (e.g. redundant route reflectors), streams
-use the route of the first session in configuration order and keep using it
-as long as it is active. If this route is withdrawn or the session goes down,
-streams switch to the same route of the next session.</p>
-<p>EVPN streams require at least one BGP session with <code class="docutils literal notranslate"><span class="pre">learn-routes</span></code> and
-family <code class="docutils literal notranslate"><span class="pre">evpn</span></code>. The <code class="docutils literal notranslate"><span class="pre">stream-info</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> shows
-<code class="docutils literal notranslate"><span class="pre">evpn-resolved</span></code> for those streams and the resolved <code class="docutils literal notranslate"><span class="pre">evpn-label</span></code>. The route
-is resolved when the stream is scheduled for sending, so stopped streams show
-<code class="docutils literal notranslate"><span class="pre">evpn-resolved</span></code> false.</p>
+received from the peer, which can be displayed with the <code class="docutils literal notranslate"><span class="pre">bgp-evpn-routes</span></code>
+<a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>. EVPN routes are used to resolve the labels of traffic
+streams for L3 EVPN, EVPN VPWS (E-LINE) and EVPN E-LAN services. The routes
+of an emulated PE are generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--evpn-vpws</span></code> or
+<code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--evpn-elan</span></code>. See <a class="reference internal" href="evpn.html#evpn"><span class="std std-ref">EVPN</span></a> for details and how
+to test EVPN services.</p>
 </section>
-<section id="evpn-vpws-e-line">
-<h2>EVPN VPWS (E-LINE)<a class="headerlink" href="#evpn-vpws-e-line" title="Permalink to this headline"></a></h2>
-<p>EVPN VPWS (<span class="target" id="index-4"></span><a class="rfc reference external" href="https://tools.ietf.org/html/rfc8214.html"><strong>RFC 8214</strong></a>) services are signaled with per-EVI Ethernet
-auto-discovery routes (type 1) with the local VPWS service identifier
-as Ethernet tag, the VPWS label and the EVPN Layer 2 Attributes extended
-community (control word, primary and backup flags and L2 MTU).</p>
-<p>In a typical setup, the BNG Blaster emulates the remote PE with a BGP
-session to the device under test (DUT) and an MPLS network interface, while a
-second network interface emulates the CE connected to the attachment circuit
-of the DUT. The routes of the emulated PE are advertised using a
-<a class="reference internal" href="#bgp"><span class="std std-ref">RAW update file</span></a> generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--evpn-vpws</span></code>.
-The Ethernet tag advertised by the BNG Blaster is the remote service identifier
-configured on the DUT and the stream uses the route of the DUT with its local
-service identifier.</p>
-<p>Traffic streams with <code class="docutils literal notranslate"><span class="pre">bgp-evpn-rd</span></code> and <code class="docutils literal notranslate"><span class="pre">bgp-evpn-ethernet-tag</span></code> (optionally
-<code class="docutils literal notranslate"><span class="pre">bgp-evpn-esi</span></code>) but without <code class="docutils literal notranslate"><span class="pre">bgp-evpn-mac</span></code> or <code class="docutils literal notranslate"><span class="pre">bgp-evpn-prefix</span></code> resolve
-the VPWS label of the DUT and send the stream packets as Ethernet frames
-over MPLS to the <code class="docutils literal notranslate"><span class="pre">destination-mac</span></code> of the CE. The control word is added if
-requested by the DUT. Customer VLAN tags within the VPWS service can be added
-with <code class="docutils literal notranslate"><span class="pre">vpws-vlan</span></code> and <code class="docutils literal notranslate"><span class="pre">vpws-inner-vlan</span></code>.</p>
-<p>Received Ethernet over MPLS traffic is accepted on network interfaces with and
-without control word, where <code class="docutils literal notranslate"><span class="pre">rx-label1</span></code> or <code class="docutils literal notranslate"><span class="pre">rx-label2</span></code> can be used to verify
-the advertised VPWS label. Streams expecting a control word (control word flag
-advertised by the BNG Blaster) should enable <code class="docutils literal notranslate"><span class="pre">rx-control-word</span></code>. This is
-required to decode frames correctly where the presence of the control word is
-ambiguous (e.g. VLAN tagged frames with destination MAC address 00:…).</p>
-<p>With <code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code> enabled, the BNG Blaster replies to ARP, IPv6 neighbor
-solicitation and ICMP/ICMPv6 echo requests for the <code class="docutils literal notranslate"><span class="pre">network-ipv4-address</span></code>
-or <code class="docutils literal notranslate"><span class="pre">network-ipv6-address</span></code> of the stream, received within the VPWS service
-with the customer VLAN tags of the stream. This allows a real CE router to
-resolve and ping the emulated PE side. Replies are sent with the labels,
-control word and customer VLAN tags of the stream and the MAC address of
-the network interface. If <code class="docutils literal notranslate"><span class="pre">destination-mac</span></code> is not configured, the stream
-learns the CE MAC address from those requests and starts sending once the
-MAC address is learned (<code class="docutils literal notranslate"><span class="pre">vpws-mac</span></code> in <code class="docutils literal notranslate"><span class="pre">stream-info</span></code>, <code class="docutils literal notranslate"><span class="pre">null</span></code> until learned).</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;VPWS-1000-PE-CE&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1:100&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;bgp-evpn-ethernet-tag&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;vpws-arp&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-<p>Without control word, CE frames with a destination MAC address starting
-with 4 or 6 in the first nibble can be misinterpreted as IPv4 or IPv6 over
-MPLS. The control word should be used if the network interface MAC address
-starts with such a nibble.</p>
-<p>The CE interface uses the MAC address of the emulated PE interface as
-<code class="docutils literal notranslate"><span class="pre">gateway-mac</span></code> so that CE to PE traffic is received by the PE interface.
-The following example assumes the MAC addresses 02:00:00:00:00:01 for
-<code class="docutils literal notranslate"><span class="pre">eth1</span></code> (PE) and 02:00:00:00:00:02 for <code class="docutils literal notranslate"><span class="pre">eth2</span></code> (CE) and a directly
-connected DUT without transport label towards the BNG Blaster.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2/24&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;gateway-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:01&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;learn-routes&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;vpws.bgp&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;family&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;evpn&quot;</span><span class="w"> </span><span class="p">]</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">],</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;VPWS-1000-PE-CE&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-mac&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;02:00:00:00:00:02&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;tx-label1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;bgp-evpn-rd&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.0.1:100&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;bgp-evpn-ethernet-tag&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="w"></span>
-<span class="w">        </span><span class="p">},</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;VPWS-1000-CE-PE&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;downstream&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2:100&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;network-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;destination-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;192.0.2.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;rx-label1&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">5000</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
-</pre></div>
-</div>
-<p>The RAW update file and streams for the example above can be generated
-with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span></code>, where <code class="docutils literal notranslate"><span class="pre">--stream-evpn-rd</span></code> is the route distinguisher
-of the DUT routes. The generated streams are named <code class="docutils literal notranslate"><span class="pre">vpws-&lt;service-id&gt;-pe-ce</span></code>
-and <code class="docutils literal notranslate"><span class="pre">vpws-&lt;service-id&gt;-ce-pe</span></code>. The <code class="docutils literal notranslate"><span class="pre">--stream-direction</span></code> selects PE to CE
-(downstream, default), CE to PE (upstream) or both streams.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>bgpupdate --evpn-vpws -n 10.0.1.2 --rd 10.0.1.2:100 --rt 65001:100 \
-    --service-id 1000 -m 5000 --mtu 1500 --primary --end-of-rib -f vpws.bgp \
-    -s streams.json --stream-direction both --stream-pps 1000 \
-    --stream-interface eth1 --stream-tx-label 16001 \
-    --stream-ce-interface eth2 --stream-ce-vlan 100 \
-    --stream-evpn-rd 10.0.0.1:100 --stream-destination-mac 02:00:00:00:00:02 \
-    --stream-pe-address 192.0.2.1 --stream-ce-address 192.0.2.2
-</pre></div>
-</div>
-<p>Multiple services are generated with <code class="docutils literal notranslate"><span class="pre">--service-num</span></code> where the service
-identifier, CE VLAN (<code class="docutils literal notranslate"><span class="pre">--stream-ce-vlan</span></code>) and customer VLAN within the VPWS
-service (<code class="docutils literal notranslate"><span class="pre">--stream-vpws-vlan</span></code>) are incremented per service. Different labels per
-service require <code class="docutils literal notranslate"><span class="pre">-M</span></code> (label count), different route distinguishers and
-route targets per service <code class="docutils literal notranslate"><span class="pre">--rd-increment</span></code> and <code class="docutils literal notranslate"><span class="pre">--rt-increment</span></code>.
-The option <code class="docutils literal notranslate"><span class="pre">--stream-vpws-arp</span></code> enables <code class="docutils literal notranslate"><span class="pre">vpws-arp</span></code> for the PE to CE
-streams, where <code class="docutils literal notranslate"><span class="pre">--stream-destination-mac</span></code> becomes optional. Withdraw
-updates (<code class="docutils literal notranslate"><span class="pre">--withdraw</span></code>) require only <code class="docutils literal notranslate"><span class="pre">--rd</span></code> besides the
-mandatory <code class="docutils literal notranslate"><span class="pre">--next-hop-base</span></code>.</p>
+<section id="bgp-l2vpn">
+<h2>BGP L2VPN<a class="headerlink" href="#bgp-l2vpn" title="Link to this heading"></a></h2>
+<p>With <code class="docutils literal notranslate"><span class="pre">learn-routes</span></code> enabled and the family <code class="docutils literal notranslate"><span class="pre">l2vpn</span></code>, the BNG Blaster learns
+the BGP L2VPN label blocks (<span class="target" id="index-4"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc6624.html"><strong>RFC 6624</strong></a>) received from the peer, which can be
+displayed with the <code class="docutils literal notranslate"><span class="pre">bgp-l2vpn-routes</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> and used to resolve
+the pseudowire labels of traffic streams. The label blocks of an emulated PE are
+generated with <code class="docutils literal notranslate"><span class="pre">bgpupdate</span> <span class="pre">--l2vpn</span></code>. See <a class="reference internal" href="l2vpn.html#l2vpn"><span class="std std-ref">BGP L2VPN</span></a> for details
+and how to test BGP L2VPN services.</p>
 </section>
 <section id="raw-update-files">
-<h2>RAW Update Files<a class="headerlink" href="#raw-update-files" title="Permalink to this headline"></a></h2>
+<h2>RAW Update Files<a class="headerlink" href="#raw-update-files" title="Link to this heading"></a></h2>
 <p>The BNG Blaster can inject BGP messages from a pre-compiled
 RAW update file into the defined sessions. A RAW update file is nothing
 more than a pre-compiled binary stream of BGP messages, typically
@@ -647,28 +490,49 @@ same file identified by file name, this file is loaded once into
 memory and used by multiple sessions.</p>
 <p>Therefore for incremental updates, it may make sense to pre-load
 them via the <code class="docutils literal notranslate"><span class="pre">bgp-raw-update-files</span></code> configuration option.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;start.bgp&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">],</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;bgp-raw-update-files&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;update1.bgp&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="s2">&quot;update2.bgp&quot;</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;raw-update-file&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;start.bgp&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;bgp-raw-update-files&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="s2">&quot;update1.bgp&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="s2">&quot;update2.bgp&quot;</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>Incremental updates not listed here will be loaded dynamically as soon
 as referenced by the first session.</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">bgp-sessions</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> shows the progress of the RAW
+update file in <code class="docutils literal notranslate"><span class="pre">raw-update-state</span></code> (<code class="docutils literal notranslate"><span class="pre">wait</span></code>, <code class="docutils literal notranslate"><span class="pre">sending</span></code> or <code class="docutils literal notranslate"><span class="pre">done</span></code>).
+The update counters (<code class="docutils literal notranslate"><span class="pre">update-tx</span></code>) are incremented once the whole file
+is sent and acknowledged. The bytes of the file acknowledged by the peer
+so far are shown in <code class="docutils literal notranslate"><span class="pre">raw-update-bytes-acked</span></code> (of <code class="docutils literal notranslate"><span class="pre">raw-update-bytes</span></code>).
+The <code class="docutils literal notranslate"><span class="pre">tcp</span></code> object shows the bytes sent but not yet acknowledged
+(<code class="docutils literal notranslate"><span class="pre">send-queue</span></code>), the free TCP send buffer (<code class="docutils literal notranslate"><span class="pre">send-buffer-free</span></code>) and
+the receive window of the peer (<code class="docutils literal notranslate"><span class="pre">peer-window</span></code>). A <code class="docutils literal notranslate"><span class="pre">peer-window</span></code> of
+zero means that the peer does not accept further data at the moment
+(receiver backpressure).</p>
+<p>The <code class="docutils literal notranslate"><span class="pre">raw-update-start-epoch</span></code> and <code class="docutils literal notranslate"><span class="pre">raw-update-stop-epoch</span></code> values show
+when sending of the current RAW update file started and when it was
+completely acknowledged, <code class="docutils literal notranslate"><span class="pre">raw-update-duration</span></code> the time in between.
+Like the traffic stream <code class="docutils literal notranslate"><span class="pre">*-epoch</span></code> values, these are seconds of the
+monotonic system clock (time since boot), not Unix time. This allows
+convergence measurements by comparing the start of a RAW update with
+the <code class="docutils literal notranslate"><span class="pre">rx-first-epoch</span></code>, <code class="docutils literal notranslate"><span class="pre">rx-interface-changed-epoch</span></code> or
+<code class="docutils literal notranslate"><span class="pre">rx-last-epoch</span></code> of traffic streams. While a further RAW update is
+sent, <code class="docutils literal notranslate"><span class="pre">raw-update-stop-epoch</span></code> and <code class="docutils literal notranslate"><span class="pre">raw-update-duration</span></code> still show
+the previous update, so check <code class="docutils literal notranslate"><span class="pre">raw-update-state</span></code> for <code class="docutils literal notranslate"><span class="pre">done</span></code> before
+using them.</p>
 </section>
 <section id="bgp-raw-update-generator">
-<h2>BGP RAW Update Generator<a class="headerlink" href="#bgp-raw-update-generator" title="Permalink to this headline"></a></h2>
+<h2>BGP RAW Update Generator<a class="headerlink" href="#bgp-raw-update-generator" title="Link to this heading"></a></h2>
 <p>The BGP RAW update generator is a simple tool to generate BGP RAW update
 streams for use with the BNG Blaster.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ bgpupdate --help
@@ -689,7 +553,11 @@ usage: bgpupdate [-h] [-a ASN] -n ADDRESS [-N N] [-p PREFIX] [-P N] [-m LABEL]
                  [--stream-vpws-qinq] [--stream-vpws-arp]
                  [--stream-evpn-rd RD] [--stream-evpn-service-id ID]
                  [--stream-destination-mac MAC] [--stream-pe-address ADDRESS]
-                 [--stream-ce-address ADDRESS]
+                 [--stream-ce-address ADDRESS] [--evpn-elan]
+                 [--ethernet-tag TAG] [--mac MAC] [--l2vpn] [--ce-id ID]
+                 [--label-block-offset N] [--label-block-size N]
+                 [--encapsulation {ethernet-vlan,ethernet}]
+                 [--stream-l2vpn-rd RD] [--stream-l2vpn-ce-id ID]
 
 The BGP RAW update generator is a simple tool to generate BGP RAW update
 streams for use with the BNG Blaster.
@@ -746,7 +614,8 @@ EVPN VPWS (E-LINE):
   --service-id ID       local VPWS service identifier base (ethernet tag)
   --service-num N       VPWS service count
   --mtu MTU             L2 MTU (default 0)
-  --control-word        request control word (C flag)
+  --control-word        request control word (C flag), E-LAN streams send and
+                        expect control word
   --primary             set primary flag (P flag)
   --backup              set backup flag (B flag)
   --encap-mpls          add MPLS encapsulation extended community
@@ -774,6 +643,32 @@ EVPN VPWS (E-LINE):
                         PE side stream IPv4 address
   --stream-ce-address ADDRESS
                         CE side stream IPv4 address
+
+EVPN E-LAN:
+  EVPN E-LAN routes use the --rd, --rt, --esi, --service-num, --encap-mpls,
+  --control-word and --stream-* options of EVPN VPWS, where --stream-vpws-*
+  sets the customer VLAN
+
+  --evpn-elan           generate EVPN E-LAN IMET (route type 3) and MAC/IP
+                        routes (route type 2)
+  --ethernet-tag TAG    ethernet tag (default 0)
+  --mac MAC             MAC address advertised per EVI (e.g. PE interface MAC)
+
+BGP L2VPN (RFC 6624):
+  BGP L2VPN routes use the --rd, --rt, --rd-increment, --rt-increment,
+  --service-num (instances), --mtu, --control-word and --stream-* options of
+  EVPN VPWS, where --stream-vpws-* sets the customer VLAN
+
+  --l2vpn               generate BGP L2VPN label blocks (RFC 6624)
+  --ce-id ID            local CE ID (default 1)
+  --label-block-offset N
+                        label block offset, first remote CE ID (default 1)
+  --label-block-size N  label block size (default 8)
+  --encapsulation {ethernet-vlan,ethernet}
+                        encapsulation type (default ethernet-vlan)
+  --stream-l2vpn-rd RD  route distinguisher of DUT routes (PE to CE streams)
+  --stream-l2vpn-ce-id ID
+                        DUT CE ID
 </pre></div>
 </div>
 <p>The Python BGP RAW update generator is a Python script that uses
@@ -805,7 +700,7 @@ bgpupdate -f test.bgp -a 65001 -l 100 -n 10.0.0.1 -N 1000 -m 2 -p fc66:2::/48 -P
 <p>There are several options supported to further define the traffic streams like PPS and expected RX labels.</p>
 </section>
 <section id="bgp-convergence-testing">
-<h2>BGP Convergence Testing<a class="headerlink" href="#bgp-convergence-testing" title="Permalink to this headline"></a></h2>
+<h2>BGP Convergence Testing<a class="headerlink" href="#bgp-convergence-testing" title="Link to this heading"></a></h2>
 <p>The following project demonstrates how to measure the convergence between the BGP Control-Plane (CP)
 and the Data-Plane (DP) using the BNG Blaster. By utilizing BNG Blaster, we can analyze and monitor
 the time it takes for routing changes to propagate from the control-plane, where BGP updates occur,
@@ -819,7 +714,7 @@ to the data-plane, where actual data packet forwarding happens.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="mpls.html" class="btn btn-neutral float-left" title="MPLS" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="ldp.html" class="btn btn-neutral float-right" title="LDP" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="evpn.html" class="btn btn-neutral float-right" title="EVPN" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

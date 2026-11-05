@@ -322,6 +322,19 @@ are supported and stored for each session if received. Received
 CSUN messages are processed correctly and via the control socket,
 it is also possible to send CSURQ requests to the LAC.
 
+Proxy Authentication
+~~~~~~~~~~~~~~~~~~~~
+
+If the LAC has already authenticated the client and sends the
+Proxy Authen AVPs in the ICCN, the LNS accepts this authentication.
+For proxy authentication type PAP or CHAP with Proxy Authen ID AVP,
+the LNS immediately sends a PAP Authenticate-Ack or CHAP Success with
+this ID instead of waiting for a retransmitted request of the client.
+Without Proxy Authen ID, the LNS waits for the request of the client.
+Credentials are not verified, as with all PAP and CHAP requests
+received by the LNS. This behaviour can be disabled with the
+``l2tp-server`` option ``proxy-auth``.
+
 L2TP Commands
 ~~~~~~~~~~~~~
 
@@ -354,10 +367,16 @@ with ``client-name`` instead of ``server-name``.
                 "control-packets-tx": 102,
                 "control-packets-tx-retry": 0,
                 "data-packets-rx": 1406,
-                "data-packets-tx": 206
+                "data-packets-tx": 206,
+                "sessions": 2,
+                "sessions-established": 2
             }
         ]
     }
+
+The ``sessions`` of a tunnel are those listed by ``l2tp-sessions``
+with its ``tunnel-id``, ``sessions-established`` only those in
+state ``Established``.
 
 The ``l2tp-sessions`` :ref:`command <api>` returns all L2TP sessions
 of both LNS and LAC tunnels.

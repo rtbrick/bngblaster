@@ -1,19 +1,22 @@
 <!DOCTYPE html>
-<html class="writer-html5" lang="en" >
+<html class="writer-html5" lang="en" data-content_root="./">
 <head>
-  <meta charset="utf-8" /><meta name="generator" content="Docutils 0.17.1: http://docutils.sourceforge.net/" />
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
 
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Performance Guide &mdash; BNG Blaster 1.0 documentation</title>
-      <link rel="stylesheet" href="_static/pygments.css" type="text/css" />
-      <link rel="stylesheet" href="_static/css/theme.css" type="text/css" />
-      <link rel="stylesheet" href="_static/tabs.css" type="text/css" />
-      <link rel="stylesheet" href="_static/custom.css" type="text/css" />
+  <title>Performance Guide &mdash; BNG Blaster 1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=86f27845" />
+      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="_static/custom.css?v=d3fa0a67" />
+
   
-        <script data-url_root="./" id="documentation_options" src="_static/documentation_options.js"></script>
-        <script src="_static/jquery.js"></script>
-        <script src="_static/underscore.js"></script>
-        <script src="_static/doctools.js"></script>
+  
+        <script src="_static/jquery.js?v=8dae8fb0"></script>
+        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+        <script src="_static/documentation_options.js?v=56dcb7b8"></script>
+        <script src="_static/doctools.js?v=888ff710"></script>
+        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -26,15 +29,19 @@
     <nav data-toggle="wy-nav-shift" class="wy-nav-side">
       <div class="wy-side-scroll">
         <div class="wy-side-nav-search"  style="background: #fcfcfc" >
-            <a href="index.html" class="icon icon-home"> BNG Blaster
-            <img src="_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
               <div class="version">
-                1.0.X
+                1.1.X
               </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
-    <input type="text" name="q" placeholder="Search docs" />
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
     <input type="hidden" name="check_keywords" value="yes" />
     <input type="hidden" name="area" value="default" />
   </form>
@@ -55,9 +62,25 @@
 <li class="toctree-l1"><a class="reference internal" href="api/index.html">API/CLI</a></li>
 <li class="toctree-l1"><a class="reference internal" href="controller.html">Controller and Web UI</a></li>
 <li class="toctree-l1 current"><a class="current reference internal" href="#">Performance Guide</a><ul>
-<li class="toctree-l2"><a class="reference internal" href="#pppoe-rss-on-intel-700-series">PPPoE RSS on Intel 700 Series</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#rss-by-vlan-and-mac-on-intel-700-series">RSS by VLAN and MAC on Intel 700 Series</a></li>
-<li class="toctree-l2"><a class="reference internal" href="#numa">NUMA</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#where-to-start">Where to Start</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#i-o-threads">I/O Threads</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#receive-side-scaling-rss">Receive Side Scaling (RSS)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#if-rss-does-not-work">If RSS Does Not Work</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#nic-driver-settings">NIC Driver Settings</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pppoe-rss-on-intel-700-series">PPPoE RSS on Intel 700 Series</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#rss-by-vlan-and-mac-on-intel-700-series">RSS by VLAN and MAC on Intel 700 Series</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#server-settings">Server Settings</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bios-uefi">BIOS/UEFI</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cpu-frequency-scaling">CPU Frequency Scaling</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#iommu">IOMMU</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#interrupts">Interrupts</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#pcie">PCIe</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#virtual-machines">Virtual Machines</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#numa-and-cpu-pinning">NUMA and CPU Pinning</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#dpdk">DPDK</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#loopback">Loopback</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#af-xdp">AF_XDP</a><ul>
@@ -83,8 +106,8 @@
         <div class="rst-content">
           <div role="navigation" aria-label="Page navigation">
   <ul class="wy-breadcrumbs">
-      <li><a href="index.html" class="icon icon-home"></a> &raquo;</li>
-      <li>Performance Guide</li>
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Performance Guide</li>
       <li class="wy-breadcrumbs-aside">
             <a href="_sources/performance.rst.txt" rel="nofollow"> View page source</a>
       </li>
@@ -95,28 +118,55 @@
            <div itemprop="articleBody">
              
   <section id="performance-guide">
-<span id="performance"></span><h1>Performance Guide<a class="headerlink" href="#performance-guide" title="Permalink to this headline"></a></h1>
+<span id="performance"></span><h1>Performance Guide<a class="headerlink" href="#performance-guide" title="Link to this heading"></a></h1>
+<p>This guide explains how to get the most out of the BNG Blaster, from the
+configuration of I/O threads to the settings of the NIC, the server and the
+operating system.</p>
 <p>The BNG Blaster handles all traffic sent and received (I/O) in the main thread per default.
 With this default behavior, you can achieve between 100000 and 250000 PPS bidirectional
 traffic in most environments. Depending on the actual setup, this can be even less or much
 more, which is primarily driven by the single-thread performance of the given CPU.</p>
-<p>Those numbers can be increased by splitting the workload over multiple I/O worker threads.
-Every I/O thread will handle only one interface and direction. It is also possible to start
+<p>Those numbers can be increased by splitting the workload over multiple I/O worker threads,
+and further with the I/O modes <a class="reference internal" href="#af-xdp-usage"><span class="std std-ref">AF_XDP</span></a> or <a class="reference internal" href="#dpdk-usage"><span class="std std-ref">DPDK</span></a>.</p>
+<section id="where-to-start">
+<h2>Where to Start<a class="headerlink" href="#where-to-start" title="Link to this heading"></a></h2>
+<p>Change one thing at a time and measure after each step. Loss shows up in the
+stream statistics of the BNG Blaster, and in the NIC counters
+(<code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-S</span> <span class="pre">&lt;interface&gt;</span></code>, e.g. <code class="docutils literal notranslate"><span class="pre">rx_missed_errors</span></code>).</p>
+<ol class="arabic simple">
+<li><p>Start with the default I/O mode <code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> and one RX and one TX
+thread per interface.</p></li>
+<li><p>Check if the NIC distributes the received traffic over multiple queues
+(<a class="reference internal" href="#rss"><span class="std std-ref">RSS</span></a>). If it doesn’t, which is common for PPPoE, keep one RX
+thread per interface (see <a class="reference internal" href="#rss-not-working"><span class="std std-ref">If RSS Does Not Work</span></a>).</p></li>
+<li><p>Add RX threads only as long as the per-queue counters show that the traffic is
+distributed over the corresponding queues.</p></li>
+<li><p>Pin the threads to CPUs of the NUMA node of the NIC, away from the CPUs
+handling the NIC interrupts (<a class="reference internal" href="#cpu-pinning"><span class="std std-ref">NUMA and CPU Pinning</span></a>).</p></li>
+<li><p>Increase the <a class="reference internal" href="#nic-rx-ring"><span class="std std-ref">NIC RX ring</span></a>.</p></li>
+<li><p>Check the <a class="reference internal" href="#server-settings"><span class="std std-ref">server settings</span></a>: BIOS power profile, CPU
+frequency scaling, IOMMU mode, PCIe slot and interrupt placement.</p></li>
+<li><p>For more performance, use <a class="reference internal" href="#af-xdp-usage"><span class="std std-ref">AF_XDP</span></a> or <a class="reference internal" href="#dpdk-usage"><span class="std std-ref">DPDK</span></a>.</p></li>
+</ol>
+</section>
+<section id="i-o-threads">
+<h2>I/O Threads<a class="headerlink" href="#i-o-threads" title="Link to this heading"></a></h2>
+<p>Every I/O thread handles only one interface and direction. It is also possible to start
 multiple threads for the same interface and direction.</p>
 <p>The number of I/O threads can be configured globally for all interfaces or per interface link.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>The configuration per interface link allows asymmetric thread pools. Assuming you would send
@@ -131,16 +181,22 @@ This allows to monitor the CPU usage and placement of each thread.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>top -H -p $(pgrep -x bngblaster)
 </pre></div>
 </div>
-<p>With multithreading, you should be able to scale up to 8 million PPS bidirectional, depending on
-the actual configuration and setup. This allows starting 1 million flows with 1 PPS per flow over
-at least 4 TX threads to verify all prefixes of a BGP full table for example.</p>
+<p>With multithreading and the default I/O mode <code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>, you should be able to scale up
+to 8 million PPS bidirectional, depending on the actual configuration and setup. This allows
+starting 1 million flows with 1 PPS per flow over at least 4 TX threads to verify all prefixes of
+a BGP full table for example. With <a class="reference internal" href="#af-xdp-usage"><span class="std std-ref">AF_XDP</span></a> or <a class="reference internal" href="#dpdk-usage"><span class="std std-ref">DPDK</span></a>,
+a single RX and TX thread can already handle 10G line rate (see <a class="reference internal" href="#af-xdp-tuning"><span class="std std-ref">AF_XDP Tuning</span></a>).</p>
 <p>The configured traffic streams are automatically balanced over all TX threads of the corresponding
-interfaces but a single stream can’t be split over multiple threads to prevent re-ordering issues.</p>
+interfaces but a single stream can’t be split over multiple threads to prevent re-ordering issues.
+TX threads are not limited by RSS, so the number of TX threads can be increased independently of
+the RX threads.</p>
 <p>Enabling multithreaded I/O causes some limitations. First of all, it works only on systems with
 CPU cache coherence, which should apply to all modern CPU architectures. TX threads are not allowed
-for LAG (Link Aggregation) interfaces but RX threads are supported. It is also not possible to capture
-traffic streams send or received on threaded interfaces. All other traffic is still captured on threaded
-interfaces.</p>
+for LAG (Link Aggregation) interfaces but RX threads are supported. Traffic streams sent or received
+by I/O threads are captured with <code class="docutils literal notranslate"><span class="pre">capture-include-streams</span></code>, which copies each stream packet to the
+main thread writing the capture. This limits the capture rate (e.g. about 2 million packets per
+second to disk in our tests) and packets exceeding it are missing in the capture, which is logged
+as <code class="docutils literal notranslate"><span class="pre">Incomplete</span> <span class="pre">stream</span> <span class="pre">capture</span></code>.</p>
 <p>RX threads handle received traffic streams directly and redirect all other packets to the main
 thread. Packets longer than 4074 bytes can’t be redirected and are counted as <code class="docutils literal notranslate"><span class="pre">rx-to-long</span></code>.
 Packets dropped because the main thread does not process redirected packets fast enough are
@@ -148,61 +204,153 @@ counted as <code class="docutils literal notranslate"><span class="pre">rx-dropp
 wait for the main thread instead.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>The BNG Blaster is currently tested for 8 million PPS with 10 million flows, which is not a
-hard limitation but everything above should be considered with caution. It is also possible to
-scale far beyond using DPDK-enabled interfaces.</p>
+<p>The BNG Blaster is currently tested for 8 million PPS with 10 million flows using the
+<code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code> I/O mode, which is not a hard limitation but everything above should
+be considered with caution. It is also possible to scale far beyond using AF_XDP or
+DPDK-enabled interfaces.</p>
+</div>
+<p>The receive performance can be increased by the number of RX threads, if the traffic is
+distributed by RSS (see below), and by the number of I/O slots.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
 </div>
 <p>It is also recommended to increase the hardware and software queue size of your
 network interface links to the maximum for higher throughput as explained
-in the <a class="reference internal" href="interfaces.html#interfaces"><span class="std std-ref">Operating System Settings</span></a>.</p>
-<p>The packet receives performance can be increased by the number of RX threads and IO slots.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+in the <a class="reference internal" href="interfaces.html#interfaces"><span class="std std-ref">Operating System Settings</span></a> and below.</p>
+</section>
+<section id="receive-side-scaling-rss">
+<span id="rss"></span><h2>Receive Side Scaling (RSS)<a class="headerlink" href="#receive-side-scaling-rss" title="Link to this heading"></a></h2>
+<p>A modern NIC has multiple receive queues. Each queue has its own ring of
+receive buffers and its own interrupt, which is usually handled by a different
+CPU. Receive side scaling (RSS) decides which queue a received packet is put
+into: the NIC calculates a hash over header fields (typically the source and
+destination IP addresses and UDP/TCP ports) and selects the queue via an
+indirection table. All packets of a flow get the same hash and therefore the
+same queue, so the order within a flow is kept. RSS is done by the NIC
+hardware, so it only works for the packet types the NIC can parse.</p>
+<p>The BNG Blaster RX threads read from those queues:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>I/O mode</p></th>
+<th class="head"><p>Distribution over RX threads</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">af_xdp</span></code>, <code class="docutils literal notranslate"><span class="pre">dpdk</span></code></p></td>
+<td><p>Each RX thread reads exactly one NIC queue. An RX thread
+whose queue gets no traffic is idle.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">packet_mmap_raw</span></code>,
+<code class="docutils literal notranslate"><span class="pre">packet_mmap</span></code>, <code class="docutils literal notranslate"><span class="pre">raw</span></code></p></td>
+<td><p>The kernel distributes the packets over the RX threads
+(packet fanout by flow hash), but the kernel receive
+processing of each NIC queue runs on the CPU handling
+the interrupt of that queue.</p></td>
+</tr>
+</tbody>
+</table>
+<p>In both cases, the traffic of one NIC queue is limited by the CPU processing
+this queue. Additional RX threads therefore only help if RSS distributes the
+traffic over multiple queues.</p>
+<p>The number of queues, the indirection table and the hashed fields can be
+shown with <code class="docutils literal notranslate"><span class="pre">ethtool</span></code>. The per-queue counters show how the traffic is
+actually distributed while it is running (counter names depend on the driver,
+e.g. <code class="docutils literal notranslate"><span class="pre">rx-&lt;n&gt;.packets</span></code> or <code class="docutils literal notranslate"><span class="pre">rx_queue_&lt;n&gt;_packets</span></code>).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># number of queues (channels)
+ethtool -l &lt;interface&gt;
+# RSS indirection table and hash key
+ethtool -x &lt;interface&gt;
+# hashed fields, e.g. for IPv4/UDP
+ethtool -n &lt;interface&gt; rx-flow-hash udp4
+# per-queue counters
+watch -d &#39;ethtool -S &lt;interface&gt; | grep -E &quot;rx[-_]([0-9]+|queue_[0-9]+)[._]packets&quot;&#39;
 </pre></div>
 </div>
-<p>The packet receives performance is also limited by the abilities of your network
-interfaces to properly distribute the traffic over multiple hardware queues using
-receive side scaling (RSS). This is a technology that allows network applications
-to distribute the processing of incoming network packets across multiple CPUs,
-improving performance, RSS uses a hashing function to assign packets to different
-CPUs based on their source and destination addresses and ports. RSS requires
-hardware support from the network adapter and the driver.</p>
-<p>Some network interfaces are not able to distribute traffic for PPPoE/L2TP or even
-MPLS traffic. Even double-tagged VLANs with the default type 0x8100 are
-often not supported. If RSS does not work for the received traffic, all packets
-of an interface are received on the same queue and therefore handled by a single
-RX thread, regardless of the number of RX threads configured. This can be verified
-with the per-queue counters of the network interface while traffic is running.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ethtool -S &lt;interface&gt; | grep -E &quot;rx-[0-9]+\.packets&quot;
+<p>Many NICs can’t parse and therefore not hash some encapsulations which are
+typical for BNG tests:</p>
+<ul class="simple">
+<li><p>PPPoE and L2TP: the IP header inside PPPoE or L2TP is not visible to the
+NIC, so all PPPoE sessions are hashed the same way, e.g. only on the
+Ethernet type.</p></li>
+<li><p>Double-tagged VLANs: even with the default type 0x8100, the inner VLAN and the
+IP header behind it are often not parsed. The outer type 0x88a8 (<code class="docutils literal notranslate"><span class="pre">qinq</span></code>) is
+often not recognized as VLAN at all.</p></li>
+<li><p>MPLS: some NICs hash only on the labels, others not at all.</p></li>
+</ul>
+<p>Therefore best results can be reached with single-tagged IPoE traffic.
+Depending on the actual network adapter, there are options to extend RSS,
+for instance for the Intel 700 Series (see below).</p>
+<section id="if-rss-does-not-work">
+<span id="rss-not-working"></span><h3>If RSS Does Not Work<a class="headerlink" href="#if-rss-does-not-work" title="Link to this heading"></a></h3>
+<p>If all received traffic of an interface ends up in one queue, for example
+with PPPoE, start with a single RX thread per interface. This often gives
+better results than multiple RX threads:</p>
+<ul class="simple">
+<li><p>All packets of the interface are processed by one CPU anyway. Additional RX
+threads can’t add capacity, but add overhead and contention.</p></li>
+<li><p>RX threads poll for packets and use CPU even if they receive nothing. With
+DPDK they permanently busy-poll, so each idle RX thread occupies a full CPU
+core. Those cores are then missing for the threads which do the work, or
+compete with them as SMT siblings of the same physical core.</p></li>
+<li><p>The CPU handling the interrupt of the active queue is busy with the kernel
+receive processing. With fewer threads, it is easier to keep this CPU free of
+BNG Blaster threads (see <a class="reference internal" href="#interrupts"><span class="std std-ref">Interrupts</span></a>).</p></li>
+</ul>
+<p>Then increase the number of RX threads step by step, only if the per-queue
+counters show that the traffic is distributed over more queues. As a starting
+point for the expected rates, a single RX thread received up to 2.4 Mpps of
+PPPoE on one queue without loss in our tests with AF_XDP (see
+<a class="reference internal" href="#single-queue"><span class="std std-ref">AF_XDP Tuning</span></a>).</p>
+<p>The same applies to the access side of a BNG test in general: downstream
+traffic to many PPPoE sessions arrives on the access interface, where RSS is
+least likely to work, while upstream traffic arrives as plain IP on the
+network interface. An asymmetric configuration with one RX thread on the
+access interface and more RX threads on the network interface is therefore
+common.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;access (PPPoE, single queue)&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;network (IP, distributed by RSS)&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
-<p>Therefore best results can be reached with single tagged IPoE traffic. Depending
-on the actual network adapter, there are different options to address this
-limitation. For instance, Intel 700 Series adapters support RSS for PPPoE traffic
-with a Dynamic Device Personalization (DDP) profile as explained in
-<a class="reference internal" href="#ddp-pppoe"><span class="std std-ref">PPPoE RSS on Intel 700 Series</span></a>, or by extending the hash
-fields as explained in <a class="reference internal" href="#rss-vlan-mac"><span class="std std-ref">RSS by VLAN and MAC on Intel 700 Series</span></a>.</p>
+</section>
+<section id="nic-driver-settings">
+<h3>NIC Driver Settings<a class="headerlink" href="#nic-driver-settings" title="Link to this heading"></a></h3>
 <p>You can also boost the performance by adjusting some driver settings. For example,
-we found that the following setting improved the performance for
+we found that the following interrupt moderation setting improved the performance for
 <a class="reference external" href="https://www.kernel.org/doc/html/v6.6/networking/device_drivers/ethernet/intel/i40e.html">Intel 700 Series</a>
 in some of our tests. However, these settings may vary depending on your specific
 test environment.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ethtool -C &lt;interface&gt; adaptive-rx off adaptive-tx off rx-usecs 125 tx-usecs 125
 </pre></div>
 </div>
-<p>The NIC RX descriptor ring is a separate, usually much smaller buffer than
+<p id="nic-rx-ring">The NIC RX descriptor ring is a separate, usually much smaller buffer than
 any of the software-side ring/slot settings above (<code class="docutils literal notranslate"><span class="pre">io-slots</span></code>, AF_XDP’s
-fill ring, DPDK’s descriptor count, …) - it is the ring of receive buffers
-the NIC writes received packets to via DMA, which the driver refills via
-its NAPI poll. On some drivers/NICs it defaults
-far below what the hardware supports (e.g. 512 out of a possible 8160 on an
-Intel i40e we tested), so at high line rates any brief delay in the NAPI
-poll (e.g. from interrupt moderation, see above) can drain it before the
-driver gets to refill it - visible as the <code class="docutils literal notranslate"><span class="pre">rx_missed_errors</span></code> counter in
+fill ring, DPDK’s descriptor count, …). It is the ring of receive buffers
+the NIC writes received packets to via DMA, which the driver refills. On some
+drivers/NICs it defaults far below what the hardware supports (e.g. 512 out
+of a possible 8160 on an Intel i40e we tested), so at high rates any brief
+delay in refilling it (e.g. from interrupt moderation, see above) can drain
+it. This is visible as the <code class="docutils literal notranslate"><span class="pre">rx_missed_errors</span></code> counter in
 <code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-S</span> <span class="pre">&lt;interface&gt;</span></code> increasing even though every software-side ring
 is comfortably sized. Check and, if needed, raise it towards its maximum:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>ethtool -g &lt;interface&gt;
@@ -216,8 +364,9 @@ the frames still waiting to be processed are missing to refill the ring, which
 results in even more <code class="docutils literal notranslate"><span class="pre">rx_missed_errors</span></code>. For example, a NIC RX ring of 8160
 requires <code class="docutils literal notranslate"><span class="pre">io-slots-rx</span></code> of 16384. BNG Blaster takes care of both automatically
 for AF_XDP, see <a class="reference internal" href="#af-xdp-usage"><span class="std std-ref">AF_XDP</span></a>.</p>
+</section>
 <section id="pppoe-rss-on-intel-700-series">
-<span id="ddp-pppoe"></span><h2>PPPoE RSS on Intel 700 Series<a class="headerlink" href="#pppoe-rss-on-intel-700-series" title="Permalink to this headline"></a></h2>
+<span id="ddp-pppoe"></span><h3>PPPoE RSS on Intel 700 Series<a class="headerlink" href="#pppoe-rss-on-intel-700-series" title="Link to this heading"></a></h3>
 <p>The Intel 700 Series (X710, XXV710, XL710) can’t parse PPPoE with its default
 parser, so all PPPoE traffic of an interface is received on the same queue.
 The Intel DDP profile <em>PPPoE and PPPoL2TPv2</em> adds PPPoE parsing, so that RSS
@@ -250,7 +399,7 @@ single queue with the profile loaded, while single-tagged PPPoE was distributed.
 of the kernel driver.</p>
 </section>
 <section id="rss-by-vlan-and-mac-on-intel-700-series">
-<span id="rss-vlan-mac"></span><h2>RSS by VLAN and MAC on Intel 700 Series<a class="headerlink" href="#rss-by-vlan-and-mac-on-intel-700-series" title="Permalink to this headline"></a></h2>
+<span id="rss-vlan-mac"></span><h3>RSS by VLAN and MAC on Intel 700 Series<a class="headerlink" href="#rss-by-vlan-and-mac-on-intel-700-series" title="Link to this heading"></a></h3>
 <p>Without the DDP profile, the Intel 700 Series hashes all non-IP traffic,
 including PPPoE, only on the Ethernet type. All PPPoE packets have the same
 Ethernet type, so they are received on the same queue. The fields used for
@@ -265,16 +414,16 @@ the i40e driver. It is a lab tweak and not an official interface of the
 driver. The register is global for all ports of the adapter and applies
 to all non-IP traffic. It is not persistent and must be set again after
 a reboot or reset of the adapter.</p>
+<p>Use it at your own risk. There is no guarantee that it works as
+described or that it does not cause damage or malfunction of the NIC.
+Register layout and values may change with firmware or driver versions
+and may differ between models of the same series. The values below were
+tested only with the adapter, firmware and driver used in our tests.</p>
 </div>
 <p>The register <code class="docutils literal notranslate"><span class="pre">GLQF_HASH_INSET</span></code> defines the hash fields for the packet type
 <em>L2 payload</em> (63) in two 32-bit words. The following values were used in our
 tests:</p>
 <table class="docutils align-default">
-<colgroup>
-<col style="width: 49%" />
-<col style="width: 26%" />
-<col style="width: 26%" />
-</colgroup>
 <thead>
 <tr class="row-odd"><th class="head"><p>Hash fields</p></th>
 <th class="head"><p>Low (0x2677F8)</p></th>
@@ -321,7 +470,7 @@ type 0x88a8 as VLAN by default, so the VLANs are not available for the hash.
 The MAC addresses are always at the same position, and each BNG Blaster session
 uses its own client MAC address (destination MAC address in downstream and
 source MAC address in upstream direction).</p>
-<p>In our tests with 650 PPPoE sessions (6.3 Mpps per interface and direction,
+<p>In our tests with 650 PPPoE sessions (6.35 Mpps per interface and direction,
 128-byte packets, 4 RX threads per interface, <a class="reference internal" href="#af-xdp-usage"><span class="std std-ref">AF_XDP</span></a>),
 the traffic was distributed evenly over all 4 queues without loss for
 single-tagged, double-tagged and QinQ PPPoE. With the default hash, all
@@ -335,8 +484,159 @@ method were not tested together.</p>
 or recommendations on how to further increase performance are welcome!</p>
 </div>
 </section>
-<section id="numa">
-<span id="cpu-pinning"></span><h2>NUMA<a class="headerlink" href="#numa" title="Permalink to this headline"></a></h2>
+</section>
+<section id="server-settings">
+<span id="id1"></span><h2>Server Settings<a class="headerlink" href="#server-settings" title="Link to this heading"></a></h2>
+<p>The settings of the server, its firmware (BIOS/UEFI) and the Linux kernel have a
+large impact on high packet rates. Short interruptions of a thread of a few
+microseconds are enough to cause loss at line rate, even if the average CPU
+load looks fine.</p>
+<section id="bios-uefi">
+<h3>BIOS/UEFI<a class="headerlink" href="#bios-uefi" title="Link to this heading"></a></h3>
+<p>The names of the settings depend on the vendor. Typical settings for a test
+server are:</p>
+<ul class="simple">
+<li><p><strong>Power profile:</strong> select a performance profile (e.g. <em>Maximum Performance</em>)
+instead of an energy-saving profile. Deep CPU sleep states (C-states) and
+frequency changes cause short delays when a CPU wakes up.</p></li>
+<li><p><strong>Virtualization for directed I/O:</strong> enable Intel VT-d or AMD-Vi (also
+called AMD IOMMU), which is required for DPDK with <code class="docutils literal notranslate"><span class="pre">vfio-pci</span></code>, for SR-IOV
+and for passing NICs through to virtual machines (see <a class="reference internal" href="#iommu"><span class="std std-ref">IOMMU</span></a>).</p></li>
+<li><p><strong>SR-IOV:</strong> enable it if you want to split a NIC into virtual functions,
+e.g. for multiple BNG Blaster instances or virtual machines.</p></li>
+</ul>
+</section>
+<section id="cpu-frequency-scaling">
+<h3>CPU Frequency Scaling<a class="headerlink" href="#cpu-frequency-scaling" title="Link to this heading"></a></h3>
+<p>Linux lowers the CPU frequency of idle CPUs. Check the current scaling governor
+and set it to <code class="docutils literal notranslate"><span class="pre">performance</span></code> for the duration of the tests (<code class="docutils literal notranslate"><span class="pre">cpupower</span></code>
+is part of the <code class="docutils literal notranslate"><span class="pre">linux-tools</span></code> package).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cat /sys/devices/system/cpu/cpu*/cpufreq/scaling_governor | sort | uniq -c
+sudo cpupower frequency-set -g performance
+</pre></div>
+</div>
+</section>
+<section id="iommu">
+<span id="id2"></span><h3>IOMMU<a class="headerlink" href="#iommu" title="Link to this heading"></a></h3>
+<p>The IOMMU translates the memory addresses a device uses for DMA, like the
+MMU does for processes. It isolates devices from memory they do not own,
+which is required to pass a device safely to a user-space driver (DPDK with
+<code class="docutils literal notranslate"><span class="pre">vfio-pci</span></code>) or to a virtual machine. The kernel uses the IOMMU in one of the
+following modes per device:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Mode</p></th>
+<th class="head"><p><code class="docutils literal notranslate"><span class="pre">iommu_group/type</span></code></p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Disabled</p></td>
+<td><p>no <code class="docutils literal notranslate"><span class="pre">iommu_group</span></code></p></td>
+<td><p>No address translation. DPDK with
+<code class="docutils literal notranslate"><span class="pre">vfio-pci</span></code>, SR-IOV passthrough to VMs and
+device assignment are not possible.</p></td>
+</tr>
+<tr class="row-odd"><td><p>Passthrough
+(<code class="docutils literal notranslate"><span class="pre">iommu=pt</span></code>)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">identity</span></code></p></td>
+<td><p>Devices used by the kernel driver access
+memory directly without translation, while
+devices assigned to DPDK or VMs are still
+isolated.</p></td>
+</tr>
+<tr class="row-even"><td><p>Translation</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">DMA</span></code> or
+<code class="docutils literal notranslate"><span class="pre">DMA-FQ</span></code></p></td>
+<td><p>Every DMA buffer of the kernel driver is
+mapped and unmapped in the IOMMU, which costs
+CPU time and can limit the packet rate.</p></td>
+</tr>
+</tbody>
+</table>
+<p>For a dedicated test server, passthrough is recommended: it keeps the IOMMU
+available for DPDK, SR-IOV and VMs, without the overhead of translation for
+interfaces used with the kernel driver (<code class="docutils literal notranslate"><span class="pre">packet_mmap</span></code>, <code class="docutils literal notranslate"><span class="pre">raw</span></code> and
+<code class="docutils literal notranslate"><span class="pre">af_xdp</span></code>). Translation mode has caused severe RX loss with AF_XDP
+zero-copy on Intel ice and i40e drivers in our tests (see
+<a class="reference internal" href="#af-xdp-usage"><span class="std std-ref">AF_XDP</span></a>).</p>
+<p>The mode of a NIC can be checked via its PCI address (<code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-i</span> <span class="pre">&lt;interface&gt;</span></code>
+shows the <code class="docutils literal notranslate"><span class="pre">bus-info</span></code>), together with the kernel command line:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>cat /proc/cmdline
+cat /sys/bus/pci/devices/&lt;pci-address&gt;/iommu_group/type
+dmesg | grep -i -e DMAR -e IOMMU
+</pre></div>
+</div>
+<p>The default mode depends on the platform, distribution and kernel. Passthrough
+is set with kernel parameters, for example on Debian or Ubuntu via GRUB. On
+Intel systems, <code class="docutils literal notranslate"><span class="pre">intel_iommu=on</span></code> enables the IOMMU if it isn’t enabled by
+default. On AMD systems, the IOMMU is enabled by default if enabled in the
+BIOS.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># /etc/default/grub (Intel)
+GRUB_CMDLINE_LINUX_DEFAULT=&quot;... intel_iommu=on iommu=pt&quot;
+# /etc/default/grub (AMD)
+GRUB_CMDLINE_LINUX_DEFAULT=&quot;... iommu=pt&quot;
+
+sudo update-grub
+sudo reboot
+</pre></div>
+</div>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>In a virtual machine, the IOMMU visible to the guest is an emulated one
+(vIOMMU), if any. Devices passed through to the VM are translated by the
+IOMMU of the host, so the host must have it enabled (preferably in
+passthrough mode).</p>
+</div>
+</section>
+<section id="interrupts">
+<span id="id3"></span><h3>Interrupts<a class="headerlink" href="#interrupts" title="Link to this heading"></a></h3>
+<p>The kernel driver processes the received packets of a NIC queue (NAPI) on the
+CPU handling the interrupt of this queue. This applies to <code class="docutils literal notranslate"><span class="pre">packet_mmap</span></code>,
+<code class="docutils literal notranslate"><span class="pre">raw</span></code> and also to AF_XDP, but not to DPDK, which doesn’t use interrupts. A BNG
+Blaster thread on such a CPU competes with this processing, which can
+significantly limit the throughput. BNG Blaster logs a warning for such
+threads, and the <a class="reference internal" href="#cpu-pinning"><span class="std std-ref">automatic CPU placement</span></a> avoids those CPUs.</p>
+<p>The interrupts of an interface and their CPUs are shown in <code class="docutils literal notranslate"><span class="pre">/proc/interrupts</span></code>.
+The <code class="docutils literal notranslate"><span class="pre">irqbalance</span></code> service moves interrupts to other CPUs at runtime, so the
+placement checked at startup may not be valid anymore. Stop <code class="docutils literal notranslate"><span class="pre">irqbalance</span></code>
+during the tests (or exclude the CPUs used for the tests) and pin the
+interrupts of the busy queues to CPUs without busy BNG Blaster threads.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>systemctl stop irqbalance
+grep &lt;interface&gt; /proc/interrupts
+echo &lt;cpu&gt; &gt; /proc/irq/&lt;irq&gt;/smp_affinity_list
+</pre></div>
+</div>
+</section>
+<section id="pcie">
+<h3>PCIe<a class="headerlink" href="#pcie" title="Link to this heading"></a></h3>
+<p>Small packets require many PCIe transactions per byte. With an
+Intel X710 4-port adapter in a PCIe 3.0 x4 slot, two ports with bidirectional
+traffic of 128-byte packets reached only about 92% of line rate (6.5 Mpps per
+port and direction), independent of the number of threads. Unidirectional
+traffic of 128-byte packets reached line rate, and bidirectional traffic of
+1400-byte packets reached line rate without loss. Check
+the negotiated PCIe link width and speed of the adapter, and use a slot with
+the full width supported by the adapter for small packets at line rate. The
+slot also determines the NUMA node of the NIC (see below).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>lspci -vv -s &lt;pci-address&gt; | grep -E &quot;LnkCap:|LnkSta:&quot;
+</pre></div>
+</div>
+</section>
+<section id="virtual-machines">
+<h3>Virtual Machines<a class="headerlink" href="#virtual-machines" title="Link to this heading"></a></h3>
+<p>The virtual CPUs of a VM may share physical cores with each other or with
+the host. In our tests, a VM with 14 virtual CPUs on a host with 8 physical
+cores provided only the performance of about 8 cores if all virtual CPUs were
+busy. Short interruptions by the host cause bursts of <code class="docutils literal notranslate"><span class="pre">rx_missed_errors</span></code>.
+If possible, pin the virtual CPUs to dedicated physical cores of the host,
+pass the NIC or an SR-IOV virtual function through to the VM instead of
+virtual NICs (requires the <a class="reference internal" href="#iommu"><span class="std std-ref">IOMMU</span></a> on the host), and use large
+<a class="reference internal" href="#nic-rx-ring"><span class="std std-ref">NIC RX rings</span></a>.</p>
+</section>
+</section>
+<section id="numa-and-cpu-pinning">
+<span id="cpu-pinning"></span><h2>NUMA and CPU Pinning<a class="headerlink" href="#numa-and-cpu-pinning" title="Link to this heading"></a></h2>
 <p>NUMA, which stands for Non-Uniform Memory Access, is a computer memory design used in multi-processor systems.
 In a NUMA system, each processor, or a group of processors, has its own local memory. The processors can access
 their own local memory faster than non-local memory, which is the memory local to another processor or shared
@@ -377,13 +677,10 @@ optimize placement as follows:</p>
 or none of the local CPUs is allowed.</p></li>
 <li><p>Pin the main thread to a free CPU as well, after all RX and TX threads got their CPU.</p></li>
 </ul>
-<p>The kernel driver processes the NIC queues (NAPI) on the CPUs handling their interrupts, which is
-also the case for AF_XDP. An RX or TX thread on such a CPU permanently competes with this processing,
-which can significantly limit the throughput (e.g. AF_XDP TX completions). A warning is logged for
-each RX or TX thread running on a CPU which handles NIC interrupts, including manually pinned threads.
-The interrupt CPUs are shown in <code class="docutils literal notranslate"><span class="pre">/proc/interrupts</span></code>. Those may change at runtime if <code class="docutils literal notranslate"><span class="pre">irqbalance</span></code>
-is running, which can be prevented by excluding those CPUs from <code class="docutils literal notranslate"><span class="pre">irqbalance</span></code> or by setting the
-interrupt affinity manually.</p>
+<p>An RX or TX thread on a CPU handling NIC interrupts permanently competes with the kernel
+processing of the NIC queues (see <a class="reference internal" href="#interrupts"><span class="std std-ref">Interrupts</span></a>), which can significantly limit
+the throughput (e.g. AF_XDP TX completions). A warning is logged for each RX or TX thread running on
+a CPU which handles NIC interrupts, including manually pinned threads.</p>
 <p>Multiple BNG Blaster instances running in parallel (e.g. one per SR-IOV virtual function) coordinate
 their automatic CPU placement. Each instance locks every CPU used by its threads with the file
 <code class="docutils literal notranslate"><span class="pre">/run/lock/bngblaster_cpu&lt;N&gt;.&lt;PID&gt;.lock</span></code>, so <code class="docutils literal notranslate"><span class="pre">ls</span> <span class="pre">/run/lock/bngblaster_cpu*</span></code> shows which process
@@ -424,86 +721,86 @@ systemd-run --scope -p AllowedCPUs=8-15 bngblaster -C test.json
 CPUs, while a cgroup cpuset (<code class="docutils literal notranslate"><span class="pre">AllowedCPUs</span></code>, containers) is enforced. A thread which can’t be
 started on its CPU stops BNG Blaster with an error.</p>
 <p>Following an example configuration using automatic CPU placement.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>Following an example configuration with manual pinning.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">      </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">          </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">              </span><span class="p">{</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">36</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">37</span><span class="p">],</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">38</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">39</span><span class="p">]</span><span class="w"></span>
-<span class="w">              </span><span class="p">},</span><span class="w"></span>
-<span class="w">              </span><span class="p">{</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="w"> </span><span class="mi">54</span><span class="p">,</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span><span class="w"> </span><span class="mi">55</span><span class="p">],</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                  </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">56</span><span class="p">,</span><span class="w"> </span><span class="mi">21</span><span class="p">,</span><span class="w"> </span><span class="mi">57</span><span class="p">]</span><span class="w"></span>
-<span class="w">              </span><span class="p">}</span><span class="w"></span>
-<span class="w">          </span><span class="p">]</span><span class="w"></span>
-<span class="w">      </span><span class="p">}</span><span class="w"></span>
-<span class="w">  </span><span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">          </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">              </span><span class="p">{</span>
+<span class="w">                  </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth0&quot;</span><span class="p">,</span>
+<span class="w">                  </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                  </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">36</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">37</span><span class="p">],</span>
+<span class="w">                  </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                  </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">38</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">39</span><span class="p">]</span>
+<span class="w">              </span><span class="p">},</span>
+<span class="w">              </span><span class="p">{</span>
+<span class="w">                  </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                  </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                  </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="w"> </span><span class="mi">54</span><span class="p">,</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span><span class="w"> </span><span class="mi">55</span><span class="p">],</span>
+<span class="w">                  </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                  </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">56</span><span class="p">,</span><span class="w"> </span><span class="mi">21</span><span class="p">,</span><span class="w"> </span><span class="mi">57</span><span class="p">]</span>
+<span class="w">              </span><span class="p">}</span>
+<span class="w">          </span><span class="p">]</span>
+<span class="w">      </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
 </pre></div>
 </div>
 <p>Following a real world example from a system with two CPU sockets (NUMA nodes) and two physical NIC adapters,
 each connected to another socket (NUMA node). This example was optimized to send loss free 20G from
 ens2f2np2, ens2f3np3 (NUMA node 0) to ens5f2np2, ens5f3np3 (NUMA node 1).</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ens2f2np2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">36</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">37</span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ens2f3np3&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">38</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">39</span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ens5f2np2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="w"> </span><span class="mi">54</span><span class="p">,</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span><span class="w"> </span><span class="mi">55</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">56</span><span class="p">,</span><span class="w"> </span><span class="mi">21</span><span class="p">,</span><span class="w"> </span><span class="mi">57</span><span class="p">,</span><span class="w"> </span><span class="mi">22</span><span class="p">,</span><span class="w"> </span><span class="mi">58</span><span class="p">,</span><span class="w"> </span><span class="mi">23</span><span class="p">,</span><span class="w"> </span><span class="mi">59</span><span class="p">,</span><span class="w"> </span><span class="mi">24</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">61</span><span class="p">],</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-slots-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ens5f3np3&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">26</span><span class="p">,</span><span class="w"> </span><span class="mi">62</span><span class="p">,</span><span class="w"> </span><span class="mi">27</span><span class="p">,</span><span class="w"> </span><span class="mi">63</span><span class="p">,</span><span class="w"> </span><span class="mi">28</span><span class="p">,</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span><span class="w"> </span><span class="mi">29</span><span class="p">,</span><span class="w"> </span><span class="mi">65</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"> </span><span class="mi">66</span><span class="p">,</span><span class="w"> </span><span class="mi">31</span><span class="p">,</span><span class="w"> </span><span class="mi">67</span><span class="p">,</span><span class="w"> </span><span class="mi">32</span><span class="p">,</span><span class="w"> </span><span class="mi">68</span><span class="p">,</span><span class="w"> </span><span class="mi">33</span><span class="p">,</span><span class="w"> </span><span class="mi">69</span><span class="p">],</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-slots-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ens2f2np2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">36</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">37</span><span class="p">]</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ens2f3np3&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">38</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">39</span><span class="p">]</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ens5f2np2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">18</span><span class="p">,</span><span class="w"> </span><span class="mi">54</span><span class="p">,</span><span class="w"> </span><span class="mi">19</span><span class="p">,</span><span class="w"> </span><span class="mi">55</span><span class="p">,</span><span class="w"> </span><span class="mi">20</span><span class="p">,</span><span class="w"> </span><span class="mi">56</span><span class="p">,</span><span class="w"> </span><span class="mi">21</span><span class="p">,</span><span class="w"> </span><span class="mi">57</span><span class="p">,</span><span class="w"> </span><span class="mi">22</span><span class="p">,</span><span class="w"> </span><span class="mi">58</span><span class="p">,</span><span class="w"> </span><span class="mi">23</span><span class="p">,</span><span class="w"> </span><span class="mi">59</span><span class="p">,</span><span class="w"> </span><span class="mi">24</span><span class="p">,</span><span class="w"> </span><span class="mi">60</span><span class="p">,</span><span class="w"> </span><span class="mi">25</span><span class="p">,</span><span class="w"> </span><span class="mi">61</span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;io-slots-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ens5f3np3&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">26</span><span class="p">,</span><span class="w"> </span><span class="mi">62</span><span class="p">,</span><span class="w"> </span><span class="mi">27</span><span class="p">,</span><span class="w"> </span><span class="mi">63</span><span class="p">,</span><span class="w"> </span><span class="mi">28</span><span class="p">,</span><span class="w"> </span><span class="mi">64</span><span class="p">,</span><span class="w"> </span><span class="mi">29</span><span class="p">,</span><span class="w"> </span><span class="mi">65</span><span class="p">,</span><span class="w"> </span><span class="mi">30</span><span class="p">,</span><span class="w"> </span><span class="mi">66</span><span class="p">,</span><span class="w"> </span><span class="mi">31</span><span class="p">,</span><span class="w"> </span><span class="mi">67</span><span class="p">,</span><span class="w"> </span><span class="mi">32</span><span class="p">,</span><span class="w"> </span><span class="mi">68</span><span class="p">,</span><span class="w"> </span><span class="mi">33</span><span class="p">,</span><span class="w"> </span><span class="mi">69</span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;io-slots-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>This example shows well that more RX threads are required than TX threads.</p>
 </section>
 <section id="dpdk">
-<span id="dpdk-usage"></span><h2>DPDK<a class="headerlink" href="#dpdk" title="Permalink to this headline"></a></h2>
+<span id="dpdk-usage"></span><h2>DPDK<a class="headerlink" href="#dpdk" title="Link to this heading"></a></h2>
 <p>Using the experimental <a class="reference external" href="https://www.dpdk.org/">DPDK</a> support requires building
 the BNG Blaster from sources with DPDK enabled as explained
 in the corresponding <a class="reference internal" href="install.html#install-dpdk"><span class="std std-ref">installation</span></a> section.</p>
@@ -512,74 +809,114 @@ in the corresponding <a class="reference internal" href="install.html#install-dp
 <p>The official BNG Blaster Debian release packages do not support
 <a class="reference external" href="https://www.dpdk.org/">DPDK</a>!</p>
 </div>
+<p>DPDK drives the NIC from user space with its own poll mode driver (PMD)
+instead of the kernel driver. The interface is therefore not visible to Linux
+anymore while it is used by DPDK, and is selected by its PCI address instead of
+its name. The BNG Blaster initializes DPDK with the default settings for all
+DPDK link interfaces, so the server must be prepared as follows.</p>
+<ol class="arabic">
+<li><p><strong>IOMMU:</strong> enable VT-d or AMD-Vi in the BIOS and the IOMMU in the kernel,
+preferably in passthrough mode (see <a class="reference internal" href="#iommu"><span class="std std-ref">IOMMU</span></a>).</p></li>
+<li><p><strong>Hugepages:</strong> DPDK allocates its packet buffers from hugepages, which must
+be reserved before the test, ideally on the NUMA node of the NIC. 2 MB
+pages can be reserved at runtime, 1 GB pages are reserved at boot with
+kernel parameters (e.g. <code class="docutils literal notranslate"><span class="pre">default_hugepagesz=1G</span> <span class="pre">hugepagesz=1G</span> <span class="pre">hugepages=8</span></code>).</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span># reserve 2048 x 2 MB pages (4 GB) on NUMA node 0
+echo 2048 | sudo tee /sys/devices/system/node/node0/hugepages/hugepages-2048kB/nr_hugepages
+grep Huge /proc/meminfo
+</pre></div>
+</div>
+</li>
+<li><p><strong>Driver binding:</strong> most NICs (e.g. Intel) must be bound to the <code class="docutils literal notranslate"><span class="pre">vfio-pci</span></code>
+driver with <code class="docutils literal notranslate"><span class="pre">dpdk-devbind.py</span></code> from the DPDK sources. The interface must be
+down before. NVIDIA (Mellanox) ConnectX NICs are an exception: their DPDK
+driver works together with the kernel driver <code class="docutils literal notranslate"><span class="pre">mlx5_core</span></code>, which stays
+bound.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo modprobe vfio-pci
+sudo ip link set &lt;interface&gt; down
+sudo dpdk-devbind.py --bind=vfio-pci &lt;pci-address&gt;
+dpdk-devbind.py --status
+</pre></div>
+</div>
+<p><code class="docutils literal notranslate"><span class="pre">dpdk-devbind.py</span> <span class="pre">--bind=&lt;kernel</span> <span class="pre">driver&gt;</span> <span class="pre">&lt;pci-address&gt;</span></code> (e.g. <code class="docutils literal notranslate"><span class="pre">i40e</span></code>)
+returns the NIC to the kernel after the tests.</p>
+</li>
+</ol>
+<p>See the <a class="reference external" href="https://doc.dpdk.org/guides/linux_gsg/">DPDK Getting Started Guide</a>
+for details.</p>
 <p>For DPDK interfaces, the same automatic CPU placement options are available.
 The DPDK backend derives the NIC socket from <code class="docutils literal notranslate"><span class="pre">rte_eth_dev_socket_id()</span></code> and
 applies the same locality and physical-core-first policy. Manual DPDK pinning
 remains available if you need exact CPU control.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Server&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Client&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;reconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;a10nsp-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">32768</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;dpdk&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Server&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Client&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;pppoe&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;reconnect&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;pps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;a10nsp-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0000:23:00.0&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>DPDK assigns one hardware queue to each RX thread, so you need to increase
-the number of threads to utilize more queues and enhance performance.</p>
+the number of threads to utilize more queues and enhance performance, as long
+as RSS distributes the received traffic over those queues. DPDK RX threads
+permanently poll their queue and use a full CPU core each, even without
+traffic (see <a class="reference internal" href="#rss-not-working"><span class="std std-ref">If RSS Does Not Work</span></a>). Some drivers
+require the DDP profile for PPPoE to be loaded via DPDK (see
+<a class="reference internal" href="#ddp-pppoe"><span class="std std-ref">PPPoE RSS on Intel 700 Series</span></a>).</p>
 </section>
 <section id="loopback">
-<span id="loopback-usage"></span><h2>Loopback<a class="headerlink" href="#loopback" title="Permalink to this headline"></a></h2>
+<span id="loopback-usage"></span><h2>Loopback<a class="headerlink" href="#loopback" title="Link to this heading"></a></h2>
 <p>The I/O mode <code class="docutils literal notranslate"><span class="pre">loopback</span></code> connects two links of the same BNG Blaster instance
 back to back via in-memory rings, without any kernel interface, driver or NIC
 in between. This allows to measure the I/O performance of the BNG Blaster
@@ -587,27 +924,27 @@ itself (packet generation, stream processing, decoding, …) independent of
 the underlying I/O stack, which makes it the upper bound of what the BNG Blaster
 can achieve with any other I/O mode. The links do not need to exist in the
 host OS and no special privileges are required.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loopback&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-a10nsp&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;loopback-peer&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-access&quot;</span><span class="w"> </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-access&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-a10nsp&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-access&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;loopback&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-a10nsp&quot;</span><span class="p">,</span><span class="w"> </span><span class="nt">&quot;loopback-peer&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-access&quot;</span><span class="w"> </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-access&quot;</span><span class="w"> </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-a10nsp&quot;</span><span class="w"> </span><span class="p">}</span><span class="w"> </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;lo-access&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipoe&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;inner-vlan&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">7</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <p>Every TX thread (or the main thread if TX threads are disabled) owns one
@@ -627,7 +964,7 @@ the number of available CPU cores.</p>
 </div>
 </section>
 <section id="af-xdp">
-<span id="af-xdp-usage"></span><h2>AF_XDP<a class="headerlink" href="#af-xdp" title="Permalink to this headline"></a></h2>
+<span id="af-xdp-usage"></span><h2>AF_XDP<a class="headerlink" href="#af-xdp" title="Link to this heading"></a></h2>
 <p>Using the experimental <a class="reference external" href="https://www.kernel.org/doc/html/latest/networking/af_xdp.html">AF_XDP</a>
 support requires building the BNG Blaster from sources with AF_XDP enabled as
 explained in the corresponding <a class="reference internal" href="install.html#install-af-xdp"><span class="std std-ref">installation</span></a> section.</p>
@@ -647,21 +984,21 @@ queue’s own RX servicing (they would otherwise share one NAPI/IRQ context).
 <code class="docutils literal notranslate"><span class="pre">rx-threads</span></code> and <code class="docutils literal notranslate"><span class="pre">tx-threads</span></code> are fully independent, e.g. more RX than
 TX threads to spread out RX-side protocol processing without paying for
 extra TX threads.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;af_xdp&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">}</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;af_xdp&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">6</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-auto-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 <div class="admonition note">
@@ -702,15 +1039,19 @@ it, which is logged once per interface:</p>
 <p>The selected mode is then used for all queues of this interface. The mode can be
 selected per link with <code class="docutils literal notranslate"><span class="pre">af-xdp-mode</span></code>: <code class="docutils literal notranslate"><span class="pre">auto</span></code> (default) uses native mode with zero-copy if
 supported by the driver, <code class="docutils literal notranslate"><span class="pre">zero-copy</span></code> fails instead of falling back, <code class="docutils literal notranslate"><span class="pre">copy</span></code> uses native mode
-without zero-copy and <code class="docutils literal notranslate"><span class="pre">generic</span></code> uses generic mode.</p>
+without zero-copy and <code class="docutils literal notranslate"><span class="pre">generic</span></code> uses generic mode. <code class="docutils literal notranslate"><span class="pre">copy-rx</span></code> binds the RX queues in copy mode
+and the TX queues like <code class="docutils literal notranslate"><span class="pre">auto</span></code>, for drivers whose zero-copy RX performs badly while zero-copy TX
+works (see below).</p>
 <p>Zero-copy mode depends on the driver filling the NIC RX ring from the AF_XDP fill ring. With
-the Intel ice driver (E810) and an IOMMU in translation mode (<code class="docutils literal notranslate"><span class="pre">DMA</span></code> or <code class="docutils literal notranslate"><span class="pre">DMA-FQ</span></code> in
-<code class="docutils literal notranslate"><span class="pre">/sys/bus/pci/devices/&lt;pci&gt;/iommu_group/type</span></code>), some kernels (e.g. 6.8) fill the ring only with
-a few buffers per interrupt, which drops most of the received packets. This is visible as
-<code class="docutils literal notranslate"><span class="pre">Failed</span> <span class="pre">to</span> <span class="pre">allocate</span> <span class="pre">some</span> <span class="pre">buffers</span> <span class="pre">on</span> <span class="pre">XSK</span> <span class="pre">buffer</span> <span class="pre">pool</span> <span class="pre">enabled</span> <span class="pre">Rx</span> <span class="pre">ring</span></code> in the kernel log and
-<code class="docutils literal notranslate"><span class="pre">rx_dropped</span></code> increasing with only few packets per RX queue (<code class="docutils literal notranslate"><span class="pre">rx_queue_&lt;n&gt;_packets</span></code>). Use
-<code class="docutils literal notranslate"><span class="pre">iommu=pt</span></code> if possible, otherwise <code class="docutils literal notranslate"><span class="pre">af-xdp-mode</span></code> <code class="docutils literal notranslate"><span class="pre">copy</span></code> for such interfaces (see
-<a class="reference internal" href="#af-xdp-tuning"><span class="std std-ref">AF_XDP Tuning</span></a>).</p>
+the Intel ice (E810) and i40e (X710) drivers and an IOMMU in translation mode (<code class="docutils literal notranslate"><span class="pre">DMA</span></code> or
+<code class="docutils literal notranslate"><span class="pre">DMA-FQ</span></code> in <code class="docutils literal notranslate"><span class="pre">/sys/bus/pci/devices/&lt;pci&gt;/iommu_group/type</span></code>), some kernels (e.g. 6.8) fill the
+ring only with a few buffers per interrupt, which drops most of the received packets. This is
+visible in the kernel log as <code class="docutils literal notranslate"><span class="pre">Failed</span> <span class="pre">to</span> <span class="pre">allocate</span> <span class="pre">some</span> <span class="pre">buffers</span> <span class="pre">on</span> <span class="pre">XSK</span> <span class="pre">buffer</span> <span class="pre">pool</span> <span class="pre">enabled</span> <span class="pre">Rx</span> <span class="pre">ring</span></code>
+(ice) or <code class="docutils literal notranslate"><span class="pre">Failed</span> <span class="pre">to</span> <span class="pre">allocate</span> <span class="pre">some</span> <span class="pre">buffers</span> <span class="pre">on</span> <span class="pre">AF_XDP</span> <span class="pre">ZC</span> <span class="pre">enabled</span> <span class="pre">Rx</span> <span class="pre">ring</span></code> (i40e), and as
+<code class="docutils literal notranslate"><span class="pre">rx_dropped</span></code> increasing with only few packets per RX queue (<code class="docutils literal notranslate"><span class="pre">rx_queue_&lt;n&gt;_packets</span></code>). The NIC
+may also send pause frames, so control traffic is lost as well. Use <code class="docutils literal notranslate"><span class="pre">iommu=pt</span></code> if possible,
+otherwise <code class="docutils literal notranslate"><span class="pre">af-xdp-mode</span></code> <code class="docutils literal notranslate"><span class="pre">copy-rx</span></code> for such interfaces, which keeps zero-copy for TX (see
+<a class="reference internal" href="#iommu"><span class="std std-ref">IOMMU</span></a> and <a class="reference internal" href="#af-xdp-tuning"><span class="std std-ref">AF_XDP Tuning</span></a>).</p>
 <p>A warning is logged at startup if the interface MTU exceeds 3712
 bytes (MTU plus 128 bytes of worst-case header overhead does not fit into the
 3840 bytes of a received frame). The actual mode of each queue is logged with
@@ -724,7 +1065,7 @@ AF_XDP: interface eth2 queue 0 bound (generic mode, copy, RX only, 4096 RX / 0 T
 of each frame, not the maximum packet size.</p>
 <p>BNG Blaster increases the NIC RX ring to 4096 descriptors (limited to the NIC
 maximum, a larger ring is kept), as the small default of some drivers (e.g. 512
-on i40e) causes RX loss at high rates (see <a class="reference internal" href="#performance"><span class="std std-ref">NIC RX ring</span></a>).
+on i40e) causes RX loss at high rates (see <a class="reference internal" href="#nic-rx-ring"><span class="std std-ref">NIC RX ring</span></a>).
 The RX frames are sized to at least twice the NIC RX ring, e.g. 8192 RX frames
 for a ring of 4096 or 16384 for a ring of 8160, unless <code class="docutils literal notranslate"><span class="pre">io-slots-rx</span></code> is
 configured explicitly for the link, in which case a too small value is only
@@ -773,13 +1114,15 @@ logged at startup if an XDP program is already attached:</p>
 removes the files pinned by libxdp in <code class="docutils literal notranslate"><span class="pre">/sys/fs/bpf/xdp/</span></code>
 (<code class="docutils literal notranslate"><span class="pre">ip</span> <span class="pre">link</span> <span class="pre">set</span> <span class="pre">&lt;interface&gt;</span> <span class="pre">xdp</span> <span class="pre">off</span></code> detaches the program only).</p>
 <section id="af-xdp-tuning">
-<span id="id4"></span><h3>AF_XDP Tuning<a class="headerlink" href="#af-xdp-tuning" title="Permalink to this headline"></a></h3>
+<span id="id7"></span><h3>AF_XDP Tuning<a class="headerlink" href="#af-xdp-tuning" title="Link to this heading"></a></h3>
 <p>The following recommendations are based on tests with PPPoE traffic between
 two directly connected 10G ports of an Intel X710 adapter (i40e driver),
 using native zero-copy mode.</p>
-<p><strong>RX threads:</strong> The RX performance per thread depends on the CPU and packet
-size. In our tests, a single RX thread received up to 2.4 Mpps per queue
-without loss and processed more than 6 Mpps with 0.1% to 0.5% loss. The loss is
+<p><strong>RX threads:</strong> The RX performance per thread depends on the CPU, packet
+size and traffic type. In our tests with PPPoE, a single RX thread received up
+to 2.4 Mpps per queue without loss and processed more than 6 Mpps with 0.1% to
+0.5% loss. With IPv4 network traffic (76-byte packets), a single RX thread
+received 10.9 Mpps (10G line rate) with 0.2% to 0.4% loss. The loss is
 caused by short delays of the RX thread, not by its CPU capacity, so
 distributing the traffic over more queues reduces loss even if a single thread
 could process the full rate. RSS does not distribute traffic perfectly evenly,
@@ -787,7 +1130,7 @@ so plan enough RX threads to keep the busiest queue well below this limit.
 Typically, more RX than TX threads are required.</p>
 <p><strong>TX threads:</strong> TX threads permanently poll and therefore use a full CPU core
 each, even if not sending at their limit. In our tests, a single TX thread
-sent at least 5.8 Mpps (the actual limit was not reached), so one TX thread
+sent 10.9 Mpps (10G line rate with 76-byte packets), so one TX thread
 per 10G interface was sufficient. Using fewer TX threads leaves more CPU
 cores for RX threads.</p>
 <p><strong>CPU cores:</strong> Each RX and TX thread should have its own CPU. The total number
@@ -806,111 +1149,95 @@ sized automatically.</p>
 default if supported by the driver. Copy mode (<code class="docutils literal notranslate"><span class="pre">&quot;af-xdp-mode&quot;:</span> <span class="pre">&quot;copy&quot;</span></code>) copies each
 packet between the driver and the AF_XDP frames, which limits the packet rate. In our
 tests, a single RX and TX thread reached about 4.4 Mpps in copy mode compared to 11 Mpps
-(10G line rate) in zero-copy mode. Use copy mode only for interfaces where zero-copy
-mode performs badly, e.g. the Intel ice driver with an IOMMU in translation mode (see
-above), where copy mode performed much better than zero-copy mode. Check the actual
+(10G line rate with 76-byte packets) in zero-copy mode. Use copy mode only for interfaces where zero-copy
+mode performs badly, e.g. the Intel ice or i40e driver with an IOMMU in translation mode (see
+above), where copy mode performed much better than zero-copy mode. If only RX is affected,
+<code class="docutils literal notranslate"><span class="pre">&quot;af-xdp-mode&quot;:</span> <span class="pre">&quot;copy-rx&quot;</span></code> limits copy mode to the RX queues and keeps zero-copy for TX.
+On an X710 (i40e) with the IOMMU in <code class="docutils literal notranslate"><span class="pre">DMA-FQ</span></code> mode, this reached 4.47 Mpps without loss
+with 27,000 double-tagged PPPoE sessions (1.40 Mpps RX on one access queue, 3.07 Mpps TX),
+while about half of the sessions never came up with zero-copy RX. Check the actual
 mode of each queue with <code class="docutils literal notranslate"><span class="pre">-l</span> <span class="pre">af_xdp</span></code>.</p>
 <p id="single-queue"><strong>Single queue:</strong> If RSS can’t distribute the received traffic, e.g. PPPoE
 without the <a class="reference internal" href="#ddp-pppoe"><span class="std std-ref">DDP profile</span></a> or
 <a class="reference internal" href="#rss-vlan-mac"><span class="std std-ref">RSS by VLAN and MAC</span></a>, all packets
-of an interface are handled by one queue and one RX thread. In our tests, this
+of an interface are handled by one queue and one RX thread (see
+<a class="reference internal" href="#rss-not-working"><span class="std std-ref">If RSS Does Not Work</span></a>). In our tests, this
 worked without loss up to about 2.4 Mpps per interface and with up to 0.5% loss
 at 6.35 Mpps. In this case, the CPU handling the interrupt of this queue is
-important. The kernel processes the received packets of a queue (NAPI) on the
-CPU of its interrupt, which took about a third of a CPU core in our tests. If
-this is the CPU of the RX thread of the same queue, both share one core, which
-increased the loss from below 0.5% to up to 21% in our tests. Pin the interrupt
-of the active queue to a CPU without a busy BNG Blaster thread and stop
-<code class="docutils literal notranslate"><span class="pre">irqbalance</span></code>, which moves interrupts automatically.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>systemctl stop irqbalance
-grep &lt;interface&gt; /proc/interrupts
-echo &lt;cpu&gt; &gt; /proc/irq/&lt;irq&gt;/smp_affinity_list
-</pre></div>
-</div>
-<p><strong>Virtual machines:</strong> The virtual CPUs of a VM may share physical cores with
-each other or with the host. In our tests, a VM with 14 virtual CPUs on a host
-with 8 physical cores provided only the performance of about 8 cores if all
-virtual CPUs were busy. Short interruptions by the host cause bursts of
-<code class="docutils literal notranslate"><span class="pre">rx_missed_errors</span></code>. If possible, pin the virtual CPUs to dedicated physical
-cores of the host and use the large buffers explained above.</p>
-<p><strong>PCIe:</strong> Small packets require many PCIe transactions per byte. With an
-Intel X710 4-port adapter in a PCIe 3.0 x4 slot, two ports with bidirectional
-traffic of 128-byte packets reached only about 92% of line rate (6.5 Mpps per
-port and direction), independent of the number of threads. Unidirectional
-traffic of 128-byte packets reached line rate, and bidirectional traffic of
-1400-byte packets reached line rate without loss. Check
-the negotiated PCIe link width and speed of the adapter, and use a slot with
-the full width supported by the adapter for small packets at line rate.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>lspci -vv -s &lt;pci-address&gt; | grep -E &quot;LnkCap:|LnkSta:&quot;
-</pre></div>
-</div>
+important. The kernel processing of the received packets of the queue (NAPI)
+took about a third of a CPU core in our tests. If this is the CPU of the RX
+thread of the same queue, both share one core, which increased the loss from
+below 0.5% to up to 21% in our tests. Pin the interrupt of the active queue to
+a CPU without a busy BNG Blaster thread and stop <code class="docutils literal notranslate"><span class="pre">irqbalance</span></code> (see
+<a class="reference internal" href="#interrupts"><span class="std std-ref">Interrupts</span></a>).</p>
+<p><strong>Virtual machines and PCIe:</strong> see <a class="reference internal" href="#server-settings"><span class="std std-ref">Server Settings</span></a>.</p>
 <p><strong>Monitoring:</strong> The following counters of <code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-S</span> <span class="pre">&lt;interface&gt;</span></code> help to
 identify the bottleneck. <code class="docutils literal notranslate"><span class="pre">rx_missed_errors</span></code> counts packets dropped because no
 free RX descriptor was available, which is caused by delayed or overloaded RX
-threads. The per-queue counters <code class="docutils literal notranslate"><span class="pre">rx-&lt;n&gt;.packets</span></code> show how RSS distributes
-the traffic over the RX threads.</p>
+threads. The per-queue counters (e.g. <code class="docutils literal notranslate"><span class="pre">rx-&lt;n&gt;.packets</span></code>) show how RSS distributes
+the traffic over the RX threads (see <a class="reference internal" href="#rss"><span class="std std-ref">RSS</span></a>).</p>
 <p>The following configuration was tested with 650 PPPoE sessions with one
 bidirectional stream of 10 Mbps and 128 bytes per session (6.35 Mpps per port
 and direction) without loss, with NIC RX rings set to 8160 and the
 <a class="reference internal" href="#ddp-pppoe"><span class="std std-ref">DDP profile</span></a> loaded.</p>
-<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;af_xdp&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-slots-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-slots-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16384</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">},</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-slots-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;io-slots-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16384</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">],</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">11</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">]</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Server&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">],</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">            </span><span class="p">{</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Client&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span><span class="w"></span>
-<span class="w">                </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="w"></span>
-<span class="w">            </span><span class="p">}</span><span class="w"></span>
-<span class="w">        </span><span class="p">]</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">650</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span><span class="w"></span>
-<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="w"></span>
-<span class="w">    </span><span class="p">},</span><span class="w"></span>
-<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"></span>
-<span class="w">        </span><span class="p">{</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S1&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;Mbps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span><span class="w"></span>
-<span class="w">            </span><span class="nt">&quot;a10nsp-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="w"></span>
-<span class="w">        </span><span class="p">}</span><span class="w"></span>
-<span class="w">    </span><span class="p">]</span><span class="w"></span>
-<span class="p">}</span><span class="w"></span>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;io-mode&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;af_xdp&quot;</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;rx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;tx-threads&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;links&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;io-slots-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;io-slots-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16384</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="mi">4</span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="mi">6</span><span class="p">]</span>
+<span class="w">            </span><span class="p">},</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;io-slots-tx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1024</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;io-slots-rx&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">16384</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">7</span><span class="p">,</span><span class="w"> </span><span class="mi">8</span><span class="p">,</span><span class="w"> </span><span class="mi">9</span><span class="p">,</span><span class="w"> </span><span class="mi">10</span><span class="p">],</span>
+<span class="w">                </span><span class="nt">&quot;tx-cpuset&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="mi">11</span><span class="p">,</span><span class="w"> </span><span class="mi">12</span><span class="p">]</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;a10nsp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Server&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">],</span>
+<span class="w">        </span><span class="nt">&quot;access&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;__comment__&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;PPPoE Client&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth2&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;pppoe&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-min&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;outer-vlan-max&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;ipv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;count&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">650</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;dhcpv6&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;enable&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;stream-group-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;S1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ipv4&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;direction&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;both&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;Mbps&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">10</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;length&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">128</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;a10nsp-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
 </pre></div>
 </div>
 </section>

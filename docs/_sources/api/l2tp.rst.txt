@@ -13,7 +13,7 @@
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``tunnel-id`` Mandatory                                            |
-|                                   | | ``sessions`` list of remote session-id.                            |
+|                                   | | ``sessions`` list of remote session-id (max 50).                   |
 +-----------------------------------+----------------------------------------------------------------------+
 | **l2tp-tunnel-terminate**         | | Terminate L2TP tunnel.                                             |
 |                                   | |                                                                    |

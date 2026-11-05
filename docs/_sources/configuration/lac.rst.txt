@@ -29,7 +29,7 @@
 |                                           | | Default: 16 Range: 1 - 65535                                      |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **max-retry**                             | | Control messages max retry.                                       |
-|                                           | | Default: 5 Range: 1 - 65535                                       |
+|                                           | | Default: 5 Range: 1 - 255                                         |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **congestion-mode**                       | | Control messages congestion mode (default, slow or aggressive).   |
 |                                           | | The BNG Blaster supports different congestion modes for the       |
