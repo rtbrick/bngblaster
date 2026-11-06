@@ -55,6 +55,7 @@ static struct option long_options[] = {
     {"ipv6-external-prefix", required_argument, NULL, 'X'},
     {"link-multiplier", required_argument, NULL, 'u'},
     {"lsp-lifetime", required_argument, NULL, 'M'},
+    {"lsp-buffer-size", required_argument, NULL, 'b'},
     {"no-ipv4", no_argument, NULL, 'z'},
     {"no-ipv6", no_argument, NULL, 'Z'},
     {"no-sr", no_argument, NULL, 'y'},
@@ -781,7 +782,8 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
         lsdb_reset_attr_template(&attr_template);
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_LSP_BUFFER_SIZE;
-        attr_template.key.lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
+        node->lsp_buffer_size = ctx->lsp_buffer_size;
+        attr_template.key.lsp_buffer_size = node->lsp_buffer_size;
         lsdb_add_node_attr(node, &attr_template);
 
         /* IPv4 loopback address */
@@ -1670,7 +1672,7 @@ main(int argc, char *argv[])
      * Parse options.
      */
     idx = 0;
-    while ((opt = getopt_long(argc, argv, "vhA:B:D:E:F:Oa:c:C:I:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:u:V:w:x:X:yzZ",
+    while ((opt = getopt_long(argc, argv, "vhA:B:D:E:F:Oa:b:c:C:I:e:f:g:Gl:L:m:M:n:K:N:p:P:q:Qr:s:S:t:T:u:V:w:x:X:yzZ",
                               long_options, &idx)) != -1) {
         switch (opt) {
             case 'v':
@@ -1725,6 +1727,11 @@ main(int argc, char *argv[])
                     /* ospf2 and ospf3 */
                     scan_ipv4_address(optarg, &ctx->topology_id.area);
                 }
+                break;
+            case 'b':
+                ctx->lsp_buffer_size = lspgen_parse_number(optarg, "lsp-buffer-size", 10,
+                                                           ISIS_MIN_LSP_BUFFER_SIZE, ISIS_MAX_LSP_BUFFER_SIZE);
+                ctx->lsp_buffer_size_set = true;
                 break;
             case 'M':
                 ctx->lsp_lifetime = lspgen_parse_number(optarg, "lsp-lifetime", 10, 1, UINT16_MAX);

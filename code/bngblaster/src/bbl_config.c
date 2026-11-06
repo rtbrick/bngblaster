@@ -1004,9 +1004,15 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
             return false;
         }
     }
-    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "mtu", 64, 9000);
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "mtu", 64, BBL_MAX_MTU);
     if(value) {
         network_config->mtu = json_number_value(value);
+        /* TX queue slots are sized by jumbo-frames and PDUs are built up to the MTU. */
+        if(network_config->mtu > BBL_MAX_MTU_NO_JUMBO && !g_ctx->config.jumbo_frames) {
+            fprintf(stderr, "JSON config error: Network interface mtu %u requires interfaces jumbo-frames\n",
+                    network_config->mtu);
+            return false;
+        }
     } else {
         network_config->mtu = 1500;
     }
@@ -2092,7 +2098,7 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         "hostname", "router-id", "system-id",
         "area", "sr-base", "sr-range",
         "sr-node-sid", "teardown-time", "teardown-delay", "external",
-        "external-auto-refresh", "lsp-buffer-size", "sr-algo",
+        "external-auto-refresh", "lsp-buffer-size", "max-pdu-size", "sr-algo",
         "adjacency-sid-base", "sr-node-sids", "node-msd", "flex-algo"
     };
     if(!schema_validate(isis, "isis", schema, 
@@ -2472,13 +2478,20 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->external_auto_refresh  = json_boolean_value(value);
     }
 
-    /* Value range chosen from smallest configurable on IOS-XR (lsp-mtu) and maximum on JunOS (max-lsp-size) */
-    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-buffer-size", 128, 9192);
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "max-pdu-size", ISIS_DEFAULT_MAX_PDU_SIZE, ISIS_JUMBO_MAX_PDU_SIZE);
+    if(value) {
+        isis_config->max_pdu_size = json_number_value(value);
+    } else {
+        isis_config->max_pdu_size = ISIS_DEFAULT_MAX_PDU_SIZE;
+    }
+
+    /* Smallest value configurable on IOS-XR (lsp-mtu) */
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-buffer-size", 128, ISIS_JUMBO_MAX_PDU_SIZE);
     if(value) {
         isis_config->lsp_buffer_size = json_number_value(value);
     }
     else {
-        isis_config->lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
+        isis_config->lsp_buffer_size = isis_config->max_pdu_size;
     }
     return true;
 }

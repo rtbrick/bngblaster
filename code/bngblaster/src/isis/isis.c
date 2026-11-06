@@ -103,7 +103,8 @@ isis_init() {
 void
 isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth) {
     protocol_error_t result;
-    isis_pdu_s pdu = {0};
+    uint8_t pdu_buf[ISIS_PDU_BUF_LEN];
+    isis_pdu_s pdu = {.pdu = pdu_buf, .size = interface->isis_max_pdu_len_rx};
 
     bbl_isis_s *isis = eth->next;
 

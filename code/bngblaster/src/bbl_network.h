@@ -97,6 +97,7 @@ typedef struct bbl_network_interface_
 
     isis_adjacency_p2p_s *isis_adjacency_p2p;
     isis_adjacency_s     *isis_adjacency[ISIS_LEVELS];
+    uint16_t              isis_max_pdu_len_rx;
     ldp_adjacency_s      *ldp_adjacency;
     ospf_interface_s     *ospfv2_interface;
     ospf_interface_s     *ospfv3_interface;

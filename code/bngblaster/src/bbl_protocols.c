@@ -2398,6 +2398,11 @@ encode_ethernet(uint8_t *buf, uint16_t *len,
             return encode_ethernet(buf, len, (bbl_ethernet_header_s*)eth->next);
         }
     } else if(eth->type == ISIS_PROTOCOL_IDENTIFIER) {
+        if(((bbl_isis_s*)eth->next)->pdu_len + LLC_HDR_LEN > ETH_IEEE_802_3_MAX_LEN) {
+            *(uint16_t*)buf = htobe16(ETH_TYPE_LLC_JUMBO);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            return encode_isis(buf, len, (bbl_isis_s*)eth->next);
+        }
         /* Remember ethernet length field position */
         eth_len_ptr = (uint16_t*)buf;
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -4830,12 +4835,14 @@ decode_ethernet(uint8_t *buf, uint16_t len,
             break;
     }
 
-    if(eth->type <= ETH_IEEE_802_3_MAX_LEN) {
-        /* 802.3 ethernet header (length instead of type) */
-        if(eth->type > len) {
-            return DECODE_ERROR;
+    if(eth->type <= ETH_IEEE_802_3_MAX_LEN || eth->type == ETH_TYPE_LLC_JUMBO) {
+        if(eth->type <= ETH_IEEE_802_3_MAX_LEN) {
+            /* 802.3 ethernet header (length instead of type) */
+            if(eth->type > len) {
+                return DECODE_ERROR;
+            }
+            len = eth->type;
         }
-        len = eth->type;
 
         if(len < LLC_HDR_LEN) {
             return DECODE_ERROR;

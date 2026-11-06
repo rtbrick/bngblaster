@@ -57,7 +57,7 @@ isis_lsp_gc_job(timer_s *timer)
             for(size_t i=0; i < delete_list_len; i++) {
                 removed = hb_tree_remove(lsdb, &delete_list[i]);
                 if(removed.removed) {
-                    free(removed.datum);
+                    isis_lsp_free(removed.datum);
                 }
             }
         }
@@ -217,7 +217,7 @@ isis_lsp_process_entries(isis_adjacency_s *adjacency, hb_tree *lsdb, isis_pdu_s 
                             lsp->instance = adjacency->instance;
                             isis_psnp_tree_add(adjacency, lsp);
                         } else {
-                            free(lsp);
+                            isis_lsp_free(lsp);
                             LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");
                         }
                     }
@@ -502,10 +502,23 @@ isis_lsp_s *
 isis_lsp_new(uint64_t id, uint8_t level, isis_instance_s *instance)
 {
     isis_lsp_s *lsp = calloc(1, sizeof(isis_lsp_s));
+    /* LSPs requested but not received yet are
+     * accessed by header fields (e.g. checksum). */
+    if(!lsp || !isis_pdu_alloc(&lsp->pdu, ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_LSP)) {
+        LOG_NOARG(ERROR, "Failed to allocate ISIS LSP\n");
+        abort();
+    }
     lsp->id = id;
     lsp->level = level;
     lsp->instance = instance;
     return lsp;
+}
+
+void
+isis_lsp_free(isis_lsp_s *lsp)
+{
+    free(lsp->pdu.pdu);
+    free(lsp);
 }
 
 static void
@@ -582,6 +595,10 @@ isis_lsp_fragment(isis_instance_s *instance, uint8_t level, uint16_t fragment, b
 
     /* Build PDU */
     pdu = &lsp->pdu;
+    if(!isis_pdu_alloc(pdu, config->max_pdu_size)) {
+        LOG_NOARG(ERROR, "Failed to allocate ISIS LSP\n");
+        return NULL;
+    }
     if(level == ISIS_LEVEL_1) {
         isis_pdu_init(pdu, ISIS_PDU_L1_LSP);
         auth_type = config->level1_auth;
@@ -809,6 +826,7 @@ NEXT:
     /* Purge remaining fragments if number of fragments has reduced. */
     while(fragment < instance->level[level-1].self_lsp_fragment) {
         lsp = isis_lsp_fragment(instance, level, ++fragment, true);
+        if(!lsp) return false;
         isis_lsp_final(lsp);
         isis_lsp_flood(lsp);
     }
@@ -958,7 +976,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
     ISIS_PDU_CURSOR_RST(pdu);
-    memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_s));
+    isis_pdu_copy(&lsp->pdu, pdu);
 
     isis_lsp_lifetime(lsp);
     isis_lsp_flood(lsp);
@@ -995,6 +1013,10 @@ isis_lsp_purge(isis_lsp_s *lsp)
 
     /* Build PDU */
     pdu = &lsp->pdu;
+    if(pdu->size < ISIS_PDU_PURGE_LEN && !isis_pdu_alloc(pdu, ISIS_PDU_PURGE_LEN)) {
+        LOG_NOARG(ERROR, "Failed to allocate ISIS LSP\n");
+        return;
+    }
     if(lsp->level == ISIS_LEVEL_1) {
         isis_pdu_init(pdu, ISIS_PDU_L1_LSP);
         auth_type = config->level1_auth;
@@ -1127,7 +1149,7 @@ isis_lsp_update_external(isis_instance_s *instance, isis_pdu_s *pdu, bool refres
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
 
     ISIS_PDU_CURSOR_RST(pdu);
-    memcpy(&lsp->pdu, pdu, sizeof(isis_pdu_s));
+    isis_pdu_copy(&lsp->pdu, pdu);
 
     if(lsp->lifetime > 0 && instance->config->external_auto_refresh) {
         if(level == ISIS_LEVEL_1) {
@@ -1218,7 +1240,7 @@ isis_lsp_flap(isis_lsp_s *lsp, time_t timer)
     flap->timer = NULL;
     flap->id = lsp->id;
     flap->instance = lsp->instance;
-    memcpy(&flap->pdu, &lsp->pdu, sizeof(isis_pdu_s));
+    isis_pdu_copy(&flap->pdu, &lsp->pdu);
 
     timer_add(&g_ctx->timer_root, &flap->timer, "ISIS FLAP", timer, 0, flap, &isis_lsp_flap_job);
     isis_lsp_purge(lsp);

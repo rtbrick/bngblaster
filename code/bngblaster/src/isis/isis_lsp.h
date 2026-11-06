@@ -39,6 +39,9 @@ isis_lsp_tx_job(timer_s *timer);
 void
 isis_lsp_tx_p2p_job(timer_s *timer);
 
+void
+isis_lsp_free(isis_lsp_s *lsp);
+
 isis_lsp_s *
 isis_lsp_new(uint64_t id, uint8_t level, isis_instance_s *instance);
 

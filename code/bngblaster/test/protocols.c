@@ -15,6 +15,8 @@
 #include <bbl_def.h>
 #include <bbl_protocols.h>
 
+#include <isis/isis_def.h>
+
 #include "ethernet_packets.h"
 
 static void
@@ -763,6 +765,61 @@ test_protocols_lacp_invalid_tlv(void **unused) {
     free(sp);
 }
 
+/* IS-IS uses 802.3 up to 1500 byte LLC + PDU and jumbo LLC above. */
+static void
+test_protocols_isis_jumbo_len(uint16_t pdu_len, uint16_t type)
+{
+    static uint8_t pdu[11997];
+    static uint8_t buf[12288];
+    uint8_t sp[1024];
+    uint8_t dst[ETH_ADDR_LEN] = {0x09, 0x00, 0x2b, 0x00, 0x00, 0x05};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint16_t len = 0;
+    bbl_ethernet_header_s eth = {0};
+    bbl_ethernet_header_s *decoded = NULL;
+    bbl_isis_s isis = {0};
+    bbl_isis_s *decoded_isis;
+
+    memset(pdu, 0x0, sizeof(pdu));
+    pdu[0] = ISIS_PROTOCOL_IDENTIFIER;
+    pdu[1] = 27;
+    pdu[4] = 20;
+    pdu[pdu_len-1] = 0xaa;
+
+    eth.dst = dst;
+    eth.src = src;
+    eth.type = ISIS_PROTOCOL_IDENTIFIER;
+    eth.next = &isis;
+    isis.type = 20;
+    isis.pdu = pdu;
+    isis.pdu_len = pdu_len;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(len, 2*ETH_ADDR_LEN + 2 + LLC_HDR_LEN + pdu_len);
+    assert_int_equal(be16toh(*(uint16_t*)(buf+2*ETH_ADDR_LEN)), type);
+    assert_int_equal(buf[14], 0xfe);
+    assert_int_equal(buf[15], 0xfe);
+    assert_int_equal(buf[16], 0x03);
+
+    assert_int_equal(decode_ethernet(buf, len, sp, sizeof(sp), &decoded), PROTOCOL_SUCCESS);
+    assert_int_equal(decoded->type, ISIS_PROTOCOL_IDENTIFIER);
+    decoded_isis = (bbl_isis_s*)decoded->next;
+    assert_int_equal(decoded_isis->pdu_len, pdu_len);
+    assert_int_equal(decoded_isis->pdu[pdu_len-1], 0xaa);
+}
+
+static void
+test_protocols_isis_jumbo(void **unused) {
+    (void) unused;
+
+    test_protocols_isis_jumbo_len(1492, 1492+LLC_HDR_LEN);
+    test_protocols_isis_jumbo_len(1497, 1500);
+    test_protocols_isis_jumbo_len(1498, ETH_TYPE_LLC_JUMBO);
+    /* LLC + PDU length equals ethertype IPv4 */
+    test_protocols_isis_jumbo_len(2045, ETH_TYPE_LLC_JUMBO);
+    test_protocols_isis_jumbo_len(11997, ETH_TYPE_LLC_JUMBO);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -779,6 +836,7 @@ int main() {
         cmocka_unit_test(test_protocols_pppoe_max_payload),
         cmocka_unit_test(test_protocols_lacp_invalid_tlv),
         cmocka_unit_test(test_protocols_igmpv3_query_short),
+        cmocka_unit_test(test_protocols_isis_jumbo),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

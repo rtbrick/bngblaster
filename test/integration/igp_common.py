@@ -10,6 +10,7 @@ SPDX-License-Identifier: BSD-3-Clause
 """
 import json
 import re
+import struct
 
 import helpers
 from helpers import BngBlaster, Frr, lspgen, wait_until
@@ -74,6 +75,18 @@ class LspgenTopology:
 
 def levels(level):
     return [l for l in (1, 2) if level & l]
+
+
+def mrt_lengths(path):
+    """Return the PDU length of all records of an MRT file."""
+    with open(path, "rb") as f:
+        data = f.read()
+    lengths, offset = [], 0
+    while offset < len(data):
+        length = struct.unpack_from(">I", data, offset + 8)[0]
+        lengths.append(length)
+        offset += 12 + length
+    return lengths
 
 
 class IgpSetup:
@@ -154,9 +167,14 @@ class IsisSetup(IgpSetup):
 
     @staticmethod
     def lspgen(path, nodes, level=1, auth=None, sr_algo=None, flex_algo=None,
-               link_delay=None, te_metric=None, node_msd=None, elc=False):
+               link_delay=None, te_metric=None, node_msd=None, elc=False,
+               external=None, lsp_buffer_size=None):
         args = ["-a", "%s/24" % ISIS_AREA, "-c", str(nodes), "-V", str(level),
                 "-C", BBL_SYSTEM_ID]
+        if external:
+            args += ["-e", str(external)]
+        if lsp_buffer_size:
+            args += ["-b", str(lsp_buffer_size)]
         if auth:
             args += ["-K", auth[1], "-T", auth[0]]
         if sr_algo:
@@ -225,7 +243,8 @@ class IsisSetup(IgpSetup):
         lines.append("exit")
         return "\n".join(lines) + "\n"
 
-    def bbl_config(self, level=1, p2p=True, isis=None, mrt=None, connection=None, network=None):
+    def bbl_config(self, level=1, p2p=True, isis=None, mrt=None, connection=None, network=None,
+                   interfaces=None):
         instance = {
             "instance-id": 1,
             "level": level,
@@ -255,7 +274,8 @@ class IsisSetup(IgpSetup):
                     "isis-level": level,
                     "isis-p2p": p2p,
                     **(network or {})
-                }
+                },
+                **(interfaces or {})
             },
             "isis": [instance]
         }

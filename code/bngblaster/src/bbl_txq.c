@@ -10,10 +10,15 @@
 #include "bbl.h"
 #include "bbl_session.h"
 
+#define BBL_TXQ_SLOT(_txq, _index) \
+    ((bbl_txq_slot_t*)((_txq)->ring + (size_t)(_index) * (_txq)->slot_size))
+
 static bool
 bbl_txq_init(bbl_txq_s *txq, uint16_t size)
 {
-    txq->ring = calloc(1, size * sizeof(bbl_txq_slot_t));
+    txq->slot_size = g_ctx->config.jumbo_frames ? IO_JUMBO_BLOCK_SIZE : BBL_TXQ_SLOT_SIZE;
+    txq->buffer_len = txq->slot_size - offsetof(bbl_txq_slot_t, packet);
+    txq->ring = calloc(size, txq->slot_size);
     if(!txq->ring) {
         return false;
     }
@@ -85,7 +90,7 @@ bbl_txq_from_buffer(bbl_txq_s *txq, uint8_t *buf)
         return 0;
     }
 
-    slot = txq->ring + txq->read;
+    slot = BBL_TXQ_SLOT(txq, txq->read);
     memcpy(buf, slot->packet, slot->packet_len);
 
     txq->read++;
@@ -111,7 +116,7 @@ bbl_txq_to_buffer(bbl_txq_s *txq, bbl_ethernet_header_s *eth)
         txq->stats.full++;
         return BBL_TXQ_FULL;
     }
-    slot = txq->ring + txq->write;
+    slot = BBL_TXQ_SLOT(txq, txq->write);
     slot->packet_len = 0;
     if(encode_ethernet(slot->packet, &slot->packet_len, eth) == PROTOCOL_SUCCESS) {
         txq->write = txq->next++;
@@ -131,7 +136,7 @@ bbl_txq_read_slot(bbl_txq_s *txq)
     if(txq->read == txq->write) {
         return NULL;
     }
-    return txq->ring + txq->read;
+    return BBL_TXQ_SLOT(txq, txq->read);
 }
 
 void
@@ -151,7 +156,7 @@ bbl_txq_write_slot(bbl_txq_s *txq)
         return NULL;
     }
 
-    return txq->ring + txq->write;
+    return BBL_TXQ_SLOT(txq, txq->write);
 }
 
 void

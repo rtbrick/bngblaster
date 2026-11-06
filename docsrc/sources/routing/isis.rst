@@ -233,6 +233,62 @@ The BNG Blaster floods LSPs received to all other active
 adjacencies of the ISIS instance except to those with peer
 system-id equal to the source system-id of the LSP.
 
+Jumbo Frames
+~~~~~~~~~~~~
+
+IS-IS PDUs are limited to 1492 bytes by default. The option ``max-pdu-size``
+raises this limit for all PDUs built by the BNG Blaster (LSP, CSNP, PSNP and
+hello padding) and for the PDUs accepted from the neighbor. PDUs of up to 1497
+bytes are always accepted. The ``lsp-buffer-size`` follows
+``max-pdu-size`` unless configured explicitly.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "jumbo-frames": true,
+            "network": [
+                {
+                    "interface": "eth1",
+                    "address": "10.0.1.2/24",
+                    "gateway": "10.0.1.1",
+                    "mtu": 9000,
+                    "isis-instance-id": 1,
+                    "isis-p2p": true
+                }
+            ]
+        },
+        "isis": [
+            {
+                "instance-id": 1,
+                "area": [ "49.0001/24" ],
+                "hello-padding": true,
+                "max-pdu-size": 8997
+            }
+        ]
+    }
+
+A ``max-pdu-size`` above the default requires ``jumbo-frames`` in the interfaces
+section and an ``mtu`` of at least ``max-pdu-size`` plus 3 bytes (LLC header) on
+all IS-IS interfaces. As jumbo frames are not supported with AF_XDP and DPDK, those
+I/O modes can't be combined with this option. With ``jumbo-frames``, the TX queues
+need three times as much memory.
+
+The 802.3 length field can't describe frames with more than 1500 bytes, so PDUs
+that don't fit are sent with the LLC header in an Ethernet II frame with ethertype
+0x8870. PDUs up to 1497 bytes are still sent as 802.3 frames. Both formats are
+accepted. This has been tested with FRR and Junos. FRR sizes hellos, CSNP and PSNP based on
+the interface MTU, so ``max-pdu-size`` must be at least the interface MTU of FRR minus
+3 bytes. Disabling hello padding in FRR is not sufficient, as CSNP and PSNP can still
+exceed the limit of the BNG Blaster, which is the case if a large LSDB is synchronized
+with the default ``max-pdu-size`` and an interface MTU above 1500. Junos requires
+``family iso mtu`` as well as ``max-lsp-size`` and ``max-hello-size``. Junos limits its own CSNP and PSNP to
+1400 bytes (``max-snp-size``), but accepts larger CSNP. The neighbor must support the
+format too, and all routers in the area should use the same LSP size, as LSPs are
+flooded unchanged.
+
+The LSPs generated with ``lspgen`` are limited by ``--lsp-buffer-size``.
+
 Segment Routing and Flex-Algo
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

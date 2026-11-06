@@ -46,7 +46,9 @@
 #include "lwip/api.h"
 #endif
 
-#define IO_BUFFER_LEN               9216
+#define IO_BUFFER_LEN               12288
+#define BBL_MAX_MTU                 12000 /* limited by IO_JUMBO_BLOCK_SIZE */
+#define BBL_MAX_MTU_NO_JUMBO        4000  /* limited by BBL_TXQ_SLOT_SIZE */
 #define SCRATCHPAD_LEN              4096
 #define CHALLENGE_LEN               16
 

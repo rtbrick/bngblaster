@@ -47,6 +47,7 @@
 #define ETH_TYPE_CFM                    0x8902
 #define ETH_TYPE_MPLS                   0x8847
 #define ETH_TYPE_LACP                   0x8809
+#define ETH_TYPE_LLC_JUMBO              0x8870 /* LLC frames exceeding the 802.3 length field */
 #define ETH_TYPE_ETH                    0xfffe
 #define ETH_TYPE_RAW                    0xffff
 

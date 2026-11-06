@@ -92,8 +92,12 @@
 
 #define ISIS_LSP_OVERLOAD_BIT           0x04
 
-#define ISIS_MAX_PDU_LEN_RX             1497 /* 1500-3 byte LLC */
-#define ISIS_MAX_PDU_LEN                1492
+#define ISIS_DEFAULT_MAX_PDU_SIZE       1492
+#define ISIS_JUMBO_MAX_PDU_SIZE         11997 /* BBL_MAX_MTU-3 byte LLC */
+#define ISIS_DEFAULT_MAX_PDU_LEN_RX     1497 /* 1500-3 byte LLC */
+#define ISIS_MAX_PDU_LEN_RX(_size)      ((_size) > ISIS_DEFAULT_MAX_PDU_LEN_RX ? (_size) : ISIS_DEFAULT_MAX_PDU_LEN_RX)
+#define ISIS_PDU_BUF_LEN                ISIS_JUMBO_MAX_PDU_SIZE
+#define ISIS_PDU_PURGE_LEN              (ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_LSP+sizeof(isis_tlv_s)+UINT8_MAX)
 
 #define ISIS_MD5_DIGEST_LEN             16
 
@@ -300,6 +304,7 @@ typedef struct isis_config_ {
     uint16_t            lsp_retry_interval; /* LSP retry interval in seconds (default 5s) */
     uint16_t            csnp_interval;      /* CSNP interval in seconds (default 5s) */
     uint16_t            lsp_buffer_size;  
+    uint16_t            max_pdu_size;       /* Max size of PDUs built (default 1492) */
 
     uint32_t            sr_base;
     uint32_t            sr_range;
@@ -442,8 +447,9 @@ typedef struct isis_pdu_ {
 
     uint16_t cur; /* current position */
 
-    uint8_t  pdu[ISIS_MAX_PDU_LEN_RX];
+    uint8_t *pdu;
     uint16_t pdu_len;
+    uint16_t size; /* size of the PDU buffer */
 } isis_pdu_s;
 
 typedef struct isis_lsp_ {
