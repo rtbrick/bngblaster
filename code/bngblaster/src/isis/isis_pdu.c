@@ -10,6 +10,77 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
+/* Clear all except the PDU buffer. */
+static void
+isis_pdu_reset(isis_pdu_s *pdu)
+{
+    uint8_t *buf = pdu->pdu;
+    uint16_t size = pdu->size;
+
+    memset(pdu, 0x0, sizeof(isis_pdu_s));
+    pdu->pdu = buf;
+    pdu->size = size;
+}
+
+/**
+ * isis_pdu_alloc
+ *
+ * Resize the PDU buffer of a stored PDU (LSP). The buffer is
+ * sized per LSP, as the LSDB would otherwise be limited by the
+ * memory needed for the largest possible PDU.
+ *
+ * @param pdu PDU
+ * @param size new buffer size
+ * @return true (success) / false (error, PDU unchanged)
+ */
+bool
+isis_pdu_alloc(isis_pdu_s *pdu, uint16_t size)
+{
+    uint8_t *buf;
+
+    if(pdu->size == size) {
+        return true;
+    }
+    buf = realloc(pdu->pdu, size);
+    if(!buf) {
+        return false;
+    }
+    if(size > pdu->size) {
+        memset(buf+pdu->size, 0x0, size-pdu->size);
+    }
+    pdu->pdu = buf;
+    pdu->size = size;
+    return true;
+}
+
+/**
+ * isis_pdu_copy
+ *
+ * Copy PDU to the stored PDU dst (LSP), which keeps its
+ * own buffer. The PDU is cleared if allocation has failed.
+ *
+ * @param dst target PDU
+ * @param src source PDU
+ */
+void
+isis_pdu_copy(isis_pdu_s *dst, isis_pdu_s *src)
+{
+    uint8_t *buf;
+    uint16_t size;
+
+    if(dst->size < src->pdu_len && !isis_pdu_alloc(dst, src->pdu_len)) {
+        LOG_NOARG(ERROR, "Failed to allocate ISIS PDU\n");
+        isis_pdu_reset(dst);
+        return;
+    }
+    buf = dst->pdu;
+    size = dst->size;
+    *dst = *src;
+    dst->pdu = buf;
+    dst->size = size;
+    memcpy(dst->pdu, src->pdu, src->pdu_len);
+}
+
 protocol_error_t
 isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
 {
@@ -18,10 +89,10 @@ isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
     uint8_t  system_id_len = 0;
     isis_tlv_s *tlv = NULL;
 
-    if(len < ISIS_HDR_LEN_COMMON || len > ISIS_MAX_PDU_LEN_RX) {
+    if(len < ISIS_HDR_LEN_COMMON || len > pdu->size) {
         return DECODE_ERROR;
     }
-    memset(pdu, 0x0, sizeof(isis_pdu_s));
+    isis_pdu_reset(pdu);
     memcpy(pdu->pdu, buf, len);
     pdu->pdu_len = len;
     
@@ -317,7 +388,8 @@ isis_pdu_validate_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
 void
 isis_pdu_init(isis_pdu_s *pdu, uint8_t pdu_type)
 {
-    memset(pdu, 0x0, sizeof(isis_pdu_s));
+    isis_pdu_reset(pdu);
+    memset(pdu->pdu, 0x0, pdu->size);
     pdu->pdu_type = pdu_type;
     *pdu->pdu = ISIS_PROTOCOL_IDENTIFIER;
     *(pdu->pdu+2) = 0x01;
@@ -728,15 +800,16 @@ isis_pdu_add_tlv_router_cap_fad(isis_pdu_s *pdu, ipv4addr_t router_id, isis_flex
 void
 isis_pdu_padding(isis_pdu_s *pdu)
 {
-    uint16_t remaining = ISIS_MAX_PDU_LEN - pdu->pdu_len;
+    uint16_t remaining = pdu->size - pdu->pdu_len;
     memset(ISIS_PDU_CURSOR(pdu), 0x0, remaining);
     while(remaining >= sizeof(isis_tlv_s)) {
         isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
         remaining-=sizeof(isis_tlv_s);
         tlv->type = ISIS_TLV_PADDING;
         if(remaining > UINT8_MAX) {
-            tlv->len = UINT8_MAX;
-            remaining -= UINT8_MAX;
+            /* A single remaining byte can't be padded with a TLV. */
+            tlv->len = remaining == UINT8_MAX+1 ? UINT8_MAX-1 : UINT8_MAX;
+            remaining -= tlv->len;
         } else {
             tlv->len = remaining;
             remaining = 0;

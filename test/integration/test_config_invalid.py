@@ -78,3 +78,14 @@ def test_config_invalid_ldp_targeted(topology, tmp_path, ldp, message):
         instance.start(cfg)
     with open(instance.path("stdout")) as f:
         assert message in f.read()
+
+
+def test_mtu_requires_jumbo_frames(topology, tmp_path):
+    """PDUs are built up to the MTU, which must fit into the TX queue slots."""
+    bbl_config = config(topology.if_a)
+    bbl_config["interfaces"]["network"][0]["mtu"] = 4001
+    instance = BngBlaster(topology.a, tmp_path, "bbl")
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start(bbl_config)
+    with open(instance.path("stdout")) as f:
+        assert "mtu 4001 requires interfaces jumbo-frames" in f.read()

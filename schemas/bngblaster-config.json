@@ -1590,10 +1590,10 @@
                 },
                 "mtu": {
                     "type": "integer",
-                    "description": "MTU size",
+                    "description": "MTU size, values above 4000 require interfaces jumbo-frames",
                     "default": 1500,
                     "minimum": 64,
-                    "maximum": 9000
+                    "maximum": 12000
                 },
                 "vlan": {
                     "type": "integer",
@@ -2987,10 +2987,17 @@
                 },
                 "lsp-buffer-size": {
                     "type": "integer",
-                    "description": "LSPBufferSize in bytes",
+                    "description": "LSPBufferSize in bytes (default max-pdu-size)",
                     "default": 1492,
                     "minimum": 128,
-                    "maximum": 9192
+                    "maximum": 11997
+                },
+                "max-pdu-size": {
+                    "type": "integer",
+                    "description": "Maximum size of IS-IS PDUs in bytes, values above 1492 require interfaces jumbo-frames",
+                    "default": 1492,
+                    "minimum": 1492,
+                    "maximum": 11997
                 },
                 "lsp-lifetime": {
                     "type": "integer",

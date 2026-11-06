@@ -255,7 +255,7 @@ pcapng_push_interface_header(uint32_t dlt, const char *if_name)
     bbl_pcap_push_le_uint(4, 0); /* block total_length */
     bbl_pcap_push_le_uint(2, dlt); /* link_type */
     bbl_pcap_push_le_uint(2, 0); /* reserved */
-    bbl_pcap_push_le_uint(4, 9*1024); /* snaplen */
+    bbl_pcap_push_le_uint(4, PCAPNG_SNAPLEN); /* snaplen */
 
     /* Write idb_ifname option. */
     bbl_pcap_push_le_uint(2, PCAPNG_IDB_IFNAME_OPTION); /* option_type */

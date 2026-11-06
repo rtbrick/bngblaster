@@ -31,6 +31,27 @@ isis_adjacency_init(bbl_network_interface_s *interface,
     LOG(ISIS, "Add network interface %s to IS-IS instance %u\n", 
         interface->name, interface_config->isis_instance_id);
 
+    if(config->max_pdu_size > ISIS_DEFAULT_MAX_PDU_SIZE) {
+        if(!g_ctx->config.jumbo_frames) {
+            LOG(ERROR, "IS-IS max-pdu-size %u requires interfaces jumbo-frames\n", config->max_pdu_size);
+            return false;
+        }
+        if(interface->mtu < config->max_pdu_size + LLC_HDR_LEN) {
+            LOG(ERROR, "IS-IS max-pdu-size %u exceeds MTU %u of interface %s (3 byte LLC header)\n",
+                config->max_pdu_size, interface->mtu, interface->name);
+            return false;
+        }
+        /* The DPDK buffers are limited to 2048 byte. */
+        for(bbl_link_config_s *link = g_ctx->config.link_config; link; link = link->next) {
+            if(link->io_mode == IO_MODE_DPDK) {
+                LOG(ERROR, "IS-IS max-pdu-size %u is not supported with DPDK (interface %s)\n",
+                    config->max_pdu_size, link->interface);
+                return false;
+            }
+        }
+    }
+    interface->isis_max_pdu_len_rx = ISIS_MAX_PDU_LEN_RX(config->max_pdu_size);
+
     /* Init P2P adjacency. */
     if(interface_config->isis_p2p) {
         adjacency_p2p = calloc(1, sizeof(isis_adjacency_p2p_s));

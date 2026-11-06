@@ -133,6 +133,7 @@ bbl_network_interfaces_add()
         network_interface->inner_vlan = network_config->inner_vlan;
         network_interface->qinq = network_config->qinq;
         network_interface->mtu = network_config->mtu;
+        network_interface->isis_max_pdu_len_rx = ISIS_DEFAULT_MAX_PDU_LEN_RX;
 
         if(*(uint32_t*)network_config->mac) {
             memcpy(network_interface->mac, network_config->mac, ETH_ADDR_LEN);

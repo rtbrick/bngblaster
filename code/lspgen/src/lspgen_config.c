@@ -384,7 +384,7 @@ lspgen_write_node_common_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *node
         if (node->attach) {
             json_object_set_new(node_obj, "attach", json_boolean(1));
         }
-        json_object_set_new(node_obj, "lsp_buffer_size", json_integer(ISIS_DEFAULT_LSP_BUFFER_SIZE));
+        json_object_set_new(node_obj, "lsp_buffer_size", json_integer(node->lsp_buffer_size));
         break;
     case PROTO_OSPF2:
     case PROTO_OSPF3: /* fall through */
@@ -1718,16 +1718,15 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
             lsdb_reset_attr_template(&attr_template);
             attr_template.key.ordinal = 1;
             attr_template.key.attr_type = ISIS_TLV_LSP_BUFFER_SIZE;
-            if (value && json_is_integer(value)) {
+            /* The command line option overrides the config file. */
+            if (value && json_is_integer(value) && !ctx->lsp_buffer_size_set) {
                 node->lsp_buffer_size = json_integer_value(value);
-                attr_template.key.lsp_buffer_size = node->lsp_buffer_size;
-                lsdb_add_node_attr(node, &attr_template);
             }
             else {
-                node->lsp_buffer_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
-                attr_template.key.lsp_buffer_size = node->lsp_buffer_size;
-                lsdb_add_node_attr(node, &attr_template);
+                node->lsp_buffer_size = ctx->lsp_buffer_size;
             }
+            attr_template.key.lsp_buffer_size = node->lsp_buffer_size;
+            lsdb_add_node_attr(node, &attr_template);
         }
 
         if (ctx->protocol_id == PROTO_ISIS) {

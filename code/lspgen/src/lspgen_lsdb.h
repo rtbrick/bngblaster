@@ -132,6 +132,7 @@ typedef struct lsdb_ctx_
     bool purge;
     uint16_t lsp_lifetime;
     uint16_t lsp_buffer_size;
+    bool lsp_buffer_size_set; /* overrides the config file */
 
     uint32_t node_index;
     uint32_t link_index;

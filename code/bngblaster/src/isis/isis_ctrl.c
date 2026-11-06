@@ -332,11 +332,12 @@ isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t
     size_t pdu_count;
 
 
-    isis_pdu_s pdu = {0};
+    uint8_t pdu_store[ISIS_PDU_BUF_LEN];
+    isis_pdu_s pdu = {.pdu = pdu_store};
     const char *pdu_string;
     uint16_t pdu_string_len;
 
-    uint8_t buf[ISIS_MAX_PDU_LEN_RX];
+    uint8_t buf[ISIS_PDU_BUF_LEN];
     uint16_t len;
 
     isis_instance_s *instance = NULL;
@@ -344,6 +345,7 @@ isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t
 
     /* Unpack further arguments */
     ISIS_CTRL_ARG_INSTANCE(arguments, fd, instance_id, instance);
+    pdu.size = ISIS_MAX_PDU_LEN_RX(instance->config->max_pdu_size);
 
     /* Process PDU array */
     value = json_object_get(arguments, "pdu");
@@ -354,7 +356,7 @@ isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t
             if(!pdu_string) {
                 return bbl_ctrl_status(fd, "error", 500, "failed to read ISIS PDU");
             }
-            pdu_string_len = strnlen(pdu_string, sizeof(buf)*2);
+            pdu_string_len = strnlen(pdu_string, pdu.size*2);
             if(pdu_string_len != strlen(pdu_string)) {
                 return bbl_ctrl_status(fd, "error", 400, "ISIS PDU too long");
             }

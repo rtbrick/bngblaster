@@ -15,6 +15,8 @@
 #define PCAPNG_SHB_USERAPPL_OPTION 4
 #define PCAPNG_SHB_USERAPPL "rtbrick-lspgen"
 
+#define PCAPNG_SNAPLEN 65535
+
 #define PCAPNG_IDB 0x00000001
 #define PCAPNG_IDB_IFNAME_OPTION 2
 
@@ -88,7 +90,7 @@ pcapng_push_interface_header (struct io_buffer_ *buf, uint32_t dlt, const char *
     push_le_uint(buf, 4, 0); /* block total_length */
     push_le_uint(buf, 2, dlt); /* link_type */
     push_le_uint(buf, 2, 0); /* reserved */
-    push_le_uint(buf, 4, 9*1024); /* snaplen */
+    push_le_uint(buf, 4, PCAPNG_SNAPLEN); /* snaplen */
 
     /*
      * Write idb_ifname option
@@ -167,7 +169,11 @@ lspgen_dump_pcap_node (struct lsdb_ctx_ *ctx, struct lsdb_node_ *node)
             /* Fake an Ethernet & LLC header */
             push_be_uint(&buf, 6, 0x0180c2000014); /* Destination MAC */
             push_be_uint(&buf, 6, 0xf41e5e000000); /* Source MAC */
-            push_be_uint(&buf, 2, packet->buf[0].idx+3); /* Length + DSAP, SSAP, Mode */
+            if (packet->buf[0].idx + ISIS_LLC_HDR_LEN > ISIS_ETH_MAX_802_3_LEN) {
+                push_be_uint(&buf, 2, ISIS_ETH_TYPE_LLC_JUMBO);
+            } else {
+                push_be_uint(&buf, 2, packet->buf[0].idx + ISIS_LLC_HDR_LEN); /* Length + DSAP, SSAP, Mode */
+            }
             push_be_uint(&buf, 3, 0xfefe03); /* OSI DSAP, SSAP, Mode */
 
         } else if (ctx->protocol_id == PROTO_OSPF2) {

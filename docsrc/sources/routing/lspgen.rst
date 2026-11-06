@@ -49,6 +49,7 @@ and the area (``-a``), connector (``-C``), sequence number (``-q``) and level
       -X --ipv6-external-prefix <ip-prefix>
       -u --link-multiplier <args>
       -M --lsp-lifetime <args>
+      -b --lsp-buffer-size <args>
       -z --no-ipv4
       -Z --no-ipv6
       -y --no-sr
@@ -104,6 +105,9 @@ The following defaults are used if not changed by the corresponding arguments.
 | ``-u --link-multiplier``      | 1 (parallel links, maximum 150)              |
 +-------------------------------+----------------------------------------------+
 | ``-M --lsp-lifetime``         | ISIS 65535, OSPF 3600 (minimum 120 seconds)  |
++-------------------------------+----------------------------------------------+
+| ``-b --lsp-buffer-size``      | ISIS 1492 (maximum LSP size, 512 - 11997,    |
+|                               | overrides the value of a config file)        |
 +-------------------------------+----------------------------------------------+
 | ``-q --sequence``             | ISIS 0x1, OSPF 0x80000001                    |
 +-------------------------------+----------------------------------------------+

@@ -37,7 +37,8 @@ isis_hello_encode(bbl_network_interface_s *interface,
                   uint8_t level)
 {
     protocol_error_t result;
-    isis_pdu_s pdu = {0};
+    uint8_t pdu_buf[ISIS_PDU_BUF_LEN];
+    isis_pdu_s pdu = {.pdu = pdu_buf};
     bbl_isis_s isis = {0};
 
     isis_adjacency_s    *adjacency = interface->isis_adjacency[level-1];
@@ -46,6 +47,8 @@ isis_hello_encode(bbl_network_interface_s *interface,
 
     isis_auth_type auth = ISIS_AUTH_NONE;
     char *key = NULL;
+
+    pdu.size = config->max_pdu_size;
 
     /* Start next timer ... */
     timer_add(&g_ctx->timer_root, &adjacency->timer_hello, 

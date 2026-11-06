@@ -1851,6 +1851,7 @@ bool
 lspgen_should_start_new_packet (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, struct lsdb_attr_ *attr)
 {
     uint32_t min_len;
+    uint32_t lsp_size;
 
     if (!packet) {
         return false;
@@ -1865,7 +1866,11 @@ lspgen_should_start_new_packet (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, st
     switch (ctx->protocol_id) {
     case PROTO_ISIS:
         min_len += TLV_OVERHEAD;
-        if (packet->buf[0].idx > (1462-min_len)) {
+        lsp_size = packet->parent->lsp_buffer_size;
+        if (lsp_size < ISIS_MIN_LSP_BUFFER_SIZE || lsp_size > ISIS_MAX_LSP_BUFFER_SIZE) {
+            lsp_size = ISIS_DEFAULT_LSP_BUFFER_SIZE;
+        }
+        if (packet->buf[0].idx > (lsp_size - ISIS_LSP_RESERVED_LEN - min_len)) {
             return true;
         }
         break;

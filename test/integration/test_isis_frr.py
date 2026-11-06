@@ -10,10 +10,12 @@ import pytest
 
 from helpers import wait_until
 from igp_common import (BBL_ADDRESS, BBL_ROUTER_ID, BBL_SYSTEM_ID, FRR_SYSTEM_ID,
-                        IsisSetup, levels)
+                        IsisSetup, levels, mrt_lengths)
 
 NODES = 50
 FRR_PREFIXES = 8
+JUMBO_MTU = 9500
+JUMBO_PDU = JUMBO_MTU - 3  # LLC header
 
 pytestmark = pytest.mark.usefixtures("frr_bin")
 
@@ -83,6 +85,28 @@ def test_database_sync_frr_to_bbl(isis, level):
     isis.frr_add_prefix(FRR_PREFIXES)
     wait_until(lambda: synchronized() and isis.bbl_database(level)[frr_lsp] > seq, 15,
                message="FRR LSP update synchronized")
+    isis.teardown()
+
+
+@pytest.mark.parametrize("p2p", [True, False], ids=["p2p", "broadcast"])
+def test_jumbo_frames(isis, topology, tmp_path, p2p):
+    """FRR pads hellos to the interface MTU and the LSPs of the emulated
+    topology exceed the 802.3 length field, so both directions use
+    LLC in Ethernet II frames (ethertype 0x8870)."""
+    for ns, ifname in ((topology.a, topology.if_a), (topology.b, topology.if_b)):
+        ns.exec(["ip", "link", "set", ifname, "mtu", str(JUMBO_MTU)])
+    topo = isis.lspgen(tmp_path / "isis", 5, 2, external=2000, lsp_buffer_size=JUMBO_PDU)
+    isis.start(frr={"level": 2, "p2p": p2p},
+               bbl={"level": 2, "p2p": p2p, "mrt": topo.mrt, "isis": {"max-pdu-size": JUMBO_PDU},
+                    "network": {"mtu": JUMBO_MTU}, "interfaces": {"jumbo-frames": True}})
+    isis.wait_established(2)
+    wait_until(lambda: set(isis.bbl_database(2)) <= set(isis.frr_database(2)), 30,
+               message="BNG Blaster database synchronized to FRR")
+    wait_until(lambda: topo.prefixes <= isis.frr_routes("ip"), 15,
+               message="FRR IPv4 routes to all nodes")
+    assert max(mrt_lengths(topo.mrt)) > 1497
+    wait_until(lambda: lsp_id(FRR_SYSTEM_ID) in isis.bbl_database(2), 10,
+               message="FRR LSP in BNG Blaster database")
     isis.teardown()
 
 

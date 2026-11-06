@@ -16,11 +16,17 @@
 #define ISIS_PDU_CURSOR_SET(_pdu, _off)  ((_pdu)->cur=_off)
 #define ISIS_PDU_CURSOR_INC(_pdu, _off)  ((_pdu)->cur+=_off)
 #define ISIS_PDU_OFFSET(_pdu, _off)      ((_pdu)->pdu+_off)
-#define ISIS_PDU_REMAINING(_pdu)         (ISIS_MAX_PDU_LEN-(_pdu)->cur)
+#define ISIS_PDU_REMAINING(_pdu)         ((_pdu)->size-(_pdu)->cur)
 
 #define ISIS_PDU_BUMP_WRITE_BUFFER(_pdu, _off) \
     (_pdu)->cur+=(_off); \
     (_pdu)->pdu_len+=(_off)
+
+bool
+isis_pdu_alloc(isis_pdu_s *pdu, uint16_t size);
+
+void
+isis_pdu_copy(isis_pdu_s *dst, isis_pdu_s *src);
 
 protocol_error_t
 isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len);

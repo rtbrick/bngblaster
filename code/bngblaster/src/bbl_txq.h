@@ -14,7 +14,7 @@
 #define __BBL_TXQ_H__
 
 #define BBL_TXQ_DEFAULT_SIZE 4096
-#define BBL_TXQ_BUFFER_LEN 4074
+#define BBL_TXQ_SLOT_SIZE 4096
 
 typedef enum bbl_ring_result_ {
     BBL_TXQ_OK = 0,
@@ -27,11 +27,13 @@ typedef struct bbl_txq_slot_ {
     uint16_t vlan_tci;
     uint16_t vlan_tpid;
     uint16_t packet_len;
-    uint8_t packet[BBL_TXQ_BUFFER_LEN];
+    uint8_t packet[];
 } bbl_txq_slot_t;
 
 typedef struct bbl_txq_ {
-    bbl_txq_slot_t *ring; /* ring buffer */
+    uint8_t *ring; /* ring buffer */
+    uint32_t slot_size; /* slot size in bytes */
+    uint16_t buffer_len; /* max packet length per slot */
     uint16_t size; /* number of send slots */
 
     char _pad0 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */

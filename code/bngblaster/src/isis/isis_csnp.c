@@ -29,7 +29,8 @@ isis_csnp_job(timer_s *timer)
 
     int entries = 0;
 
-    isis_pdu_s pdu = {0};
+    uint8_t pdu_buf[ISIS_PDU_BUF_LEN];
+    isis_pdu_s pdu = {.pdu = pdu_buf, .size = config->max_pdu_size};
     uint8_t level = adjacency->level;
     uint16_t remaining_lifetime;
 
@@ -101,7 +102,7 @@ isis_csnp_job(timer_s *timer)
 
         if(tlv->len > UINT8_MAX-ISIS_LSP_ENTRY_LEN) {
             /* Open next LSP entry TLV. */
-            if(pdu.pdu_len+sizeof(isis_tlv_s)+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
+            if(pdu.pdu_len+sizeof(isis_tlv_s)+ISIS_LSP_ENTRY_LEN > pdu.size) {
                 adjacency->csnp_start = lsp->id;
                 break;
             }
@@ -110,7 +111,7 @@ isis_csnp_job(timer_s *timer)
             tlv->len = 0;
             ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
         } else {
-            if(pdu.pdu_len+ISIS_LSP_ENTRY_LEN > ISIS_MAX_PDU_LEN) {
+            if(pdu.pdu_len+ISIS_LSP_ENTRY_LEN > pdu.size) {
                 /* All entries do not fit into single CSNP. */
                 adjacency->csnp_start = lsp->id;
                 break;
