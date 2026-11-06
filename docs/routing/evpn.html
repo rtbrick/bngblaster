@@ -65,7 +65,6 @@
 <li class="toctree-l3"><a class="reference internal" href="#evpn-e-lan">EVPN E-LAN</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#testing-evpn-services">Testing EVPN Services</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#troubleshooting">Troubleshooting</a></li>
-<li class="toctree-l3"><a class="reference internal" href="#virtual-lab">Virtual Lab</a></li>
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="l2vpn.html">BGP L2VPN</a></li>
@@ -712,40 +711,6 @@ or 6 are ambiguous. Use the control word or other MAC addresses.</p></td>
 </tr>
 </tbody>
 </table>
-</section>
-<section id="virtual-lab">
-<h2>Virtual Lab<a class="headerlink" href="#virtual-lab" title="Link to this heading"></a></h2>
-<p>EVPN services can be tested against virtual routers, for example with
-<a class="reference external" href="https://containerlab.dev">containerlab</a>, where the BNG Blaster runs on
-the host connected to the virtual DUT using <code class="docutils literal notranslate"><span class="pre">host</span></code> links. The example above
-was verified with Juniper vJunosEvolved (PTX10001-36MR) which is available
-for free without license and supports EVPN VPWS and E-LAN with MPLS
-encapsulation (license alarms can be ignored in the lab).
-The container image is built with <a class="reference external" href="https://containerlab.dev/manual/vrnetlab/">vrnetlab</a>.</p>
-<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="nt">name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">evpn</span>
-<span class="nt">topology</span><span class="p">:</span>
-<span class="w">  </span><span class="nt">nodes</span><span class="p">:</span>
-<span class="w">    </span><span class="nt">pe1</span><span class="p">:</span>
-<span class="w">      </span><span class="nt">kind</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">juniper_vjunosevolved</span>
-<span class="w">      </span><span class="nt">image</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">vrnetlab/juniper_vjunosevolved:26.2R1.7-EVO</span>
-<span class="w">      </span><span class="nt">startup-config</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">pe1.cfg</span>
-<span class="w">  </span><span class="nt">links</span><span class="p">:</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;pe1:et-0/0/0&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;host:eth1&quot;</span><span class="p p-Indicator">]</span>
-<span class="w">    </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">endpoints</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;pe1:et-0/0/1&quot;</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="s">&quot;host:eth2&quot;</span><span class="p p-Indicator">]</span>
-</pre></div>
-</div>
-<p>The MAC addresses of the host interfaces can be set as used in the example
-above, and IPv6 should be disabled on those interfaces as the BNG Blaster
-interfaces must not have IP addresses configured in the host OS.</p>
-<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>sudo containerlab deploy -t evpn.clab.yml
-sudo ip link set eth1 address 02:00:00:00:00:01
-sudo ip link set eth2 address 02:00:00:00:00:02
-sudo sysctl -w net.ipv6.conf.eth1.disable_ipv6=1 net.ipv6.conf.eth2.disable_ipv6=1
-</pre></div>
-</div>
-<p>The free container images of Nokia SR Linux support EVPN only with VXLAN
-encapsulation, while the BNG Blaster supports EVPN traffic streams only with
-MPLS encapsulation.</p>
 </section>
 </section>
 
