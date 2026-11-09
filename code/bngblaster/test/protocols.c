@@ -743,6 +743,50 @@ test_protocols_pppoe_max_payload(void **unused) {
     free(sp);
 }
 
+/* The option length must not be truncated to 8 bit. */
+static void
+test_protocols_ppp_options_len(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[512] = {0};
+    uint8_t header[26] = {0x02, 0, 0, 0, 0, 0x01, 0x02, 0, 0, 0, 0, 0x02,
+                          0x88, 0x64, 0x11, 0x00, 0x00, 0x01,
+                          0x01, 0x32, /* PPPoE length 306 */
+                          0x00, 0x00, /* PPP protocol */
+                          0x01, 0x01, 0x01, 0x30}; /* conf-request, length 304 */
+    uint16_t protocols[] = {PROTOCOL_LCP, PROTOCOL_IPCP, PROTOCOL_IP6CP};
+    uint16_t options_len = 0;
+    uint16_t len = sizeof(header) + 300;
+    bbl_ethernet_header_s *decoded;
+    bbl_pppoe_session_s *pppoe;
+
+    memcpy(buf, header, sizeof(header));
+    /* Unknown options with length 40, 100 and 160. */
+    buf[26] = 0x7f; buf[27] = 40;
+    buf[26 + 40] = 0x7f; buf[27 + 40] = 100;
+    buf[26 + 140] = 0x7f; buf[27 + 140] = 160;
+
+    for(size_t i = 0; i < sizeof(protocols) / sizeof(protocols[0]); i++) {
+        *(uint16_t*)(buf + 20) = htobe16(protocols[i]);
+        assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+        pppoe = (bbl_pppoe_session_s*)decoded->next;
+        switch(protocols[i]) {
+            case PROTOCOL_LCP:
+                options_len = ((bbl_lcp_s*)pppoe->next)->options_len;
+                break;
+            case PROTOCOL_IPCP:
+                options_len = ((bbl_ipcp_s*)pppoe->next)->options_len;
+                break;
+            default:
+                options_len = ((bbl_ip6cp_s*)pppoe->next)->options_len;
+                break;
+        }
+        assert_int_equal(options_len, 300);
+    }
+    free(sp);
+}
+
 static void
 test_protocols_igmpv3_query_short(void **unused) {
     (void) unused;
@@ -895,6 +939,7 @@ int main() {
         cmocka_unit_test(test_protocols_gratuitous_arp),
         cmocka_unit_test(test_protocols_unsolicited_na),
         cmocka_unit_test(test_protocols_pppoe_max_payload),
+        cmocka_unit_test(test_protocols_ppp_options_len),
         cmocka_unit_test(test_protocols_lacp_invalid_tlv),
         cmocka_unit_test(test_protocols_igmpv3_query_short),
         cmocka_unit_test(test_protocols_isis_jumbo),

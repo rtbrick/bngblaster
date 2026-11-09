@@ -725,7 +725,7 @@ typedef struct bbl_lcp_ {
     uint8_t     code;
     uint8_t     identifier;
     uint8_t    *options;
-    uint8_t     options_len;
+    uint16_t    options_len;
     uint16_t    mru;
     uint16_t    auth;
     uint8_t     alg;
@@ -749,7 +749,7 @@ typedef struct bbl_ipcp_ {
     uint8_t     code;
     uint8_t     identifier;
     uint8_t    *options;
-    uint8_t     options_len;
+    uint16_t    options_len;
     uint32_t    address;
     uint32_t    dns1;
     uint32_t    dns2;
@@ -766,7 +766,7 @@ typedef struct bbl_ip6cp_ {
     uint8_t     code;
     uint8_t     identifier;
     uint8_t    *options;
-    uint8_t     options_len;
+    uint16_t    options_len;
     uint64_t    ipv6_identifier;
     bool        unknown_options;
 } bbl_ip6cp_s;

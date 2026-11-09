@@ -1137,6 +1137,9 @@ bbl_access_rx_ipcp_conf_reject(bbl_session_s *session, bbl_ipcp_s *ipcp)
     while(len >= 2) {
         option_type = *buf;
         option_len = *(buf+1);
+        if(option_len < 2 || option_len > len) {
+            break;
+        }
         if(option_type != PPP_IPCP_OPTION_ADDRESS) {
             if((session->ipcp_options_len + option_len) <= PPP_OPTIONS_BUFFER) {
                 memcpy(session->ipcp_options+session->ipcp_options_len, buf, option_len);

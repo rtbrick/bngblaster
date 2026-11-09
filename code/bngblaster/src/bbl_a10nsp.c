@@ -164,6 +164,12 @@ bbl_a10nsp_tx_mpls(bbl_a10nsp_interface_s *interface,
     bbl_mpls_s mpls_transport = {0};
     bbl_mpls_s mpls_service = {0};
 
+    /* Replies echo received PPP options and must fit the TXQ slot
+     * with the outer ethernet header, 2 labels and 3 VLAN tags. */
+    if(eth->length + 14 + 5 * sizeof(uint32_t) > interface->txq->buffer_len) {
+        return;
+    }
+
     eth_mpls.dst = interface->network_interface->gateway6_mac;
     eth_mpls.src = interface->mac;
     eth_mpls.type = ETH_TYPE_ETH;
