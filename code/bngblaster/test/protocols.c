@@ -259,6 +259,66 @@ test_protocols_arp_over_mpls_all(void **unused) {
     test_protocols_arp_over_mpls(true, 0x0f, ARP_REPLY);
 }
 
+/* Ethernet over MPLS is limited to one level, nested frames are not decoded
+ * and must not cost exponential time for the control word retries. */
+static void
+test_protocols_ethernet_over_mpls_nested(void **unused) {
+    (void) unused;
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[1024] = {0};
+    uint8_t *block;
+    uint16_t len = 0;
+    uint8_t mac[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x03};
+    uint8_t outer_header[18] = {0x02, 0, 0, 0, 0, 0x01, 0x02, 0, 0, 0, 0, 0x02,
+                                0x88, 0x47, 0x00, 0x01, 0x41, 0x40};
+
+    bbl_ethernet_header_s eth = {0};
+    bbl_ethernet_header_s inner = {0};
+    bbl_mpls_s service = {0};
+    bbl_arp_s arp = {0};
+    bbl_ethernet_header_s *decoded;
+    struct timespec start, end;
+
+    eth.dst = mac;
+    eth.src = mac;
+    eth.mpls = &service;
+    eth.type = ETH_TYPE_ETH;
+    eth.next = &inner;
+    service.label = 5000;
+    service.ttl = 254;
+    inner.dst = mac;
+    inner.src = mac;
+    inner.type = ETH_TYPE_ARP;
+    inner.next = &arp;
+    arp.code = ARP_REPLY;
+    arp.sender = mac;
+    arp.target = mac;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+
+    memmove(buf + sizeof(outer_header), buf, len);
+    memcpy(buf, outer_header, sizeof(outer_header));
+    len += sizeof(outer_header);
+    assert_int_not_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+
+    /* Two converging interpretations of each block, which doubled the work per block. */
+    memset(buf, 0x0, sizeof(buf));
+    buf[12] = 0x88; buf[13] = 0x47; buf[16] = 0x01;
+    for(int i = 0; i < 30; i++) {
+        block = buf + 18 + i * 22;
+        block[0] = 0x01;
+        block[12] = 0x88; block[13] = 0x47;
+        block[16] = 0x88; block[17] = 0x47;
+        block[20] = 0x01;
+    }
+    clock_gettime(CLOCK_MONOTONIC, &start);
+    assert_int_not_equal(decode_ethernet(buf, 679, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    clock_gettime(CLOCK_MONOTONIC, &end);
+    assert_true(end.tv_sec - start.tv_sec < 2);
+    free(sp);
+}
+
 /* The 32-bit flow-id is followed by 32 reserved bits, which must be
  * wire compatible with the former 64-bit little-endian flow-id. */
 static void
@@ -826,6 +886,7 @@ int main() {
         cmocka_unit_test(test_protocols_ethernet_over_mpls_cw),
         cmocka_unit_test(test_protocols_ethernet_over_mpls_no_cw),
         cmocka_unit_test(test_protocols_arp_over_mpls_all),
+        cmocka_unit_test(test_protocols_ethernet_over_mpls_nested),
         cmocka_unit_test(test_protocols_bbl_flow_id),
         cmocka_unit_test(test_protocols_lcp_chap),
         cmocka_unit_test(test_protocols_dhcp_end_option),

@@ -4678,12 +4678,15 @@ decode_isis(uint8_t *buf, uint16_t len,
 }
 
 /*
- * decode_ethernet
+ * decode_ethernet_frame
+ *
+ * Ethernet over MPLS is limited to one level (eompls), otherwise
+ * the control word retries multiply with every nested frame.
  */
-protocol_error_t
-decode_ethernet(uint8_t *buf, uint16_t len,
-                uint8_t *sp, uint16_t sp_len,
-                bbl_ethernet_header_s **_eth)
+static protocol_error_t
+decode_ethernet_frame(uint8_t *buf, uint16_t len,
+                      uint8_t *sp, uint16_t sp_len,
+                      bbl_ethernet_header_s **_eth, bool eompls)
 {
     bbl_ethernet_header_s *eth;
     bbl_mpls_s *mpls;
@@ -4781,6 +4784,9 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                 eth->type = NB_ETH_TYPE_IPV6; 
                 break;
             default: 
+                if(eompls) {
+                    return UNKNOWN_PROTOCOL;
+                }
                 /* Ethernet over MPLS with or without PW control word
                  * (first nibble zero, RFC 4385). A zero first byte is
                  * ambiguous and decoded both ways, if both are valid the
@@ -4790,13 +4796,13 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                  * MAC address 0x01-0x0f (e.g. 02:...) twice. */
                 if(*buf == 0 && len > 4) {
                     sp_len /= 2;
-                    cw_valid = decode_ethernet(buf+4, len-4, sp+sp_len, sp_len,
-                                               (bbl_ethernet_header_s**)&eth->next_cw) == PROTOCOL_SUCCESS;
+                    cw_valid = decode_ethernet_frame(buf+4, len-4, sp+sp_len, sp_len,
+                                                     (bbl_ethernet_header_s**)&eth->next_cw, true) == PROTOCOL_SUCCESS;
                     if(!cw_valid) {
                         eth->next_cw = NULL;
                     }
                 }
-                if(decode_ethernet(buf, len, sp, sp_len, (bbl_ethernet_header_s**)&eth->next) == PROTOCOL_SUCCESS) {
+                if(decode_ethernet_frame(buf, len, sp, sp_len, (bbl_ethernet_header_s**)&eth->next, true) == PROTOCOL_SUCCESS) {
                     eth->type = ETH_TYPE_ETH;
                     return PROTOCOL_SUCCESS;
                 } else if(cw_valid) {
@@ -4806,8 +4812,8 @@ decode_ethernet(uint8_t *buf, uint16_t len,
                     eth->next_cw = NULL;
                     return PROTOCOL_SUCCESS;
                 } else if(*buf && (*buf & 0xf0) == 0 && len > 4 &&
-                          decode_ethernet(buf+4, len-4, sp, sp_len,
-                                          (bbl_ethernet_header_s**)&eth->next) == PROTOCOL_SUCCESS) {
+                          decode_ethernet_frame(buf+4, len-4, sp, sp_len,
+                                                (bbl_ethernet_header_s**)&eth->next, true) == PROTOCOL_SUCCESS) {
                     eth->type = ETH_TYPE_ETH;
                     eth->mpls_cw = true;
                     return PROTOCOL_SUCCESS;
@@ -4856,4 +4862,15 @@ decode_ethernet(uint8_t *buf, uint16_t len,
     }
 
     return UNKNOWN_PROTOCOL;
+}
+
+/*
+ * decode_ethernet
+ */
+protocol_error_t
+decode_ethernet(uint8_t *buf, uint16_t len,
+                uint8_t *sp, uint16_t sp_len,
+                bbl_ethernet_header_s **_eth)
+{
+    return decode_ethernet_frame(buf, len, sp, sp_len, _eth, false);
 }
