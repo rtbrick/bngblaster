@@ -58,6 +58,15 @@ delete_from_callback_cb(timer_s *timer)
 }
 
 static void
+delete_other_timer_cb(timer_s *timer)
+{
+    timer_s **other = timer->data;
+
+    g_callback_counter++;
+    timer_del(*other);
+}
+
+static void
 periodic_cb(timer_s *timer)
 {
     (void)timer;
@@ -271,6 +280,26 @@ test_timer_delete_from_callback(void **state)
     assert_null(timer);
 }
 
+/* The callback of a timer deleted earlier in the same walk must not run,
+ * as the owner of the timer may be freed. */
+static void
+test_timer_deleted_in_same_walk_not_fired(void **state)
+{
+    timer_root_s *root = *state;
+    timer_s *first = NULL;
+    timer_s *second = NULL;
+
+    timer_add(root, &first, "FIRST", 0, 5 * MSEC, &second, delete_other_timer_cb);
+    timer_add(root, &second, "SECOND", 0, 5 * MSEC, NULL, periodic_cb);
+    assert_non_null(first);
+    assert_non_null(second);
+
+    sleep_ms(15);
+    timer_walk(root);
+    assert_int_equal(g_callback_counter, 1);
+    assert_null(second);
+}
+
 static void
 test_periodic_timer_fires_multiple_times(void **state)
 {
@@ -356,6 +385,9 @@ main(void)
                                         setup_timer_root,
                                         teardown_timer_root),
         cmocka_unit_test_setup_teardown(test_timer_delete_from_callback,
+                                        setup_timer_root,
+                                        teardown_timer_root),
+        cmocka_unit_test_setup_teardown(test_timer_deleted_in_same_walk_not_fired,
                                         setup_timer_root,
                                         teardown_timer_root),
         cmocka_unit_test_setup_teardown(test_periodic_timer_fires_multiple_times,

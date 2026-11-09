@@ -537,6 +537,11 @@ timer_walk(timer_root_s *root)
                 break;
             }
 
+            /* The owner of a deleted timer may already be freed. */
+            if(timer->delete) {
+                continue;
+            }
+
             /* Everything from here one is expired. */
             timer->expired = true;
 
