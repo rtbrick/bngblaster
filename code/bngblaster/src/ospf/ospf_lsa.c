@@ -1455,7 +1455,7 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
             if(hb_tree_count(tree) == 0){ 
                 continue;
             }
-            search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+            search = hb_tree_search_ge(tree, &g_lsa_key_zero);
             while(search) {
                 entry = *search;
                 lsa = entry->lsa;
@@ -1471,7 +1471,7 @@ ospf_lsa_update_tx(ospf_interface_s *ospf_interface,
                     lsa_count++;
                 }
                 ospf_lsa_tree_remove(&entry->key, tree);
-                search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+                search = hb_tree_search_ge(tree, &g_lsa_key_zero);
             }
         }
     }
@@ -1604,7 +1604,9 @@ ospf_lsa_ack_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
         ospf_pdu_add_u16(&pdu, 0);
     }
 
-    for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
+    /* Remaining entries are acknowledged with the next PDU. */
+    for(type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX &&
+        (overhead + pdu.pdu_len + OSPF_LSA_HDR_LEN) <= interface->mtu; type++) {
         if(ospf_neighbor) {
             /* Direct LS ack */
             tree = ospf_neighbor->lsa_ack_tree[type];
@@ -1615,7 +1617,7 @@ ospf_lsa_ack_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
         if(hb_tree_count(tree) == 0){ 
             continue;
         }
-        search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+        search = hb_tree_search_ge(tree, &g_lsa_key_zero);
         while(search) {
             entry = *search;
             lsa = entry->lsa;
@@ -1630,7 +1632,7 @@ ospf_lsa_ack_tx(ospf_interface_s *ospf_interface, ospf_neighbor_s *ospf_neighbor
             if((overhead + pdu.pdu_len + OSPF_LSA_HDR_LEN) > interface->mtu) {
                 break;
             }
-            search = hb_tree_search_gt(tree, &g_lsa_key_zero);
+            search = hb_tree_search_ge(tree, &g_lsa_key_zero);
         }
     }
     if(lsa_count == 0) {
@@ -1687,7 +1689,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         ospf_rx_error(interface, pdu, "no neighbor");
         return;
     }
-    if(ospf_neighbor->state < OSPF_NBSTATE_EXSTART) {
+    if(ospf_neighbor->state < OSPF_NBSTATE_EXCHANGE) {
         ospf_rx_error(interface, pdu, "wrong state");
         return;
     }
@@ -1737,7 +1739,10 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         search = hb_tree_search(ospf_neighbor->lsa_request_tree[lsa_type], key);
         if(search) {
             entry = *search;
-            ospf_lsa_tree_remove(&entry->key, ospf_neighbor->lsa_request_tree[lsa_type]);
+            /* An older instance does not satisfy the request. */
+            if(ospf_lsa_compare(hdr, &entry->hdr) != -1) {
+                ospf_lsa_tree_remove(&entry->key, ospf_neighbor->lsa_request_tree[lsa_type]);
+            }
         }
 
         search = hb_tree_search(ospf_instance->lsdb[lsa_type], key);
@@ -1758,7 +1763,7 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
                 if(ospf_lsa_retry_stop(lsa, ospf_neighbor)) {
                     /* Implied acknowledgment (see RFC2328 section 13, step 7a). */
                     if(ospf_interface->state == OSPF_IFSTATE_BACKUP && 
-                        ospf_interface->dr == pdu->router_id) {
+                        ospf_interface->dr == ospf_neighbor_dr_id(ospf_neighbor)) {
                         /* Send delayed LSA ack. */
                         ospf_lsa_tree_add(lsa, NULL, ospf_interface->lsa_ack_tree[lsa_type]);
                     }
@@ -1830,8 +1835,8 @@ ospf_lsa_update_handler_rx(ospf_interface_s *ospf_interface,
         ospf_lsa_lifetime(lsa);
     }
 
-    /* Send direct LSA ack. */
-    ospf_lsa_ack_tx(ospf_interface, ospf_neighbor);
+    /* Send direct LSA ack, a single PDU is limited by the MTU. */
+    while(ospf_lsa_ack_tx(ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS);
     /* Send direct LSA update. */
     ospf_lsa_update_tx(ospf_interface, ospf_neighbor, false);
     /* Check if state can updated from loading to full. */
@@ -1865,7 +1870,7 @@ ospf_lsa_req_handler_rx(ospf_interface_s *ospf_interface,
         ospf_rx_error(interface, pdu, "no neighbor");
         return;
     }
-    if(ospf_neighbor->state < OSPF_NBSTATE_EXSTART) {
+    if(ospf_neighbor->state < OSPF_NBSTATE_EXCHANGE) {
         ospf_rx_error(interface, pdu, "wrong state");
         return;
     }
@@ -1955,7 +1960,7 @@ ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface,
         ospf_rx_error(interface, pdu, "no neighbor");
         return;
     }
-    if(ospf_neighbor->state < OSPF_NBSTATE_EXSTART) {
+    if(ospf_neighbor->state < OSPF_NBSTATE_EXCHANGE) {
         ospf_rx_error(interface, pdu, "wrong state");
         return;
     }

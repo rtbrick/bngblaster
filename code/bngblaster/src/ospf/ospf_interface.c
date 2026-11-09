@@ -109,7 +109,8 @@ void
 ospf_interface_ack_job(timer_s *timer)
 {
     ospf_interface_s *ospf_interface = timer->data;
-    ospf_lsa_ack_tx(ospf_interface, NULL);
+    /* A single PDU is limited by the MTU. */
+    while(ospf_lsa_ack_tx(ospf_interface, NULL) == PROTOCOL_SUCCESS);
 }
 
 void
