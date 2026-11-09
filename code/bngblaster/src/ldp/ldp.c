@@ -99,6 +99,7 @@ ldp_teardown()
 {
     ldp_instance_s *instance = g_ctx->ldp_instances;
     ldp_session_s *session;
+    ldp_session_listen_teardown();
     while(instance) {
         if(!instance->teardown) {
             LOG(LDP, "Teardown LDP instance %u\n", instance->config->id);

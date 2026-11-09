@@ -25,6 +25,9 @@ void
 ldp_session_connect(ldp_session_s *session, time_t delay);
 
 void
+ldp_session_listen_teardown(void);
+
+void
 ldp_session_ipv4_init(ldp_session_s *session, ldp_adjacency_s *adjacency, 
                       bbl_ipv4_s *ipv4, bbl_ldp_hello_s *ldp);
 

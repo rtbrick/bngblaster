@@ -194,7 +194,6 @@ typedef struct ldp_session_ {
     ldp_instance_s *instance;
     bbl_network_interface_s *interface;
     bbl_tcp_ctx_s *tcpc;
-    bbl_tcp_ctx_s *listen_tcpc;
 
     struct timer_ *connect_timer;
     struct timer_ *keepalive_timer;
