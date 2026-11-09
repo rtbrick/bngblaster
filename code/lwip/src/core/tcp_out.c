@@ -1269,6 +1269,8 @@ tcp_output(struct tcp_pcb *pcb)
   seg = pcb->unsent;
 
   if (seg == NULL) {
+    /* The acknowledgment of a zero window probe can empty the send queue. */
+    pcb->persist_backoff = 0;
     LWIP_DEBUGF(TCP_OUTPUT_DEBUG, ("tcp_output: nothing to send (%p)\n",
                                    (void *)pcb->unsent));
     LWIP_DEBUGF(TCP_CWND_DEBUG, ("tcp_output: snd_wnd %"TCPWNDSIZE_F
