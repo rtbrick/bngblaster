@@ -1013,6 +1013,11 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
                     network_config->mtu);
             return false;
         }
+        if(network_config->mtu > BBL_MAX_MTU_DPDK && g_ctx->dpdk) {
+            fprintf(stderr, "JSON config error: Network interface mtu %u is not supported with DPDK (must be at most %u)\n",
+                    network_config->mtu, BBL_MAX_MTU_DPDK);
+            return false;
+        }
     } else {
         network_config->mtu = 1500;
     }
@@ -5242,6 +5247,11 @@ json_parse_config(json_t *root)
             if(!json_parse_link(sub, link_config)) {
                 return false;
             }
+        }
+
+        if(g_ctx->config.jumbo_frames && g_ctx->dpdk) {
+            fprintf(stderr, "JSON config error: jumbo-frames are not supported with DPDK\n");
+            return false;
         }
 
         /* Network Interface Configuration Section */

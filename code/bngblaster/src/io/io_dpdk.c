@@ -36,6 +36,7 @@
 #include <rte_ethdev.h>
 #include <rte_malloc.h>
 
+#define IO_DPDK_BUF_SIZE 2048 /* mbuf data room */
 #define MBUF_CACHE_SIZE 256
 #define NUM_MBUFS_RX (131072 - 1)
 #define NUM_MBUFS_TX (8192 - 1)
@@ -276,7 +277,7 @@ io_dpdk_mbuf_alloc(io_handle_s *io)
         io->stats.no_buffer++;
         return false;
     }
-    if(rte_pktmbuf_append(mbuf, 2048) == NULL) {
+    if(rte_pktmbuf_append(mbuf, IO_DPDK_BUF_SIZE) == NULL) {
         rte_pktmbuf_free(mbuf);
         io->stats.no_buffer++;
         return false;
@@ -297,6 +298,7 @@ io_dpdk_mbuf_alloc(io_handle_s *io)
 void
 io_dpdk_tx_job(timer_s *timer)
 {
+    static uint8_t tx_buf[IO_BUFFER_LEN]; /* main thread only */
     io_handle_s *io = timer->data;
     bbl_interface_s *interface = io->interface;
 
@@ -331,10 +333,18 @@ io_dpdk_tx_job(timer_s *timer)
             }
         }
         if(likely(io->buf_len == 0)) {
-            if(bbl_tx(interface, io->buf, &io->buf_len) != PROTOCOL_SUCCESS) {
+            /* Control packets can be larger than the mbuf. */
+            if(bbl_tx(interface, tx_buf, &io->buf_len) != PROTOCOL_SUCCESS) {
                 io->buf_len = 0;
                 break;
-            }        
+            }
+            if(unlikely(io->buf_len > IO_DPDK_BUF_SIZE)) {
+                io->stats.to_long++;
+                io->buf_len = 0;
+                burst--;
+                continue;
+            }
+            memcpy(io->buf, tx_buf, io->buf_len);
         }
         /* Transmit the packet. */
         io->mbuf->data_len = io->buf_len;
@@ -520,6 +530,11 @@ io_dpdk_thread_tx_run_fn(io_thread_s *thread)
 
         /* First send all control traffic which has higher priority. */
         while((slot = bbl_txq_read_slot(txq))) {
+            if(unlikely(slot->packet_len > IO_DPDK_BUF_SIZE)) {
+                io->stats.to_long++;
+                bbl_txq_read_next(txq);
+                continue;
+            }
             /* This packet will be retried next interval
              * because slot is not marked as read. */
             if(!io->mbuf) {
