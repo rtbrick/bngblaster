@@ -772,6 +772,17 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
 
     LOG(PACKET, "L2TP SCCRQ received from %s\n", format_ipv4_address(&ipv4->src));
 
+    /* The server provides the secret and host name required to decode the
+     * attributes. The client-auth-id is verified after decoding (see below). */
+    for(l2tp_tunnel->server = l2tp_server; l2tp_tunnel->server; l2tp_tunnel->server = l2tp_tunnel->server->next) {
+        if(l2tp_tunnel->server->ip == ipv4->dst) break;
+    }
+    if(!l2tp_tunnel->server) {
+        bbl_l2tp_tunnel_delete(l2tp_tunnel);
+        return;
+    }
+    l2tp_tunnel->config = &l2tp_tunnel->server->config;
+
     /* Decode received attributes and store in tunnel */
     if(!bbl_l2tp_avp_decode_tunnel(l2tp, l2tp_tunnel)) {
         LOG(ERROR, "L2TP SCCRQ invalid (decode error) from %s\n", 
