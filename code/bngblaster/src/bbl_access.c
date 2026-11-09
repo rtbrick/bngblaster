@@ -787,6 +787,42 @@ bbl_access_rx_ipv6(bbl_access_interface_s *interface,
     session->stats.accounting_bytes_rx += eth ? eth->length : ipv6->len + 2;
 }
 
+/**
+ * bbl_access_set_message
+ *
+ * Store a message received from the peer. Those messages are
+ * reported as JSON strings, which must be valid UTF-8. Non-ASCII
+ * bytes of other messages are stored as text (\xHH).
+ *
+ * @param target message to replace
+ * @param message received message
+ * @param len length of the received message
+ */
+static void
+bbl_access_set_message(char **target, char *message, uint16_t len)
+{
+    json_t *string = json_stringn(message, len);
+    char *copy = malloc((string ? (size_t)len : (size_t)len * 4) + 1);
+    size_t pos = 0;
+
+    if(string) {
+        json_decref(string);
+        memcpy(copy, message, len);
+        pos = len;
+    } else {
+        for(uint16_t i = 0; i < len; i++) {
+            if(message[i] & 0x80) {
+                pos += sprintf(copy + pos, "\\x%02X", (uint8_t)message[i]);
+            } else {
+                copy[pos++] = message[i];
+            }
+        }
+    }
+    copy[pos] = 0;
+    free(*target);
+    *target = copy;
+}
+
 static void
 bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_message_len)
 {
@@ -847,12 +883,7 @@ bbl_access_rx_pap(bbl_access_interface_s *interface,
                     }
                 }
                 if(pap->reply_message_len) {
-                    if(session->reply_message) {
-                        free(session->reply_message);
-                    }
-                    session->reply_message = malloc(pap->reply_message_len+1);
-                    memcpy(session->reply_message, pap->reply_message, pap->reply_message_len);
-                    session->reply_message[pap->reply_message_len] = 0;
+                    bbl_access_set_message(&session->reply_message, pap->reply_message, pap->reply_message_len);
                 }
                 bbl_session_update_state(session, BBL_PPP_NETWORK);
                 if(session->access_config->ipcp_enable) {
@@ -922,12 +953,7 @@ bbl_access_rx_chap(bbl_access_interface_s *interface,
                     }
                 }
                 if(chap->reply_message_len) {
-                    if(session->reply_message) {
-                        free(session->reply_message);
-                    }
-                    session->reply_message = malloc(chap->reply_message_len+1);
-                    memcpy(session->reply_message, chap->reply_message, chap->reply_message_len);
-                    session->reply_message[chap->reply_message_len] = 0;
+                    bbl_access_set_message(&session->reply_message, chap->reply_message, chap->reply_message_len);
                 }
                 bbl_session_update_state(session, BBL_PPP_NETWORK);
                 if(session->access_config->ipcp_enable) {
@@ -1548,12 +1574,7 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
                 /* Skip the 2 byte option header (type, length) */
                 lcp->vendor_value_len -= 2;
                 lcp->vendor_value += 2;
-                if(session->connections_status_message) {
-                    free(session->connections_status_message);
-                }
-                session->connections_status_message = malloc(lcp->vendor_value_len+1);
-                memcpy(session->connections_status_message, lcp->vendor_value, lcp->vendor_value_len);
-                session->connections_status_message[lcp->vendor_value_len] = 0;
+                bbl_access_set_message(&session->connections_status_message, (char*)lcp->vendor_value, lcp->vendor_value_len);
                 session->lcp_response_code = PPP_CODE_VENDOR_SPECIFIC;
                 *(uint32_t*)session->lcp_options = session->magic_number;
                 memcpy(session->lcp_options+sizeof(uint32_t), lcp->vendor_oui, OUI_LEN);
