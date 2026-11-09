@@ -1959,8 +1959,12 @@ tcp_parseopt(struct tcp_pcb *pcb)
           /* An MSS option with the right option length. */
           mss = (u16_t)(tcp_get_next_optbyte() << 8);
           mss |= tcp_get_next_optbyte();
-          /* Limit the mss to the configured TCP_MSS and prevent division by zero */
-          pcb->mss = ((mss > TCP_MSS) || (mss == 0)) ? TCP_MSS : mss;
+          /* The MSS option is only valid in SYN segments, later changes
+             would break the segments already queued (RFC 9293 3.7.1). */
+          if (flags & TCP_SYN) {
+            /* Limit the mss to the configured TCP_MSS and prevent division by zero */
+            pcb->mss = ((mss > TCP_MSS) || (mss == 0)) ? TCP_MSS : mss;
+          }
           break;
 #if LWIP_WND_SCALE
         case LWIP_TCP_OPT_WS:
