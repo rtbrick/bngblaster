@@ -1635,10 +1635,7 @@ bbl_session_json(bbl_session_s *session, bool debug)
             "session-traffic", session_traffic,
             "a10nsp", a10nsp_session);
     }
-    if(!root) {
-        if(a10nsp_session) json_decref(a10nsp_session);
-        if(session_traffic) json_decref(session_traffic);
-    } else if (debug) {
+    if(root && debug) {
         /* Add debug informations. */
         json_object_set_new(root, "debug-idle-queue", json_boolean(CIRCLEQ_PREV(session, session_idle_qnode)));
         json_object_set_new(root, "debug-teardown-queue", json_boolean(CIRCLEQ_PREV(session, session_teardown_qnode)));
