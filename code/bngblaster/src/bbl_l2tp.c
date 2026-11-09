@@ -2383,6 +2383,14 @@ bbl_l2tp_ctrl_csurq(int fd, uint32_t session_id __attribute__((unused)), json_t 
     }
 }
 
+static bool
+bbl_l2tp_ctrl_message_too_long(json_t *arguments, const char *name)
+{
+    const char *message;
+
+    return json_unpack(arguments, "{s:s}", name, &message) == 0 && strlen(message) > L2TP_MAX_MESSAGE_LEN;
+}
+
 int
 bbl_l2tp_ctrl_tunnel_terminate(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
@@ -2407,6 +2415,10 @@ bbl_l2tp_ctrl_tunnel_terminate(int fd, uint32_t session_id __attribute__((unused
         l2tp_tunnel = l2tp_session->tunnel;
         if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
             return bbl_ctrl_status(fd, "warning", 400, "tunnel not established");
+        }
+        /* The AVPs are encoded into a buffer of L2TP_MAX_AVP_SIZE. */
+        if(bbl_l2tp_ctrl_message_too_long(arguments, "error-message")) {
+            return bbl_ctrl_status(fd, "error", 400, "error-message too long");
         }
         bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
         if(json_unpack(arguments, "{s:i}", "result-code", &result_code) != 0) {
@@ -2460,6 +2472,11 @@ bbl_l2tp_ctrl_session_terminate(int fd, uint32_t session_id, json_t *arguments)
         }
         if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
             return bbl_ctrl_status(fd, "warning", 400, "session not established");
+        }
+        /* The AVPs are encoded into a buffer of L2TP_MAX_AVP_SIZE. */
+        if(bbl_l2tp_ctrl_message_too_long(arguments, "error-message") ||
+           bbl_l2tp_ctrl_message_too_long(arguments, "disconnect-message")) {
+            return bbl_ctrl_status(fd, "error", 400, "error-message or disconnect-message too long");
         }
         if(json_unpack(arguments, "{s:i}", "result-code", &result_code) != 0) {
             result_code = 2;

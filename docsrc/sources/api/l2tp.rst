@@ -67,6 +67,8 @@ The L2TP session terminate command allows testing of result (RFC2661) and discon
 
 ``$ sudo bngblaster-cli run.sock l2tp-session-terminate session-id 1 result-code 2 error-message "LCP request" disconnect-code 3 disconnect-message "LCP terminate request"``
 
+The ``error-message`` and ``disconnect-message`` are limited to 244 bytes.
+
 The L2TP LCP restart command lets the BNG Blaster LNS send a new LCP
 Configure-Request to the client of an established L2TP session,
 which forces LCP renegotiation, for example to test how the BNG behaves
