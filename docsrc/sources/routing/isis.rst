@@ -268,11 +268,15 @@ bytes are always accepted. The ``lsp-buffer-size`` follows
         ]
     }
 
-A ``max-pdu-size`` above the default requires ``jumbo-frames`` in the interfaces
-section and an ``mtu`` of at least ``max-pdu-size`` plus 3 bytes (LLC header) on
-all IS-IS interfaces. As jumbo frames are not supported with AF_XDP and DPDK, those
-I/O modes can't be combined with this option. With ``jumbo-frames``, the TX queues
-need three times as much memory.
+A ``max-pdu-size`` above the default requires an ``mtu`` of at least
+``max-pdu-size`` plus 3 bytes (LLC header) on all IS-IS interfaces. Without
+``jumbo-frames`` in the interfaces section, the ``mtu`` is limited to 4000 bytes,
+which allows a ``max-pdu-size`` of up to 3997 bytes. Larger values require
+``jumbo-frames``, which is not supported with AF_XDP and DPDK and needs three
+times as much memory for the TX queues. The DPDK I/O mode can't be combined with
+a ``max-pdu-size`` above the default. With AF_XDP, the kernel drops received frames
+larger than 3840 bytes including Ethernet and VLAN headers, and some drivers don't
+support native mode with larger interface MTUs (e.g. i40e above 3046 bytes).
 
 The 802.3 length field can't describe frames with more than 1500 bytes, so PDUs
 that don't fit are sent with the LLC header in an Ethernet II frame with ethertype

@@ -3718,7 +3718,7 @@
                     "description": "ICMP data size",
                     "default": 8,
                     "minimum": 0,
-                    "maximum": 65507
+                    "maximum": 11974
                 },
                 "interval": {
                     "type": "number",

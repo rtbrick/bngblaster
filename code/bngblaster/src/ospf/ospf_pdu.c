@@ -394,7 +394,8 @@ ospf_pdu_tx_fragmented(ospf_pdu_s *pdu,
         ospf->pdu_len = pdu->pdu_len - pdu_send;
         ipv4->offset = pdu_send >> 3;
         if(ospf->pdu_len + 20 > interface->mtu) {
-            ospf->pdu_len = interface->mtu - 20;
+            /* Fragment offsets are in units of 8 bytes. */
+            ospf->pdu_len = (interface->mtu - 20) & ~7;
             ipv4->offset |= IPV4_MF;
         } else {
             ipv4->offset &= ~IPV4_MF;
@@ -494,6 +495,13 @@ ospf_pdu_tx(ospf_pdu_s *pdu,
         pdu->source = ipv6.src;
         pdu->destination = ipv6.dst;
         ospf_pdu_update_checksum(pdu);
+
+        /* OSPFv3 PDUs are not fragmented and must fit the interface MTU. */
+        if((pdu->pdu_len + 40) > interface->mtu) {
+            LOG(ERROR, "OSPFv3 TX %s exceeds MTU on interface %s\n",
+                ospf_pdu_type_string(pdu->pdu_type), interface->name);
+            return SEND_ERROR;
+        }
     }
 
     ospf.pdu = pdu->pdu;

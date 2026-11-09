@@ -801,6 +801,7 @@ void
 isis_pdu_padding(isis_pdu_s *pdu)
 {
     uint16_t remaining = pdu->size - pdu->pdu_len;
+    if(pdu->pdu_len >= pdu->size) return;
     memset(ISIS_PDU_CURSOR(pdu), 0x0, remaining);
     while(remaining >= sizeof(isis_tlv_s)) {
         isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);

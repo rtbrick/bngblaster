@@ -95,6 +95,9 @@
 #define ISIS_DEFAULT_MAX_PDU_SIZE       1492
 #define ISIS_JUMBO_MAX_PDU_SIZE         11997 /* BBL_MAX_MTU-3 byte LLC */
 #define ISIS_DEFAULT_MAX_PDU_LEN_RX     1497 /* 1500-3 byte LLC */
+/* Largest PDU which can be sent on the interface (3 byte LLC header). */
+#define ISIS_MAX_PDU_LEN_TX(_config, _interface) \
+    ((_config)->max_pdu_size < (_interface)->mtu - LLC_HDR_LEN ? (_config)->max_pdu_size : (_interface)->mtu - LLC_HDR_LEN)
 #define ISIS_MAX_PDU_LEN_RX(_size)      ((_size) > ISIS_DEFAULT_MAX_PDU_LEN_RX ? (_size) : ISIS_DEFAULT_MAX_PDU_LEN_RX)
 #define ISIS_PDU_BUF_LEN                ISIS_JUMBO_MAX_PDU_SIZE
 #define ISIS_PDU_PURGE_LEN              (ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_LSP+sizeof(isis_tlv_s)+UINT8_MAX)

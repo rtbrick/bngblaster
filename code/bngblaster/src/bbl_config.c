@@ -3825,6 +3825,7 @@ json_parse_arp_client_config(json_t *arp, bbl_arp_client_config_s *arp_client_co
 static bool
 json_parse_icmp_client_config(json_t *icmp, bbl_icmp_client_config_s *icmp_client_config)
 {
+    uint16_t max_size;
     json_t *value = NULL;
     const char *s = NULL;
 
@@ -3878,6 +3879,12 @@ json_parse_icmp_client_config(json_t *icmp, bbl_icmp_client_config_s *icmp_clien
     JSON_OBJ_GET_NUMBER(icmp, value, "icmp-client", "size", 0, 65507);
     if(value) {
         icmp_client_config->size = json_number_value(value);
+        /* Limited by the TXQ slot: MTU - IPv4 and ICMP header - 2 byte client overhead. */
+        max_size = (g_ctx->config.jumbo_frames ? BBL_MAX_MTU : BBL_MAX_MTU_NO_JUMBO) - 26;
+        if(icmp_client_config->size > max_size) {
+            fprintf(stderr, "JSON config error: Invalid value for icmp-client->size (must be between 0 and %u)\n", max_size);
+            return false;
+        }
     } else {
         icmp_client_config->size = 8;
     }

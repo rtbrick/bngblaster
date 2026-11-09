@@ -383,7 +383,7 @@ isis_lsp_tx_job(timer_s *timer)
     while(search) {
         entry = *search;
         lsp = entry->lsp;
-        if(lsp->pdu.pdu_len >= ISIS_HDR_LEN_COMMON) {
+        if(lsp->pdu.pdu_len >= ISIS_HDR_LEN_COMMON && lsp->pdu.pdu_len + LLC_HDR_LEN <= interface->mtu) {
             /* Update lifetime. */
             timespec_sub(&ago, &now, &lsp->timestamp);
             if(ago.tv_sec < lsp->lifetime) {
@@ -462,7 +462,7 @@ isis_lsp_tx_p2p_job(timer_s *timer)
         entry = *hb_itor_datum(itor);
         if(!entry->wait_ack) {
             lsp = entry->lsp;
-            if(lsp->pdu.pdu_len >= ISIS_HDR_LEN_COMMON) {
+            if(lsp->pdu.pdu_len >= ISIS_HDR_LEN_COMMON && lsp->pdu.pdu_len + LLC_HDR_LEN <= interface->mtu) {
                 /* Update lifetime */
                 timespec_sub(&ago, &now, &lsp->timestamp);
                 if(ago.tv_sec < lsp->lifetime) {

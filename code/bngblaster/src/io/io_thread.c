@@ -59,7 +59,9 @@ redirect(io_thread_s *thread, io_handle_s *io)
 
     assert(io->direction == IO_INGRESS);
     assert(io->thread != NULL);
-    if(io->buf_len > thread->txq->buffer_len) {
+    /* Echo replies copy received data into a TXQ slot, which
+     * also needs room for VLAN tags stripped by the kernel. */
+    if(io->buf_len > thread->txq->buffer_len - 3 * sizeof(uint32_t)) {
         io->stats.to_long++;
         return IO_ERROR;
     }

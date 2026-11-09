@@ -67,7 +67,8 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
             break;
     }
 
-    while(ospf_neighbor) {
+    /* The neighbor list is controlled by the peers, stop at the MTU. */
+    while(ospf_neighbor && (20 + OSPF_MD5_DIGEST_LEN + pdu.pdu_len + IPV4_ADDR_LEN) <= interface->mtu) {
         if(ospf_neighbor->state > OSPF_NBSTATE_DOWN) {
             ospf_pdu_add_ipv4(&pdu, ospf_neighbor->router_id);
         }
@@ -161,7 +162,8 @@ ospf_hello_v3_encode(bbl_network_interface_s *interface,
             break;
     }
 
-    while(ospf_neighbor) {
+    /* The neighbor list is controlled by the peers, stop at the MTU. */
+    while(ospf_neighbor && (40 + pdu.pdu_len + IPV4_ADDR_LEN) <= interface->mtu) {
         if(ospf_neighbor->state > OSPF_NBSTATE_DOWN) {
             ospf_pdu_add_ipv4(&pdu, ospf_neighbor->router_id);
         }

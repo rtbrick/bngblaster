@@ -41,7 +41,7 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
     isis_auth_type auth = ISIS_AUTH_NONE;
     char *key = NULL;
 
-    pdu.size = config->max_pdu_size;
+    pdu.size = ISIS_MAX_PDU_LEN_TX(config, interface);
 
     /* Start next timer ... */
     timer_add(&g_ctx->timer_root, &adjacency->timer_hello, 
@@ -80,6 +80,11 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
     }
     isis_pdu_update_len(&pdu);
     isis_pdu_update_auth(&pdu, key);
+
+    /* Hellos are not fragmented. */
+    if(pdu.pdu_len + LLC_HDR_LEN > interface->mtu) {
+        return ENCODE_ERROR;
+    }
     /* Build packet ... */
     eth->type = ISIS_PROTOCOL_IDENTIFIER;
     eth->next = &isis;

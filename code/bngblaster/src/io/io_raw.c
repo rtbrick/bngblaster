@@ -28,6 +28,11 @@ io_raw_rx_job(timer_s *timer)
     protocol_error_t decode_result;
     bool pcap = false;
 
+    /* Echo replies copy received data into a TXQ slot, which
+     * also needs room for VLAN tags stripped by the kernel. */
+    uint16_t max_len = (g_ctx->config.jumbo_frames ? IO_JUMBO_BLOCK_SIZE : BBL_TXQ_SLOT_SIZE) -
+                       offsetof(bbl_txq_slot_t, packet) - 3 * sizeof(uint32_t);
+
     assert(io->mode == IO_MODE_RAW);
     assert(io->direction == IO_INGRESS);
     assert(io->thread == NULL);
@@ -43,6 +48,10 @@ io_raw_rx_job(timer_s *timer)
         }
         io->stats.packets++;
         io->stats.bytes += io->buf_len;
+        if(io->buf_len > max_len) {
+            io->stats.to_long++;
+            continue;
+        }
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             /* Copy RX timestamp */

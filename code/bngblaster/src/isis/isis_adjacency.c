@@ -32,10 +32,6 @@ isis_adjacency_init(bbl_network_interface_s *interface,
         interface->name, interface_config->isis_instance_id);
 
     if(config->max_pdu_size > ISIS_DEFAULT_MAX_PDU_SIZE) {
-        if(!g_ctx->config.jumbo_frames) {
-            LOG(ERROR, "IS-IS max-pdu-size %u requires interfaces jumbo-frames\n", config->max_pdu_size);
-            return false;
-        }
         if(interface->mtu < config->max_pdu_size + LLC_HDR_LEN) {
             LOG(ERROR, "IS-IS max-pdu-size %u exceeds MTU %u of interface %s (3 byte LLC header)\n",
                 config->max_pdu_size, interface->mtu, interface->name);

@@ -30,7 +30,7 @@ isis_csnp_job(timer_s *timer)
     int entries = 0;
 
     uint8_t pdu_buf[ISIS_PDU_BUF_LEN];
-    isis_pdu_s pdu = {.pdu = pdu_buf, .size = config->max_pdu_size};
+    isis_pdu_s pdu = {.pdu = pdu_buf, .size = ISIS_MAX_PDU_LEN_TX(config, adjacency->interface)};
     uint8_t level = adjacency->level;
     uint16_t remaining_lifetime;
 
