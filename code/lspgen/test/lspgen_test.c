@@ -513,7 +513,7 @@ test_ospf_sr(void **unused)
     tlv.tlv_type = 9; /* SID/Label Range */
     test_node_tlv(ctx, node, &tlv);
     assert_int_equal(tlv.count, 1);
-    assert_int_equal(tlv.length, 11);
+    assert_int_equal(tlv.length, 12); /* includes sub-TLV padding */
 
     memset(&tlv, 0, sizeof(tlv));
     tlv.lsa_type = 0x070a;
@@ -535,7 +535,7 @@ test_ospf_sr(void **unused)
     tlv.tlv_type = 9; /* SID/Label Range */
     test_node_tlv(ctx, node, &tlv);
     assert_int_equal(tlv.count, 1);
-    assert_int_equal(tlv.length, 11);
+    assert_int_equal(tlv.length, 12); /* includes sub-TLV padding */
 
     memset(&tlv, 0, sizeof(tlv));
     tlv.lsa_type = 0xa029;
