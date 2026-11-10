@@ -156,7 +156,11 @@ io_stream_update_pps(io_handle_s *io)
     bbl_stream_s *stream;
     bbl_stream_s *stream_next;
     bbl_stream_s *stream_prev;
+    bbl_stream_s *update_head = NULL;
 
+    /* Unlink all updated streams first and add them back after
+     * the walk, as adding a stream to the bucket being walked
+     * (same pps) would corrupt the list. */
     while(io_bucket) {
         stream_next = io_bucket->stream_head;
         stream_prev = NULL;
@@ -175,30 +179,40 @@ io_stream_update_pps(io_handle_s *io)
                 io->stream_count--;
                 /* The stream has the new pps already. */
                 io->stream_pps -= io_bucket->pps;
-                stream->io_next = NULL;
-                /* Add stream to new bucket. */
                 if(io == stream->io) {
                     LOG(DEBUG, "Update stream %s flow-id %u pps from %0.2lf to %0.2lf\n", 
                         stream->config->name, stream->flow_id,
                         io_bucket->pps, stream->pps);
-                    io_stream_add(io, stream);
                 } else {
                     LOG(DEBUG, "Update stream %s flow-id %u IO interface from %s to %s\n", 
                         stream->config->name, stream->flow_id,
                         io->interface->name, stream->io->interface->name);
-                    stream->io->update_streams = true;
-                    io_stream_add(stream->io, stream);
                 }
-                if(stream->pps < 1.0) {
-                    if(stream->rate_packets_rx) stream->rate_packets_rx->avg = 0;
-                    if(stream->rate_packets_tx) stream->rate_packets_tx->avg = 0;
-                }
-                stream->update_pps = false;
+                stream->io_next = update_head;
+                update_head = stream;
             } else {
                 stream_prev = stream;
             }
         }
         io_bucket = io_bucket->next;
+    }
+
+    /* Add streams to new bucket. */
+    while(update_head) {
+        stream = update_head;
+        update_head = stream->io_next;
+        stream->io_next = NULL;
+        if(io == stream->io) {
+            io_stream_add(io, stream);
+        } else {
+            stream->io->update_streams = true;
+            io_stream_add(stream->io, stream);
+        }
+        if(stream->pps < 1.0) {
+            if(stream->rate_packets_rx) stream->rate_packets_rx->avg = 0;
+            if(stream->rate_packets_tx) stream->rate_packets_tx->avg = 0;
+        }
+        stream->update_pps = false;
     }
     io_stream_smear(io);
     io->update_streams = false;
