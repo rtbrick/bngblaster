@@ -40,9 +40,11 @@ lspgen_seq_cache_filename(lsdb_ctx_t *ctx)
         return seq_cache_filename;
     }
 
+    /* OSPFv2 and OSPFv3 nodes are different LSDBs. */
     if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
         snprintf(seq_cache_filename, sizeof(seq_cache_filename),
-                 "ospf-area%s-sequence-cache.json", format_ipv4_address(&ctx->topology_id.area));
+                 "%s-area%s-sequence-cache.json", lsdb_format_proto(ctx),
+                 format_ipv4_address(&ctx->topology_id.area));
         return seq_cache_filename;
     }
 

@@ -87,6 +87,11 @@ lspgen_write_link_config(lsdb_ctx_t *ctx, json_t *arr, lsdb_attr_t *attr)
     case PROTO_ISIS:
         str = json_string(lsdb_format_node_id(attr->key.link.remote_node_id));
         json_object_set_new(obj, "remote_node_id", str);
+        /* Parallel links */
+        if (read_be_uint(attr->key.link.local_link_id, 4)) {
+            str = json_string(format_ipv4_address((uint32_t*)&(attr->key.link.local_link_id)));
+            json_object_set_new(obj, "local_link_id", str);
+        }
         break;
     case PROTO_OSPF2:
     case PROTO_OSPF3:
@@ -493,6 +498,7 @@ lspgen_write_node_ospf2_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
         switch (attr->key.attr_cp[2]) {
         case 0: /* fall through */
         case OSPF_TLV_HOSTNAME:
+        case OSPF_TLV_SR_ALGO: /* added with the capability */
         case OSPF_TLV_EXTENDED_PREFIX:
             break;
         case OSPF_ROUTER_LSA_LINK_PTP:
@@ -625,6 +631,7 @@ lspgen_write_node_ospf3_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *level
         switch (attr->key.attr_cp[2]) {
         case 0: /* fall through */
         case OSPF_TLV_HOSTNAME:
+        case OSPF_TLV_SR_ALGO: /* added with the capability */
         case OSPF_TLV_INTRA_AREA_PREFIX:
             break;
         case OSPF_ROUTER_LSA_LINK_PTP:
@@ -1336,6 +1343,33 @@ lspgen_add_fad_attr(lsdb_node_t *node, lsdb_attr_fad_t *fad)
 }
 
 /*
+ * Add the OSPF SR-Algorithm TLV of the router information LSA,
+ * algorithm 0 (SPF) if no list is given.
+ */
+void
+lspgen_add_ospf_sr_algo_attr(lsdb_node_t *node, uint8_t *sr_algo, uint8_t sr_algo_len)
+{
+    struct lsdb_attr_ attr_template;
+
+    lsdb_reset_attr_template(&attr_template);
+    if (sr_algo && sr_algo_len) {
+        if (sr_algo_len > sizeof(attr_template.key.cap.sr_algo)) {
+            sr_algo_len = sizeof(attr_template.key.cap.sr_algo);
+        }
+        memcpy(attr_template.key.cap.sr_algo, sr_algo, sr_algo_len);
+        attr_template.key.cap.sr_algo_len = sr_algo_len;
+    } else {
+        attr_template.key.cap.sr_algo[0] = 0;
+        attr_template.key.cap.sr_algo_len = 1;
+    }
+    attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
+    attr_template.key.attr_cp[1] = OSPF_LSA_OPAQUE_AREA_RI;
+    attr_template.key.attr_cp[2] = OSPF_TLV_SR_ALGO;
+    attr_template.key.ordinal = 1;
+    lsdb_add_node_attr(node, &attr_template);
+}
+
+/*
  * Read a Flex-Algo definition, e.g.
  * {"algo": 128, "metric_type": "min-delay", "priority": 200, "m_flag": true, "exclude_any": 1}
  */
@@ -1466,6 +1500,22 @@ lspgen_read_capability_config(lsdb_node_t *node, json_t *obj)
 
         attr_template.key.ordinal = 1;
         lsdb_add_node_attr(node, &attr_template);
+
+        if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+            /* SR-Algorithm TLV, algorithm 0 if no list is given */
+            arr = json_object_get(obj, "sr_algo_list");
+            lsdb_reset_attr_template(&attr_template);
+            if (arr && json_is_array(arr)) {
+                num_arr = json_array_size(arr);
+                for (idx = 0; idx < num_arr && idx < sizeof(attr_template.key.cap.sr_algo); idx++) {
+                    value = json_array_get(arr, idx);
+                    if (json_is_integer(value)) {
+                        attr_template.key.cap.sr_algo[attr_template.key.cap.sr_algo_len++] = json_integer_value(value);
+                    }
+                }
+            }
+            lspgen_add_ospf_sr_algo_attr(node, attr_template.key.cap.sr_algo, attr_template.key.cap.sr_algo_len);
+        }
     }
 }
 
@@ -1582,7 +1632,8 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, ui
             }
 
             memcpy(attr_template.key.link.remote_node_id, link_template.key.remote_node_id, 7);
-
+            /* Parallel links to the same neighbor, not encoded */
+            memcpy(attr_template.key.link.local_link_id, link_template.key.local_link_id, 4);
 
         } else if (ctx->protocol_id == PROTO_OSPF2) {
 
@@ -1627,7 +1678,7 @@ lspgen_read_link_config(lsdb_ctx_t *ctx, lsdb_node_t *node, json_t *link_obj, ui
     }
 }
 
-void
+bool
 lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
 {
     struct lsdb_attr_ attr_template;
@@ -1658,15 +1709,34 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
         if (value && json_is_integer(value)) {
             if (json_integer_value(value) >= 0 && json_integer_value(value) <= UINT16_MAX) {
                 node_template.lsp_lifetime = json_integer_value(value);
+                if (node_template.lsp_lifetime && node_template.lsp_lifetime < LSP_LIFETIME_MIN) {
+                    node_template.lsp_lifetime = LSP_LIFETIME_MIN;
+                    LOG(ERROR, "Set lsp_lifetime of node %s to min %us\n",
+                        lsdb_format_node_id(node_template.key.node_id), LSP_LIFETIME_MIN);
+                }
             } else {
                 LOG(ERROR, "Ignore lsp_lifetime %" JSON_INTEGER_FORMAT " out of range\n",
                     json_integer_value(value));
             }
         }
 
+        /* Lists the protocol can not encode. */
+        if (ctx->protocol_id != PROTO_ISIS && json_object_get(node_obj, "label_binding_list")) {
+            LOG(ERROR, "label_binding_list not supported for protocol %s\n", lsdb_format_proto(ctx));
+            return false;
+        }
+        if (ctx->protocol_id == PROTO_OSPF2 && json_object_get(node_obj, "ipv6_prefix_list")) {
+            LOG_NOARG(ERROR, "ipv6_prefix_list not supported for protocol ospf2\n");
+            return false;
+        }
+        if (ctx->protocol_id == PROTO_OSPF3 && json_object_get(node_obj, "ipv4_prefix_list")) {
+            LOG_NOARG(ERROR, "ipv4_prefix_list not supported for protocol ospf3\n");
+            return false;
+        }
+
         node = lsdb_add_node(ctx, &node_template);
         if (!node) {
-            return;
+            return false;
         }
 
         value = json_object_get(node_obj, "is_root");
@@ -1720,6 +1790,12 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
             attr_template.key.attr_type = ISIS_TLV_LSP_BUFFER_SIZE;
             /* The command line option overrides the config file. */
             if (value && json_is_integer(value) && !ctx->lsp_buffer_size_set) {
+                if (json_integer_value(value) < ISIS_MIN_LSP_BUFFER_SIZE ||
+                    json_integer_value(value) > ISIS_MAX_LSP_BUFFER_SIZE) {
+                    LOG(ERROR, "Invalid lsp_buffer_size %" JSON_INTEGER_FORMAT " (range %u - %u)\n",
+                        json_integer_value(value), ISIS_MIN_LSP_BUFFER_SIZE, ISIS_MAX_LSP_BUFFER_SIZE);
+                    return false;
+                }
                 node->lsp_buffer_size = json_integer_value(value);
             }
             else {
@@ -1819,34 +1895,50 @@ lspgen_read_node_config(lsdb_ctx_t *ctx, json_t *node_obj)
             }
         }
     }
+    return true;
 }
 
-void
+bool
 lspgen_read_lsdb_config(lsdb_ctx_t *ctx, json_t *level_arr)
 {
     uint32_t num_nodes, idx;
 
     num_nodes = json_array_size(level_arr);
     for (idx = 0; idx < num_nodes; idx++) {
-        lspgen_read_node_config(ctx, json_array_get(level_arr, idx));
+        if (!lspgen_read_node_config(ctx, json_array_get(level_arr, idx))) {
+            LOG(ERROR, "Error reading config file %s, node %u\n", ctx->config_filename, idx+1);
+            return false;
+        }
     }
+    if (!ctx->nodecount) {
+        LOG(ERROR, "Error reading config file %s, no nodes found\n", ctx->config_filename);
+        return false;
+    }
+    return true;
 }
 
-void
+/*
+ * Read the link-state database from a config file,
+ * returns false if the file can not be read.
+ */
+bool
 lspgen_read_config(lsdb_ctx_t *ctx)
 {
     json_t *root_obj;
     json_error_t error;
     json_t *protocol, *instance, *lsp_lifetime;
     json_t *lsdb;
-    bool lsdb_found;
+    bool lsdb_found, result;
     const char *key;
+    char *end;
+    long level;
 
+    result = false;
     root_obj = json_load_file(ctx->config_filename, 0, &error);
     if (!root_obj) {
         LOG(ERROR, "Error reading config file %s, line %d: %s\n",
             ctx->config_filename, error.line, error.text);
-        return;
+        return false;
     }
 
     if (json_typeof(root_obj) != JSON_OBJECT) {
@@ -1877,6 +1969,7 @@ lspgen_read_config(lsdb_ctx_t *ctx)
             ctx->config_filename, json_string_value(protocol));
         goto cleanup;
     }
+    lspgen_set_protocol_defaults(ctx);
 
     /*
      * Instance
@@ -1932,19 +2025,39 @@ lspgen_read_config(lsdb_ctx_t *ctx)
 
         /* OSPF */
         if (strncmp(key, "area", 4) == 0) {
+            if (ctx->protocol_id == PROTO_ISIS) {
+                LOG(ERROR, "Error reading config file %s, %s not supported for protocol isis\n",
+                    ctx->config_filename, key);
+                goto cleanup;
+            }
             if (inet_pton(AF_INET, &key[4], &ctx->topology_id.area) != 1) {
                 LOG(ERROR, "Error reading config file %s, invalid area %s\n", ctx->config_filename, key);
                 goto cleanup;
             }
-            lspgen_read_lsdb_config(ctx, lsdb);
+            if (!lspgen_read_lsdb_config(ctx, lsdb)) {
+                goto cleanup;
+            }
             lsdb_found = true;
             break;
         }
 
         /* IS-IS */
         if (strncmp(key, "level", 5) == 0) {
-            ctx->topology_id.level = strtol(&key[5], NULL, 10);
-            lspgen_read_lsdb_config(ctx, lsdb);
+            if (ctx->protocol_id != PROTO_ISIS) {
+                LOG(ERROR, "Error reading config file %s, %s not supported for protocol %s\n",
+                    ctx->config_filename, key, lsdb_format_proto(ctx));
+                goto cleanup;
+            }
+            level = strtol(&key[5], &end, 10);
+            if (*end || (level != 1 && level != 2)) {
+                LOG(ERROR, "Error reading config file %s, invalid %s (level1 or level2)\n",
+                    ctx->config_filename, key);
+                goto cleanup;
+            }
+            ctx->topology_id.level = level;
+            if (!lspgen_read_lsdb_config(ctx, lsdb)) {
+                goto cleanup;
+            }
             lsdb_found = true;
             break;
         }
@@ -1953,8 +2066,11 @@ lspgen_read_config(lsdb_ctx_t *ctx)
     if (!lsdb_found) {
         LOG(ERROR, "Error reading config file %s, no level1|2 or area<n.n.n.n> array found\n",
             ctx->config_filename);
+        goto cleanup;
     }
+    result = true;
 
 cleanup:
     json_decref(root_obj);
+    return result;
 }

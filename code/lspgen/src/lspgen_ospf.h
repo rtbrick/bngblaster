@@ -47,7 +47,19 @@ enum {
 
     /* Inter Area Prefix LSA */
     OSPF_IA_PREFIX_LSA_PREFIX,
+
+    /* Opaque LSA RI SR-Algorithm TLV (rfc 8665), appended to keep the attribute order */
+    OSPF_TLV_SR_ALGO,
 };
+
+/* Largest OSPFv3 LSA generated, such that an LS update with one LSA fits into
+ * the IPv6 minimum MTU with authentication. OSPFv3 is not fragmented, while
+ * OSPFv2 LSAs are limited by the packet buffer only (IP fragmentation). */
+#define OSPF3_MAX_LSA_LEN           1200
+/* IP and OSPF header plus #LSAs of an LS update */
+#define OSPF2_LSUPDATE_HDR_LEN      (20+24+4)
+#define OSPF3_LSUPDATE_HDR_LEN      (40+16+4)
+#define OSPF_MAX_AGE                3600
 
 /* Node flag of the OSPFv2 Extended Prefix TLV (RFC 7684) */
 #define OSPF_EXT_PREFIX_FLAG_N      0x40

@@ -34,7 +34,7 @@ lspgen_gen_isis_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t 
     buf->data = packet->data;
     buf->start_idx = 0;
     buf->idx = 0;
-    buf->size = sizeof(packet->data);
+    buf->size = LSPGEN_PACKET_BUF_SIZE;
 
     push_be_uint(buf, 1, 0x83); /* Intradomain Routeing Protocol Discriminator */
     push_be_uint(buf, 1, 27); /* Length Indicator always 27 for LSPs */
@@ -197,6 +197,13 @@ lspgen_finalize_isis_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *p
     buf = &packet->buf[0];
 
     /*
+     * A purge carries the LSP header only (and authentication).
+     */
+    if (ctx->purge) {
+        buf->idx = ISIS_LSP_HDR_LEN;
+    }
+
+    /*
      * Generate Authentication TLV
      */
     if (ctx->authentication_key && ctx->authentication_type) {
@@ -279,6 +286,31 @@ lspgen_close_all_message_levels (lsdb_packet_t *packet)
     return state;
 }
 
+/*
+ * Shrink the packet buffer to the final packet size.
+ */
+static void
+lspgen_shrink_packet(lsdb_packet_t *packet)
+{
+    uint8_t *data;
+    uint idx;
+
+    if (!packet->buf[0].idx) {
+        return;
+    }
+    data = realloc(packet->data, packet->buf[0].idx);
+    if (!data) {
+        return;
+    }
+    packet->data = data;
+    packet->buf[0].data = data;
+    packet->buf[0].size = packet->buf[0].idx;
+    for (idx = 1; idx < MAX_MSG_LEVEL; idx++) {
+        memcpy(&packet->buf[idx], &packet->buf[0], sizeof(struct io_buffer_));
+        packet->buf[idx].idx = 0;
+    }
+}
+
 void
 lspgen_finalize_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet)
 {
@@ -295,6 +327,7 @@ lspgen_finalize_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet
     default:
         LOG_NOARG(ERROR, "Unknown protocol\n");
     }
+    lspgen_shrink_packet(packet);
 }
 
 bool
@@ -1037,7 +1070,7 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
             push_be_uint(buf1, 1, 0); /* Options */
             push_be_uint(buf1, 1, 10); /* LS-Type  */
             push_be_uint(buf1, 1, 7); /* Opaque Type: Extended Prefix */
-            push_be_uint(buf1, 3, 0); /* Opaque subtype  */
+            push_be_uint(buf1, 3, packet->key.id); /* Opaque ID, one LSA per packet */
             router_id = read_be_uint(node->key.node_id, 4);
             push_be_uint(buf1, 4, router_id); /* Advertising Router */
             push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1052,13 +1085,6 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
         }
 
         lspgen_propagate_buffer_down(packet, 1);
-    }
-
-    /*
-     * If the user wants to generate purges encoding stops at level 1.
-     */
-    if (ctx->purge) {
-        return;
     }
 
     /* open Level 2 */
@@ -1091,6 +1117,15 @@ lspgen_serialize_ospf2_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
                 push_be_uint(buf2, 2, 7); /* Type */
                 push_be_uint(buf2, 2, attr_len); /* Length */
                 push_data(buf2, (uint8_t *)attr->key.hostname, attr_len);
+                push_pad4(buf2);
+            }
+            break;
+
+        case OSPF_TLV_SR_ALGO:
+            if (attr->key.cap.sr_algo_len) {
+                push_be_uint(buf2, 2, 8); /* Type */
+                push_be_uint(buf2, 2, attr->key.cap.sr_algo_len); /* Length */
+                push_data(buf2, attr->key.cap.sr_algo, attr->key.cap.sr_algo_len);
                 push_pad4(buf2);
             }
             break;
@@ -1309,7 +1344,7 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
         case OSPF_LSA_EXTERNAL6:
             push_be_uint(buf1, 2, lspgen_get_ospf_age(node)); /* LS-age */
             push_be_uint(buf1, 2, 0x4005); /* LS-Type  */
-            push_be_uint(buf1, 4, attr->key.prefix.tag); /* Link State ID */
+            push_be_uint(buf1, 4, node->ext_lsid++); /* Link State ID, unique per node */
             router_id = read_be_uint(node->key.node_id, 4);
             push_be_uint(buf1, 4, router_id); /* Advertising Router */
             push_be_uint(buf1, 4, node->sequence); /* Sequence */
@@ -1394,13 +1429,6 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
         lspgen_propagate_buffer_down(packet, 1);
     }
 
-    /*
-     * If the user wants to generate purges encoding stops at level 1.
-     */
-    if (ctx->purge) {
-        return;
-    }
-
     /* open Level 2 */
     if (state & OPEN_LEVEL2) {
         switch(attr->key.attr_cp[2]) {
@@ -1443,6 +1471,15 @@ lspgen_serialize_ospf3_state(lsdb_attr_t *attr, lsdb_packet_t *packet, uint16_t 
                 push_be_uint(buf2, 2, 7); /* Type */
                 push_be_uint(buf2, 2, attr_len); /* Length */
                 push_data(buf2, (uint8_t *)attr->key.hostname, attr_len);
+                push_pad4(buf2);
+            }
+            break;
+
+        case OSPF_TLV_SR_ALGO:
+            if (attr->key.cap.sr_algo_len) {
+                push_be_uint(buf2, 2, 8); /* Type */
+                push_be_uint(buf2, 2, attr->key.cap.sr_algo_len); /* Length */
+                push_data(buf2, attr->key.cap.sr_algo, attr->key.cap.sr_algo_len);
                 push_pad4(buf2);
             }
             break;
@@ -1730,7 +1767,7 @@ lspgen_reset_packet_buffer (struct lsdb_packet_ *packet)
     buf->data = packet->data;
     buf->start_idx = 0;
     buf->idx = 0;
-    buf->size = sizeof(packet->data);
+    buf->size = LSPGEN_PACKET_BUF_SIZE;
     for (idx = 1; idx < MAX_MSG_LEVEL; idx++) {
         memcpy(&packet->buf[idx], buf, sizeof(struct io_buffer_));
     }
@@ -1760,6 +1797,11 @@ lspgen_add_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, uint32_t id)
         if (!packet) {
             return NULL;
         }
+        packet->data = malloc(LSPGEN_PACKET_BUF_SIZE);
+        if (!packet->data) {
+            free(packet);
+            return NULL;
+        }
 
         /*
         * Insert packet into dictionary hanging off a node.
@@ -1767,6 +1809,7 @@ lspgen_add_packet(lsdb_ctx_t *ctx, lsdb_node_t *node, uint32_t id)
         packet->key.id = id;
         result = dict_insert(node->packet_dict, &packet->key);
         if (!result.inserted) {
+            free(packet->data);
             free(packet);
             return NULL;
         }
@@ -1830,20 +1873,112 @@ lspgen_refresh_cb (timer_s *timer)
 }
 
 /*
- * The refresh interval is lsp_lifetime minus 300 seconds.
+ * The refresh interval is the lifetime of the node minus 300 seconds.
+ * OSPF LSAs age up to MaxAge, independent of the configured lifetime.
  * Ensure that it does not go below 60 secs.
  */
 unsigned int
-lspgen_refresh_interval (lsdb_ctx_t *ctx)
+lspgen_refresh_interval (lsdb_node_t *node)
 {
-    int refresh;
+    lsdb_ctx_t *ctx;
+    int lifetime, refresh;
 
-    refresh = ctx->lsp_lifetime - 300;
+    ctx = node->ctx;
+    lifetime = node->lsp_lifetime ? node->lsp_lifetime : ctx->lsp_lifetime;
+    if ((ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) &&
+        lifetime > OSPF_MAX_AGE) {
+        lifetime = OSPF_MAX_AGE;
+    }
+
+    refresh = lifetime - 300;
     if (refresh < 60) {
         refresh = 60;
     }
 
     return refresh;
+}
+
+/*
+ * Bytes used by a packet, including the message levels still open,
+ * which are propagated to the level above only when they are closed.
+ */
+static uint32_t
+lspgen_packet_len (struct lsdb_packet_ *packet)
+{
+    uint32_t len, level;
+
+    len = 0;
+    for (level = 0; level < MAX_MSG_LEVEL; level++) {
+        len += packet->buf[level].idx;
+    }
+    return len;
+}
+
+/*
+ * Bytes used by the open LSA.
+ */
+static uint32_t
+lspgen_lsa_len (struct lsdb_packet_ *packet)
+{
+    return lspgen_packet_len(packet) - packet->buf[0].idx;
+}
+
+/*
+ * Does the attribute add an entry to the open LSA ?
+ */
+static bool
+lspgen_attr_continues_lsa (struct lsdb_packet_ *packet, struct lsdb_attr_ *attr)
+{
+    return packet->prev_attr_cp[1] &&
+        packet->prev_attr_cp[0] == attr->key.attr_cp[0] &&
+        packet->prev_attr_cp[1] == attr->key.attr_cp[1] &&
+        !attr->key.start_tlv;
+}
+
+/*
+ * The Link State ID of these LSAs is derived from the packet number,
+ * such that further entries can be added to a new LSA in the next packet.
+ */
+static bool
+lspgen_lsa_can_split (lsdb_ctx_t *ctx, uint8_t lsa_cp)
+{
+    switch (lsa_cp) {
+    case OSPF_LSA_ROUTER:
+        return ctx->protocol_id == PROTO_OSPF3;
+    case OSPF_LSA_OPAQUE_AREA_EP: /* OSPFv2 */
+    case OSPF_LSA_INTRA_AREA_PREFIX: /* OSPFv3 */
+    case OSPF_LSA_E_INTRA_AREA_PREFIX: /* OSPFv3 */
+        return true;
+    default:
+        return false;
+    }
+}
+
+/*
+ * Does the attribute exceed the packet buffer ?
+ */
+static bool
+lspgen_ospf_packet_is_full (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, struct lsdb_attr_ *attr)
+{
+    return lspgen_packet_len(packet) + lspgen_calculate_auth_len(ctx) + attr->size >
+        LSPGEN_PACKET_BUF_SIZE - 60;
+}
+
+/*
+ * Does the attribute exceed the maximum size of the open LSA ?
+ */
+static bool
+lspgen_lsa_is_full (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, struct lsdb_attr_ *attr)
+{
+    if (!packet || !lspgen_attr_continues_lsa(packet, attr)) {
+        return false;
+    }
+    if (lspgen_ospf_packet_is_full(ctx, packet, attr)) {
+        return true;
+    }
+    /* The attribute size includes the LS update header. */
+    return ctx->protocol_id == PROTO_OSPF3 &&
+        lspgen_lsa_len(packet) + attr->size - OSPF3_LSUPDATE_HDR_LEN > OSPF3_MAX_LSA_LEN;
 }
 
 /*
@@ -1878,31 +2013,17 @@ lspgen_should_start_new_packet (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, st
         break;
 
     case PROTO_OSPF2:
-        if (packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
-            return true;
-        }
-        break;
-
     case PROTO_OSPF3:
-        if (packet->buf[0].idx > (sizeof(packet->data) -60 -min_len)) {
+        if (lspgen_ospf_packet_is_full(ctx, packet, attr)) {
             return true;
         }
 
         /*
-         * Do not build router-LSAs larger than IPv6 min MTU.
+         * Continue LSAs exceeding the maximum size in a new packet.
          */
-        if (attr->key.attr_cp[1] == OSPF_LSA_ROUTER &&
-            packet->buf[2].idx > 1170) {
-            LOG(PACKET, "Max OSPF3 Router LSA size of %u reached\n", packet->buf[2].idx);
-            return true;
-        }
-
-        /*
-         * Do not build Intra-Area-Prefix LSAs larger than IPv6 min MTU.
-         */
-        if (attr->key.attr_cp[1] == OSPF_LSA_INTRA_AREA_PREFIX &&
-            packet->buf[2].idx > 1170) {
-            LOG(PACKET, "Max OSPF3 Intra-Area Prefix LSA size of %u reached\n", packet->buf[2].idx);
+        if (lspgen_lsa_is_full(ctx, packet, attr) && lspgen_lsa_can_split(ctx, attr->key.attr_cp[1])) {
+            LOG(PACKET, "Max %s size of %u reached\n",
+                val2key(ospf_attr_names, attr->key.attr_cp[1]), lspgen_lsa_len(packet));
             return true;
         }
         break;
@@ -1938,10 +2059,11 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
      */
     dict_clear(node->packet_dict, lsdb_free_packet);
 
-    if (!node->attr_dict || ctx->purge) {
+    if (!node->attr_dict) {
 
         /*
-         * Purge if no attributes or explicit purge.
+         * Purge if no attributes. With explicit purge all
+         * fragments are walked and finalized as purges.
          */
         packet = lspgen_add_packet(ctx, node, id);
         if (packet) {
@@ -1972,7 +2094,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
      */
     if (ctx->ctrl_socket_path) {
         timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
-                   lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
+                   lspgen_refresh_interval(node), 0, node, &lspgen_refresh_cb);
     }
 
     do {
@@ -2057,6 +2179,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
      * Flush old serialized packets.
      */
     dict_clear(node->packet_dict, lsdb_free_packet);
+    node->ext_lsid = 0;
 
     if (!node->attr_dict) {
         /*
@@ -2088,11 +2211,25 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
      */
     if (ctx->ctrl_socket_path) {
         timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
-                           lspgen_refresh_interval(ctx), 0, node, &lspgen_refresh_cb);
+                           lspgen_refresh_interval(node), 0, node, &lspgen_refresh_cb);
     }
 
     do {
         attr = *dict_itor_datum(itor);
+
+        /*
+         * LSAs which can not be split (single Link State ID) stop growing,
+         * they must not continue in the next packet.
+         */
+        if (lspgen_lsa_is_full(ctx, packet, attr) && !lspgen_lsa_can_split(ctx, attr->key.attr_cp[1])) {
+            if (!node->lsa_overflow) {
+                node->lsa_overflow = true;
+                LOG(ERROR, "%s of node %s exceeds %u bytes, dropping further entries\n",
+                    val2key(ospf_attr_names, attr->key.attr_cp[1]), lsdb_format_node(node),
+                    lspgen_lsa_len(packet));
+            }
+            continue;
+        }
 
         /*
          * Space left in this packet ?
@@ -2206,8 +2343,9 @@ lspgen_gen_packet(lsdb_ctx_t *ctx)
     if (!ctx->quit_loop) {
 
         /*
-         * Distribute expiration of refresh timer over time.
+         * Distribute expiration of the refresh timers over time,
+         * nodes with different lifetimes use different buckets.
          */
-        timer_smear_bucket(&ctx->timer_root, lspgen_refresh_interval(ctx), 0);
+        timer_smear_all_buckets(&ctx->timer_root);
     }
 }

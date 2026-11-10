@@ -388,8 +388,9 @@ The generated link state packets are written to the following files.
   converted into ``<filename>.svg`` if the graphviz command ``dot`` is installed.
 
 The sequence numbers of all nodes are stored in a sequence cache file
-in the current working directory (``isis-level<level>-sequence-cache.json``
-or ``ospf-area<area>-sequence-cache.json``). The next run of ``lspgen`` for
+in the current working directory (``isis-level<level>-sequence-cache.json``,
+``ospf2-area<area>-sequence-cache.json`` or ``ospf3-area<area>-sequence-cache.json``).
+The next run of ``lspgen`` for
 the same level or area increments those sequence numbers by one, so that the
 updated link state packets replace the previous ones in the network.
 With the argument ``-G``, all link state packets are generated as purges.
@@ -401,7 +402,7 @@ Instead of loading an MRT file, ``lspgen`` can inject the generated link
 state packets directly into a running BNG Blaster instance using its
 control socket (``-S --control-socket``) with the ``isis-lsp-update``
 or ``ospf-pdu-update`` :ref:`command <api>`. The ISIS or OSPF instance
-of the BNG Blaster is selected with ``-I --control-instance`` (default 0).
+of the BNG Blaster is selected with ``-I --control-instance`` (default 1).
 
 .. code-block:: none
 

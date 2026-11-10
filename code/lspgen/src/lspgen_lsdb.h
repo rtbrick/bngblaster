@@ -107,6 +107,8 @@ typedef struct lsdb_ctx_
     iso_prefix area[3];
     uint32_t num_area;
     uint32_t sequence;
+    bool sequence_set; /* set by option, overrides the protocol default */
+    bool lsp_lifetime_set; /* set by option, overrides the protocol default */
     uint32_t srgb_base;
     uint32_t srgb_range;
     uint8_t sr_algo[LSDB_MAX_PREFIX_ALGO]; /* SR algorithms for generated node SIDs */
@@ -155,6 +157,13 @@ typedef struct lsdb_ctx_
     struct io_buffer_ ctrl_io_buf;
     int ctrl_socket_sockfd;
     bool ctrl_packet_first;
+    bool ctrl_request_done; /* request of this connection completely written */
+    bool ctrl_error; /* BNG Blaster rejected a request */
+    uint8_t ctrl_reply_wait; /* seconds waited for the reply */
+    char ctrl_reply[256];
+    uint16_t ctrl_reply_len;
+    /* Packets sent on the current connection, requeued if rejected */
+    CIRCLEQ_HEAD(lsdb_packet_sent_head_, lsdb_packet_ ) packet_sent_qhead;
     bool quit_loop; /* Terminate loop after draining the LSDB */
     struct {
         uint32_t octets_sent;
@@ -196,6 +205,8 @@ typedef struct lsdb_node_ {
     uint16_t lsp_buffer_size;
 
     timer_s *refresh_timer;
+    uint32_t ext_lsid; /* next OSPFv3 AS-External-LSA Link State ID */
+    bool lsa_overflow; /* OSPFv2 Router-LSA limit reached and logged */
 
     /*
      * List of links
@@ -390,6 +401,7 @@ typedef struct lsdb_attr_ {
     struct lsdb_node_ *parent;
 } lsdb_attr_t;
 
+#define LSPGEN_PACKET_BUF_SIZE 16384
 #define MAX_OSPF_PACKET  1000 /* 16384 * 1000 bytes total LSA advertisement size */
 #define MAX_ISIS_FRAGMENT 256 /*  1462 *  256 bytes total LSP advertisement size */
 
@@ -402,6 +414,7 @@ typedef struct lsdb_packet_ {
     CIRCLEQ_ENTRY(lsdb_packet_ ) packet_change_qnode;
     struct lsdb_node_ *parent;
     bool on_change_list;
+    bool on_sent_list; /* packet_change_qnode is used for the sent list */
 
     /*
      * Key in the dict
@@ -411,7 +424,7 @@ typedef struct lsdb_packet_ {
     } key;
 
     struct io_buffer_ buf[MAX_MSG_LEVEL];
-    uint8_t data[16384]; /* fixed buffer */
+    uint8_t *data; /* LSPGEN_PACKET_BUF_SIZE while building, shrunk to the final size */
 
     uint8_t prev_attr_cp[MAX_MSG_LEVEL]; /* cached code points for previous attr */
 

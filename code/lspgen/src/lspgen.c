@@ -384,6 +384,24 @@ lspgen_get_prefix_inc(uint32_t afi, uint32_t prefix_len)
 }
 
 /*
+ * Loopback address of a generated node. The node ID is derived
+ * from the IPv4 address, so that both match.
+ */
+__uint128_t
+lspgen_node_addr4(struct lsdb_ctx_ *ctx, uint32_t node_index)
+{
+    return lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t)) +
+        node_index * lspgen_get_prefix_inc(AF_INET, ctx->ipv4_node_prefix.len);
+}
+
+static __uint128_t
+lspgen_node_addr6(struct lsdb_ctx_ *ctx, uint32_t node_index)
+{
+    return lspgen_load_addr(ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN) +
+        node_index * lspgen_get_prefix_inc(AF_INET6, ctx->ipv6_node_prefix.len);
+}
+
+/*
  * Return the number of SR algorithms used for node SIDs.
  */
 static uint32_t
@@ -667,6 +685,12 @@ lspgen_link_random(struct lsdb_ctx_ *ctx, lsdb_link_t *link, uint32_t salt, uint
     for (idx = 0; idx < LSDB_MAX_NODE_ID_SIZE; idx++) {
         hash = (hash ^ b[idx]) * 16777619u;
     }
+    /* Parallel links, both directions use the same local link ID. */
+    if (read_be_uint(link->key.local_link_id, 4)) {
+        for (idx = 0; idx < 4; idx++) {
+            hash = (hash ^ link->key.local_link_id[idx]) * 16777619u;
+        }
+    }
     return min + hash % (max - min + 1);
 }
 
@@ -788,8 +812,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
 
         /* IPv4 loopback address */
         lsdb_reset_attr_template(&attr_template);
-        addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
-        addr += node->node_index;
+        addr = lspgen_node_addr4(ctx, node->node_index);
         lspgen_store_addr(addr, attr_template.key.ipv4_addr, sizeof(ipv4addr_t));
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_IPV4_ADDR;
@@ -810,8 +833,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
 
         /* IPv6 loopback address */
         lsdb_reset_attr_template(&attr_template);
-        addr = lspgen_load_addr(ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
-        addr += node->node_index;
+        addr = lspgen_node_addr6(ctx, node->node_index);
         lspgen_store_addr(addr, attr_template.key.ipv6_addr, IPV6_ADDR_LEN);
         attr_template.key.ordinal = 1;
         attr_template.key.attr_type = ISIS_TLV_IPV6_ADDR;
@@ -856,8 +878,7 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
         if (!ctx->no_sr) {
             /* SR capability */
             lsdb_reset_attr_template(&attr_template);
-            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
-            addr += node->node_index;
+            addr = lspgen_node_addr4(ctx, node->node_index);
             lspgen_store_addr(addr, attr_template.key.cap.router_id, sizeof(ipv4addr_t));
             attr_template.key.cap.srgb_base = ctx->srgb_base;
             attr_template.key.cap.srgb_range = ctx->srgb_range;
@@ -876,13 +897,15 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.attr_type = ISIS_TLV_CAP;
             attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
+        }
 
-            /* Flex-Algo definitions are advertised by two nodes for redundancy */
-            if (node->node_index < 2) {
-                for (idx = 0; idx < ctx->fad_count; idx++) {
-                    memcpy(ctx->fad[idx].router_id, attr_template.key.cap.router_id, 4);
-                    lspgen_add_fad_attr(node, &ctx->fad[idx]);
-                }
+        /* Flex-Algo definitions are advertised by two nodes for redundancy,
+         * independent of SR (RFC 9350). */
+        if (node->node_index < 2) {
+            addr = lspgen_node_addr4(ctx, node->node_index);
+            for (idx = 0; idx < ctx->fad_count; idx++) {
+                lspgen_store_addr(addr, ctx->fad[idx].router_id, sizeof(ipv4addr_t));
+                lspgen_add_fad_attr(node, &ctx->fad[idx]);
             }
         }
 
@@ -895,6 +918,8 @@ lspgen_gen_isis_attr(struct lsdb_ctx_ *ctx)
             lsdb_reset_attr_template(&attr_template);
             attr_template.key.attr_type = ISIS_TLV_EXTD_IS_REACH;
             memcpy(attr_template.key.link.remote_node_id, link->key.remote_node_id, 7);
+            /* Parallel links to the same neighbor, not encoded */
+            memcpy(attr_template.key.link.local_link_id, link->key.local_link_id, 4);
             attr_template.key.link.metric = link->link_metric;
             lspgen_add_link_asla(ctx, link, &attr_template);
             lsdb_add_node_attr(node, &attr_template);
@@ -987,8 +1012,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
 
         /* IPv4 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
-        addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
-        addr += node->node_index;
+        addr = lspgen_node_addr4(ctx, node->node_index);
         lspgen_store_addr(addr, (uint8_t*)&attr_template.key.prefix.ipv4_prefix.address, sizeof(ipv4addr_t));
         attr_template.key.prefix.ipv4_prefix.len = ctx->ipv4_node_prefix.len;
         attr_template.key.prefix.node_flag = true;
@@ -1035,8 +1059,7 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
         if (!ctx->no_sr) {
             /* SR capability */
             lsdb_reset_attr_template(&attr_template);
-            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
-            addr += node->node_index;
+            addr = lspgen_node_addr4(ctx, node->node_index);
             lspgen_store_addr(addr, attr_template.key.cap.router_id, sizeof(ipv4addr_t));
             attr_template.key.cap.srgb_base = ctx->srgb_base;
             attr_template.key.cap.srgb_range = ctx->srgb_range;
@@ -1045,6 +1068,9 @@ lspgen_gen_ospf2_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
             attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
+
+            /* SR-Algorithm TLV, required for SR capable nodes (RFC 8665) */
+            lspgen_add_ospf_sr_algo_attr(node, NULL, 0);
         }
 
         /*
@@ -1174,8 +1200,7 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
 
         /* IPv6 loopback prefix */
         lsdb_reset_attr_template(&attr_template);
-        addr = lspgen_load_addr((uint8_t*)&ctx->ipv6_node_prefix.address, IPV6_ADDR_LEN);
-        addr += node->node_index;
+        addr = lspgen_node_addr6(ctx, node->node_index);
         lspgen_store_addr(addr, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
         attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_node_prefix.len;
         attr_template.key.prefix.node_flag = true;
@@ -1211,7 +1236,6 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
             lspgen_store_addr(ext_addr6, attr_template.key.prefix.ipv6_prefix.address, IPV6_ADDR_LEN);
             attr_template.key.prefix.ipv6_prefix.len = ctx->ipv6_ext_prefix.len;
             attr_template.key.prefix.metric = 100;
-            attr_template.key.prefix.tag = ext_per_node;
             attr_template.key.prefix.ext_flag = true;
             attr_template.key.attr_cp[0] = OSPF_MSG_LSUPDATE;
             attr_template.key.attr_cp[1] = OSPF_LSA_EXTERNAL6;
@@ -1223,8 +1247,7 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
         if (!ctx->no_sr) {
             /* SR capability */
             lsdb_reset_attr_template(&attr_template);
-            addr = lspgen_load_addr((uint8_t*)&ctx->ipv4_node_prefix.address, sizeof(ipv4addr_t));
-            addr += node->node_index;
+            addr = lspgen_node_addr4(ctx, node->node_index);
             lspgen_store_addr(addr, attr_template.key.cap.router_id, sizeof(ipv4addr_t));
             attr_template.key.cap.srgb_base = ctx->srgb_base;
             attr_template.key.cap.srgb_range = ctx->srgb_range;
@@ -1233,6 +1256,9 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
             attr_template.key.attr_cp[2] = OSPF_TLV_SID_LABEL_RANGE;
             attr_template.key.ordinal = 1;
             lsdb_add_node_attr(node, &attr_template);
+
+            /* SR-Algorithm TLV, required for SR capable nodes (RFC 8665) */
+            lspgen_add_ospf_sr_algo_attr(node, NULL, 0);
         }
 
         /*
@@ -1312,10 +1338,45 @@ lspgen_gen_ospf3_attr(struct lsdb_ctx_ *ctx)
     dict_itor_free(itor);
 }
 
+/*
+ * Apply the defaults of the protocol, unless set by options.
+ */
+void
+lspgen_set_protocol_defaults(struct lsdb_ctx_ *ctx)
+{
+    switch (ctx->protocol_id) {
+        case PROTO_ISIS:
+            if (!ctx->sequence_set) {
+                ctx->sequence = 1;
+            }
+            if (!ctx->lsp_lifetime_set) {
+                ctx->lsp_lifetime = 65535;
+            }
+            break;
+        case PROTO_OSPF2:
+        case PROTO_OSPF3:
+            if (ctx->protocol_id == PROTO_OSPF2) {
+                ctx->no_ipv6 = true;
+            } else {
+                ctx->no_ipv4 = true;
+            }
+            if (!ctx->sequence_set) {
+                ctx->sequence = 0x80000001; /* InitialSequenceNumber */
+            }
+            if (!ctx->lsp_lifetime_set) {
+                ctx->lsp_lifetime = OSPF_MAX_AGE;
+            }
+            break;
+        default:
+            break;
+    }
+}
+
 void
 lspgen_init_ctx(struct lsdb_ctx_ *ctx)
 {
     CIRCLEQ_INIT(&ctx->packet_change_qhead);
+    CIRCLEQ_INIT(&ctx->packet_sent_qhead);
     timer_init_root(&ctx->timer_root);
 
     ctx->protocol_id = PROTO_ISIS;
@@ -1654,6 +1715,7 @@ main(int argc, char *argv[])
     int opt, idx;
     char *end;
     long value;
+    bool ctrl_error;
     struct lsdb_ctx_ *ctx;
 
     /*
@@ -1687,17 +1749,10 @@ main(int argc, char *argv[])
                     LOG(ERROR, "Unknown protocol %s\n", optarg);
                     exit(EXIT_FAILURE);
                 }
-                if (ctx->protocol_id == PROTO_OSPF2) {
-                    ctx->no_ipv6 = true;
-                }
-                if (ctx->protocol_id == PROTO_OSPF3) {
-                    ctx->no_ipv4 = true;
-                }
                 if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
                     ctx->topology_id.area = 0; /* reset area */
-                    ctx->sequence = 0x80000001;
-                    ctx->lsp_lifetime = 3600;
                 }
+                lspgen_set_protocol_defaults(ctx);
                 break;
             case 'r':
                 if (ctx->config_filename) {
@@ -1739,6 +1794,7 @@ main(int argc, char *argv[])
                     ctx->lsp_lifetime = LSP_LIFETIME_MIN;
                     LOG(ERROR, "Set lsp-lifetime to min %us\n", ctx->lsp_lifetime);
                 }
+                ctx->lsp_lifetime_set = true;
                 break;
             case 'y':
                 /* no-sr */
@@ -1878,14 +1934,9 @@ main(int argc, char *argv[])
                 break;
             case 'q':
                 /* sequence */
-                ctx->sequence = strtol(optarg, NULL, 0);
-                if (ctx->sequence == 0) {
-                    if (ctx->protocol_id == PROTO_ISIS) {
-                        ctx->sequence = 1;
-                    } else {
-                        ctx->sequence = 0x80000001;
-                    }
-                }
+                ctx->sequence = strtoul(optarg, NULL, 0);
+                ctx->sequence_set = ctx->sequence != 0;
+                lspgen_set_protocol_defaults(ctx);
                 break;
             case 'Q':
                 /* Quit event loop after draining LSDB once  */
@@ -1946,7 +1997,10 @@ main(int argc, char *argv[])
      * Read the link-state database from a config file.
      */
     if (ctx->config_read && ctx->config_filename) {
-        lspgen_read_config(ctx);
+        if (!lspgen_read_config(ctx)) {
+            lsdb_delete_ctx(ctx);
+            exit(EXIT_FAILURE);
+        }
     } else {
 
         /*
@@ -2065,6 +2119,7 @@ main(int argc, char *argv[])
      * Flush and close all we have.
      */
 EXIT:
+    ctrl_error = ctx->ctrl_error;
     lsdb_delete_ctx(ctx);
-    return 0;
+    return ctrl_error ? EXIT_FAILURE : 0;
 }

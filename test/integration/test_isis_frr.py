@@ -1,16 +1,19 @@
 """
-BNG Blaster ISIS against FRR (adjacency, database sync, authentication)
+BNG Blaster ISIS against FRR (adjacency, database sync, authentication,
+lspgen control socket)
 
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import subprocess
 import time
 
 import pytest
 
+import helpers
 from helpers import wait_until
-from igp_common import (BBL_ADDRESS, BBL_ROUTER_ID, BBL_SYSTEM_ID, FRR_SYSTEM_ID,
-                        IsisSetup, levels, mrt_lengths)
+from igp_common import (BBL_ADDRESS, BBL_ROUTER_ID, BBL_SYSTEM_ID, FRR_SYSTEM_ID, ISIS_AREA,
+                        LSPGEN_ROOT_SYSTEM_ID, IsisSetup, levels, mrt_lengths)
 
 NODES = 50
 FRR_PREFIXES = 8
@@ -283,4 +286,28 @@ def test_bbl_flex_algo(isis, tmp_path):
     assert isis.frr_node_msd(1)["%s.00-00" % BBL_SYSTEM_ID] == 8
     asla = isis.frr_asla()
     assert asla[("%s.00-00" % BBL_SYSTEM_ID, "%s.00" % FRR_SYSTEM_ID)] == (100, 50, 50)
+    isis.teardown()
+
+
+def test_lspgen_control_socket(isis, tmp_path):
+    """lspgen injects the topology with the control socket and checks the
+    reply of the BNG Blaster: a request to an unknown instance fails with
+    exit code 1, the LSPs of the correct instance are flooded to FRR."""
+    isis.start(bbl={"isis": {"external": {"connections": [
+        {"system-id": "%s.00" % LSPGEN_ROOT_SYSTEM_ID, "l1-metric": 10}]}}})
+    isis.wait_established(1)
+    cmd = [helpers.LSPGEN_BIN, "-a", "%s/24" % ISIS_AREA, "-c", "10", "-C", BBL_SYSTEM_ID,
+           "-S", isis.bbl.socket, "-Q"]
+
+    result = subprocess.run(cmd + ["-I", "2"], cwd=str(tmp_path), stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, timeout=30)
+    assert result.returncode == 1, result.stdout
+    assert "Request rejected" in result.stdout
+    assert not any(lsp.startswith(LSPGEN_ROOT_SYSTEM_ID) for lsp in isis.bbl_database(1))
+
+    result = subprocess.run(cmd + ["-I", "1"], cwd=str(tmp_path), stdout=subprocess.PIPE,
+                            stderr=subprocess.STDOUT, text=True, timeout=30)
+    assert result.returncode == 0, result.stdout
+    wait_until(lambda: len([lsp for lsp in isis.frr_database(1) if lsp.startswith("1921.6800.000")]) == 10,
+               15, message="lspgen LSPs flooded to FRR")
     isis.teardown()

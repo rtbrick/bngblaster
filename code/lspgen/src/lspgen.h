@@ -38,6 +38,8 @@
 __uint128_t lspgen_load_addr(uint8_t *, uint32_t);
 void lspgen_store_addr(__uint128_t, uint8_t *, uint32_t);
 void lspgen_store_bcd_addr(__uint128_t, uint8_t *, uint32_t);
+__uint128_t lspgen_node_addr4(lsdb_ctx_t *, uint32_t);
+void lspgen_set_protocol_defaults(lsdb_ctx_t *);
 void lspgen_quit_loop(void);
 
 /* lspgen_mrt.c */
@@ -54,8 +56,9 @@ void lspgen_ctrl_wakeup_cb(timer_s *);
 void lspgen_dump_stream(lsdb_ctx_t *);
 
 /* lspgen_config.c */
-void lspgen_read_config(lsdb_ctx_t *);
+bool lspgen_read_config(lsdb_ctx_t *);
 void lspgen_add_fad_attr(lsdb_node_t *, lsdb_attr_fad_t *);
+void lspgen_add_ospf_sr_algo_attr(lsdb_node_t *, uint8_t *, uint8_t);
 bool lspgen_scan_fad_metric_type(const char *, uint8_t *);
 void lspgen_write_config(lsdb_ctx_t *);
 extern struct keyval_ isis_level_names[];
@@ -64,6 +67,7 @@ extern struct keyval_ isis_level_names[];
 void lspgen_serialize_attr(lsdb_ctx_t *, lsdb_attr_t *, lsdb_packet_t *);
 void lspgen_gen_packet(lsdb_ctx_t *);
 void lspgen_reset_packet_buffer(struct lsdb_packet_ *);
+unsigned int lspgen_refresh_interval(lsdb_node_t *);
 
 /* lspgen_seq_cache.c */
 void lspgen_read_seq_cache(lsdb_ctx_t *);

@@ -371,7 +371,11 @@ lsdb_free_packet(__attribute__((unused))void *key, void *datum)
         CIRCLEQ_REMOVE(&ctx->packet_change_qhead, packet, packet_change_qnode);
         ctx->ctrl_stats.packets_queued--;
     }
+    if (packet->on_sent_list) {
+        CIRCLEQ_REMOVE(&ctx->packet_sent_qhead, packet, packet_change_qnode);
+    }
 
+    free(packet->data);
     free(datum);
 }
 
@@ -987,6 +991,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
     struct lsdb_attr_ *attr;
     void **p;
     lsdb_packet_t packet;
+    static uint8_t packet_data[LSPGEN_PACKET_BUF_SIZE]; /* for the size calculation */
     int idx;
 
     if (!node) {
@@ -995,6 +1000,7 @@ lsdb_add_node_attr(lsdb_node_t *node, lsdb_attr_t *attr_template)
 
     ctx = node->ctx;
     packet.parent = node;
+    packet.data = packet_data;
 
     /*
      * Refuse addition of v4 attributes if v4 is turned off.

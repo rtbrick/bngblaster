@@ -7,9 +7,14 @@
  *
  * Copyright (C) 2015-2022, RtBrick, Inc.
  */
+#include <jansson.h>
 #include "lspgen.h"
 #include "lspgen_lsdb.h"
 #include "lspgen_isis.h"
+
+#define CTRL_REPLY_TIMEOUT 5 /* seconds */
+
+bool lspgen_buffer_is_empty(lsdb_ctx_t *);
 
 /*
  * Write all the generated LSPs of a single node to the packet_change list.
@@ -36,6 +41,10 @@ lspgen_enqueue_node_packets(lsdb_ctx_t *ctx, lsdb_node_t *node)
     do {
         packet = *dict_itor_datum(itor);
 
+        if (packet->on_sent_list) {
+            CIRCLEQ_REMOVE(&ctx->packet_sent_qhead, packet, packet_change_qnode);
+            packet->on_sent_list = false;
+        }
         if (packet->on_change_list) {
             CIRCLEQ_REMOVE(&ctx->packet_change_qhead, packet, packet_change_qnode);
             ctx->ctrl_stats.packets_queued--;
@@ -197,12 +206,111 @@ lspgen_ctrl_encode_packet(lsdb_ctx_t *ctx, lsdb_packet_t *packet)
     ctx->ctrl_stats.packets_sent++;
 }
 
+/*
+ * Take the packets sent on this connection off the sent list,
+ * back to the change list if they have been rejected.
+ */
+static void
+lspgen_ctrl_release_sent_packets(lsdb_ctx_t *ctx, bool requeue)
+{
+    struct lsdb_packet_ *packet;
+
+    while (!CIRCLEQ_EMPTY(&ctx->packet_sent_qhead)) {
+        packet = CIRCLEQ_FIRST(&ctx->packet_sent_qhead);
+        CIRCLEQ_REMOVE(&ctx->packet_sent_qhead, packet, packet_change_qnode);
+        packet->on_sent_list = false;
+        if (requeue) {
+            CIRCLEQ_INSERT_TAIL(&ctx->packet_change_qhead, packet, packet_change_qnode);
+            packet->on_change_list = true;
+            ctx->ctrl_stats.packets_queued++;
+        }
+    }
+}
+
+/*
+ * Read the reply of the BNG Blaster, which closes the
+ * connection after it. Returns true once complete.
+ */
+static bool
+lspgen_ctrl_read_reply(lsdb_ctx_t *ctx)
+{
+    ssize_t res;
+
+    while (ctx->ctrl_reply_len < sizeof(ctx->ctrl_reply)-1) {
+        res = recv(ctx->ctrl_socket_sockfd, ctx->ctrl_reply + ctx->ctrl_reply_len,
+                   sizeof(ctx->ctrl_reply) - 1 - ctx->ctrl_reply_len, MSG_DONTWAIT);
+        if (res > 0) {
+            ctx->ctrl_reply_len += res;
+            continue;
+        }
+        if (res < 0 && (errno == EAGAIN || errno == EWOULDBLOCK)) {
+            return false;
+        }
+        break; /* closed or error */
+    }
+    ctx->ctrl_reply[ctx->ctrl_reply_len] = 0;
+    return true;
+}
+
+/*
+ * Check the status of the reply, the packets
+ * are requeued if the request has been rejected.
+ */
+static void
+lspgen_ctrl_check_reply(lsdb_ctx_t *ctx)
+{
+    json_t *root;
+    const char *status = NULL;
+    const char *message = NULL;
+    bool ok;
+
+    root = json_loads(ctx->ctrl_reply, JSON_DISABLE_EOF_CHECK, NULL);
+    if (root) {
+        json_unpack(root, "{s:s, s?s}", "status", &status, "message", &message);
+    }
+    ok = status && strcmp(status, "ok") == 0;
+    if (ok) {
+        LOG(CTRL, "Reply from %s: %s\n", ctx->ctrl_socket_path, ctx->ctrl_reply);
+    } else {
+        ctx->ctrl_error = true;
+        if (ctx->ctrl_reply_len) {
+            LOG(ERROR, "Request rejected by %s: %s %s\n", ctx->ctrl_socket_path,
+                status ? status : "invalid reply", message ? message : ctx->ctrl_reply);
+        } else {
+            LOG(ERROR, "No reply from %s\n", ctx->ctrl_socket_path);
+        }
+    }
+    if (root) {
+        json_decref(root);
+    }
+
+    /* Retry later unless the event loop terminates after one drain. */
+    lspgen_ctrl_release_sent_packets(ctx, !ok && !ctx->quit_loop);
+    if (!ok && !ctx->quit_loop) {
+        LOG(ERROR, "Requeued %u packets to %s\n", ctx->ctrl_stats.packets_queued, ctx->ctrl_socket_path);
+    }
+}
+
 void
 lspgen_ctrl_close_cb(timer_s *timer)
 {
     struct lsdb_ctx_ *ctx;
 
     ctx = timer->data;
+
+    /*
+     * Wait for the reply once the request has been written.
+     */
+    if (!ctx->ctrl_packet_first && ctx->ctrl_socket_sockfd > 0) {
+        if ((!lspgen_buffer_is_empty(ctx) || !lspgen_ctrl_read_reply(ctx)) &&
+            ctx->ctrl_reply_wait < CTRL_REPLY_TIMEOUT) {
+            ctx->ctrl_reply_wait++;
+            timer_add(&ctx->timer_root, &ctx->ctrl_socket_close_timer, "close",
+                      1, 0, ctx, &lspgen_ctrl_close_cb);
+            return;
+        }
+        lspgen_ctrl_check_reply(ctx);
+    }
 
     /*
      * Kill the write timer.
@@ -260,6 +368,13 @@ lspgen_ctrl_write_cb(timer_s *timer)
      */
     lspgen_write_ctrl_buffer(ctx);
 
+    /*
+     * One request per connection, further packets use the next connection.
+     */
+    if (ctx->ctrl_request_done) {
+        return;
+    }
+
     if (CIRCLEQ_EMPTY(&ctx->packet_change_qhead)) {
         if (ctx->ctrl_packet_first && lspgen_buffer_is_empty(ctx)) {
             /* Nothing to send on this connection, close it. */
@@ -311,16 +426,20 @@ lspgen_ctrl_write_cb(timer_s *timer)
         lspgen_ctrl_encode_packet(ctx, packet);
 
         /*
-         * Packet got encoded, take packet off the change queue.
+         * Packet got encoded, move it from the change queue
+         * to the sent queue until the reply has been checked.
          */
         CIRCLEQ_REMOVE(&ctx->packet_change_qhead, packet, packet_change_qnode);
         packet->on_change_list = false;
         ctx->ctrl_stats.packets_queued--;
+        CIRCLEQ_INSERT_TAIL(&ctx->packet_sent_qhead, packet, packet_change_qnode);
+        packet->on_sent_list = true;
     }
 
 close_socket:
 
     push_data(&ctx->ctrl_io_buf, (uint8_t *)json_footer, strlen(json_footer));
+    ctx->ctrl_request_done = true;
     lspgen_write_ctrl_buffer(ctx);
 
     /*
@@ -413,6 +532,9 @@ lspgen_ctrl_connect_cb(timer_s *timer)
          * Write header before the first packet.
          */
         ctx->ctrl_packet_first = true;
+        ctx->ctrl_request_done = false;
+        ctx->ctrl_reply_len = 0;
+        ctx->ctrl_reply_wait = 0;
 
         LOG(NORMAL, "%u packets enqueued to %s\n", ctx->ctrl_stats.packets_queued, ctx->ctrl_socket_path);
         return;

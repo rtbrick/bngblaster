@@ -32,5 +32,6 @@ struct keyval_ ospf_attr_names[] = {
     { OSPF_TLV_INTRA_AREA_PREFIX,       "Intra-Area-Prefix" },
     { OSPF_SUBTLV_PREFIX_SID,           "Prefix-SID" },
     { OSPF_IA_PREFIX_LSA_PREFIX,        "Prefix" },
+    { OSPF_TLV_SR_ALGO,                 "SR-Algorithm" },
     { 0, NULL}
 };

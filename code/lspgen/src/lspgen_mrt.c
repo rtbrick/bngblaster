@@ -26,7 +26,7 @@ lspgen_dump_mrt_node(lsdb_ctx_t *ctx, lsdb_node_t *node)
     struct lsdb_packet_ *packet;
     dict_itor *itor;
     struct io_buffer_ buf;
-    uint8_t mrt_record[sizeof(packet->data)+12];
+    uint8_t mrt_record[LSPGEN_PACKET_BUF_SIZE+12];
     uint32_t length;
 
     itor = dict_itor_new(node->packet_dict);

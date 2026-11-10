@@ -1,4 +1,6 @@
 {
+  "protocol": "isis",
+  "instance": "default",
   "level1": [
     {
       "node_id": "1921.6800.0000.00",

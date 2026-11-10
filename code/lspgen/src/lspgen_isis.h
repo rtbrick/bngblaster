@@ -70,6 +70,7 @@ enum {
 #define ISIS_DEFAULT_LSP_BUFFER_SIZE    1492
 #define ISIS_MIN_LSP_BUFFER_SIZE        512
 #define ISIS_MAX_LSP_BUFFER_SIZE        11997 /* 12000-3 byte LLC */
+#define ISIS_LSP_HDR_LEN                27   /* LSP header */
 #define ISIS_LSP_RESERVED_LEN           30   /* LSP header and margin */
 #define ISIS_LLC_HDR_LEN                3
 #define ISIS_ETH_MAX_802_3_LEN          1500
