@@ -191,6 +191,23 @@ bbl_l2tp_force_stop(bbl_l2tp_tunnel_s *l2tp_tunnel)
 }
 
 /**
+ * Free the memory of an L2TP session.
+ */
+static void
+bbl_l2tp_session_free(bbl_l2tp_session_s *l2tp_session)
+{
+    free(l2tp_session->proxy_auth_name);
+    free(l2tp_session->proxy_auth_challenge);
+    free(l2tp_session->proxy_auth_response);
+    free(l2tp_session->peer_called_number);
+    free(l2tp_session->peer_calling_number);
+    free(l2tp_session->peer_sub_address);
+    free(l2tp_session->peer_ari);
+    free(l2tp_session->peer_aci);
+    free(l2tp_session);
+}
+
+/**
  * bbl_l2tp_session_delete
  *
  * This function will free all dynamic memory for the given
@@ -259,14 +276,8 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
             }
         }
 
-        /* Free tunnel memory */
-        if(l2tp_session->proxy_auth_name) free(l2tp_session->proxy_auth_name);
-        if(l2tp_session->proxy_auth_challenge) free(l2tp_session->proxy_auth_challenge);
-        if(l2tp_session->proxy_auth_response) free(l2tp_session->proxy_auth_response);
-        if(l2tp_session->peer_called_number) free(l2tp_session->peer_called_number);
-        if(l2tp_session->peer_calling_number) free(l2tp_session->peer_calling_number);
-        if(l2tp_session->peer_sub_address) free(l2tp_session->peer_sub_address);
-        free(l2tp_session);
+        /* Free session memory */
+        bbl_l2tp_session_free(l2tp_session);
     }
 }
 
@@ -1016,12 +1027,23 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
     }
 
     bbl_l2tp_session_s *l2tp_session = calloc(1, sizeof(bbl_l2tp_session_s));
-    g_ctx->l2tp_sessions++;
+    if(!l2tp_session) {
+        return;
+    }
     l2tp_session->tunnel = l2tp_tunnel;
     l2tp_session->state = BBL_L2TP_SESSION_WAIT_CONN;
 
     if(!bbl_l2tp_avp_decode_session(l2tp, l2tp_tunnel, l2tp_session)) {
-        bbl_l2tp_session_delete(l2tp_session);
+        /* The call is rejected with a CDN (RFC 2661 section 5.4) if the
+         * session ID of the peer is known. The session is not inserted
+         * and has no own session ID (0). */
+        if(l2tp_session->peer_session_id) {
+            l2tp_session->result_code = 2; /* see error code */
+            l2tp_session->error_code = 6; /* generic error */
+            l2tp_session->error_message = "invalid ICRQ";
+            bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
+        }
+        bbl_l2tp_session_free(l2tp_session);
         return;
     }
 
@@ -1043,11 +1065,13 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
     if(!result.inserted) {
         LOG(ERROR, "L2TP Error (%s) Failed to add session\n",
             l2tp_tunnel_hostname(l2tp_tunnel));
-        free(l2tp_session);
+        bbl_l2tp_session_free(l2tp_session);
         return;
     }
     *result.datum_ptr = l2tp_session;
     CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->session_qhead, l2tp_session, session_qnode);
+    /* Counted once inserted, decremented by bbl_l2tp_session_delete. */
+    g_ctx->l2tp_sessions++;
     if(g_ctx->l2tp_sessions > g_ctx->l2tp_sessions_max) {
         g_ctx->l2tp_sessions_max = g_ctx->l2tp_sessions;
     }
@@ -1216,6 +1240,39 @@ bbl_l2tp_cdn_rx(bbl_network_interface_s *interface,
         l2tp_session->key.session_id);
 
     bbl_l2tp_session_delete(l2tp_session);
+}
+
+/**
+ * A CDN with session ID 0 is sent by a peer which does not know the
+ * own session ID yet, e.g. if the call is cleared before the ICRP is
+ * received. The session is identified by the Assigned Session ID AVP
+ * of the peer (RFC 2661 section 6.14).
+ */
+static void
+bbl_l2tp_cdn_rx_session_zero(bbl_network_interface_s *interface,
+                             bbl_l2tp_tunnel_s *l2tp_tunnel,
+                             bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp)
+{
+    bbl_l2tp_session_s *l2tp_session;
+    bbl_l2tp_session_s *peer = calloc(1, sizeof(bbl_l2tp_session_s));
+    uint16_t peer_session_id;
+
+    if(!peer) {
+        return;
+    }
+    peer->tunnel = l2tp_tunnel;
+    bbl_l2tp_avp_decode_session(l2tp, l2tp_tunnel, peer);
+    peer_session_id = peer->peer_session_id;
+    bbl_l2tp_session_free(peer);
+    if(!peer_session_id) {
+        return;
+    }
+    CIRCLEQ_FOREACH(l2tp_session, &l2tp_tunnel->session_qhead, session_qnode) {
+        if(l2tp_session->key.session_id && l2tp_session->peer_session_id == peer_session_id) {
+            bbl_l2tp_cdn_rx(interface, l2tp_session, eth, l2tp);
+            return;
+        }
+    }
 }
 
 static void
@@ -1555,7 +1612,9 @@ bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *s
     }
 
     l2tp_session = calloc(1, sizeof(bbl_l2tp_session_s));
-    g_ctx->l2tp_sessions++;
+    if(!l2tp_session) {
+        return;
+    }
     l2tp_session->tunnel = l2tp_tunnel;
     l2tp_session->state = BBL_L2TP_SESSION_WAIT_CONN;
 
@@ -1577,11 +1636,12 @@ bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *s
     if(!result.inserted) {
         LOG(ERROR, "L2TP Error (%s) Failed to add session\n",
             l2tp_tunnel_hostname(l2tp_tunnel));
-        free(l2tp_session);
+        bbl_l2tp_session_free(l2tp_session);
         return;
     }
     *result.datum_ptr = l2tp_session;
     CIRCLEQ_INSERT_TAIL(&l2tp_tunnel->session_qhead, l2tp_session, session_qnode);
+    g_ctx->l2tp_sessions++;
     if(g_ctx->l2tp_sessions > g_ctx->l2tp_sessions_max) {
         g_ctx->l2tp_sessions_max = g_ctx->l2tp_sessions;
     }
@@ -2097,9 +2157,10 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
                     case L2TP_MESSAGE_CDN:
                         if(l2tp_session->key.session_id) {
                             bbl_l2tp_cdn_rx(interface, l2tp_session, eth, l2tp);
-                            return;
+                        } else {
+                            bbl_l2tp_cdn_rx_session_zero(interface, l2tp_tunnel, eth, l2tp);
                         }
-                        break;
+                        return;
                     default:
                         break;
                 }

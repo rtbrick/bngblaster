@@ -9,6 +9,12 @@ PPP packet itself, but writes every PPP packet received from the LNS
 within the given time as JSON list of (protocol, code, identifier) to
 stdout.
 
+With --icrq, the LAC sends an invalid ICRQ (call serial number of 3
+bytes) and a valid ICRQ with the Broadband Forum ACI and ARI AVPs, which
+it clears with a CDN, and a third ICRQ which it clears with a CDN with
+session ID 0 (as before the ICRP is received), and writes the replies of
+the LNS as JSON.
+
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
@@ -22,7 +28,11 @@ L2TP_PORT = 1701
 CTRL_FLAGS = 0xc802  # T, L and S bit, version 2
 T_BIT, L_BIT, S_BIT, O_BIT = 0x8000, 0x4000, 0x0800, 0x0200
 
-SCCRQ, SCCRP, SCCCN, ICRQ, ICRP, ICCN = 1, 2, 3, 10, 11, 12
+SCCRQ, SCCRP, SCCCN, STOPCCN, ICRQ, ICRP, ICCN, CDN = 1, 2, 3, 4, 10, 11, 12, 14
+
+AVP_RESULT_CODE = 1
+BROADBAND_FORUM = 3561
+ACCESS_LINE_ACI, ACCESS_LINE_ARI = 1, 2
 
 AVP_MESSAGE_TYPE = 0
 AVP_PROTOCOL_VERSION = 2
@@ -45,9 +55,9 @@ LOCAL_TUNNEL_ID = 100
 LOCAL_SESSION_ID = 200
 
 
-def avp(avp_type, value, mandatory=True):
+def avp(avp_type, value, mandatory=True, vendor=0):
     return struct.pack("!HHH", (0x8000 if mandatory else 0) | (6 + len(value)),
-                       0, avp_type) + value
+                       vendor, avp_type) + value
 
 
 def avp16(avp_type, value):
@@ -96,6 +106,7 @@ class Lac:
         offset = 2
         if flags & L_BIT:
             offset += 2
+        self.last_session_id = struct.unpack("!H", data[offset+2:offset+4])[0]
         offset += 4  # tunnel and session id
         if flags & T_BIT:
             ns = struct.unpack("!H", data[offset:offset+2])[0]
@@ -122,7 +133,7 @@ class Lac:
                 return avps
         raise TimeoutError("L2TP message type %d" % message_type)
 
-    def connect(self, auth, auth_id):
+    def connect_tunnel(self):
         self.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, SCCRQ) +
                        avp16(AVP_PROTOCOL_VERSION, 0x0100) +
                        avp(AVP_HOST_NAME, b"PROXY-LAC") +
@@ -131,6 +142,51 @@ class Lac:
         avps = self.wait_ctrl(SCCRP)
         self.peer_tunnel_id = struct.unpack("!H", avps[AVP_ASSIGNED_TUNNEL_ID])[0]
         self.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, SCCCN))
+
+    def icrq(self):
+        """Invalid ICRQ answered with CDN, valid ICRQ with ACI and ARI
+        answered with ICRP and cleared by the LAC."""
+        self.connect_tunnel()
+        result = {}
+        self.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, ICRQ) +
+                       avp16(AVP_ASSIGNED_SESSION_ID, LOCAL_SESSION_ID + 1) +
+                       avp(AVP_CALL_SERIAL_NUMBER, b"\x00\x00\x01"))
+        try:
+            avps = self.wait_ctrl(CDN)
+            result["cdn-session-id"] = self.last_session_id
+            result["cdn-result-code"] = struct.unpack("!H", avps[AVP_RESULT_CODE][:2])[0]
+        except TimeoutError:
+            result["cdn-session-id"] = None
+        self.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, ICRQ) +
+                       avp16(AVP_ASSIGNED_SESSION_ID, LOCAL_SESSION_ID + 2) +
+                       avp32(AVP_CALL_SERIAL_NUMBER, 2) +
+                       avp(ACCESS_LINE_ACI, b"circuit-1", mandatory=False, vendor=BROADBAND_FORUM) +
+                       avp(ACCESS_LINE_ARI, b"remote-1", mandatory=False, vendor=BROADBAND_FORUM))
+        avps = self.wait_ctrl(ICRP)
+        result["icrp"] = True
+        session_id = struct.unpack("!H", avps[AVP_ASSIGNED_SESSION_ID])[0]
+        self.send_ctrl(session_id, avp16(AVP_MESSAGE_TYPE, CDN) +
+                       avp(AVP_RESULT_CODE, struct.pack("!H", 3)) +
+                       avp16(AVP_ASSIGNED_SESSION_ID, LOCAL_SESSION_ID + 2))
+        # The call is cleared before the LNS session ID is known, the CDN
+        # has session ID 0 and the Assigned Session ID of the LAC.
+        self.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, ICRQ) +
+                       avp16(AVP_ASSIGNED_SESSION_ID, LOCAL_SESSION_ID + 3) +
+                       avp32(AVP_CALL_SERIAL_NUMBER, 3))
+        self.wait_ctrl(ICRP)
+        self.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, CDN) +
+                       avp(AVP_RESULT_CODE, struct.pack("!H", 3)) +
+                       avp16(AVP_ASSIGNED_SESSION_ID, LOCAL_SESSION_ID + 3))
+        time.sleep(1)
+        # Close the tunnel, which acknowledges all messages of the LNS.
+        self.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, STOPCCN) +
+                       avp(AVP_RESULT_CODE, struct.pack("!H", 1)) +
+                       avp16(AVP_ASSIGNED_TUNNEL_ID, LOCAL_TUNNEL_ID))
+        time.sleep(1)
+        return result
+
+    def connect(self, auth, auth_id):
+        self.connect_tunnel()
 
         self.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, ICRQ) +
                        avp16(AVP_ASSIGNED_SESSION_ID, LOCAL_SESSION_ID) +
@@ -177,9 +233,13 @@ def main():
     parser.add_argument("--auth", choices=sorted(PROXY_AUTH_TYPE), default="pap")
     parser.add_argument("--auth-id", type=int, help="Proxy Authen ID (AVP omitted if not set)")
     parser.add_argument("--duration", type=float, default=2)
+    parser.add_argument("--icrq", action="store_true", help="invalid and valid ICRQ (see above)")
     args = parser.parse_args()
 
     lac = Lac(args.local, args.server)
+    if args.icrq:
+        print(json.dumps(lac.icrq()))
+        return
     lac.connect(args.auth, args.auth_id)
     print(json.dumps(lac.ppp_received(args.duration)))
 

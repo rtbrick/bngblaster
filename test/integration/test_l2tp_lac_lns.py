@@ -393,3 +393,33 @@ def test_connect_speed_invalid(topology, tmp_path, option, value):
         lac.start(lac_config(topology.if_a, sessions=1, client_options={1: {option: value}}))
     with open(lac.path("stdout")) as f:
         assert "Invalid value for l2tp-client->%s" % option in f.read()
+
+
+def test_invalid_icrq(topology, processes, tmp_path):
+    """An invalid ICRQ is rejected with a CDN to the session ID of the
+    LAC (RFC 2661) and is not counted as session, a valid ICRQ with the
+    Broadband Forum ACI and ARI AVPs is accepted and cleared by the LAC.
+    A CDN with session ID 0, sent by a LAC which clears the call before
+    the ICRP is received, deletes the session by the Assigned Session ID
+    of the LAC (issue #396, the session was kept and counted)."""
+    config = lns_config(topology.if_b)
+    del config["l2tp-server"][0]["secret"]
+    lns = BngBlaster(topology.b, tmp_path, "lns").start(config, logging=("info", "l2tp"))
+    processes.append(lns)
+    helpers.kernel_address(topology.a, topology.if_a, LAC_ADDRESS + "/24")
+
+    cmd = [sys.executable, "-I", str(Path(__file__).parent / "l2tp_proxy_lac.py"),
+           "--local", LAC_ADDRESS, "--server", LNS_ADDRESS, "--icrq"]
+    result = subprocess.run(topology.a.cmd(cmd), capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    replies = json.loads(result.stdout)
+    assert replies["cdn-session-id"] == 201
+    assert replies["cdn-result-code"] == 2
+    assert replies["icrp"]
+    wait_until(lambda: not lns.ctrl("l2tp-sessions")["l2tp-sessions"], 5,
+               message="LNS session cleared by CDN")
+
+    assert lns.terminate(30) == 0
+    # The rejected ICRQ is not counted (the maximum would be 2).
+    assert lns.report()["report"]["l2tp"]["sessions"] == 1
+
