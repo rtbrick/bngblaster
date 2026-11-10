@@ -20,8 +20,6 @@ io_raw_rx_job(timer_s *timer)
     io_handle_s *io = timer->data;
     bbl_interface_s *interface = io->interface;
 
-    struct sockaddr saddr;
-    int saddr_size = sizeof(saddr);
 
     bbl_ethernet_header_s *eth;
 
@@ -42,7 +40,7 @@ io_raw_rx_job(timer_s *timer)
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
     while(true) {
-        io->buf_len = recvfrom(io->fd, io->buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
+        io->buf_len = recv(io->fd, io->buf, IO_BUFFER_LEN, 0);
         if(io->buf_len < 14 || io->buf_len > IO_BUFFER_LEN) {
             break;
         }
@@ -207,8 +205,6 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
 {
     io_handle_s *io = thread->io;
 
-    struct sockaddr saddr;
-    int saddr_size = sizeof(saddr);
 
     assert(io->direction == IO_INGRESS);
 
@@ -218,7 +214,7 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
 
     /* Number of consecutive rounds without a valid packet received before
      * we back off with a nanosleep. Real traffic can arrive in an uneven
-     * pattern, so a single empty recvfrom() is not a reliable idle signal
+     * pattern, so a single empty recv() is not a reliable idle signal
      * on its own - we only throttle once idleness looks sustained rather
      * than after a single empty round. */
     uint32_t idle_rounds = 0;
@@ -228,7 +224,7 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
         /* Get RX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
         /* Receive from socket */
-        io->buf_len = recvfrom(io->fd, io->buf, IO_BUFFER_LEN, 0, &saddr , (socklen_t*)&saddr_size);
+        io->buf_len = recv(io->fd, io->buf, IO_BUFFER_LEN, 0);
         if(io->buf_len < 14 || io->buf_len > IO_BUFFER_LEN) {
             if(++idle_rounds >= idle_spin_rounds) {
                 nanosleep(&sleep, &rem);

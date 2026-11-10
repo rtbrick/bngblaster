@@ -63,6 +63,8 @@ Functional tests over veth pairs between network namespaces:
   (`test_ldp_frr.py`)
 * Jumbo frames (9000 byte stream packets) with PACKET_MMAP
   (`test_jumbo_frames.py`)
+* Stream traffic with io-mode raw received by the main loop and by RX
+  threads (`test_io_raw.py`)
 * Stream capture with TX/RX threads including PCAP stop/start at
   runtime, and restored VLAN of received packets with PACKET_MMAP
   (`test_capture_streams.py`)
