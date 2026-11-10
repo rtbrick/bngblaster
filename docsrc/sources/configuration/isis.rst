@@ -58,8 +58,9 @@
 | **hold-time**                    | | ISIS hold time in seconds.                                      |
 |                                  | | Default: 30 Range: 1 - 65535                                    |
 +----------------------------------+-------------------------------------------------------------------+
-| **lsp-buffer-size**              | | ISIS LSPBufferSize in bytes.                                    |
-|                                  | | Default: max-pdu-size Range: 128 - 11997                        |
+| **lsp-buffer-size**              | | ISIS LSPBufferSize in bytes, which limits the size of self      |
+|                                  | | originated LSPs.                                                |
+|                                  | | Default: max-pdu-size Range: 512 - 11997                        |
 +----------------------------------+-------------------------------------------------------------------+
 | **max-pdu-size**                 | | Maximum size of IS-IS PDUs in bytes (see jumbo frames).         |
 |                                  | | Default: 1492 Range: 1492 - 11997                               |
@@ -91,7 +92,7 @@
 | **system-id**                    | | ISIS system identifier.                                         |
 |                                  | | Default: 0100.1001.0010                                         |
 +----------------------------------+-------------------------------------------------------------------+
-| **area**                         | | ISIS area(s).                                                   |
+| **area**                         | | ISIS area(s), up to 3.                                          |
 |                                  | | Default: 49.0001/24                                             |
 +----------------------------------+-------------------------------------------------------------------+
 | **sr-algo**                      | | ISIS SR algorithm(s), multiple possible.                        |

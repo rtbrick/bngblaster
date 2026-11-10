@@ -27,9 +27,17 @@ isis_adjacency_init(bbl_network_interface_s *interface,
     isis_adjacency_p2p_s *adjacency_p2p = NULL;
     
     uint8_t level;
+    /* Levels of the interface supported by the instance. */
+    uint8_t levels = interface_config->isis_level & config->level;
 
     LOG(ISIS, "Add network interface %s to IS-IS instance %u\n", 
         interface->name, interface_config->isis_instance_id);
+
+    if(!levels) {
+        LOG(ERROR, "IS-IS level %u of interface %s is not enabled in instance %u (level %u)\n",
+            interface_config->isis_level, interface->name, config->id, config->level);
+        return false;
+    }
 
     if(config->max_pdu_size > ISIS_DEFAULT_MAX_PDU_SIZE) {
         if(interface->mtu < config->max_pdu_size + LLC_HDR_LEN) {
@@ -58,7 +66,7 @@ isis_adjacency_init(bbl_network_interface_s *interface,
         adjacency_p2p->peer = calloc(1, sizeof(isis_peer_s));
         if(!adjacency_p2p->peer) return false;
         adjacency_p2p->peer->adjacency_p2p = adjacency_p2p;
-        adjacency_p2p->level = interface_config->isis_level;
+        adjacency_p2p->level = levels;
         adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
         interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
     } else {
@@ -68,7 +76,7 @@ isis_adjacency_init(bbl_network_interface_s *interface,
     /* Init adjacency levels. */
     for(int i=0; i<ISIS_LEVELS; i++) {
         level = i+1;
-        if(!(interface_config->isis_level & level)) {
+        if(!(levels & level)) {
             continue;
         }
         adjacency = calloc(1, sizeof(isis_adjacency_s));
@@ -90,7 +98,7 @@ isis_adjacency_init(bbl_network_interface_s *interface,
 
         adjacency->flood_tree = hb_tree_new((dict_compare_func)isis_lsp_id_compare);
         adjacency->psnp_tree = hb_tree_new((dict_compare_func)isis_lsp_id_compare);
-        adjacency->levels = interface_config->isis_level;
+        adjacency->levels = levels;
         adjacency->level = level;
         adjacency->window_size = config->lsp_tx_window_size;
         if(level == ISIS_LEVEL_1) {
@@ -142,7 +150,7 @@ isis_adjacency_up(isis_adjacency_s *adjacency)
             "ISIS TX", 0, config->lsp_tx_interval * MSEC, adjacency, &isis_lsp_tx_p2p_job);
 
         timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_retry, 
-            "ISIS RETRY", config->lsp_retry_interval, 0, adjacency, &isis_lsp_retry_job);
+            "ISIS RETRY", 1, 0, adjacency, &isis_lsp_retry_job);
     } else {
         timer_add_periodic(&g_ctx->timer_root, &adjacency->timer_tx, 
             "ISIS TX", 0, config->lsp_tx_interval * MSEC, adjacency, &isis_lsp_tx_job);
@@ -173,6 +181,14 @@ isis_adjacency_down(isis_adjacency_s *adjacency, const char *reason)
     timer_del(adjacency->timer_retry);
     timer_del(adjacency->timer_csnp);
     timer_del(adjacency->timer_csnp_next);
+    timer_del(adjacency->timer_psnp_next);
+    adjacency->timer_psnp_started = false;
+    adjacency->csnp_start = 0;
+
+    /* Pending LSPs are sent again by the database
+     * synchronization once the adjacency is up. */
+    hb_tree_clear(adjacency->flood_tree, isis_flood_entry_free);
+    hb_tree_clear(adjacency->psnp_tree, isis_psnp_free);
 
     if(g_ctx->routing_sessions) g_ctx->routing_sessions--;
 }

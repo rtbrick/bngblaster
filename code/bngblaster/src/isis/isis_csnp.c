@@ -28,6 +28,8 @@ isis_csnp_job(timer_s *timer)
     dict_remove_result removed;
 
     int entries = 0;
+    uint64_t last_id = 0;
+    uint64_t next_start = 0;
 
     uint8_t pdu_buf[ISIS_PDU_BUF_LEN];
     isis_pdu_s pdu = {.pdu = pdu_buf, .size = ISIS_MAX_PDU_LEN_TX(config, adjacency->interface)};
@@ -103,7 +105,7 @@ isis_csnp_job(timer_s *timer)
         if(tlv->len > UINT8_MAX-ISIS_LSP_ENTRY_LEN) {
             /* Open next LSP entry TLV. */
             if(pdu.pdu_len+sizeof(isis_tlv_s)+ISIS_LSP_ENTRY_LEN > pdu.size) {
-                adjacency->csnp_start = lsp->id;
+                next_start = lsp->id;
                 break;
             }
             tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(&pdu);
@@ -113,7 +115,7 @@ isis_csnp_job(timer_s *timer)
         } else {
             if(pdu.pdu_len+ISIS_LSP_ENTRY_LEN > pdu.size) {
                 /* All entries do not fit into single CSNP. */
-                adjacency->csnp_start = lsp->id;
+                next_start = lsp->id;
                 break;
             }
         }
@@ -125,6 +127,7 @@ isis_csnp_job(timer_s *timer)
         entry->checksum = *(uint16_t*)ISIS_PDU_OFFSET(&lsp->pdu, ISIS_OFFSET_LSP_CHECKSUM);
         ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_lsp_entry_s));
         entries++;
+        last_id = lsp->id;
 
         /* Remove LSP included in CSNP from PSNP tree! */
         removed = hb_tree_remove(adjacency->psnp_tree, &lsp->id);
@@ -136,19 +139,21 @@ isis_csnp_job(timer_s *timer)
         next = hb_itor_next(itor);
     }
     hb_itor_free(itor);
-    isis_pdu_update_len(&pdu);
-    isis_pdu_update_auth(&pdu, key);
 
-    if(adjacency->csnp_start) {
+    if(next_start) {
         /* Seems that not all LSP entries fitted into a single CSNP PDU,
-         * therefore remember where we stopped and send next CSNP 
-         * fragment in 10ms ... */
-        *(uint64_t*)ISIS_PDU_OFFSET(&pdu, ISIS_OFFSET_CSNP_LSP_END) = htobe64(adjacency->csnp_start++);
+         * therefore the range ends with the last LSP added and the next
+         * CSNP fragment starts with the first LSP not added in 10ms ...
+         * The end of the range is part of the authenticated data. */
+        *(uint64_t*)ISIS_PDU_OFFSET(&pdu, ISIS_OFFSET_CSNP_LSP_END) = htobe64(last_id);
+        adjacency->csnp_start = next_start;
         timer_add(&g_ctx->timer_root, &adjacency->timer_csnp_next, 
                   "ISIS CSNP", 
                    0, 10 * MSEC, adjacency,
                    &isis_csnp_job);
-    }    
+    }
+    isis_pdu_update_len(&pdu);
+    isis_pdu_update_auth(&pdu, key);
 
     if(entries == 0) {
         /* Do not send empty CSNP. */
@@ -217,6 +222,12 @@ isis_csnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_
     config = instance->config;
 
     adjacency->stats.csnp_rx++;
+
+    /* SNPs are only accepted from an adjacency in state up
+     * (ISO 10589 7.3.15.2). */
+    if(adjacency->state != ISIS_ADJACENCY_STATE_UP) {
+        return;
+    }
     
     lsp_start = be64toh(*(uint64_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LSP_START));
     lsp_end = be64toh(*(uint64_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_CSNP_LSP_END));
@@ -245,8 +256,8 @@ isis_csnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_
         if(lsp->id > lsp_end) {
             break;
         }
-        if(lsp->csnp_scan != csnp_scan) {
-            /* Add LSP to flood tree. */
+        if(lsp->csnp_scan != csnp_scan && !lsp->deleted && !lsp->expired) {
+            /* Add LSP with non-zero lifetime to flood tree (ISO 10589 7.3.15.2). */
             isis_lsp_flood_adjacency(lsp, adjacency);
         }
         next = hb_itor_next(itor);

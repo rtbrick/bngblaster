@@ -91,6 +91,25 @@ def test_database_sync_frr_to_bbl(isis, level):
     isis.teardown()
 
 
+def test_database_sync_dis_md5(isis, tmp_path):
+    """The BNG Blaster as DIS describes a database of several CSNPs with
+    HMAC-MD5. The LSPs loaded before the adjacency came up reach FRR only
+    by CSNP and PSNP, so each CSNP must have a valid HMAC and describe
+    all LSPs of its range (250 nodes avoid the system-ids of BNG Blaster
+    and FRR in the lspgen topology)."""
+    key = "secret123"
+    topo = isis.lspgen(tmp_path / "isis", 250, 2, auth=("md5", key))
+    isis.start(frr={"level": 2, "p2p": False, "auth": ("md5", key)},
+               bbl={"level": 2, "p2p": False, "mrt": topo.mrt,
+                    "isis": {"level2-auth-key": key, "level2-auth-type": "md5"},
+                    "network": {"isis-l2-priority": 100}})
+    isis.wait_established(2)
+    wait_until(lambda: set(isis.bbl_database(2)) <= set(isis.frr_database(2)), 60,
+               message="BNG Blaster database synchronized to FRR by CSNP")
+    assert len(isis.bbl_database(2)) > 250
+    isis.teardown()
+
+
 @pytest.mark.parametrize("p2p", [True, False], ids=["p2p", "broadcast"])
 def test_jumbo_frames(isis, topology, tmp_path, p2p):
     """FRR pads hellos to the interface MTU and the LSPs of the emulated

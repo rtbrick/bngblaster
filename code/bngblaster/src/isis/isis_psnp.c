@@ -67,7 +67,7 @@ isis_psnp_job(timer_s *timer)
     tlv->len = 0;
     ISIS_PDU_BUMP_WRITE_BUFFER(&pdu, sizeof(isis_tlv_s));
 
-    search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);
+    search = hb_tree_search_ge(adjacency->psnp_tree, &lsp_id_zero);
     while(search) {
         lsp = *search;
 
@@ -76,7 +76,7 @@ isis_psnp_job(timer_s *timer)
             assert(lsp->refcount);
             if(lsp->refcount) lsp->refcount--;
             hb_tree_remove(adjacency->psnp_tree, &lsp->id);
-            search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);
+            search = hb_tree_search_ge(adjacency->psnp_tree, &lsp_id_zero);
             continue;
         }
 
@@ -129,7 +129,7 @@ isis_psnp_job(timer_s *timer)
         assert(lsp->refcount);
         if(lsp->refcount) lsp->refcount--;
         hb_tree_remove(adjacency->psnp_tree, &lsp->id);
-        search = hb_tree_search_gt(adjacency->psnp_tree, &lsp_id_zero);
+        search = hb_tree_search_ge(adjacency->psnp_tree, &lsp_id_zero);
     }
     isis_pdu_update_len(&pdu);
     isis_pdu_update_auth(&pdu, key);
@@ -193,6 +193,12 @@ isis_psnp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_
     config = instance->config;
 
     adjacency->stats.psnp_rx++;
+
+    /* SNPs are only accepted from an adjacency in state up
+     * (ISO 10589 7.3.15.2). */
+    if(adjacency->state != ISIS_ADJACENCY_STATE_UP) {
+        return;
+    }
     
     if(level == ISIS_LEVEL_1 && config->level1_auth_psnp) {
         auth = config->level1_auth;

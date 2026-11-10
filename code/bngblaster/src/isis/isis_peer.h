@@ -15,6 +15,9 @@ isis_peer_dis_elect(isis_adjacency_s *adjacency);
 void
 isis_peer_update(isis_peer_s *peer, isis_pdu_s *pdu);
 
+bool
+isis_peer_hello_valid(isis_instance_s *instance, isis_pdu_s *pdu, uint8_t level);
+
 isis_peer_s*
 isis_peer(isis_adjacency_s *adjacency, uint8_t *mac);
 

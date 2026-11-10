@@ -3020,7 +3020,7 @@
                     "type": "integer",
                     "description": "LSPBufferSize in bytes (default max-pdu-size)",
                     "default": 1492,
-                    "minimum": 128,
+                    "minimum": 512,
                     "maximum": 11997
                 },
                 "max-pdu-size": {
@@ -3092,6 +3092,8 @@
                 "area": {
                     "type": "array",
                     "description": "ISIS area(s)",
+                    "minItems": 1,
+                    "maxItems": 3,
                     "items": {
                         "type": "string"
                     }

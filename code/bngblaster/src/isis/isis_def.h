@@ -83,6 +83,14 @@
 
 #define ISIS_LSP_GC_INTERVAL            30
 #define ISIS_LSP_GC_DELETE_MAX          256
+/* Lifetime of LSPs requested by SNP entries but not received yet. */
+#define ISIS_LSP_REQUEST_LIFETIME       60
+/* Default maximumAreaAddresses (ISO 10589). */
+#define ISIS_MAX_AREAS                  3
+/* Minimum originatingLSPBufferSize (ISO 10589). */
+#define ISIS_MIN_LSP_BUFFER_SIZE        512
+/* Size of the extended P2P three-way adjacency TLV (RFC 5303). */
+#define ISIS_P2P_ADJACENCY_STATE_LEN_FULL 15
 
 #define ISIS_PROTOCOLS_MAX              2
 #define ISIS_PROTOCOL_IPV4              0xcc
@@ -342,6 +350,10 @@ typedef struct isis_peer_ {
     uint16_t hold_time;
     char    *hostname;
 
+    /* Extended local circuit ID of the P2P neighbor (RFC 5303) */
+    uint32_t ext_circuit_id;
+    bool     ext_circuit_id_valid;
+
     struct timer_ *timer_hold;
     struct isis_adjacency_ *adjacency;
     struct isis_adjacency_p2p_ *adjacency_p2p;
@@ -377,6 +389,7 @@ typedef struct isis_adjacency_ {
     bool timer_psnp_started;
 
     uint8_t  pseudo_node_id;
+    uint8_t  dis_lsp_fragment; /* last fragment of the pseudonode LSP */
     uint8_t  level; /* adjacency level (L1 or L2) */
     uint8_t  levels; /* interface levels (L1, L2 or L1L2) */ 
     uint8_t  state;

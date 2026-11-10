@@ -22,7 +22,7 @@ isis_peer_dis_elect(isis_adjacency_s *adjacency)
         if(peer->pseudo_node_id && peer->state == ISIS_PEER_STATE_UP && 
            (peer->priority > priority ||
            (peer->priority == priority && 
-            compare_mac_addresses(peer->mac, mac)))) {
+            compare_mac_addresses(peer->mac, mac) > 0))) {
             priority = peer->priority;
             dis = peer;
             mac = peer->mac;
@@ -117,11 +117,70 @@ isis_peer_update(isis_peer_s *peer, isis_pdu_s *pdu)
         peer->priority = *ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_PRIORITY);
         if(memcmp(peer->system_id, ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_DIS), ISIS_SYSTEM_ID_LEN) == 0) {
             peer->pseudo_node_id = *ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_DIS_PSEUDO);
+        } else {
+            /* The peer no longer claims to be DIS. */
+            peer->pseudo_node_id = 0;
         }
         timer_add(&g_ctx->timer_root, &peer->timer_hold, 
                   "ISIS Hold", peer->hold_time, 0, peer, 
                   &isis_peer_hold_timeout);
     }
+}
+
+/**
+ * Return true if one of the areas of a received hello matches
+ * one of the areas of the instance (ISO 10589 8.2.4 and 8.4.2).
+ */
+static bool
+isis_peer_area_match(isis_config_s *config, isis_pdu_s *pdu)
+{
+    isis_tlv_s *tlv;
+    uint8_t offset, len;
+
+    tlv = isis_pdu_first_tlv(pdu);
+    while(tlv) {
+        if(tlv->type == ISIS_TLV_AREA_ADDRESSES) {
+            offset = 0;
+            while(offset < tlv->len) {
+                len = tlv->value[offset++];
+                if(offset + len > tlv->len) {
+                    break;
+                }
+                for(int i = 0; i < config->area_count; i++) {
+                    if(config->area[i].len == len &&
+                       memcmp(config->area[i].value, tlv->value+offset, len) == 0) {
+                        return true;
+                    }
+                }
+                offset += len;
+            }
+        }
+        tlv = isis_pdu_next_tlv(pdu);
+    }
+    return false;
+}
+
+/**
+ * Check a received hello for the given level: the system-id must not
+ * be the own one, the circuit type must include the level and level 1
+ * requires a common area (ISO 10589 8.2 and 8.4).
+ */
+bool
+isis_peer_hello_valid(isis_instance_s *instance, isis_pdu_s *pdu, uint8_t level)
+{
+    isis_config_s *config = instance->config;
+    uint8_t circuit_type = *ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_LEVEL) & 0x03;
+
+    if(memcmp(ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_SYSTEM_ID), config->system_id, ISIS_SYSTEM_ID_LEN) == 0) {
+        return false;
+    }
+    if(!(circuit_type & level)) {
+        return false;
+    }
+    if(level == ISIS_LEVEL_1 && !isis_peer_area_match(config, pdu)) {
+        return false;
+    }
+    return true;
 }
 
 isis_peer_s*

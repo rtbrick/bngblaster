@@ -32,15 +32,22 @@ def pytest_unconfigure(config):
                 os.lchown(name, int(uid), int(gid))
 
 
+def pytest_addoption(parser):
+    parser.addoption("--slow", action="store_true", default=False,
+                     help="run slow tests (marked slow)")
+
+
 def pytest_collection_modifyitems(config, items):
     reason = None
     if os.geteuid() != 0:
         reason = "integration tests require root (network namespaces)"
     elif not helpers.BNGBLASTER_BIN:
         reason = "bngblaster binary not found (set BNGBLASTER_BIN)"
-    if reason:
-        for item in items:
+    for item in items:
+        if reason:
             item.add_marker(pytest.mark.skip(reason=reason))
+        elif "slow" in item.keywords and not config.getoption("--slow"):
+            item.add_marker(pytest.mark.skip(reason="slow test (run with --slow)"))
 
 
 @pytest.fixture(scope="session", autouse=True)

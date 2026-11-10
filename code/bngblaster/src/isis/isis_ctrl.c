@@ -243,15 +243,15 @@ isis_ctrl_database_entries(hb_tree *lsdb)
             remaining_lifetime = lsp->lifetime - ago.tv_sec;
         }
 
-        if(lsp->source.adjacency) {
+        if(lsp->source.adjacency && lsp->source.adjacency->peer) {
             source_system_id = isis_system_id_to_str(lsp->source.adjacency->peer->system_id);
         } else {
             source_system_id = NULL;
         }
         
-        entry = json_pack("{ss si si si ss ss*}", 
+        entry = json_pack("{ss sI si si ss ss*}", 
             "id", isis_lsp_id_to_str(&lsp->id),
-            "seq", lsp->seq,
+            "seq", (json_int_t)lsp->seq,
             "lifetime", lsp->lifetime,
             "lifetime-remaining", remaining_lifetime,
             "source-type", isis_source_string(lsp->source.type),
@@ -360,9 +360,16 @@ isis_ctrl_lsp_update(int fd, uint32_t session_id __attribute__((unused)), json_t
             if(pdu_string_len != strlen(pdu_string)) {
                 return bbl_ctrl_status(fd, "error", 400, "ISIS PDU too long");
             }
+            if(pdu_string_len % 2) {
+                return bbl_ctrl_status(fd, "error", 400, "invalid ISIS PDU hex string");
+            }
             /* Load PDU from hexstring */
             for (len = 0; len < (pdu_string_len/2); len++) {
-                sscanf(pdu_string + len*2, "%02hhx", &buf[len]);
+                if(!isxdigit((unsigned char)pdu_string[len*2]) ||
+                   !isxdigit((unsigned char)pdu_string[len*2+1]) ||
+                   sscanf(pdu_string + len*2, "%02hhx", &buf[len]) != 1) {
+                    return bbl_ctrl_status(fd, "error", 400, "invalid ISIS PDU hex string");
+                }
             }
             result = isis_pdu_load(&pdu, (uint8_t*)buf, len);
             if(result != PROTOCOL_SUCCESS) {

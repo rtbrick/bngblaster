@@ -84,6 +84,12 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
 
         /* Get LSDB */
         lsdb = instance->level[level-1].lsdb;
+        if(!lsdb) {
+            LOG(ERROR, "Failed to add %s-LSP %s from MRT file %s (level not enabled in instance %u)\n",
+                isis_level_string(level), isis_lsp_id_to_str(&lsp_id), file_path, instance->config->id);
+            fclose(mrt_file);
+            return false;
+        }
         search = hb_tree_search(lsdb, &lsp_id);
         if(search) {
             /* Update existing LSP. */
@@ -92,6 +98,12 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
                 LOG_NOARG(ISIS, "Failed to add LSP to LSDB (overwriting self LSP not permitted)\n");
                 fclose(mrt_file);
                 return false;
+            }
+            if(lsp->seq >= seq) {
+                /* Keep the newer LSP. */
+                LOG(ISIS, "Skip %s-LSP %s (seq %u) from MRT file, LSDB has seq %u\n",
+                    isis_level_string(level), isis_lsp_id_to_str(&lsp_id), seq, lsp->seq);
+                continue;
             }
         } else {
             /* Create new LSP. */
@@ -137,6 +149,10 @@ isis_mrt_load(isis_instance_s *instance, char *file_path, bool startup)
                                &isis_lsp_refresh_job);
         } else {
             isis_lsp_lifetime(lsp);
+        }
+        if(!startup) {
+            /* Loaded during a running adjacency. */
+            isis_lsp_flood(lsp);
         }
     }
 

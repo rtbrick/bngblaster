@@ -148,9 +148,11 @@ isis_pdu_load(isis_pdu_s *pdu, uint8_t *buf, uint16_t len)
         default:
             return DECODE_ERROR;
     }
-    if(pdu_len > len) {
+    if(pdu_len > len || pdu_len < hdr_len) {
         return DECODE_ERROR;
     }
+    /* Bytes after the PDU length (e.g. Ethernet padding) are ignored. */
+    pdu->pdu_len = pdu_len;
 
     /* Check TLV section and search for authentication TLV */
     ISIS_PDU_CURSOR_SET(pdu, hdr_len);
@@ -314,6 +316,11 @@ isis_pdu_update_auth(isis_pdu_s *pdu, char *key)
     }
 }
 
+/**
+ * Validate the LSP checksum. The checksum of a purge (zero lifetime)
+ * is not checked (RFC 3719 section 7), a zero checksum of any other
+ * LSP is invalid (ISO 10589 7.3.14.2).
+ */
 bool
 isis_pdu_validate_checksum(isis_pdu_s *pdu)
 {
@@ -323,15 +330,19 @@ isis_pdu_validate_checksum(isis_pdu_s *pdu)
     switch(pdu->pdu_type) {
         case ISIS_PDU_L1_LSP:
         case ISIS_PDU_L2_LSP:
-            checksum_orig = *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM);
-            if(checksum_orig > 0) {
-                checksum = calculate_fletcher_checksum(
-                    pdu->pdu+ISIS_OFFSET_LSP_ID, 
-                    ISIS_OFFSET_LSP_CHECKSUM-ISIS_OFFSET_LSP_ID, 
-                    pdu->pdu_len-ISIS_OFFSET_LSP_ID);
-                *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM) = checksum_orig;
-                checksum_orig = be16toh(checksum_orig);
+            if(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_LIFETIME) == 0) {
+                return true;
             }
+            checksum_orig = *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM);
+            if(checksum_orig == 0) {
+                return false;
+            }
+            checksum = calculate_fletcher_checksum(
+                pdu->pdu+ISIS_OFFSET_LSP_ID, 
+                ISIS_OFFSET_LSP_CHECKSUM-ISIS_OFFSET_LSP_ID, 
+                pdu->pdu_len-ISIS_OFFSET_LSP_ID);
+            *(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_LSP_CHECKSUM) = checksum_orig;
+            checksum_orig = be16toh(checksum_orig);
             break;
         default:
             return true;
@@ -347,12 +358,17 @@ isis_pdu_validate_auth(isis_pdu_s *pdu, isis_auth_type auth, char *key)
 {
     uint8_t auth_data[ISIS_MD5_DIGEST_LEN];
 
-    if(!(pdu && pdu->auth_type == auth)) {
+    if(!pdu) {
         return false;
     }
 
+    /* Without authentication, PDUs with authentication TLV are accepted. */
     if(auth == ISIS_AUTH_NONE) {
         return true;
+    }
+
+    if(pdu->auth_type != auth) {
+        return false;
     }
 
     if(!(pdu->auth_data_offset && pdu->auth_data_len && key)) {
@@ -525,14 +541,26 @@ isis_pdu_add_tlv_ipv6_int_address(isis_pdu_s *pdu, ipv6addr_t *addr)
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
 }
 
+/**
+ * Add the P2P three-way adjacency TLV (RFC 5303), with the
+ * neighbor system-id and extended circuit ID once known.
+ */
 void
-isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state, uint32_t vlindex)
+isis_pdu_add_tlv_p2p_adjacency_state(isis_pdu_s *pdu, uint8_t state, uint32_t vlindex, isis_peer_s *peer)
 {
     isis_tlv_s *tlv = (isis_tlv_s *)ISIS_PDU_CURSOR(pdu);
     tlv->type = ISIS_TLV_P2P_ADJACENCY_STATE;
     tlv->len = sizeof(state) + sizeof(vlindex);
     *tlv->value = state;
     *(uint32_t*)(&tlv->value[1]) = htobe32(vlindex);
+    if(peer && peer->state != ISIS_PEER_STATE_DOWN) {
+        memcpy(&tlv->value[5], peer->system_id, ISIS_SYSTEM_ID_LEN);
+        tlv->len += ISIS_SYSTEM_ID_LEN;
+        if(peer->ext_circuit_id_valid) {
+            *(uint32_t*)(&tlv->value[11]) = htobe32(peer->ext_circuit_id);
+            tlv->len += sizeof(uint32_t);
+        }
+    }
     ISIS_PDU_BUMP_WRITE_BUFFER(pdu, sizeof(isis_tlv_s)+tlv->len);
 }
 

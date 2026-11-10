@@ -17,8 +17,12 @@ Functional tests over veth pairs between network namespaces:
   that only connects actively (`test_bgp_listen.py`, `bgp_sink.py`)
 * BNG Blaster ISIS and OSPFv2 against FRR: adjacency (P2P and
   broadcast, L1/L2/L1L2), database synchronization in both directions
-  with routes installed by FRR, and authentication
-  (`test_isis_frr.py`, `test_ospf_frr.py`)
+  with routes installed by FRR (also by CSNP with HMAC-MD5 as DIS), and
+  authentication (`test_isis_frr.py`, `test_ospf_frr.py`)
+* BNG Blaster ISIS against a scripted neighbor (`isis_peer.py`): P2P
+  three-way handshake, hello checks, DIS election, receive rules for
+  LSPs and SNPs, CSNP ranges with HMAC-MD5, retransmission, purges,
+  pseudonode LSP fragments and control commands (`test_isis_neighbor.py`)
 * BNG Blaster OSPFv2 and OSPFv3 against BIRD: adjacency, DR/BDR
   election, database synchronization in both directions (OSPFv2 only
   from BNG Blaster to BIRD) and authentication (`test_ospf_bird.py`)
@@ -91,6 +95,14 @@ The tests don't build the BNG Blaster, so rebuild after code changes:
 ```
 cmake --build build
 sudo -E python3 -m pytest test/integration
+```
+
+Tests marked `slow` wait for protocol timers of minutes and are skipped
+unless `--slow` is given. Only the slow tests run with `--slow -m slow`
+(GitHub workflow "Integration (slow)", started manually):
+
+```
+sudo -E python3 -m pytest test/integration --slow -m slow
 ```
 
 Without sudo, the tests also run in an unprivileged user namespace:

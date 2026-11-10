@@ -170,10 +170,13 @@ isis_area_to_str(isis_area_s *area)
 bool
 isis_str_to_system_id(const char *str, uint8_t *system_id)
 {
-    sscanf(str, "%hx.%hx.%hx", 
-           &((uint16_t*)system_id)[0], 
-           &((uint16_t*)system_id)[1], 
-           &((uint16_t*)system_id)[2]);
+    memset(system_id, 0x0, ISIS_SYSTEM_ID_LEN);
+    if(sscanf(str, "%hx.%hx.%hx", 
+              &((uint16_t*)system_id)[0], 
+              &((uint16_t*)system_id)[1], 
+              &((uint16_t*)system_id)[2]) != 3) {
+        return false;
+    }
 
     for(uint8_t i = 0; i < (ISIS_SYSTEM_ID_LEN/sizeof(uint16_t)); i++) {
         ((uint16_t*)system_id)[i] = htobe16(((uint16_t*)system_id)[i]);
@@ -243,18 +246,13 @@ isis_pseudo_node_id_to_str(uint8_t *system_id, uint8_t pseudo_node_id)
 bool
 isis_str_to_lsp_id(const char *str, uint64_t *lsp_id)
 {
-    sscanf(str, "%hx.%hx.%hx.%hhx-%hhx", 
-           &((uint16_t*)lsp_id)[3], 
-           &((uint16_t*)lsp_id)[2], 
-           &((uint16_t*)lsp_id)[1], 
-           &((uint8_t*)lsp_id)[1],
-           &((uint8_t*)lsp_id)[0]);
-
-    ((uint16_t*)lsp_id)[3] = ((uint16_t*)lsp_id)[3];
-    ((uint16_t*)lsp_id)[2] = ((uint16_t*)lsp_id)[2];
-    ((uint16_t*)lsp_id)[1] = ((uint16_t*)lsp_id)[1];
-
-    return true;
+    *lsp_id = 0;
+    return sscanf(str, "%hx.%hx.%hx.%hhx-%hhx", 
+                  &((uint16_t*)lsp_id)[3], 
+                  &((uint16_t*)lsp_id)[2], 
+                  &((uint16_t*)lsp_id)[1], 
+                  &((uint8_t*)lsp_id)[1],
+                  &((uint8_t*)lsp_id)[0]) == 5;
 }
 
 /**

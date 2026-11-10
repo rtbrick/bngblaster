@@ -59,7 +59,7 @@ test_newer(isis_lsp_s *lsp, uint32_t seq, uint16_t lifetime, uint16_t checksum)
     static uint8_t buf[TEST_PDU_LEN];
     static isis_pdu_s pdu;
     test_pdu(&pdu, buf, seq, lifetime, checksum);
-    return isis_lsp_rx_newer(lsp, &pdu, seq);
+    return isis_lsp_rx_compare(lsp, &pdu, seq) > 0;
 }
 
 static const isis_lsp_source sources[] = {
@@ -116,6 +116,74 @@ test_isis_lsp_checksum(void **unused)
     assert_true(test_newer(&lsp, TEST_SEQ, TEST_LIFETIME, TEST_CHECKSUM+1));
     test_lsp(&lsp, ISIS_SOURCE_ADJACENCY, false);
     assert_false(test_newer(&lsp, TEST_SEQ, TEST_LIFETIME, TEST_CHECKSUM+1));
+}
+
+/* Older LSPs are answered with the stored one (ISO 10589 7.3.15.1). */
+static void
+test_isis_lsp_older(void **unused)
+{
+    static isis_lsp_s lsp;
+    static uint8_t buf[TEST_PDU_LEN];
+    static isis_pdu_s pdu;
+    (void)unused;
+
+    test_lsp(&lsp, ISIS_SOURCE_ADJACENCY, false);
+    test_pdu(&pdu, buf, TEST_SEQ-1, TEST_LIFETIME, TEST_CHECKSUM);
+    assert_int_equal(isis_lsp_rx_compare(&lsp, &pdu, TEST_SEQ-1), -1);
+    test_pdu(&pdu, buf, TEST_SEQ, TEST_LIFETIME, TEST_CHECKSUM);
+    assert_int_equal(isis_lsp_rx_compare(&lsp, &pdu, TEST_SEQ), 0);
+    /* The stored purge is newer than the same LSP alive. */
+    test_lsp(&lsp, ISIS_SOURCE_ADJACENCY, true);
+    assert_int_equal(isis_lsp_rx_compare(&lsp, &pdu, TEST_SEQ), -1);
+}
+
+/* PDU length, checksum and authentication rules of received PDUs. */
+static void
+test_isis_pdu_rx_rules(void **unused)
+{
+    uint8_t buf[100] = {0};
+    uint8_t pdu_buf[ISIS_PDU_BUF_LEN];
+    isis_pdu_s pdu = {.pdu = pdu_buf, .size = ISIS_DEFAULT_MAX_PDU_LEN_RX};
+    uint16_t len = ISIS_HDR_LEN_COMMON+ISIS_HDR_LEN_LSP;
+    uint16_t checksum;
+    (void)unused;
+
+    buf[0] = ISIS_PROTOCOL_IDENTIFIER;
+    buf[1] = len;
+    buf[4] = ISIS_PDU_L2_LSP;
+    *(uint16_t*)(buf+ISIS_OFFSET_LSP_LEN) = htobe16(len);
+    *(uint16_t*)(buf+ISIS_OFFSET_LSP_LIFETIME) = htobe16(1200);
+    *(uint32_t*)(buf+ISIS_OFFSET_LSP_SEQ) = htobe32(1);
+
+    /* Bytes after the PDU length (e.g. padding) are ignored (BUG-223). */
+    checksum = calculate_fletcher_checksum(buf+ISIS_OFFSET_LSP_ID,
+                                           ISIS_OFFSET_LSP_CHECKSUM-ISIS_OFFSET_LSP_ID,
+                                           len-ISIS_OFFSET_LSP_ID);
+    *(uint16_t*)(buf+ISIS_OFFSET_LSP_CHECKSUM) = htobe16(checksum);
+    assert_int_equal(isis_pdu_load(&pdu, buf, len+10), PROTOCOL_SUCCESS);
+    assert_int_equal(pdu.pdu_len, len);
+    assert_true(isis_pdu_validate_checksum(&pdu));
+
+    /* A length below the header length is invalid. */
+    *(uint16_t*)(buf+ISIS_OFFSET_LSP_LEN) = htobe16(10);
+    assert_int_equal(isis_pdu_load(&pdu, buf, len), DECODE_ERROR);
+    *(uint16_t*)(buf+ISIS_OFFSET_LSP_LEN) = htobe16(len);
+
+    /* Zero checksum with lifetime is invalid (BUG-224). */
+    *(uint16_t*)(buf+ISIS_OFFSET_LSP_CHECKSUM) = 0;
+    assert_int_equal(isis_pdu_load(&pdu, buf, len), PROTOCOL_SUCCESS);
+    assert_false(isis_pdu_validate_checksum(&pdu));
+
+    /* The checksum of a purge is not checked (RFC 3719 section 7). */
+    *(uint16_t*)(buf+ISIS_OFFSET_LSP_LIFETIME) = 0;
+    *(uint16_t*)(buf+ISIS_OFFSET_LSP_CHECKSUM) = htobe16(0x1234);
+    assert_int_equal(isis_pdu_load(&pdu, buf, len), PROTOCOL_SUCCESS);
+    assert_true(isis_pdu_validate_checksum(&pdu));
+
+    /* Without authentication, PDUs with authentication TLV are accepted (BUG-225). */
+    pdu.auth_type = ISIS_AUTH_CLEARTEXT;
+    assert_true(isis_pdu_validate_auth(&pdu, ISIS_AUTH_NONE, NULL));
+    assert_false(isis_pdu_validate_auth(&pdu, ISIS_AUTH_HMAC_MD5, "key"));
 }
 
 /* Stored PDUs are sized per LSP and keep their buffer on copy. */
@@ -287,6 +355,8 @@ int main(void) {
         cmocka_unit_test(test_isis_lsp_purge),
         cmocka_unit_test(test_isis_lsp_checksum),
         cmocka_unit_test(test_isis_lsp_gc),
+        cmocka_unit_test(test_isis_lsp_older),
+        cmocka_unit_test(test_isis_pdu_rx_rules),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

@@ -197,9 +197,27 @@ isis_hello_handler_rx(bbl_network_interface_s *interface,
     }
 
 
+    if(!isis_peer_hello_valid(instance, pdu, level)) {
+        LOG(ISIS, "ISIS RX %s-Hello from %s rejected (system-id, circuit type or area) on interface %s\n",
+            isis_level_string(level),
+            isis_system_id_to_str(ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_SYSTEM_ID)),
+            interface->name);
+        return;
+    }
+
     if(adjacency->dis) dis_pseudo_node_id = adjacency->dis->pseudo_node_id;
 
     peer = isis_peer(adjacency, eth->src);
+    if(peer->state != ISIS_PEER_STATE_DOWN &&
+       memcmp(peer->system_id, ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_SYSTEM_ID), ISIS_SYSTEM_ID_LEN) != 0) {
+        /* The system-id of the neighbor has changed, so the
+         * adjacency is initialized again. */
+        LOG(ISIS, "ISIS %s neighbor %s changed system-id on interface %s\n",
+            isis_level_string(level), isis_system_id_to_str(peer->system_id), interface->name);
+        peer->state = ISIS_PEER_STATE_DOWN;
+        peer->pseudo_node_id = 0;
+        self_update = true;
+    }
     isis_peer_update(peer, pdu);
 
     if(adjacency->dis && adjacency->dis->pseudo_node_id != dis_pseudo_node_id) {

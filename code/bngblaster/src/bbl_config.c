@@ -2331,6 +2331,10 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     value = json_object_get(isis, "area");
     if(json_is_array(value)) {
         isis_config->area_count = json_array_size(value);
+        if(isis_config->area_count < 1 || isis_config->area_count > ISIS_MAX_AREAS) {
+            fprintf(stderr, "JSON config error: Invalid value for isis->area (1 - %u areas)\n", ISIS_MAX_AREAS);
+            return false;
+        }
         isis_config->area = calloc(isis_config->area_count, sizeof(isis_area_s));
         for(i = 0; i < isis_config->area_count; i++) {
             if(!json_is_string(json_array_get(value, i)) ||
@@ -2516,8 +2520,9 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
         isis_config->max_pdu_size = ISIS_DEFAULT_MAX_PDU_SIZE;
     }
 
-    /* Smallest value configurable on IOS-XR (lsp-mtu) */
-    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-buffer-size", 128, ISIS_JUMBO_MAX_PDU_SIZE);
+    /* Self originated LSPs are limited to this size, the minimum
+     * originatingLSPBufferSize of ISO 10589 is 512. */
+    JSON_OBJ_GET_NUMBER(isis, value, "isis", "lsp-buffer-size", ISIS_MIN_LSP_BUFFER_SIZE, ISIS_JUMBO_MAX_PDU_SIZE);
     if(value) {
         isis_config->lsp_buffer_size = json_number_value(value);
     }
