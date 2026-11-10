@@ -1446,7 +1446,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
         bbl_session_s *session = l2tp_session->session;
         if(session) {
             bbl_ppp_rx(session->access_interface, session, NULL,
-                       l2tp->protocol, l2tp->next);
+                       l2tp->protocol, l2tp->next, 0);
         }
         return;
     }

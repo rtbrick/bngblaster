@@ -354,9 +354,7 @@ bbl_a10nsp_ipcp_handler(bbl_a10nsp_interface_s *interface,
 
     switch(ipcp->code) {
         case PPP_CODE_CONF_REQUEST:
-            if(ipcp->address == a10nsp_session->ipv4_address) {
-                ipcp->code = PPP_CODE_CONF_ACK;
-            } else {
+            if(ipcp->address != a10nsp_session->ipv4_address) {
                 ipcp->options = NULL;
                 ipcp->options_len = 0;
                 ipcp->code = PPP_CODE_CONF_NAK;
@@ -368,7 +366,14 @@ bbl_a10nsp_ipcp_handler(bbl_a10nsp_interface_s *interface,
                 if(ipcp->option_dns2) {
                     ipcp->dns2 = MOCK_DNS2;
                 }
+                bbl_a10nsp_tx(interface, a10nsp_session, eth);
+                break;
             }
+            /* The own configure-request is sent with the configure-ack
+             * only, otherwise each nak would be followed by a further
+             * request, which the client must handle as renegotiation
+             * once opened (RFC 1661 section 4.1). */
+            ipcp->code = PPP_CODE_CONF_ACK;
             bbl_a10nsp_tx(interface, a10nsp_session, eth);
             memset(&ipcp_request, 0x0, sizeof(bbl_ipcp_s));
             ipcp_request.code = PPP_CODE_CONF_REQUEST;

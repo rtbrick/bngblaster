@@ -61,6 +61,17 @@ Functional tests over veth pairs between network namespaces:
 * BNG Blaster LDP against FRR: label bindings (IPv4, IPv6, dual-stack),
   hold time, hello adjacency loss, teardown and stream labels
   (`test_ldp_frr.py`)
+* BNG Blaster PPPoE client against a scripted PPPoE server: rejected LCP
+  options, Code-Reject and Discard-Request, NCP timeout, Max-Failure,
+  terminate and renegotiation by the server, ipcp-close retransmission,
+  disabled IPv4/IPCP, PADO validation and several Service-Name tags,
+  missing CHAP challenge, protocol-reject during authentication and for
+  unknown protocols, unsolicited terminate-ack, own MRU limit and
+  outstanding sessions after lcp-restart (`test_pppoe_negotiation.py`,
+  `ppp_peer.py`)
+* BNG Blaster PPPoE client against pppd (rp-pppoe): PAP, IPCP and IP6CP,
+  rejected Magic-Number and MRU, CHAP re-challenge and IPCP rejected by
+  the server (`test_pppoe_pppd.py`)
 * Jumbo frames (9000 byte stream packets) with PACKET_MMAP
   (`test_jumbo_frames.py`)
 * Stream traffic with io-mode raw received by the main loop and by RX
@@ -108,6 +119,12 @@ go install github.com/osrg/gobgp/v4/cmd/...@15e9be9198ae51abad50b3d9b42aa63c3b46
   installed unless `BBL_REQUIRE_BIRD` is set. BIRD is started per test
   in foreground with config, control socket and log in the test
   directory, so the BIRD service can be stopped.
+* pppd and rp-pppoe (Debian/Ubuntu packages `ppp` and `pppoe`), tests
+  are skipped if not installed unless `BBL_REQUIRE_PPPD` is set. Without
+  installing, both packages can be extracted with `dpkg-deb -x` into a
+  directory given by `PPP_ROOT` (remove the setuid bit of the extracted
+  pppd). The pppd options are mounted at `/etc/ppp` per test with an
+  overlay in a private mount namespace.
 * Linux kernel with `CONFIG_TCP_MD5SIG` and `CONFIG_TCP_AO` (6.7+),
   tests are skipped otherwise unless `BBL_REQUIRE_TCP_MD5` or
   `BBL_REQUIRE_TCP_AO` is set.

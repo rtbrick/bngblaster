@@ -4166,6 +4166,7 @@ decode_ppp_lcp(uint8_t *buf, uint16_t len,
         case PPP_CODE_CONF_REQUEST:
         case PPP_CODE_CONF_ACK:
         case PPP_CODE_CONF_NAK:
+        case PPP_CODE_CONF_REJECT:
             while(lcp_len >= 2) {
                 if(lcp_option_index < PPP_MAX_OPTIONS) {
                     lcp->option[lcp_option_index++] = buf;
@@ -4516,8 +4517,14 @@ decode_pppoe_discovery(uint8_t *buf, uint16_t len,
         }
         switch (pppoe_tag_type) {
             case PPPOE_TAG_SERVICE_NAME:
-                pppoe->service_name = buf;
-                pppoe->service_name_len = pppoe_tag_len;
+                if(!pppoe->service_names_count) {
+                    pppoe->service_name = buf;
+                    pppoe->service_name_len = pppoe_tag_len;
+                }
+                if(pppoe->service_names_count < PPPOE_SERVICE_NAMES_MAX) {
+                    pppoe->service_names[pppoe->service_names_count] = buf;
+                    pppoe->service_names_len[pppoe->service_names_count++] = pppoe_tag_len;
+                }
                 break;
             case PPPOE_TAG_HOST_UNIQ:
                 pppoe->host_uniq = buf;
@@ -4609,7 +4616,11 @@ decode_pppoe_session(uint8_t *buf, uint16_t len,
             ret_val = decode_ppp_chap(buf, len, sp, sp_len, (bbl_chap_s**)&pppoe->next);
             break;
         default:
-            pppoe->next = NULL;
+            /* Unsupported PPP protocol, passed as raw data to
+             * the client to answer with LCP Protocol-Reject. */
+            pppoe->next = buf;
+            pppoe->raw_len = len;
+            ret_val = PROTOCOL_SUCCESS;
             break;
     }
 

@@ -1623,11 +1623,18 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
 
     if(access_config->access_type == ACCESS_TYPE_PPPOE ||
        access_config->access_type == ACCESS_TYPE_PPPOL2TP) {
-        /* Disable IPv4 on PPPoE/PPPoL2TP if IPCP is disabled. */
+        /* IPv4 and IPCP (IPv6 and IP6CP) are enabled or disabled
+         * together on PPPoE/PPPoL2TP, the NCP code checks only
+         * the ipcp/ip6cp setting. */
+        if(!access_config->ipv4_enable) {
+            access_config->ipcp_enable = false;
+        }
         if(!access_config->ipcp_enable) {
             access_config->ipv4_enable = false;
         }
-        /* Disable IPv6 on PPPoE/PPPoL2TP if IP6CP is disabled. */
+        if(!access_config->ipv6_enable) {
+            access_config->ip6cp_enable = false;
+        }
         if(!access_config->ip6cp_enable) {
             access_config->ipv6_enable = false;
             access_config->dhcpv6_enable = false;

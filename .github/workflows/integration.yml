@@ -75,6 +75,12 @@ jobs:
         # BIRD is started per test in network namespaces.
         sudo systemctl stop bird
 
+    - name: Install pppd
+      shell: bash
+      run: |
+        # pppoe-server (rp-pppoe) with pppd as PPPoE server, started per test.
+        sudo apt install -y ppp pppoe
+
     - name: Install Python Dependencies
       shell: bash
       run: |
@@ -90,6 +96,7 @@ jobs:
         BBL_REQUIRE_TCP_AO: 1
         BBL_REQUIRE_FRR: 1
         BBL_REQUIRE_BIRD: 1
+        BBL_REQUIRE_PPPD: 1
       run: |
         uname -r
         grep -E "CONFIG_TCP_(AO|MD5SIG)=" /boot/config-$(uname -r) || true

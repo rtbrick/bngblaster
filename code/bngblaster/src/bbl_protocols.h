@@ -682,11 +682,17 @@ typedef struct bbl_ethernet_header_ {
 /*
  * PPPoE Discovery Structure
  */
+#define PPPOE_SERVICE_NAMES_MAX 8
+
 typedef struct bbl_pppoe_discovery_ {
     uint8_t        code;
     uint16_t       session_id;
-    uint8_t       *service_name;
+    uint8_t       *service_name; /* first Service-Name tag */
     uint16_t       service_name_len;
+    /* All Service-Name tags (RFC 2516 section 5.2 allows several in PADO) */
+    uint8_t       *service_names[PPPOE_SERVICE_NAMES_MAX];
+    uint16_t       service_names_len[PPPOE_SERVICE_NAMES_MAX];
+    uint8_t        service_names_count;
     uint8_t       *ac_name;
     uint16_t       ac_name_len;
     uint8_t       *ac_cookie;

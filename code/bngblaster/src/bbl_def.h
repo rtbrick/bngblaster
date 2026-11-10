@@ -131,6 +131,10 @@ static const ipv6_prefix mock_ipv6_ra_prefix = {
 #define DUID_LEN                    10
 #define DHCPV6_BUFFER               64
 
+/* Configure-Nak/Reject received without Configure-Ack
+ * before giving up (RFC 1661 section 4.6 Max-Failure) */
+#define PPP_MAX_FAILURE             5
+
 #define ENABLE_ENDPOINT(_endpoint) \
     if(_endpoint != ENDPOINT_DISABLED) _endpoint = ENDPOINT_ENABLED
 

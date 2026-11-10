@@ -112,6 +112,45 @@ bbl_session_tx_qnode_remove(bbl_session_s *session)
     CIRCLEQ_PREV(session, session_tx_qnode) = NULL;
 }
 
+/**
+ * bbl_session_ncp_down
+ *
+ * IPCP or IP6CP is no longer opened (closed, terminated or renegotiated
+ * by the peer): stop the traffic of this address family.
+ *
+ * @param session session
+ * @param ipcp true for IPCP, false for IP6CP
+ */
+void
+bbl_session_ncp_down(bbl_session_s *session, bool ipcp)
+{
+    if(ipcp) {
+        session->ip_address = 0;
+        session->peer_ip_address = 0;
+        session->dns1 = 0;
+        session->dns2 = 0;
+        ENABLE_ENDPOINT(session->endpoint.ipv4);
+        bbl_stream_reset(session->session_traffic.ipv4_up);
+        bbl_stream_reset(session->session_traffic.ipv4_down);
+    } else {
+        session->ipv6_prefix.len = 0;
+        session->delegated_ipv6_prefix.len = 0;
+        session->icmpv6_ra_received = false;
+        memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+        session->ipv6_address_ia_na = false;
+        memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
+        memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
+        bbl_dhcpv6_stop(session);
+        ENABLE_ENDPOINT(session->endpoint.ipv6);
+        ENABLE_ENDPOINT(session->endpoint.ipv6pd);
+        bbl_stream_reset(session->session_traffic.ipv6_up);
+        bbl_stream_reset(session->session_traffic.ipv6_down);
+        bbl_stream_reset(session->session_traffic.ipv6pd_up);
+        bbl_stream_reset(session->session_traffic.ipv6pd_down);
+    }
+    session->version++;
+}
+
 void
 bbl_session_ncp_open(bbl_session_s *session, bool ipcp) {
     if(session->session_state == BBL_ESTABLISHED ||
@@ -119,6 +158,8 @@ bbl_session_ncp_open(bbl_session_s *session, bool ipcp) {
         if(ipcp) {
             if(session->ipcp_state == BBL_PPP_CLOSED) {
                 session->ipcp_state = BBL_PPP_INIT;
+                session->ipcp_retries = 0;
+                session->ipcp_failures = 0;
                 session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
                 session->send_requests |= BBL_SEND_IPCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
@@ -127,6 +168,8 @@ bbl_session_ncp_open(bbl_session_s *session, bool ipcp) {
             /* ip6cp */
             if(session->ip6cp_state == BBL_PPP_CLOSED) {
                 session->ip6cp_state = BBL_PPP_INIT;
+                session->ip6cp_retries = 0;
+                session->ip6cp_failures = 0;
                 session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
                 session->send_requests |= BBL_SEND_IP6CP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
@@ -142,26 +185,19 @@ bbl_session_ncp_close(bbl_session_s *session, bool ipcp) {
         if(ipcp) {
             if(session->ipcp_state == BBL_PPP_OPENED) {
                 session->ipcp_state = BBL_PPP_TERMINATE;
+                session->ipcp_retries = 0;
                 session->ipcp_request_code = PPP_CODE_TERM_REQUEST;
                 session->send_requests |= BBL_SEND_IPCP_REQUEST;
-                session->ip_address = 0;
-                session->peer_ip_address = 0;
-                session->dns1 = 0;
-                session->dns2 = 0;
+                bbl_session_ncp_down(session, true);
                 bbl_session_tx_qnode_insert(session);
             }
         } else { /* ip6cp */
             if(session->ip6cp_state == BBL_PPP_OPENED) {
                 session->ip6cp_state = BBL_PPP_TERMINATE;
+                session->ip6cp_retries = 0;
                 session->ip6cp_request_code = PPP_CODE_TERM_REQUEST;
                 session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-                /* Stop IPv6 */
-                session->ipv6_prefix.len = 0;
-                session->icmpv6_ra_received = false;
-                memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
-                memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
-                /* Stop DHCPv6 */
-                bbl_dhcpv6_stop(session);
+                bbl_session_ncp_down(session, false);
                 bbl_session_tx_qnode_insert(session);
             }
         }
@@ -400,6 +436,11 @@ bbl_session_reset(bbl_session_s *session) {
 
     session->pppoe_retries = 0;
     session->lcp_retries = 0;
+    session->lcp_failures = 0;
+    session->lcp_mru_rejected = false;
+    session->lcp_magic_rejected = false;
+    session->ipcp_failures = 0;
+    session->ip6cp_failures = 0;
     session->lcp_options_len = 0;
     session->lcp_response_code = 0;
     session->lcp_request_code = 0;
@@ -638,9 +679,12 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             bbl_tun_session_down(session);
         }
 
-        /* Update outstanding session count. */
+        /* Update outstanding session count, sessions going back to
+         * setup (e.g. LCP or DHCP restart) are outstanding again. */
         if(old_state > BBL_IDLE && old_state < BBL_ESTABLISHED && new_state >= BBL_ESTABLISHED) {
             if(g_ctx->sessions_outstanding) g_ctx->sessions_outstanding--;
+        } else if(old_state == BBL_ESTABLISHED && new_state > BBL_IDLE && new_state < BBL_ESTABLISHED) {
+            g_ctx->sessions_outstanding++;
         }
         
         if(new_state == BBL_ESTABLISHED) {

@@ -151,7 +151,11 @@ bbl_ppp_rx(bbl_access_interface_s *interface,
            bbl_session_s *session,
            bbl_ethernet_header_s *eth,
            uint16_t protocol,
-           void *next);
+           void *next,
+           uint16_t raw_len);
+
+void
+bbl_access_ncp_failed(bbl_session_s *session, bool ipcp);
 
 int
 bbl_access_ctrl_interfaces(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments __attribute__((unused)));

@@ -155,7 +155,10 @@ typedef struct bbl_session_
     uint8_t     lcp_identifier;
     uint8_t     lcp_peer_identifier;
     uint8_t     lcp_retries;
+    uint8_t     lcp_failures; /* Configure-Nak/Reject received (Max-Failure) */
     bool        lcp_echo_request_ignore;
+    bool        lcp_mru_rejected; /* MRU option rejected by peer */
+    bool        lcp_magic_rejected; /* Magic-Number option rejected by peer */
     uint32_t    magic_number;
     uint32_t    peer_magic_number;
     uint16_t    mru;
@@ -175,6 +178,7 @@ typedef struct bbl_session_
     uint8_t     ipcp_identifier;
     uint8_t     ipcp_peer_identifier;
     uint8_t     ipcp_retries;
+    uint8_t     ipcp_failures;
     bool        ipcp_request_dns1;
     bool        ipcp_request_dns2;
 
@@ -187,6 +191,7 @@ typedef struct bbl_session_
     uint8_t     ip6cp_identifier;
     uint8_t     ip6cp_peer_identifier;
     uint8_t     ip6cp_retries;
+    uint8_t     ip6cp_failures;
     uint64_t    ip6cp_ipv6_identifier;
     uint64_t    ip6cp_ipv6_peer_identifier;
 
@@ -373,11 +378,17 @@ typedef struct bbl_session_
 const char *
 session_state_string(uint32_t state);
 
+const char *
+ppp_state_string(uint32_t state);
+
 void
 bbl_session_tx_qnode_insert(struct bbl_session_ *session);
 
 void
 bbl_session_tx_qnode_remove(struct bbl_session_ *session);
+
+void
+bbl_session_ncp_down(bbl_session_s *session, bool ipcp);
 
 void
 bbl_session_ncp_open(bbl_session_s *session, bool ipcp);

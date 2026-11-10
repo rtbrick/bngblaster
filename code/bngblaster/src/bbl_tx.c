@@ -698,20 +698,30 @@ void
 bbl_tx_ip6cp_timeout(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
-    if(session->session_state == BBL_PPP_NETWORK && session->ip6cp_state != BBL_PPP_OPENED) {
-        if(session->ip6cp_retries) {
-            session->access_interface->stats.ip6cp_timeout++;
-        }
-        if(session->ip6cp_retries > g_ctx->config.ip6cp_conf_request_retry) {
-            session->ip6cp_state = BBL_PPP_CLOSED;
-            LOG(PPPOE, "IP6CP TIMEOUT (ID: %u)\n", session->session_id);
-            if(session->ipcp_state == BBL_PPP_CLOSED && session->ip6cp_state == BBL_PPP_CLOSED) {
-                bbl_session_clear(session);
-            }
-        } else {
-            session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-            bbl_session_tx_qnode_insert(session);
-        }
+
+    /* Requests are also retried in established state (open, close). */
+    if(!(session->session_state == BBL_PPP_NETWORK ||
+         session->session_state == BBL_ESTABLISHED)) {
+        return;
+    }
+    switch(session->ip6cp_state) {
+        case BBL_PPP_INIT:
+        case BBL_PPP_LOCAL_ACK:
+        case BBL_PPP_PEER_ACK:
+        case BBL_PPP_TERMINATE:
+            break;
+        default:
+            return;
+    }
+    if(session->ip6cp_retries) {
+        session->access_interface->stats.ip6cp_timeout++;
+    }
+    if(session->ip6cp_retries > g_ctx->config.ip6cp_conf_request_retry) {
+        LOG(PPPOE, "IP6CP TIMEOUT (ID: %u)\n", session->session_id);
+        bbl_access_ncp_failed(session, false);
+    } else {
+        session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+        bbl_session_tx_qnode_insert(session);
     }
 }
 
@@ -720,7 +730,7 @@ bbl_tx_encode_packet_ip6cp_request(bbl_session_s *session)
 {
     bbl_ip6cp_s ip6cp = {0};
 
-    if(session->ip6cp_state == BBL_PPP_CLOSED || session->ip6cp_state == BBL_PPP_OPENED) {
+    if(session->ip6cp_state < BBL_PPP_INIT || session->ip6cp_state == BBL_PPP_OPENED) {
         return WRONG_PROTOCOL_STATE;
     }
 
@@ -758,20 +768,30 @@ void
 bbl_ipcp_timeout(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
-    if(session->session_state == BBL_PPP_NETWORK && session->ipcp_state != BBL_PPP_OPENED) {
-        if(session->ipcp_retries) {
-            session->access_interface->stats.ipcp_timeout++;
-        }
-        if(session->ipcp_retries > g_ctx->config.ipcp_conf_request_retry) {
-            session->ipcp_state = BBL_PPP_CLOSED;
-            LOG(PPPOE, "IPCP TIMEOUT (ID: %u)\n", session->session_id);
-            if(session->ipcp_state == BBL_PPP_CLOSED && session->ip6cp_state == BBL_PPP_CLOSED) {
-                bbl_session_clear(session);
-            }
-        } else {
-            session->send_requests |= BBL_SEND_IPCP_REQUEST;
-            bbl_session_tx_qnode_insert(session);
-        }
+
+    /* Requests are also retried in established state (open, close). */
+    if(!(session->session_state == BBL_PPP_NETWORK ||
+         session->session_state == BBL_ESTABLISHED)) {
+        return;
+    }
+    switch(session->ipcp_state) {
+        case BBL_PPP_INIT:
+        case BBL_PPP_LOCAL_ACK:
+        case BBL_PPP_PEER_ACK:
+        case BBL_PPP_TERMINATE:
+            break;
+        default:
+            return;
+    }
+    if(session->ipcp_retries) {
+        session->access_interface->stats.ipcp_timeout++;
+    }
+    if(session->ipcp_retries > g_ctx->config.ipcp_conf_request_retry) {
+        LOG(PPPOE, "IPCP TIMEOUT (ID: %u)\n", session->session_id);
+        bbl_access_ncp_failed(session, true);
+    } else {
+        session->send_requests |= BBL_SEND_IPCP_REQUEST;
+        bbl_session_tx_qnode_insert(session);
     }
 }
 
@@ -780,7 +800,7 @@ bbl_tx_encode_packet_ipcp_request(bbl_session_s *session)
 {
     bbl_ipcp_s ipcp = {0};
 
-    if(session->ipcp_state == BBL_PPP_CLOSED || session->ipcp_state == BBL_PPP_OPENED) {
+    if(session->ipcp_state < BBL_PPP_INIT || session->ipcp_state == BBL_PPP_OPENED) {
         return WRONG_PROTOCOL_STATE;
     }
 
@@ -866,11 +886,13 @@ bbl_tx_encode_packet_lcp_request(bbl_session_s *session)
     lcp.code = session->lcp_request_code;
     lcp.identifier = ++session->lcp_identifier;
     if(lcp.code == PPP_CODE_ECHO_REQUEST) {
-        lcp.magic = session->magic_number;
+        /* Magic-Number zero if not negotiated */
+        lcp.magic = session->lcp_magic_rejected ? 0 : session->magic_number;
         timeout = 0;
     } else if(lcp.code == PPP_CODE_CONF_REQUEST) {
-        lcp.mru = session->mru;
-        lcp.magic = session->magic_number;
+        /* Options rejected by the peer are not requested again. */
+        lcp.mru = session->lcp_mru_rejected ? 0 : session->mru;
+        lcp.magic = session->lcp_magic_rejected ? 0 : session->magic_number;
         timeout = g_ctx->config.lcp_conf_request_timeout;
     }
 
@@ -892,7 +914,7 @@ bbl_tx_encode_packet_lcp_response(bbl_session_s *session)
     lcp.identifier = session->lcp_peer_identifier;
 
     if(lcp.code == PPP_CODE_ECHO_REPLY) {
-        lcp.magic = session->magic_number;
+        lcp.magic = session->lcp_magic_rejected ? 0 : session->magic_number;
     } else {
         if(session->lcp_options_len) {
             lcp.options = session->lcp_options;

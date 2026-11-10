@@ -853,6 +853,13 @@ bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_messa
             key.session_id = atoi(tok);
             search = dict_search(g_ctx->l2tp_session_dict, &key);
             if(search) {
+                if(((bbl_l2tp_session_s*)*search)->session &&
+                   ((bbl_l2tp_session_s*)*search)->session != session) {
+                    LOG(ERROR, "L2TP (ID: %u) BNG Blaster LNS session (%d:%d) already linked to session %u\n",
+                        session->session_id, key.tunnel_id, key.session_id,
+                        ((bbl_l2tp_session_s*)*search)->session->session_id);
+                    return;
+                }
                 session->l2tp_session = *search;
                 session->l2tp_session->session = session;
                 LOG(L2TP, "L2TP (ID: %u) Tunnelled session with BNG Blaster LNS (%d:%d)\n",
@@ -863,6 +870,42 @@ bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_messa
     }
     LOG(ERROR, "L2TP (ID: %u) Failed to get BNG Blaster LNS session\n", session->session_id);
     return;
+}
+
+/* Start the network phase with IPCP and IP6CP. */
+static void
+bbl_access_ncp_start(bbl_session_s *session)
+{
+    bbl_session_update_state(session, BBL_PPP_NETWORK);
+    if(session->access_config->ipcp_enable) {
+        session->ipcp_state = BBL_PPP_INIT;
+        session->ipcp_retries = 0;
+        session->ipcp_failures = 0;
+        session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
+        session->send_requests |= BBL_SEND_IPCP_REQUEST;
+        session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
+    }
+    if(session->access_config->ip6cp_enable) {
+        session->ip6cp_state = BBL_PPP_INIT;
+        session->ip6cp_retries = 0;
+        session->ip6cp_failures = 0;
+        session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
+        session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+        session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
+    }
+    bbl_session_tx_qnode_insert(session);
+}
+
+/* Terminate the PPP session with LCP terminate-request. */
+static void
+bbl_access_lcp_terminate(bbl_session_s *session)
+{
+    bbl_session_update_state(session, BBL_PPP_TERMINATING);
+    session->lcp_request_code = PPP_CODE_TERM_REQUEST;
+    session->lcp_options_len = 0;
+    session->lcp_state = BBL_PPP_TERMINATE;
+    session->send_requests |= BBL_SEND_LCP_REQUEST;
+    bbl_session_tx_qnode_insert(session);
 }
 
 static void
@@ -885,31 +928,28 @@ bbl_access_rx_pap(bbl_access_interface_s *interface,
                 if(pap->reply_message_len) {
                     bbl_access_set_message(&session->reply_message, pap->reply_message, pap->reply_message_len);
                 }
-                bbl_session_update_state(session, BBL_PPP_NETWORK);
-                if(session->access_config->ipcp_enable) {
-                    session->ipcp_state = BBL_PPP_INIT;
-                    session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
-                    session->send_requests |= BBL_SEND_IPCP_REQUEST;
-                    session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
-                }
-                if(session->access_config->ip6cp_enable) {
-                    session->ip6cp_state = BBL_PPP_INIT;
-                    session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
-                    session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-                    session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
-                }
-                bbl_session_tx_qnode_insert(session);
+                bbl_access_ncp_start(session);
                 break;
             default:
-                bbl_session_update_state(session, BBL_PPP_TERMINATING);
-                session->lcp_request_code = PPP_CODE_TERM_REQUEST;
-                session->lcp_options_len = 0;
-                session->lcp_state = BBL_PPP_TERMINATE;
-                session->send_requests |= BBL_SEND_LCP_REQUEST;
-                bbl_session_tx_qnode_insert(session);
+                bbl_access_lcp_terminate(session);
                 break;
         }
     }
+}
+
+static void
+bbl_access_chap_response(bbl_session_s *session, bbl_chap_s *chap)
+{
+    MD5_CTX md5_ctx;
+
+    MD5_Init(&md5_ctx);
+    MD5_Update(&md5_ctx, &chap->identifier, 1);
+    MD5_Update(&md5_ctx, session->password, strlen(session->password));
+    MD5_Update(&md5_ctx, chap->challenge, chap->challenge_len);
+    MD5_Final(session->chap_response, &md5_ctx);
+    session->chap_identifier = chap->identifier;
+    session->send_requests |= BBL_SEND_CHAP_RESPONSE;
+    bbl_session_tx_qnode_insert(session);
 }
 
 static void
@@ -918,10 +958,29 @@ bbl_access_rx_chap(bbl_access_interface_s *interface,
                    bbl_chap_s *chap,
                    struct timespec *timestamp)
 {
-    MD5_CTX md5_ctx;
-
     UNUSED(interface);
     UNUSED(timestamp);
+
+    if(session->session_state == BBL_PPP_NETWORK ||
+       session->session_state == BBL_ESTABLISHED) {
+        /* Repeated challenges during the link (RFC 1994 section 2) */
+        switch(chap->code) {
+            case CHAP_CODE_CHALLENGE:
+                if(chap->challenge_len) {
+                    LOG(PPPOE, "CHAP (ID: %u) Re-challenge received\n", session->session_id);
+                    session->auth_retries = 0;
+                    bbl_access_chap_response(session, chap);
+                }
+                break;
+            case CHAP_CODE_SUCCESS:
+                break;
+            default:
+                LOG(PPPOE, "CHAP (ID: %u) Re-authentication failed\n", session->session_id);
+                bbl_access_lcp_terminate(session);
+                break;
+        }
+        return;
+    }
 
     if(session->session_state == BBL_PPP_AUTH) {
         switch(chap->code) {
@@ -929,21 +988,9 @@ bbl_access_rx_chap(bbl_access_interface_s *interface,
                 if(chap->challenge_len == 0) {
                     /* TODO: Add support for variable CHAP challenge lengths. */
                     LOG(PPPOE, "CHAP (ID: %u) CHAP challenge length must be greater than 0\n", session->session_id);
-                    bbl_session_update_state(session, BBL_PPP_TERMINATING);
-                    session->lcp_request_code = PPP_CODE_TERM_REQUEST;
-                    session->lcp_options_len = 0;
-                    session->lcp_state = BBL_PPP_TERMINATE;
-                    session->send_requests |= BBL_SEND_LCP_REQUEST;
-                    bbl_session_tx_qnode_insert(session);
+                    bbl_access_lcp_terminate(session);
                 } else {
-                    MD5_Init(&md5_ctx);
-                    MD5_Update(&md5_ctx, &chap->identifier, 1);
-                    MD5_Update(&md5_ctx, session->password, strlen(session->password));
-                    MD5_Update(&md5_ctx, chap->challenge, chap->challenge_len);
-                    MD5_Final(session->chap_response, &md5_ctx);
-                    session->chap_identifier = chap->identifier;
-                    session->send_requests |= BBL_SEND_CHAP_RESPONSE;
-                    bbl_session_tx_qnode_insert(session);
+                    bbl_access_chap_response(session, chap);
                 }
                 break;
             case CHAP_CODE_SUCCESS:
@@ -955,29 +1002,29 @@ bbl_access_rx_chap(bbl_access_interface_s *interface,
                 if(chap->reply_message_len) {
                     bbl_access_set_message(&session->reply_message, chap->reply_message, chap->reply_message_len);
                 }
-                bbl_session_update_state(session, BBL_PPP_NETWORK);
-                if(session->access_config->ipcp_enable) {
-                    session->ipcp_state = BBL_PPP_INIT;
-                    session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
-                    session->send_requests |= BBL_SEND_IPCP_REQUEST;
-                    session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
-                }
-                if(session->access_config->ip6cp_enable) {
-                    session->ip6cp_state = BBL_PPP_INIT;
-                    session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
-                    session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-                    session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
-                }
-                bbl_session_tx_qnode_insert(session);
+                timer_del(session->timer_auth);
+                bbl_access_ncp_start(session);
                 break;
             default:
-                bbl_session_update_state(session, BBL_PPP_TERMINATING);
-                session->lcp_request_code = PPP_CODE_TERM_REQUEST;
-                session->lcp_options_len = 0;
-                session->lcp_state = BBL_PPP_TERMINATE;
-                session->send_requests |= BBL_SEND_LCP_REQUEST;
-                bbl_session_tx_qnode_insert(session);
+                bbl_access_lcp_terminate(session);
                 break;
+        }
+    }
+}
+
+/* No CHAP challenge received after LCP is opened. */
+static void
+bbl_access_chap_challenge_timeout(timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+    if(session->session_state == BBL_PPP_AUTH) {
+        session->access_interface->stats.chap_timeout++;
+        if(++session->auth_retries > g_ctx->config.authentication_retry) {
+            LOG(PPPOE, "CHAP (ID: %u) No challenge received\n", session->session_id);
+            bbl_session_clear(session);
+        } else {
+            timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout",
+                      g_ctx->config.authentication_timeout, 0, session, &bbl_access_chap_challenge_timeout);
         }
     }
 }
@@ -991,13 +1038,15 @@ bbl_access_session_timeout(timer_s *timer)
     }
 }
 
+/* NCP negotiation still in progress */
 static bool
-bbl_access_ncp_success(uint8_t state)
+bbl_access_ncp_pending(uint8_t state)
 {
     switch(state) {
-        case BBL_PPP_DISABLED:
-        case BBL_PPP_REJECTED:
-        case BBL_PPP_OPENED:
+        case BBL_PPP_INIT:
+        case BBL_PPP_LOCAL_ACK:
+        case BBL_PPP_PEER_ACK:
+        case BBL_PPP_TERMINATE:
             return true;
         default:
             return false;
@@ -1006,7 +1055,11 @@ bbl_access_ncp_success(uint8_t state)
 
 /**
  * bbl_access_rx_established_pppoe
- * 
+ *
+ * Evaluate the NCP states in the network phase: the session is
+ * established once no NCP is pending and at least one is opened,
+ * and cleared if all NCPs failed (timeout, rejected or closed).
+ *
  * @param interface receiving interface
  * @param session corresponding session
  * @param timestamp received packet timestamp
@@ -1018,35 +1071,66 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
 {
     UNUSED(interface);
 
-    bool ipcp = bbl_access_ncp_success(session->ipcp_state);
-    bool ip6cp = bbl_access_ncp_success(session->ip6cp_state);
+    if(session->session_state != BBL_PPP_NETWORK) {
+        return;
+    }
+    if(bbl_access_ncp_pending(session->ipcp_state) ||
+       bbl_access_ncp_pending(session->ip6cp_state)) {
+        return;
+    }
+    if(!(session->ipcp_state == BBL_PPP_OPENED || session->ip6cp_state == BBL_PPP_OPENED ||
+        (session->ipcp_state == BBL_PPP_DISABLED && session->ip6cp_state == BBL_PPP_DISABLED))) {
+        LOG(PPPOE, "PPP (ID: %u) No NCP opened (IPCP %s, IP6CP %s)\n", session->session_id,
+            ppp_state_string(session->ipcp_state), ppp_state_string(session->ip6cp_state));
+        bbl_session_clear(session);
+        return;
+    }
 
-    if(ipcp && ip6cp) {
-        if(session->session_state != BBL_ESTABLISHED) {
-            if(g_ctx->sessions_established_max < g_ctx->sessions) {
-                if(timestamp) {
-                    g_ctx->stats.last_session_established.tv_sec = timestamp->tv_sec;
-                    g_ctx->stats.last_session_established.tv_nsec = timestamp->tv_nsec;
-                } else {
-                    clock_gettime(CLOCK_MONOTONIC, &g_ctx->stats.last_session_established);
-                }
-            }
-            bbl_session_update_state(session, BBL_ESTABLISHED);
-            if(g_ctx->config.pppoe_session_time) {
-                /* Start Session Timer */
-                timer_add(&g_ctx->timer_root, &session->timer_session, "Session", g_ctx->config.pppoe_session_time, 0, session, &bbl_access_session_timeout);
-            }
-            if(session->ipcp_state == BBL_PPP_OPENED) {
-                if(session->l2tp == false && !session->a10nsp_session &&
-                   g_ctx->config.igmp_group && 
-                   g_ctx->config.igmp_autostart && 
-                   g_ctx->config.igmp_start_delay) {
-                    /* Start IGMP */
-                    timer_add(&g_ctx->timer_root, &session->timer_igmp, "IGMP", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
-                }
-            }
+    if(g_ctx->sessions_established_max < g_ctx->sessions) {
+        if(timestamp) {
+            g_ctx->stats.last_session_established.tv_sec = timestamp->tv_sec;
+            g_ctx->stats.last_session_established.tv_nsec = timestamp->tv_nsec;
+        } else {
+            clock_gettime(CLOCK_MONOTONIC, &g_ctx->stats.last_session_established);
         }
     }
+    bbl_session_update_state(session, BBL_ESTABLISHED);
+    if(g_ctx->config.pppoe_session_time) {
+        /* Start Session Timer */
+        timer_add(&g_ctx->timer_root, &session->timer_session, "Session", g_ctx->config.pppoe_session_time, 0, session, &bbl_access_session_timeout);
+    }
+    if(session->ipcp_state == BBL_PPP_OPENED) {
+        if(session->l2tp == false && !session->a10nsp_session &&
+           g_ctx->config.igmp_group && 
+           g_ctx->config.igmp_autostart && 
+           g_ctx->config.igmp_start_delay) {
+            /* Start IGMP */
+            timer_add(&g_ctx->timer_root, &session->timer_igmp, "IGMP", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
+        }
+    }
+}
+
+/**
+ * bbl_access_ncp_failed
+ *
+ * IPCP or IP6CP failed (timeout or Max-Failure).
+ *
+ * @param session corresponding session
+ * @param ipcp true for IPCP, false for IP6CP
+ */
+void
+bbl_access_ncp_failed(bbl_session_s *session, bool ipcp)
+{
+    if(ipcp) {
+        timer_del(session->timer_ipcp);
+        session->send_requests &= ~BBL_SEND_IPCP_REQUEST;
+        session->ipcp_state = BBL_PPP_CLOSED;
+    } else {
+        timer_del(session->timer_ip6cp);
+        session->send_requests &= ~BBL_SEND_IP6CP_REQUEST;
+        session->ip6cp_state = BBL_PPP_CLOSED;
+    }
+    bbl_access_rx_established_pppoe(NULL, session, NULL);
 }
 
 static void
@@ -1061,7 +1145,7 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
         return;
     }
 
-    if(!g_ctx->config.ip6cp_enable) {
+    if(!session->access_config->ip6cp_enable) {
         /* Protocol Reject */
         LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Send IP6CP protocol reject\n", session->session_id);
         *(uint16_t*)session->lcp_options = htobe16(PROTOCOL_IP6CP);
@@ -1076,6 +1160,31 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
 
     switch(ip6cp->code) {
         case PPP_CODE_CONF_REQUEST:
+            if(session->ip6cp_state == BBL_PPP_OPENED) {
+                /* Peer renegotiation (RFC 1661 section 4.1, Opened + RCR):
+                 * IPv6 is down until opened again. */
+                LOG(PPPOE, "IP6CP (ID: %u) Renegotiation by peer\n", session->session_id);
+                bbl_session_ncp_down(session, false);
+                session->ip6cp_state = BBL_PPP_INIT;
+                session->ip6cp_retries = 0;
+                session->ip6cp_failures = 0;
+                session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
+                session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+            } else if(session->ip6cp_state < BBL_PPP_INIT) {
+                /* Closed (RFC 1661 section 4.1, Closed + RCR: sta) or
+                 * rejected, NCP packets before the network phase are
+                 * silently discarded (RFC 1661 section 3.5). */
+                if(session->ip6cp_state == BBL_PPP_CLOSED &&
+                   (session->session_state == BBL_PPP_NETWORK ||
+                    session->session_state == BBL_ESTABLISHED)) {
+                    session->ip6cp_peer_identifier = ip6cp->identifier;
+                    session->ip6cp_response_code = PPP_CODE_TERM_ACK;
+                    session->ip6cp_options_len = 0;
+                    session->send_requests |= BBL_SEND_IP6CP_RESPONSE;
+                    bbl_session_tx_qnode_insert(session);
+                }
+                break;
+            }
             if(ip6cp->ipv6_identifier) {
                 session->ip6cp_ipv6_peer_identifier = ip6cp->ipv6_identifier;
             }
@@ -1107,7 +1216,15 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
             bbl_session_tx_qnode_insert(session);
             break;
         case PPP_CODE_CONF_NAK:
+            if(!bbl_access_ncp_pending(session->ip6cp_state)) {
+                break;
+            }
             session->ip6cp_retries = 0;
+            if(++session->ip6cp_failures > PPP_MAX_FAILURE) {
+                LOG(PPPOE, "IP6CP (ID: %u) Max-Failure reached\n", session->session_id);
+                bbl_access_ncp_failed(session, false);
+                break;
+            }
             if(ip6cp->ipv6_identifier) {
                 session->ip6cp_ipv6_identifier = ip6cp->ipv6_identifier;
             }
@@ -1117,6 +1234,7 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
             break;
         case PPP_CODE_CONF_ACK:
             session->ip6cp_retries = 0;
+            session->ip6cp_failures = 0;
             switch(session->ip6cp_state) {
                 case BBL_PPP_INIT:
                     session->ip6cp_state = BBL_PPP_LOCAL_ACK;
@@ -1137,12 +1255,24 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
         case PPP_CODE_TERM_REQUEST:
             session->ip6cp_peer_identifier = ip6cp->identifier;
             session->ip6cp_response_code = PPP_CODE_TERM_ACK;
+            session->ip6cp_options_len = 0;
             session->send_requests |= BBL_SEND_IP6CP_RESPONSE;
             bbl_session_tx_qnode_insert(session);
+            if(session->ip6cp_state > BBL_PPP_CLOSED) {
+                /* Closed by peer (RFC 1661 section 4.1, RTR) */
+                LOG(PPPOE, "IP6CP (ID: %u) Terminated by peer\n", session->session_id);
+                if(session->ip6cp_state == BBL_PPP_OPENED) {
+                    bbl_session_ncp_down(session, false);
+                }
+                bbl_access_ncp_failed(session, false);
+            }
             break;
         case PPP_CODE_TERM_ACK:
             session->ip6cp_retries = 0;
-            session->ip6cp_state = BBL_PPP_CLOSED;
+            if(session->ip6cp_state == BBL_PPP_TERMINATE) {
+                timer_del(session->timer_ip6cp);
+                session->ip6cp_state = BBL_PPP_CLOSED;
+            }
             break;
         default:
             break;
@@ -1194,7 +1324,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
         return;
     }
 
-    if(!g_ctx->config.ipcp_enable) {
+    if(!session->access_config->ipcp_enable) {
         /* Protocol Reject */
         LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Send IPCP protocol reject\n", session->session_id);
         *(uint16_t*)session->lcp_options = htobe16(PROTOCOL_IPCP);
@@ -1210,6 +1340,32 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
 
     switch(ipcp->code) {
         case PPP_CODE_CONF_REQUEST:
+            if(session->ipcp_state == BBL_PPP_OPENED) {
+                /* Peer renegotiation (RFC 1661 section 4.1, Opened + RCR):
+                 * IPv4 is down until opened again. */
+                LOG(PPPOE, "IPCP (ID: %u) Renegotiation by peer\n", session->session_id);
+                bbl_session_ncp_down(session, true);
+                session->ipcp_state = BBL_PPP_INIT;
+                session->ipcp_retries = 0;
+                session->ipcp_failures = 0;
+                session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
+                session->send_requests |= BBL_SEND_IPCP_REQUEST;
+                bbl_session_tx_qnode_insert(session);
+            } else if(session->ipcp_state < BBL_PPP_INIT) {
+                /* Closed (RFC 1661 section 4.1, Closed + RCR: sta) or
+                 * rejected, NCP packets before the network phase are
+                 * silently discarded (RFC 1661 section 3.5). */
+                if(session->ipcp_state == BBL_PPP_CLOSED &&
+                   (session->session_state == BBL_PPP_NETWORK ||
+                    session->session_state == BBL_ESTABLISHED)) {
+                    session->ipcp_peer_identifier = ipcp->identifier;
+                    session->ipcp_response_code = PPP_CODE_TERM_ACK;
+                    session->ipcp_options_len = 0;
+                    session->send_requests |= BBL_SEND_IPCP_RESPONSE;
+                    bbl_session_tx_qnode_insert(session);
+                }
+                break;
+            }
             if(ipcp->option_dns1 || ipcp->option_dns2 || ipcp->unknown_options) {
                 bbl_access_rx_ipcp_conf_reject(session, ipcp);
                 return;
@@ -1247,8 +1403,16 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
             if(g_ctx->config.ipcp_conf_reject_ignore) {
                 LOG(PPPOE, "IPCP (ID: %u) conf-reject ignored\n", session->session_id);
             } else {
+                if(!bbl_access_ncp_pending(session->ipcp_state)) {
+                    break;
+                }
                 LOG(PPPOE, "IPCP (ID: %u) conf-reject received\n", session->session_id);
                 session->ipcp_retries = 0;
+                if(++session->ipcp_failures > PPP_MAX_FAILURE) {
+                    LOG(PPPOE, "IPCP (ID: %u) Max-Failure reached\n", session->session_id);
+                    bbl_access_ncp_failed(session, true);
+                    break;
+                }
                 if(ipcp->option_address) {
                     LOG(PPPOE, "IPCP (ID: %u) Address option rejected\n", session->session_id);
                 }
@@ -1266,7 +1430,15 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
             }
             break;
         case PPP_CODE_CONF_NAK:
+            if(!bbl_access_ncp_pending(session->ipcp_state)) {
+                break;
+            }
             session->ipcp_retries = 0;
+            if(++session->ipcp_failures > PPP_MAX_FAILURE) {
+                LOG(PPPOE, "IPCP (ID: %u) Max-Failure reached\n", session->session_id);
+                bbl_access_ncp_failed(session, true);
+                break;
+            }
             if(ipcp->address) {
                 session->ip_address = ipcp->address;
             }
@@ -1282,6 +1454,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
             break;
         case PPP_CODE_CONF_ACK:
             session->ipcp_retries = 0;
+            session->ipcp_failures = 0;
             switch(session->ipcp_state) {
                 case BBL_PPP_INIT:
                     session->ipcp_state = BBL_PPP_LOCAL_ACK;
@@ -1304,10 +1477,21 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
             session->ipcp_options_len = 0;
             session->send_requests |= BBL_SEND_IPCP_RESPONSE;
             bbl_session_tx_qnode_insert(session);
+            if(session->ipcp_state > BBL_PPP_CLOSED) {
+                /* Closed by peer (RFC 1661 section 4.1, RTR) */
+                LOG(PPPOE, "IPCP (ID: %u) Terminated by peer\n", session->session_id);
+                if(session->ipcp_state == BBL_PPP_OPENED) {
+                    bbl_session_ncp_down(session, true);
+                }
+                bbl_access_ncp_failed(session, true);
+            }
             break;
         case PPP_CODE_TERM_ACK:
             session->ipcp_retries = 0;
-            session->ipcp_state = BBL_PPP_CLOSED;
+            if(session->ipcp_state == BBL_PPP_TERMINATE) {
+                timer_del(session->timer_ipcp);
+                session->ipcp_state = BBL_PPP_CLOSED;
+            }
             break;
         default:
             break;
@@ -1334,6 +1518,26 @@ bbl_access_lcp_mru_max(bbl_session_s *session)
         return session->pppoe_max_payload;
     }
     return PPPOE_DEFAULT_MRU;
+}
+
+/**
+ * bbl_access_lcp_mru
+ *
+ * Own LCP MRU, limited to 1492 unless a larger PPP-Max-Payload
+ * was echoed by the server (RFC 4638).
+ *
+ * @param session corresponding session
+ * @return MRU
+ */
+static uint16_t
+bbl_access_lcp_mru(bbl_session_s *session)
+{
+    uint16_t mru = session->access_config->ppp_mru;
+    uint16_t mru_max = bbl_access_lcp_mru_max(session);
+    if(mru_max && mru > mru_max) {
+        mru = mru_max;
+    }
+    return mru;
 }
 
 /**
@@ -1438,6 +1642,11 @@ bbl_access_lcp_restart(bbl_session_s *session, bool peer)
     session->lcp_state = peer ? BBL_PPP_PEER_ACK : BBL_PPP_INIT;
     session->lcp_request_code = PPP_CODE_CONF_REQUEST;
     session->lcp_retries = 0;
+    session->lcp_failures = 0;
+    session->lcp_mru_rejected = false;
+    session->lcp_magic_rejected = false;
+    session->ipcp_failures = 0;
+    session->ip6cp_failures = 0;
     session->auth_retries = 0;
     session->auth_protocol = 0;
     session->ipcp_retries = 0;
@@ -1445,7 +1654,7 @@ bbl_access_lcp_restart(bbl_session_s *session, bool peer)
     session->ipcp_request_dns2 = g_ctx->config.ipcp_request_dns2;
     session->ip6cp_retries = 0;
 
-    session->mru = session->access_config->ppp_mru;
+    session->mru = bbl_access_lcp_mru(session);
     session->peer_mru = 0;
     session->peer_magic_number = 0;
 
@@ -1516,23 +1725,14 @@ bbl_access_lcp_opened(bbl_session_s *session)
             break;
         case PROTOCOL_CHAP:
             bbl_session_update_state(session, BBL_PPP_AUTH);
+            /* Wait for the challenge of the peer. */
+            session->auth_retries = 0;
+            timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout",
+                      g_ctx->config.authentication_timeout, 0, session, &bbl_access_chap_challenge_timeout);
             break;
         default:
             /* Authentication disabled */
-            bbl_session_update_state(session, BBL_PPP_NETWORK);
-            if(session->access_config->ipcp_enable) {
-                session->ipcp_state = BBL_PPP_INIT;
-                session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
-                session->send_requests |= BBL_SEND_IPCP_REQUEST;
-                session->send_requests &= ~BBL_SEND_IPCP_RESPONSE;
-            }
-            if(session->access_config->ip6cp_enable) {
-                session->ip6cp_state = BBL_PPP_INIT;
-                session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
-                session->send_requests |= BBL_SEND_IP6CP_REQUEST;
-                session->send_requests &= ~BBL_SEND_IP6CP_RESPONSE;
-            }
-            bbl_session_tx_qnode_insert(session);
+            bbl_access_ncp_start(session);
             break;
     }
 
@@ -1685,6 +1885,7 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             break;
         case PPP_CODE_CONF_ACK:
             session->lcp_retries = 0;
+            session->lcp_failures = 0;
             switch(session->lcp_state) {
                 case BBL_PPP_INIT:
                     session->lcp_state = BBL_PPP_LOCAL_ACK;
@@ -1698,6 +1899,11 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             break;
         case PPP_CODE_CONF_NAK:
             session->lcp_retries = 0;
+            if(++session->lcp_failures > PPP_MAX_FAILURE) {
+                LOG(PPPOE, "LCP (ID: %u) Max-Failure reached\n", session->session_id);
+                bbl_session_clear(session);
+                break;
+            }
             if(lcp->mru) {
                 mru_max = bbl_access_lcp_mru_max(session);
                 if(mru_max && lcp->mru > mru_max) {
@@ -1715,6 +1921,45 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             session->send_requests |= BBL_SEND_LCP_REQUEST;
             session->lcp_request_code = PPP_CODE_CONF_REQUEST;
             bbl_session_tx_qnode_insert(session);
+            break;
+        case PPP_CODE_CONF_REJECT:
+            /* Options rejected by the peer are not requested
+             * again (RFC 1661 section 5.4). */
+            session->lcp_retries = 0;
+            if(++session->lcp_failures > PPP_MAX_FAILURE) {
+                LOG(PPPOE, "LCP (ID: %u) Max-Failure reached\n", session->session_id);
+                bbl_session_clear(session);
+                break;
+            }
+            for(int i=0; i < PPP_MAX_OPTIONS; i++) {
+                if(!lcp->option[i]) continue;
+                switch(lcp->option[i][0]) {
+                    case PPP_LCP_OPTION_MRU:
+                        LOG(PPPOE, "LCP (ID: %u) MRU option rejected\n", session->session_id);
+                        session->lcp_mru_rejected = true;
+                        break;
+                    case PPP_LCP_OPTION_MAGIC:
+                        LOG(PPPOE, "LCP (ID: %u) Magic-Number option rejected\n", session->session_id);
+                        session->lcp_magic_rejected = true;
+                        break;
+                    default:
+                        break;
+                }
+            }
+            if(session->lcp_state == BBL_PPP_OPENED) {
+                bbl_access_lcp_restart(session, false);
+                break;
+            }
+            session->send_requests |= BBL_SEND_LCP_REQUEST;
+            session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+            break;
+        case PPP_CODE_CODE_REJECT:
+            /* Never answered with code-reject (RFC 1661 section 5.6) */
+            LOG(PPPOE, "LCP (ID: %u) Code-Reject received\n", session->session_id);
+            break;
+        case PPP_CODE_DISCARD_REQUEST:
+            /* Silently discarded (RFC 1661 section 5.9) */
             break;
         case PPP_CODE_ECHO_REQUEST:
             if(!session->lcp_echo_request_ignore) {
@@ -1742,6 +1987,16 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             bbl_session_tx_qnode_insert(session);
             break;
         case PPP_CODE_TERM_ACK:
+            if(session->lcp_state != BBL_PPP_TERMINATE &&
+               session->session_state != BBL_PPP_TERMINATING) {
+                /* Unsolicited terminate-ack (RFC 1661 section 4.1,
+                 * Opened + RTA: renegotiate), ignored otherwise. */
+                if(session->lcp_state == BBL_PPP_OPENED) {
+                    LOG(PPPOE, "LCP (ID: %u) Unsolicited Terminate-Ack received\n", session->session_id);
+                    bbl_access_lcp_restart(session, false);
+                }
+                break;
+            }
             session->lcp_retries = 0;
             session->lcp_state = BBL_PPP_CLOSED;
             if(session->ipcp_state > BBL_PPP_DISABLED) {
@@ -1756,10 +2011,24 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             break;
         case PPP_CODE_PROT_REJECT:
             if(lcp->protocol == PROTOCOL_IPCP) {
-                session->ipcp_state = BBL_PPP_REJECTED;
+                if(session->ipcp_state == BBL_PPP_OPENED) {
+                    bbl_session_ncp_down(session, true);
+                }
+                if(session->ipcp_state > BBL_PPP_DISABLED) {
+                    session->ipcp_state = BBL_PPP_REJECTED;
+                }
+                timer_del(session->timer_ipcp);
+                session->send_requests &= ~BBL_SEND_IPCP_REQUEST;
                 LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol IPCP reject received\n", session->session_id);
             } else if(lcp->protocol == PROTOCOL_IP6CP) {
-                session->ip6cp_state = BBL_PPP_REJECTED;
+                if(session->ip6cp_state == BBL_PPP_OPENED) {
+                    bbl_session_ncp_down(session, false);
+                }
+                if(session->ip6cp_state > BBL_PPP_DISABLED) {
+                    session->ip6cp_state = BBL_PPP_REJECTED;
+                }
+                timer_del(session->timer_ip6cp);
+                session->send_requests &= ~BBL_SEND_IP6CP_REQUEST;
                 LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol IP6CP reject received\n", session->session_id);
             } else {
                 LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Protocol 0x%04x reject  received\n", 
@@ -1783,12 +2052,37 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
     }
 }
 
+/* LCP protocol-reject for unsupported protocols (RFC 1661 section 5.7) */
+static void
+bbl_access_protocol_reject(bbl_session_s *session, uint16_t protocol, uint8_t *data, uint16_t len)
+{
+    if(session->lcp_state != BBL_PPP_OPENED) {
+        return;
+    }
+    LOG(PPPOE, "LCP PROTOCOL REJECT (ID: %u) Send protocol 0x%04x reject\n", session->session_id, protocol);
+    *(uint16_t*)session->lcp_options = htobe16(protocol);
+    if(!data) {
+        len = 0;
+    } else if(len > PPP_OPTIONS_BUFFER - sizeof(uint16_t)) {
+        len = PPP_OPTIONS_BUFFER - sizeof(uint16_t);
+    }
+    if(len) {
+        memcpy(session->lcp_options + sizeof(uint16_t), data, len);
+    }
+    session->lcp_options_len = sizeof(uint16_t) + len;
+    session->lcp_peer_identifier = ++session->lcp_identifier;
+    session->lcp_response_code = PPP_CODE_PROT_REJECT;
+    session->send_requests |= BBL_SEND_LCP_RESPONSE;
+    bbl_session_tx_qnode_insert(session);
+}
+
 void
 bbl_ppp_rx(bbl_access_interface_s *interface,
            bbl_session_s *session,
            bbl_ethernet_header_s *eth,
            uint16_t protocol,
-           void *next)
+           void *next,
+           uint16_t raw_len)
 {
     struct timespec *timestamp = eth ? &eth->timestamp : NULL;
 
@@ -1821,6 +2115,7 @@ bbl_ppp_rx(bbl_access_interface_s *interface,
             break;
         default:
             if(interface) interface->stats.unknown++;
+            bbl_access_protocol_reject(session, protocol, next, raw_len);
             break;
     }
 }
@@ -1838,7 +2133,7 @@ bbl_access_rx_session(bbl_access_interface_s *interface,
         return;
     }
 
-    bbl_ppp_rx(interface, session, eth, pppoes->protocol, pppoes->next);
+    bbl_ppp_rx(interface, session, eth, pppoes->protocol, pppoes->next, pppoes->raw_len);
 }
 
 void
@@ -1848,6 +2143,38 @@ bbl_access_lcp_start_delay(timer_s *timer)
     session->send_requests |= BBL_SEND_LCP_REQUEST;
     session->lcp_request_code = PPP_CODE_CONF_REQUEST;
     bbl_session_tx_qnode_insert(session);
+}
+
+/* The requested service name must be one of the Service-Name tags
+ * (PADO may offer several, RFC 2516 section 5.2). */
+static bool
+bbl_access_pppoe_service_name(bbl_session_s *session, bbl_pppoe_discovery_s *pppoed, const char *pdu)
+{
+    if(!session->pppoe_service_name_len) {
+        return true;
+    }
+    for(uint8_t i = 0; i < pppoed->service_names_count; i++) {
+        if(pppoed->service_names_len[i] == session->pppoe_service_name_len &&
+           memcmp(pppoed->service_names[i], session->pppoe_service_name, session->pppoe_service_name_len) == 0) {
+            return true;
+        }
+    }
+    LOG(PPPOE, "PPPoE Error (ID: %u) %s service name in %s\n", session->session_id,
+        pppoed->service_names_count ? "Wrong" : "Missing", pdu);
+    return false;
+}
+
+static bool
+bbl_access_pppoe_host_uniq(bbl_session_s *session, bbl_pppoe_discovery_s *pppoed, const char *pdu)
+{
+    if(session->pppoe_host_uniq) {
+        if(pppoed->host_uniq_len != sizeof(uint64_t) ||
+           *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
+            LOG(PPPOE, "PPPoE Error (ID: %u) Wrong host-uniq in %s\n", session->session_id, pdu);
+            return false;
+        }
+    }
+    return true;
 }
 
 static void
@@ -1862,41 +2189,30 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
         case PPPOE_PADO:
             interface->stats.pado_rx++;
             if(session->session_state == BBL_PPPOE_INIT) {
+                /* Validate the offer before anything is stored, PADI
+                 * is sent as broadcast until a valid PADO is received. */
+                if(!bbl_access_pppoe_service_name(session, pppoed, "PADO") ||
+                   !bbl_access_pppoe_host_uniq(session, pppoed, "PADO")) {
+                    return;
+                }
                 /* Store server MAC address */
                 memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
+                if(session->pppoe_ac_cookie) {
+                    free(session->pppoe_ac_cookie);
+                    session->pppoe_ac_cookie = NULL;
+                    session->pppoe_ac_cookie_len = 0;
+                }
                 if(pppoed->ac_cookie_len) {
                     /* Store AC cookie */
-                    if(session->pppoe_ac_cookie) free(session->pppoe_ac_cookie);
                     session->pppoe_ac_cookie = malloc(pppoed->ac_cookie_len);
                     session->pppoe_ac_cookie_len = pppoed->ac_cookie_len;
                     memcpy(session->pppoe_ac_cookie, pppoed->ac_cookie, pppoed->ac_cookie_len);
                 }
-                if(pppoed->service_name_len) {
-                    if(session->pppoe_service_name_len) {
-                        /* Compare service name */
-                        if(pppoed->service_name_len != session->pppoe_service_name_len ||
-                           memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
-                            LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADO\n", session->session_id);
-                            return;
-                        }
-                    } else {
-                        /* Store service name */
-                        session->pppoe_service_name = malloc(pppoed->service_name_len);
-                        session->pppoe_service_name_len = pppoed->service_name_len;
-                        memcpy(session->pppoe_service_name, pppoed->service_name, pppoed->service_name_len);
-                    }
-                } else {
-                    if(session->pppoe_service_name_len) {
-                        LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADO\n", session->session_id);
-                        return;
-                    }
-                }
-                if(session->pppoe_host_uniq) {
-                    if(pppoed->host_uniq_len != sizeof(uint64_t) ||
-                       *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
-                        LOG(PPPOE, "PPPoE Error (ID: %u) Wrong host-uniq in PADO\n", session->session_id);
-                        return;
-                    }
+                if(!session->pppoe_service_name_len && pppoed->service_name_len) {
+                    /* Request the first service offered. */
+                    session->pppoe_service_name = malloc(pppoed->service_name_len);
+                    session->pppoe_service_name_len = pppoed->service_name_len;
+                    memcpy(session->pppoe_service_name, pppoed->service_name, pppoed->service_name_len);
                 }
                 bbl_session_update_state(session, BBL_PPPOE_REQUEST);
                 session->pppoe_retries = 0;
@@ -1907,25 +2223,14 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
         case PPPOE_PADS:
             interface->stats.pads_rx++;
             if(session->session_state == BBL_PPPOE_REQUEST) {
+                if(memcmp(eth->src, session->server_mac, ETH_ADDR_LEN) != 0) {
+                    LOG(PPPOE, "PPPoE Error (ID: %u) PADS from wrong source MAC\n", session->session_id);
+                    return;
+                }
                 if(pppoed->session_id) {
-                    if(session->pppoe_host_uniq) {
-                        if(pppoed->host_uniq_len != sizeof(uint64_t) ||
-                           *(uint64_t*)pppoed->host_uniq != session->pppoe_host_uniq) {
-                            LOG(PPPOE, "PPPoE Error (ID: %u) Wrong host-uniq in PADS\n", session->session_id);
-                            return;
-                        }
-                    }
-                    if(pppoed->service_name_len) {
-                        if(pppoed->service_name_len != session->pppoe_service_name_len ||
-                            memcmp(pppoed->service_name, session->pppoe_service_name, session->pppoe_service_name_len) != 0) {
-                            LOG(PPPOE, "PPPoE Error (ID: %u) Wrong service name in PADS\n", session->session_id);
-                            return;
-                        }
-                    } else {
-                        if(session->pppoe_service_name_len) {
-                            LOG(PPPOE, "PPPoE Error (ID: %u) Missing service name in PADS\n", session->session_id);
-                            return;
-                        }
+                    if(!bbl_access_pppoe_host_uniq(session, pppoed, "PADS") ||
+                       !bbl_access_pppoe_service_name(session, pppoed, "PADS")) {
+                        return;
                     }
                     if(g_ctx->config.pppoe_max_payload > PPPOE_DEFAULT_MRU) {
                         /* A server supporting a larger MRU echoes the tag (RFC 4638). */
@@ -1941,6 +2246,8 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
                             session->pppoe_max_payload = g_ctx->config.pppoe_max_payload;
                         }
                     }
+                    /* Own MRU limited as per RFC 4638 */
+                    session->mru = bbl_access_lcp_mru(session);
                     session->pppoe_retries = 0;
                     session->pppoe_session_id = pppoed->session_id;
                     bbl_session_update_state(session, BBL_PPP_LINK);
