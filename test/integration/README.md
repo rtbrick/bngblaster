@@ -97,8 +97,8 @@ cmake --build build
 sudo -E python3 -m pytest test/integration
 ```
 
-Tests marked `slow` wait for protocol timers of minutes and are skipped
-unless `--slow` is given. Only the slow tests run with `--slow -m slow`
+Tests marked `slow` wait for long protocol timers (hold timers, LCP
+echo timeouts, LSP lifetimes) and are skipped unless `--slow` is given. Only the slow tests run with `--slow -m slow`
 (GitHub workflow "Integration (slow)", started manually):
 
 ```

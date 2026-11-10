@@ -53,11 +53,12 @@ def test_tcp_ao(bgp, algorithm):
 
 @pytest.mark.parametrize("gobgp,bbl", [
     ({"ao": gobgp_ao("hmac-sha-1-96", key="WrongKey0123456789ab")}, {"bgp": bbl_ao("hmac-sha-1-96")}),
-    ({"ao": gobgp_ao("hmac-sha-1-96", receive_id=3)}, {"bgp": bbl_ao("hmac-sha-1-96")}),
-    ({"ao": gobgp_ao("hmac-sha-1-96", send_id=3)}, {"bgp": bbl_ao("hmac-sha-1-96")}),
-    ({"ao": gobgp_ao("aes-128-cmac-96")}, {"bgp": bbl_ao("hmac-sha-1-96")}),
-    ({"ao": gobgp_ao("hmac-sha-1-96")}, {}),
-    ({}, {"bgp": bbl_ao("hmac-sha-1-96")}),
+    # Each mismatch waits for the hold timer, only wrong-key runs by default.
+    pytest.param({"ao": gobgp_ao("hmac-sha-1-96", receive_id=3)}, {"bgp": bbl_ao("hmac-sha-1-96")}, marks=pytest.mark.slow),
+    pytest.param({"ao": gobgp_ao("hmac-sha-1-96", send_id=3)}, {"bgp": bbl_ao("hmac-sha-1-96")}, marks=pytest.mark.slow),
+    pytest.param({"ao": gobgp_ao("aes-128-cmac-96")}, {"bgp": bbl_ao("hmac-sha-1-96")}, marks=pytest.mark.slow),
+    pytest.param({"ao": gobgp_ao("hmac-sha-1-96")}, {}, marks=pytest.mark.slow),
+    pytest.param({}, {"bgp": bbl_ao("hmac-sha-1-96")}, marks=pytest.mark.slow),
 ], ids=["wrong-key", "wrong-recv-id", "wrong-send-id", "wrong-algorithm", "gobgp-only", "bbl-only"])
 def test_tcp_ao_mismatch(bgp, gobgp, bbl):
     bgp.start(gobgp=gobgp, bbl=bbl)

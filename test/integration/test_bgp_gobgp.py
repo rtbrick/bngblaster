@@ -172,9 +172,10 @@ def test_md5(bgp):
 
 @pytest.mark.usefixtures("md5_kernel")
 @pytest.mark.parametrize("gobgp_md5,bbl_md5", [
+    # Each mismatch waits for the hold timer, only wrong-key runs by default.
     ("BNGBlasterMD5", "WrongKey"),
-    ("BNGBlasterMD5", None),
-    (None, "BNGBlasterMD5"),
+    pytest.param("BNGBlasterMD5", None, marks=pytest.mark.slow),
+    pytest.param(None, "BNGBlasterMD5", marks=pytest.mark.slow),
 ], ids=["wrong-key", "gobgp-only", "bbl-only"])
 def test_md5_mismatch(bgp, gobgp_md5, bbl_md5):
     bbl = {"tcp-ao-algorithm": "md5", "tcp-ao-key": bbl_md5} if bbl_md5 else {}

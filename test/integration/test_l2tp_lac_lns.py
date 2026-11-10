@@ -249,6 +249,7 @@ def test_l2tp_tunnel_terminate_from_lns(lac_lns):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.slow
 def test_lcp_echo_timeout(lac_lns):
     """LNS dies: the LAC detects the LCP echo timeout, tears down all
     sessions and tunnels (retries towards the dead LNS) and exits."""

@@ -1,6 +1,6 @@
 name: Integration (slow)
 
-# Tests marked slow wait for protocol timers of minutes and run only on
+# Tests marked slow wait for long protocol timers and run only on
 # manual execution (Actions > Integration (slow) > Run workflow).
 on:
   workflow_dispatch:
