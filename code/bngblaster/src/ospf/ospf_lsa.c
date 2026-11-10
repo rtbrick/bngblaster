@@ -350,8 +350,8 @@ ospf_lsa_update_age(ospf_lsa_s *lsa, struct timespec *now)
     uint16_t age;
 
     timespec_sub(&ago, now, &lsa->timestamp);
-    lsa->timestamp.tv_sec = now->tv_sec;
-    lsa->timestamp.tv_nsec = now->tv_nsec;
+    /* Advance by full seconds only to keep the fraction. */
+    lsa->timestamp.tv_sec += ago.tv_sec;
 
     age = lsa->age + ago.tv_sec;
     if(lsa->expired || age >= OSPF_LSA_MAX_AGE) {
