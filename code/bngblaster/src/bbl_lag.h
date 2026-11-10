@@ -13,6 +13,12 @@
 #define LAG_MEMBER_ACTIVE_MAX 64
 #define LAG_MONKEY_INTERVAL 30
 
+/* IEEE 802.1AX timer values in seconds */
+#define LACP_FAST_PERIODIC_TIME 1
+#define LACP_SLOW_PERIODIC_TIME 30
+#define LACP_SHORT_TIMEOUT_TIME 3
+#define LACP_LONG_TIMEOUT_TIME  90
+
 typedef struct bbl_lag_
 {
     uint8_t id;
@@ -40,10 +46,11 @@ typedef struct bbl_lag_member_
      * all control traffic. */
     bool primary;
 
-    bool periodic_fast;
-
+    /* LACP timer with an interval of one second, driving
+     * the periodic transmission and the receive timeout. */
     struct timer_ *lacp_timer;
-    uint8_t timeout;
+    uint32_t timeout; /* seconds since last LACP PDU received */
+    uint32_t periodic; /* seconds since last periodic LACP PDU */
 
     uint8_t     actor_system_id[ETH_ADDR_LEN];
     uint16_t    actor_system_priority;

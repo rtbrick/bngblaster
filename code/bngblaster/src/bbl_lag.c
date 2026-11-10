@@ -241,23 +241,59 @@ bbl_lag_select(bbl_lag_s *lag)
     lag->active_count = active_count;
 }
 
+/* The periodic rate is selected by the timeout of the partner
+ * (IEEE 802.1AX periodic transmission machine). Without current
+ * partner information, the rate follows the own timeout, so that
+ * the LAG comes up fast with short timeout. */
+static uint32_t
+bbl_lag_lacp_periodic_time(bbl_lag_member_s *member)
+{
+    if(member->partner_state & LACP_STATE_FLAG_SHORT_TIMEOUT) {
+        return LACP_FAST_PERIODIC_TIME;
+    }
+    if(member->lacp_state != LACP_CURRENT && 
+       member->actor_state & LACP_STATE_FLAG_SHORT_TIMEOUT) {
+        return LACP_FAST_PERIODIC_TIME;
+    }
+    return LACP_SLOW_PERIODIC_TIME;
+}
+
 void
 bbl_lag_lacp_job(timer_s *timer)
 {
     bbl_interface_s *interface = timer->data;
     bbl_lag_member_s *member = interface->lag_member;
+    uint32_t expire;
 
-    bbl_lag_lacp_send(member);
-    member->timeout++;
-    if(member->timeout > 3) {
+    if(++member->periodic >= bbl_lag_lacp_periodic_time(member)) {
+        member->periodic = 0;
+        bbl_lag_lacp_send(member);
+    }
+
+    /* The partner information expires after the own timeout and
+     * is defaulted after a further short timeout in state expired
+     * (IEEE 802.1AX receive machine). */
+    if(member->actor_state & LACP_STATE_FLAG_SHORT_TIMEOUT) {
+        expire = LACP_SHORT_TIMEOUT_TIME;
+    } else {
+        expire = LACP_LONG_TIMEOUT_TIME;
+    }
+    if(member->timeout <= expire + LACP_SHORT_TIMEOUT_TIME) {
+        member->timeout++;
+    }
+    if(member->timeout > expire) {
         if(!(member->actor_state & LACP_STATE_FLAG_EXPIRED)) {
             member->lacp_state = LACP_EXPIRED;
             member->actor_state |= LACP_STATE_FLAG_EXPIRED;
+            /* Assume short timeout of the partner, which
+             * selects the fast periodic rate. */
+            member->partner_state |= LACP_STATE_FLAG_SHORT_TIMEOUT;
+            member->partner_state &= ~LACP_STATE_FLAG_IN_SYNC;
             LOG(LAG, "LAG (%s) LACP expired on interface %s\n",
                 member->lag->interface->name, interface->name);
             bbl_lag_select(member->lag);
         }
-        if(member->timeout > 6) {
+        if(member->timeout > expire + LACP_SHORT_TIMEOUT_TIME) {
             if(!(member->actor_state & LACP_STATE_FLAG_DEFAULTED)) {
                 member->lacp_state = LACP_DEFAULTED;
                 member->actor_state |= LACP_STATE_FLAG_DEFAULTED;
@@ -295,7 +331,6 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
 {
     bbl_lag_s *lag;
     bbl_lag_member_s *member;
-    time_t timer_sec;
 
     if(link_config->lag_interface) {
         lag = bbl_lag_get_by_name(link_config->lag_interface);
@@ -335,13 +370,10 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
                 member->actor_state |= LACP_STATE_FLAG_ACTIVE;
             }
             if(lag->config->lacp_timeout_short) {
-                timer_sec = 1;
                 member->actor_state |= LACP_STATE_FLAG_SHORT_TIMEOUT;
-            } else {
-                timer_sec = 30;
             }
             timer_add_periodic(&g_ctx->timer_root, &member->lacp_timer, "LACP",
-                               timer_sec, 0, interface, &bbl_lag_lacp_job);
+                               1, 0, interface, &bbl_lag_lacp_job);
             /* Send the first LACP PDU immediately
              * instead of after the periodic interval. */
             bbl_lag_lacp_send(member);

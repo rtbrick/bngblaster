@@ -214,3 +214,30 @@ def test_stream_update_lacp_down(tmp_path, processes):
     assert instance.ctrl("stream-update", pps="fast")["code"] == 400
     assert instance.ctrl("stream-update", flows=[-1, 1e12, 1], pps=300)["code"] == 200
     assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_lacp_timeout_mixed(tmp_path, processes):
+    """The periodic rate follows the timeout of the partner (IEEE 802.1AX):
+    lagB with long timeout sends every second to lagA with short timeout,
+    so that lagA does not expire, while lagA sends only every 30 seconds."""
+    config = lag_config(False, True)
+    config["interfaces"]["lag"][1]["lacp-timeout-short"] = False
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
+    processes.append(instance)
+    wait_until(lambda: lags_up(instance), 5, 0.1, message="LAG interfaces up")
+
+    def transitions():
+        return {m["interface"]: m["state-transitions"]
+                for lag in instance.ctrl("lag-info")["lag-info"] for m in lag["members"]}
+
+    before, transitions_before = lacp_tx(instance), transitions()
+    # Longer than the short timeout (3s) of lagA, without flapping.
+    time.sleep(8)
+    assert transitions() == transitions_before, (transitions_before, transitions())
+    assert lags_up(instance)
+    after = lacp_tx(instance)
+    for member in ("lolB1", "lolB2"):
+        assert after[member] - before[member] >= 6, (member, before, after)
+    for member in ("lolA1", "lolA2"):
+        assert after[member] - before[member] <= 1, (member, before, after)
+    assert instance.terminate(EXIT_TIMEOUT) == 0
