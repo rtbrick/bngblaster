@@ -21,6 +21,10 @@
 void
 bbl_dhcp_stop(bbl_session_s *session, bool keep_address)
 {
+    if(session->dhcp_state == BBL_DHCP_DISABLED) {
+        return;
+    }
+
     LOG(DHCP, "DHCP (ID: %u) Stop DHCP\n", session->session_id);
 
     session->dhcp_state = BBL_DHCP_INIT;

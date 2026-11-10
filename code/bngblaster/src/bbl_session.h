@@ -195,6 +195,8 @@ typedef struct bbl_session_
     uint32_t    ip_address;
     uint32_t    ip_netmask;
     uint32_t    peer_ip_address;
+    uint32_t    static_ip_address;
+    uint32_t    static_peer_ip_address;
     uint32_t    dns1;
     uint32_t    dns2;
 

@@ -427,8 +427,8 @@ bbl_session_reset(bbl_session_s *session) {
     session->mru = session->access_config->ppp_mru;
     session->peer_mru = 0;
     session->peer_magic_number = 0;
-    session->ip_address = 0;
-    session->peer_ip_address = 0;
+    session->ip_address = session->static_ip_address;
+    session->peer_ip_address = session->static_peer_ip_address;
     session->dns1 = 0;
     session->dns2 = 0;
     session->ipv6_prefix.len = 0;
@@ -1162,8 +1162,10 @@ bbl_sessions_init()
             if(access_config->ipv4_enable) {
                 session->endpoint.ipv4 = ENDPOINT_ENABLED;
                 if(access_config->static_ip && access_config->static_gateway) {
-                    session->ip_address = access_config->static_ip;
-                    session->peer_ip_address = access_config->static_gateway;
+                    session->static_ip_address = access_config->static_ip;
+                    session->static_peer_ip_address = access_config->static_gateway;
+                    session->ip_address = session->static_ip_address;
+                    session->peer_ip_address = session->static_peer_ip_address;
                     access_config->static_ip = htobe32(be32toh(access_config->static_ip) + be32toh(access_config->static_ip_iter));
                     access_config->static_gateway = htobe32(be32toh(access_config->static_gateway) + be32toh(access_config->static_gateway_iter));
                 } else if(access_config->dhcp_enable) {
