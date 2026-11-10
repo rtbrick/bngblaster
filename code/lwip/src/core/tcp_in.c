@@ -709,10 +709,6 @@ tcp_listen_input(struct tcp_pcb_listen *pcb)
     npcb->snd_wnd = tcphdr->wnd;
     npcb->snd_wnd_max = npcb->snd_wnd;
 
-#if TCP_CALCULATE_EFF_SEND_MSS
-    npcb->mss = tcp_eff_send_mss(npcb->mss, &npcb->local_ip, &npcb->remote_ip);
-#endif /* TCP_CALCULATE_EFF_SEND_MSS */
-
     MIB2_STATS_INC(mib2.tcppassiveopens);
 
 #if LWIP_TCP_PCB_NUM_EXT_ARGS
@@ -721,6 +717,11 @@ tcp_listen_input(struct tcp_pcb_listen *pcb)
       return;
     }
 #endif
+
+#if TCP_CALCULATE_EFF_SEND_MSS
+    /* After the passive_open hook, which may bind the netif. */
+    npcb->mss = tcp_eff_send_mss_pcb(npcb->mss, npcb);
+#endif /* TCP_CALCULATE_EFF_SEND_MSS */
 
     /* Send a SYN|ACK together with the MSS option. */
     rc = tcp_enqueue_flags(npcb, TCP_SYN | TCP_ACK);
@@ -881,7 +882,7 @@ tcp_process(struct tcp_pcb *pcb)
         pcb->state = ESTABLISHED;
 
 #if TCP_CALCULATE_EFF_SEND_MSS
-        pcb->mss = tcp_eff_send_mss(pcb->mss, &pcb->local_ip, &pcb->remote_ip);
+        pcb->mss = tcp_eff_send_mss_pcb(pcb->mss, pcb);
 #endif /* TCP_CALCULATE_EFF_SEND_MSS */
 
         pcb->cwnd = LWIP_TCP_CALC_INITIAL_CWND(pcb->mss);
@@ -1940,6 +1941,11 @@ tcp_parseopt(struct tcp_pcb *pcb)
   if (tcphdr_optlen != 0) {
     for (tcp_optidx = 0; tcp_optidx < tcphdr_optlen; ) {
       u8_t opt = tcp_get_next_optbyte();
+      if (opt != LWIP_TCP_OPT_EOL && opt != LWIP_TCP_OPT_NOP && tcp_optidx >= tcphdr_optlen) {
+        /* No length byte left for this option. */
+        LWIP_DEBUGF(TCP_INPUT_DEBUG, ("tcp_parseopt: bad length\n"));
+        return;
+      }
       switch (opt) {
         case LWIP_TCP_OPT_EOL:
           /* End of options. */

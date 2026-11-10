@@ -57,6 +57,9 @@ bbl_http_server_accepted_cb(bbl_tcp_ctx_s *tcpc, void *arg)
     connection->tcpc = tcpc;
     tcpc->arg = connection;
     tcpc->receive_cb = bbl_http_server_receive_cb;
+    /* The connection is freed in CLOSE_WAIT, while lwIP may still
+     * retransmit the response, so lwIP must copy it. */
+    tcpc->tx.flags = TCP_WRITE_FLAG_COPY;
 
     if(tcpc->af == AF_INET) {
         LOG(HTTP, "HTTP-Server (Name: %s) new connection from %s\n",

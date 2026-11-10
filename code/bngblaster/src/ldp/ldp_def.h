@@ -20,6 +20,7 @@
 #define LDP_MIN_TLV_LEN                             4
 
 #define LDP_BUF_SIZE                                256*1024
+#define LDP_SESSION_HASHTABLE_SIZE                  32771 /* is a prime number */
 
 #define LDP_MESSAGE_TYPE_NOTIFICATION               0x0001
 #define LDP_MESSAGE_TYPE_HELLO                      0x0100
@@ -204,11 +205,20 @@ typedef struct ldp_config_ {
     struct ldp_config_ *next; 
 } ldp_config_s;
 
+/* Key of the LDP session hashtable (IPv4 addresses in the first 4 bytes). */
+typedef struct ldp_session_key_ {
+    uint8_t af;
+    uint8_t local_address[IPV6_ADDR_LEN];
+    uint8_t peer_address[IPV6_ADDR_LEN];
+} ldp_session_key_s;
+
 /*
  * LDP Session.
  */
 typedef struct ldp_session_ {
     ldp_instance_s *instance;
+    ldp_session_key_s key; /* g_ctx->ldp_session_dict */
+    bool indexed;
     bbl_network_interface_s *interface;
     bbl_tcp_ctx_s *tcpc;
 

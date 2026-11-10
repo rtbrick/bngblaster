@@ -23,8 +23,9 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 +-----------------------------------+----------------------------------------------------------------------+
 | **peer-address**                  | | Mandatory BGP peer IPv4/6 address.                                 |
 +-----------------------------------+----------------------------------------------------------------------+
-| **peer-as**                       | | BGP peer AS.                                                       |
-|                                   | | Default: `local AS` Range: 0 - 4294967295                          |
+| **peer-as**                       | | BGP peer AS. If set, the session is rejected with Bad Peer AS      |
+|                                   | | if the AS in the OPEN of the peer differs.                         |
+|                                   | | Default: 0 (not checked) Range: 0 - 4294967295                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **hold-time**                     | | BGP hold-time in seconds.                                          |
 |                                   | | Default: 90 Range: 0, 3 - 65535 (0 disables hold timer and         |
@@ -70,6 +71,7 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **reconnect**                     | | Reconnect BGP session automatically.                               |
+|                                   | | If disabled, connections of the peer are refused after close.      |
 |                                   | | Default: true                                                      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **start-traffic**                 | | Start global traffic after RAW update finished.                    |

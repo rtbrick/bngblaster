@@ -3631,7 +3631,7 @@
                 },
                 "peer-as": {
                     "type": "integer",
-                    "description": "BGP peer AS",
+                    "description": "BGP peer AS, the AS of the peer OPEN message must match (not checked if not set or 0)",
                     "minimum": 0,
                     "maximum": 4294967295
                 },

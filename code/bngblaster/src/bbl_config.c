@@ -1815,7 +1815,8 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
     if(value) {
         bgp_config->peer_as = json_number_value(value);
     } else {
-        bgp_config->peer_as = bgp_config->local_as;
+        /* The peer AS is not checked. */
+        bgp_config->peer_as = 0;
     }
 
     JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "hold-time", 0, 65535);

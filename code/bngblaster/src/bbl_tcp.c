@@ -350,7 +350,9 @@ bbl_tcp_recv_cb(void *arg, struct tcp_pcb *tpcb, struct pbuf *p, err_t err)
                 (tcpc->receive_cb)(tcpc->arg, NULL, 0);
             }
             tcpc->bytes_rx += p->tot_len;
-            if(!tcpc->free_pending) {
+            if(tcpc->pcb == tpcb) {
+                /* Also with deferred free pending, otherwise the
+                 * reduced window makes tcp_close() send a RST. */
                 tcp_recved(tpcb, p->tot_len);
             }
         }
@@ -530,6 +532,8 @@ bbl_tcp_listen_accepted(void *arg, struct tcp_pcb *tpcb, err_t err)
 
     tcpc->pcb = tpcb;
     tcp_arg(tpcb, tcpc);
+    /* TF_NODELAY is not inherited from the listen pcb. */
+    tcp_nagle_disable(tpcb);
 
     /* Add send/receive callback functions. */
     tcp_sent(tpcb, bbl_tcp_sent_cb);
@@ -603,6 +607,7 @@ bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address,
                      uint16_t port, uint8_t ttl, uint8_t tos)
 {
     bbl_tcp_ctx_s *tcpc;
+    struct tcp_pcb *lpcb;
 
     if(!g_ctx->tcp) {
         /* TCP not enabled! */
@@ -621,11 +626,13 @@ bbl_tcp_ipv4_listen(bbl_network_interface_s *interface, ipv4addr_t *address,
         return NULL;
     }
 
-    tcpc->pcb = tcp_listen(tcpc->pcb);
-    if(!tcpc->pcb) {
+    lpcb = tcp_listen(tcpc->pcb);
+    if(!lpcb) {
+        /* The bound pcb is not freed by tcp_listen(). */
         bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
+    tcpc->pcb = lpcb;
 
     tcp_accept(tcpc->pcb, bbl_tcp_listen_accepted);
     if(g_tcp_listen_ext_id != LWIP_TCP_PCB_NUM_EXT_ARG_ID_INVALID) {
@@ -665,6 +672,7 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address,
                      uint16_t port, uint8_t ttl, uint8_t tos)
 {
     bbl_tcp_ctx_s *tcpc;
+    struct tcp_pcb *lpcb;
 
     if(!g_ctx->tcp) {
         /* TCP not enabled! */
@@ -684,11 +692,13 @@ bbl_tcp_ipv6_listen(bbl_network_interface_s *interface, ipv6addr_t *address,
         return NULL;
     }
 
-    tcpc->pcb = tcp_listen(tcpc->pcb);
-    if(!tcpc->pcb) {
+    lpcb = tcp_listen(tcpc->pcb);
+    if(!lpcb) {
+        /* The bound pcb is not freed by tcp_listen(). */
         bbl_tcp_ctx_free(tcpc);
         return NULL;
     }
+    tcpc->pcb = lpcb;
 
     tcp_accept(tcpc->pcb, bbl_tcp_listen_accepted);
     if(g_tcp_listen_ext_id != LWIP_TCP_PCB_NUM_EXT_ARG_ID_INVALID) {
@@ -1086,7 +1096,6 @@ void
 bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4) {
     struct pbuf *pbuf;
     bbl_tcp_s *tcp;
-    ldp_instance_s *instance;
     ldp_session_s *ldp_session;
     bgp_session_s *bgp_session;
 
@@ -1114,19 +1123,9 @@ bbl_tcp_ipv4_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
         }
     }
     if(tcp->dst == LDP_PORT || tcp->src == LDP_PORT) {
-        instance = g_ctx->ldp_instances;
-        while(instance) {
-            ldp_session = instance->sessions;
-            instance = instance->next;
-            while(ldp_session) {
-                if(ldp_session->local.ipv4_address == ipv4->dst &&
-                   ldp_session->peer.ipv4_address == ipv4->src) {
-                    interface = ldp_session->interface;
-                    instance = NULL;
-                    break;
-                }
-                ldp_session = ldp_session->next;
-            }
+        ldp_session = ldp_session_find_ipv4(ipv4->dst, ipv4->src);
+        if(ldp_session && ldp_session->interface) {
+            interface = ldp_session->interface;
         }
     }
 
@@ -1194,7 +1193,6 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
 {
     struct pbuf *pbuf;
     bbl_tcp_s *tcp;
-    ldp_instance_s *instance;
     ldp_session_s *ldp_session;
     bgp_session_s *bgp_session;
 
@@ -1222,27 +1220,11 @@ bbl_tcp_ipv6_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, 
         }
     }
     if(tcp->dst == LDP_PORT || tcp->src == LDP_PORT) {
-        instance = g_ctx->ldp_instances;
-        while(instance) {
-            ldp_session = instance->sessions;
-            instance = instance->next;
-            while(ldp_session) {
-                if(memcmp(&ldp_session->local.ipv6_address, ipv6->dst, IPV6_ADDR_LEN) == 0 &&
-                   memcmp(&ldp_session->peer.ipv6_address, ipv6->src, IPV6_ADDR_LEN) == 0) {
-                    interface = ldp_session->interface;
-                    instance = NULL;
-                    break;
-                }
-                ldp_session = ldp_session->next;
-            }            
+        ldp_session = ldp_session_find_ipv6((ipv6addr_t*)ipv6->dst, (ipv6addr_t*)ipv6->src);
+        if(ldp_session && ldp_session->interface) {
+            interface = ldp_session->interface;
         }
     }
-
-    pbuf = pbuf_alloc_reference(ipv6->hdr, ipv6->len, PBUF_ROM);
-    if(!pbuf) {
-        return;
-    }
-    interface->netif.input(pbuf, &interface->netif);
 
     ip_data.current_netif = &interface->netif;
     ip_data.current_input_netif = &interface->netif;
@@ -1281,12 +1263,6 @@ bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ipv6_s *ipv6)
         format_ipv6_address((ipv6addr_t*)ipv6->dst), tcp->dst,
         format_ipv6_address((ipv6addr_t*)ipv6->src), tcp->src);
 #endif
-
-    pbuf = pbuf_alloc_reference(ipv6->hdr, ipv6->len, PBUF_ROM);
-    if(!pbuf) {
-        return;
-    }
-    session->netif.input(pbuf, &session->netif);
 
     ip_data.current_netif = &session->netif;
     ip_data.current_input_netif = &session->netif;
@@ -1332,6 +1308,34 @@ bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len)
 }
 
 /**
+ * bbl_tcp_send_copy
+ *
+ * Queue a small message copied by lwIP, also behind data still
+ * sent or not yet acknowledged, as long as the pending transmit
+ * buffer is fully queued (e.g. a NOTIFICATION behind an OPEN).
+ *
+ * @param tcpc TCP context
+ * @param buf data (may be released after return)
+ * @param len data length
+ * @return true if queued
+ */
+bool
+bbl_tcp_send_copy(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint16_t len)
+{
+    if(!(tcpc && tcpc->pcb) || tcpc->listen) {
+        return false;
+    }
+    if(tcpc->state == BBL_TCP_STATE_SENDING && tcpc->tx.offset < tcpc->tx.len) {
+        return false;
+    }
+    if(tcp_write(tcpc->pcb, buf, len, TCP_WRITE_FLAG_COPY) != ERR_OK) {
+        return false;
+    }
+    tcp_output(tcpc->pcb);
+    return true;
+}
+
+/**
  * bbl_tcp_txq_resume
  *
  * Resend TCP segments that could not be sent because the
@@ -1348,9 +1352,17 @@ bbl_tcp_txq_resume(bbl_txq_s *txq)
     }
 }
 
+/* Ethernet with three VLAN tags plus PPPoE and PPP header */
+#define BBL_TCP_L2_HDR_MAX (14 + 3*4 + 8)
+
 static err_t
-bbl_tcp_txq_output(bbl_txq_s *txq, bbl_ethernet_header_s *eth)
+bbl_tcp_txq_output(bbl_txq_s *txq, bbl_ethernet_header_s *eth, struct pbuf *p)
 {
+    if(p->tot_len + BBL_TCP_L2_HDR_MAX > txq->buffer_len) {
+        /* The encoder copies the pbuf chain without bound. */
+        txq->stats.encode_error++;
+        return ERR_IF;
+    }
     switch(bbl_txq_to_buffer(txq, eth)) {
         case BBL_TXQ_OK:
             return ERR_OK;
@@ -1381,7 +1393,7 @@ bbl_tcp_netif_output_ipv4(struct netif *netif, struct pbuf *p, const ip4_addr_t 
     eth.type = ETH_TYPE_IPV4;
     eth.lwip = true;
     eth.next = p;
-    if(bbl_tcp_txq_output(interface->txq, &eth) != ERR_OK) {
+    if(bbl_tcp_txq_output(interface->txq, &eth, p) != ERR_OK) {
         return ERR_IF;
     }
     interface->stats.tcp_tx++;
@@ -1428,7 +1440,7 @@ bbl_tcp_netif_output_ipv4_session(struct netif *netif, struct pbuf *p, const ip4
     }
     eth.vlan_inner_priority = eth.vlan_outer_priority;
 
-    if(bbl_tcp_txq_output(session->access_interface->txq, &eth) != ERR_OK) {
+    if(bbl_tcp_txq_output(session->access_interface->txq, &eth, p) != ERR_OK) {
         return ERR_IF;
     }
     return ERR_OK;
@@ -1452,7 +1464,7 @@ bbl_tcp_netif_output_ipv6(struct netif *netif, struct pbuf *p, const ip6_addr_t 
     eth.type = ETH_TYPE_IPV6;
     eth.lwip = true;
     eth.next = p;
-    if(bbl_tcp_txq_output(interface->txq, &eth) != ERR_OK) {
+    if(bbl_tcp_txq_output(interface->txq, &eth, p) != ERR_OK) {
         return ERR_IF;
     }
     interface->stats.tcp_tx++;
@@ -1499,7 +1511,7 @@ bbl_tcp_netif_output_ipv6_session(struct netif *netif, struct pbuf *p, const ip6
     }
     eth.vlan_inner_priority = eth.vlan_outer_priority;
 
-    if(bbl_tcp_txq_output(session->access_interface->txq, &eth) != ERR_OK) {
+    if(bbl_tcp_txq_output(session->access_interface->txq, &eth, p) != ERR_OK) {
         return ERR_IF;
     }
     return ERR_OK;

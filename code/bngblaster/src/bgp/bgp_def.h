@@ -30,6 +30,7 @@
 #define BGP_MSG_UPDATE              2
 #define BGP_MSG_NOTIFICATION        3
 #define BGP_MSG_KEEPALIVE           4
+#define BGP_MSG_ROUTE_REFRESH       5
 
 /* NOTIFICATION UPDATE Message Error (RFC 4271) */
 #define BGP_ERROR_UPDATE                    3
@@ -162,7 +163,7 @@ typedef struct bgp_config_ {
 
     uint32_t id;
     uint32_t local_as;
-    uint32_t peer_as;
+    uint32_t peer_as; /* 0 means not checked */
     uint16_t hold_time;
     uint16_t teardown_time;
     uint8_t  tos; /* IPv4 TOS or IPv6 TC */

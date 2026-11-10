@@ -480,6 +480,11 @@ u16_t tcp_eff_send_mss_netif(u16_t sendmss, struct netif *outif,
                              const ip_addr_t *dest);
 #define tcp_eff_send_mss(sendmss, src, dest) \
     tcp_eff_send_mss_netif(sendmss, ip_route(src, dest), dest)
+/* Use the netif the pcb is bound to, ip_route() finds no netif without addresses. */
+#define tcp_eff_send_mss_pcb(sendmss, pcb) \
+    tcp_eff_send_mss_netif(sendmss, ((pcb)->netif_idx != NETIF_NO_INDEX) ? \
+                           netif_get_by_index((pcb)->netif_idx) : \
+                           ip_route(&(pcb)->local_ip, &(pcb)->remote_ip), &(pcb)->remote_ip)
 #endif /* TCP_CALCULATE_EFF_SEND_MSS */
 
 #if LWIP_CALLBACK_API

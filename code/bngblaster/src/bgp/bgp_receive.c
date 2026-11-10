@@ -14,6 +14,7 @@ struct keyval_ bgp_msg_names[] = {
     { BGP_MSG_UPDATE,       "update" },
     { BGP_MSG_NOTIFICATION, "notification" },
     { BGP_MSG_KEEPALIVE,    "keepalive" },
+    { BGP_MSG_ROUTE_REFRESH, "route-refresh" },
     { 0, NULL}
 };
 
@@ -33,6 +34,14 @@ struct keyval_ bgp_notification_msg_hdr_error_values[] = {
     { 1, "Connection Not Synchronized" },
     { 2, "Bad Message Length" },
     { 3, "Bad Message Type" },
+    { 0, NULL}
+};
+
+struct keyval_ bgp_notification_fsm_error_values[] = {
+    { 0, "Unspecified Error" },
+    { 1, "Receive Unexpected Message in OpenSent State" },
+    { 2, "Receive Unexpected Message in OpenConfirm State" },
+    { 3, "Receive Unexpected Message in Established State" },
     { 0, NULL}
 };
 
@@ -77,6 +86,16 @@ struct keyval_ bgp_notification_cease_error_values[] = {
     { 10, "BFD Down" },
     { 0, NULL}
 };
+
+static void
+bgp_error(bgp_session_s *session, uint8_t error_code, uint8_t error_subcode)
+{
+    if(!session->error_code) {
+        session->error_code = error_code;
+        session->error_subcode = error_subcode;
+    }
+    bgp_session_close(session);
+}
 
 static void 
 bgp_decode_error(bgp_session_s *session)
@@ -129,20 +148,51 @@ bgp_capability(bgp_session_s *session, uint8_t *start, uint8_t length)
     return true;
 }
 
+/**
+ * bgp_open_parse
+ *
+ * Decode and validate an OPEN message (RFC 4271 section 6.2)
+ * into session->peer.
+ *
+ * @param session BGP session
+ * @param start message start
+ * @param length message length
+ * @param error_code NOTIFICATION error code if invalid
+ * @param error_subcode NOTIFICATION error subcode if invalid
+ * @return true if valid
+ */
 bool
-bgp_open_parse(bgp_session_s *session, uint8_t *start, uint16_t length)
+bgp_open_parse(bgp_session_s *session, uint8_t *start, uint16_t length,
+               uint8_t *error_code, uint8_t *error_subcode)
 {
     uint16_t opt_end;
     uint16_t opt_idx = 29;
     uint8_t opt_param_type;
     uint8_t opt_param_length;
+    uint8_t version;
+
+    *error_code = 2; /* OPEN Message Error */
+    *error_subcode = 0;
 
     if(length < 29) {
+        *error_code = 1; /* Message Header Error */
+        *error_subcode = 2; /* Bad Message Length */
         return false;
     }
+    version = start[19];
     session->peer.as = read_be_uint(start+20, 2);
     session->peer.hold_time = read_be_uint(start+22, 2);
     session->peer.id = read_be_uint(start+24, 4);
+
+    if(version != 4) {
+        LOG(BGP, "BGP (%s %s - %s) open message with unsupported version %u\n",
+            session->interface->name,
+            session->local_address_str,
+            session->peer_address_str,
+            version);
+        *error_subcode = 1; /* Unsupported Version Number */
+        return false;
+    }
 
     /* Decode optional parameters. */
     opt_end = opt_idx + read_be_uint(start+28, 1);
@@ -173,13 +223,62 @@ bgp_open_parse(bgp_session_s *session, uint8_t *start, uint16_t length)
         session->peer_address_str,
         session->peer.as, session->peer.hold_time);
 
+    /* The peer AS is checked after the 4-octet AS capability. */
+    if(session->config->peer_as && session->peer.as != session->config->peer_as) {
+        LOG(BGP, "BGP (%s %s - %s) open message with bad peer AS %u (expected %u)\n",
+            session->interface->name,
+            session->local_address_str,
+            session->peer_address_str,
+            session->peer.as, session->config->peer_as);
+        *error_subcode = 2; /* Bad Peer AS */
+        return false;
+    }
+    if(session->peer.hold_time == 1 || session->peer.hold_time == 2) {
+        LOG(BGP, "BGP (%s %s - %s) open message with unacceptable hold-time %us\n",
+            session->interface->name,
+            session->local_address_str,
+            session->peer_address_str,
+            session->peer.hold_time);
+        *error_subcode = 6; /* Unacceptable Hold Time */
+        return false;
+    }
+    if(session->peer.id == 0) {
+        LOG(BGP, "BGP (%s %s - %s) open message with BGP identifier 0\n",
+            session->interface->name,
+            session->local_address_str,
+            session->peer_address_str);
+        *error_subcode = 3; /* Bad BGP Identifier */
+        return false;
+    }
+    return true;
+}
+
+/**
+ * bgp_marker_valid
+ *
+ * @param start message start
+ * @return true if the marker is all ones (RFC 4271 section 4.1)
+ */
+bool
+bgp_marker_valid(uint8_t *start)
+{
+    uint8_t i;
+    for(i = 0; i < 16; i++) {
+        if(start[i] != 0xff) return false;
+    }
     return true;
 }
 
 static bool
 bgp_open(bgp_session_s *session, uint8_t *start, uint16_t length)
 {
-    if(!bgp_open_parse(session, start, length)) {
+    uint8_t error_code, error_subcode;
+
+    if(!bgp_open_parse(session, start, length, &error_code, &error_subcode)) {
+        if(!session->error_code) {
+            session->error_code = error_code;
+            session->error_subcode = error_subcode;
+        }
         return false;
     }
     if(session->collision) {
@@ -219,6 +318,7 @@ bgp_notification(bgp_session_s *session, uint8_t *start, uint16_t length)
         case 1: subcodes = bgp_notification_msg_hdr_error_values; break;
         case 2: subcodes = bgp_notification_open_error_values; break;
         case 3: subcodes = bgp_notification_update_error_values; break;
+        case 5: subcodes = bgp_notification_fsm_error_values; break;
         case 6: subcodes = bgp_notification_cease_error_values; break;
         default: break;
     }
@@ -415,6 +515,18 @@ bgp_rebase_read_buffer(bgp_session_s *session)
     buffer->idx = size;
 }
 
+/* FSM Error subcode for an unexpected message (RFC 6608). */
+static uint8_t
+bgp_fsm_error_subcode(bgp_session_s *session)
+{
+    switch(session->state) {
+        case BGP_OPENSENT: return 1;
+        case BGP_OPENCONFIRM: return 2;
+        case BGP_ESTABLISHED: return 3;
+        default: return 0;
+    }
+}
+
 static void
 bgp_read(bgp_session_s *session)
 {
@@ -425,12 +537,21 @@ bgp_read(bgp_session_s *session)
     io_buffer_t *buffer = &session->read_buf;
 
     while(true) {
+        if(session->state < BGP_OPENSENT || session->state > BGP_ESTABLISHED) {
+            /* Closing, data received after a fatal error is ignored. */
+            return;
+        }
         start = buffer->data+buffer->start_idx;
         size = buffer->idx - buffer->start_idx;
 
         /* Minimum message size */
         if(size < BGP_MIN_MESSAGE_SIZE) {
             break;
+        }
+
+        if(!bgp_marker_valid(start)) {
+            bgp_error(session, 1, 1); /* Connection Not Synchronized */
+            return;
         }
 
         length = read_be_uint(start+16, 2);
@@ -456,6 +577,10 @@ bgp_read(bgp_session_s *session)
 
         switch(type) {
             case BGP_MSG_OPEN:
+                if(session->state != BGP_OPENSENT) {
+                    bgp_error(session, 5, bgp_fsm_error_subcode(session));
+                    return;
+                }
                 if(!bgp_open(session, start, length)) {
                     bgp_decode_error(session);
                     return;
@@ -476,21 +601,44 @@ bgp_read(bgp_session_s *session)
                 }
                 return;
             case BGP_MSG_KEEPALIVE:
+                if(length != BGP_MIN_MESSAGE_SIZE) {
+                    bgp_error(session, 1, 2); /* Bad Message Length */
+                    return;
+                }
+                if(session->state == BGP_OPENSENT) {
+                    bgp_error(session, 5, 1);
+                    return;
+                }
                 session->stats.keepalive_rx++;
                 if(session->state == BGP_OPENCONFIRM) {
                     bgp_session_state_change(session, BGP_ESTABLISHED);
                 }
                 break;
             case BGP_MSG_UPDATE:
+                if(length < 23) {
+                    bgp_error(session, 1, 2); /* Bad Message Length */
+                    return;
+                }
+                if(session->state != BGP_ESTABLISHED) {
+                    bgp_error(session, 5, bgp_fsm_error_subcode(session));
+                    return;
+                }
                 session->stats.update_rx++;
-                if(session->state == BGP_ESTABLISHED &&
-                   !bgp_update(session, start, length)) {
+                if(!bgp_update(session, start, length)) {
                     bgp_decode_error(session);
                     return;
                 }
                 break;
-            default:
+            case BGP_MSG_ROUTE_REFRESH:
+                /* Not negotiated, but tolerated and ignored. */
+                if(session->state != BGP_ESTABLISHED) {
+                    bgp_error(session, 5, bgp_fsm_error_subcode(session));
+                    return;
+                }
                 break;
+            default:
+                bgp_error(session, 1, 3); /* Bad Message Type */
+                return;
         }
 
         /* Reset hold timer */
@@ -507,6 +655,10 @@ bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len)
 {
     bgp_session_s *session = (bgp_session_s*)arg;
     io_buffer_t *buffer = &session->read_buf;
+    if(session->state == BGP_CLOSING) {
+        /* Data received after the NOTIFICATION is ignored. */
+        return;
+    }
     if(buf) {
         if(buffer->idx+len > buffer->size) {
             LOG(ERROR, "BGP (%s %s - %s) receive error (read buffer exhausted)\n",

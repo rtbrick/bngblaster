@@ -134,3 +134,30 @@ def test_l2vpn(local_veth, bbl, tmp_path, threads):
     wait_until(lambda: not routes(PE_A), 15, message="L2VPN route of PE B withdrawn")
     wait_until(lambda: info(1)["l2vpn-resolved"] is False, 15, message="stream A-B unresolved")
     assert info(2)["l2vpn-resolved"] is True
+
+
+def test_l2vpn_stats_reset(local_veth, bbl, tmp_path):
+    """The L2VPN counters restart at 0 on reconnect as all other
+    session counters."""
+    update_a, update_b = str(tmp_path / "a.bgp"), str(tmp_path / "b.bgp")
+    l2vpn_update(update_a, PE_A, RD_A, LABEL_A, CE_A)
+    l2vpn_update(update_b, PE_B, RD_B, LABEL_B, CE_B)
+    instance = bbl({
+        "interfaces": {"network": [
+            {"interface": local_veth.if1, "address": PE_A + "/24", "gateway": PE_B},
+            {"interface": local_veth.if2, "address": PE_B + "/24", "gateway": PE_A}]},
+        "bgp": [session(PE_A, PE_B, update_a), session(PE_B, PE_A, update_b)]
+    })
+
+    def stats():
+        for s in instance.ctrl("bgp-sessions")["bgp-sessions"]:
+            if s["local-address"] == PE_A:
+                return s["state"], s["stats"]["l2vpn-reach-rx"]
+        return None, None
+
+    wait_until(lambda: stats() == ("established", 1), 30, message="L2VPN route received")
+    instance.ctrl("bgp-disconnect", **{"local-ipv4-address": PE_A})
+    wait_until(lambda: stats()[0] != "established", 10, message="session down")
+    wait_until(lambda: stats()[0] == "established", 30, message="session established again")
+    wait_until(lambda: stats()[1] == 1, 10, message="L2VPN route received again")
+    assert stats() == ("established", 1)

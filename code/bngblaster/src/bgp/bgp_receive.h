@@ -13,6 +13,10 @@ void
 bgp_receive_cb(void *arg, uint8_t *buf, uint16_t len);
 
 bool
-bgp_open_parse(bgp_session_s *session, uint8_t *start, uint16_t length);
+bgp_open_parse(bgp_session_s *session, uint8_t *start, uint16_t length,
+               uint8_t *error_code, uint8_t *error_subcode);
+
+bool
+bgp_marker_valid(uint8_t *start);
 
 #endif

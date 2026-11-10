@@ -536,6 +536,103 @@ ldp_session_connect(ldp_session_s *session, time_t delay)
     }
 }
 
+int
+ldp_session_key_compare(void *key1, void *key2)
+{
+    return memcmp(key1, key2, sizeof(ldp_session_key_s));
+}
+
+uint32_t
+ldp_session_key_hash(const void *k)
+{
+    const uint8_t *key = k;
+    uint32_t hash = 2166136261U;
+    size_t i;
+
+    /* FNV-1a */
+    for(i = 0; i < sizeof(ldp_session_key_s); i++) {
+        hash ^= key[i];
+        hash *= 16777619U;
+    }
+    return hash;
+}
+
+static ldp_session_s *
+ldp_session_find_key(ldp_session_key_s *key)
+{
+    void **search = dict_search(g_ctx->ldp_session_dict, key);
+    if(search) {
+        return *search;
+    }
+    return NULL;
+}
+
+ldp_session_s *
+ldp_session_find_ipv4(ipv4addr_t local_address, ipv4addr_t peer_address)
+{
+    ldp_session_key_s key = {0};
+
+    key.af = AF_INET;
+    memcpy(key.local_address, &local_address, sizeof(ipv4addr_t));
+    memcpy(key.peer_address, &peer_address, sizeof(ipv4addr_t));
+    return ldp_session_find_key(&key);
+}
+
+ldp_session_s *
+ldp_session_find_ipv6(ipv6addr_t *local_address, ipv6addr_t *peer_address)
+{
+    ldp_session_key_s key;
+
+    key.af = AF_INET6;
+    memcpy(key.local_address, local_address, IPV6_ADDR_LEN);
+    memcpy(key.peer_address, peer_address, IPV6_ADDR_LEN);
+    return ldp_session_find_key(&key);
+}
+
+/**
+ * ldp_session_index
+ *
+ * Add the session with its current addresses to the hashtable searched
+ * for received TCP packets. The peer address can change if the session
+ * is reused. If several sessions have the same addresses, the first one
+ * is found as before with the session list.
+ *
+ * @param session LDP session
+ */
+static void
+ldp_session_index(ldp_session_s *session)
+{
+    ldp_session_key_s key = {0};
+    dict_insert_result result;
+    void **search;
+
+    if(session->ipv6) {
+        key.af = AF_INET6;
+        memcpy(key.local_address, &session->local.ipv6_address, IPV6_ADDR_LEN);
+        memcpy(key.peer_address, &session->peer.ipv6_address, IPV6_ADDR_LEN);
+    } else {
+        key.af = AF_INET;
+        memcpy(key.local_address, &session->local.ipv4_address, sizeof(ipv4addr_t));
+        memcpy(key.peer_address, &session->peer.ipv4_address, sizeof(ipv4addr_t));
+    }
+    if(session->indexed) {
+        if(memcmp(&key, &session->key, sizeof(key)) == 0) {
+            return;
+        }
+        search = dict_search(g_ctx->ldp_session_dict, &session->key);
+        if(search && *search == session) {
+            dict_remove(g_ctx->ldp_session_dict, &session->key);
+        }
+        session->indexed = false;
+    }
+    session->key = key;
+    result = dict_insert(g_ctx->ldp_session_dict, &session->key);
+    if(result.inserted) {
+        *result.datum_ptr = session;
+        session->indexed = true;
+    }
+}
+
 /**
  * ldp_session_ipv4_init
  * 
@@ -578,6 +675,7 @@ ldp_session_ipv4_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     }
     session->peer.lsr_id = ldp->lsr_id;
     session->peer.label_space_id = ldp->label_space_id;
+    ldp_session_index(session);
     session->peer.keepalive_time = 0;
     session->peer.max_pdu_len = 0;
 
@@ -644,6 +742,7 @@ ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     }
     session->peer.lsr_id = ldp->lsr_id;
     session->peer.label_space_id = ldp->label_space_id;
+    ldp_session_index(session);
     session->peer.keepalive_time = 0;
     session->peer.max_pdu_len = 0;
 

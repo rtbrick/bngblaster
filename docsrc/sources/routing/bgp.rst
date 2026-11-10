@@ -54,6 +54,17 @@ address families:
 
 This can be changed using the ``family`` configuration option.
 
+The OPEN message of the peer is validated (RFC 4271 section 6.2): BGP
+version 4, hold time 0 or at least 3 seconds, a BGP identifier other than 0
+and, if ``peer-as`` is configured, the peer AS. Messages are accepted only in
+the states defined by RFC 4271, an OPEN in OpenConfirm or Established, a
+KEEPALIVE in OpenSent or an UPDATE before Established closes the session with
+a NOTIFICATION FSM Error (RFC 6608 subcodes). Invalid headers (marker, length,
+unknown message type) close the session with a Message Header Error.
+
+Sessions with ``reconnect`` disabled stay down after they are closed, also
+connection attempts of the peer are refused.
+
 Authentication
 ~~~~~~~~~~~~~~
 

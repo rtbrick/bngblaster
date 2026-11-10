@@ -181,6 +181,11 @@ bgp_pre_accept_cb(struct tcp_pcb *new_pcb, void *arg)
         /* No configured peer for this address pair. */
         return false;
     }
+    if(session->state == BGP_CLOSED || session->state == BGP_CLOSING) {
+        /* Connections are refused while the session is down
+         * without reconnect or closing (RFC 4271 section 8.2.2). */
+        return false;
+    }
     /* The listen socket is shared by all sessions and interfaces. */
     tcp_bind_netif(new_pcb, &session->interface->netif);
     if(session->config->ttl) {
@@ -676,6 +681,8 @@ bgp_session_connect(bgp_session_s *session, time_t delay)
         session->stats.evpn_withdraw_rx = 0;
         session->stats.route_reach_rx = 0;
         session->stats.route_withdraw_rx = 0;
+        session->stats.l2vpn_reach_rx = 0;
+        session->stats.l2vpn_withdraw_rx = 0;
 
         session->raw_update = session->raw_update_start;
         session->raw_update_sending = false;
@@ -708,6 +715,7 @@ bgp_session_connect(bgp_session_s *session, time_t delay)
 void
 bgp_session_close_now(bgp_session_s *session)
 {
+    timer_del(session->hold_timer);
     if(session->state > BGP_IDLE) {
         if(bbl_tcp_pending(session->tcpc)) {
             /* The FIN would be sent only after the pending data,
@@ -749,6 +757,8 @@ void
 bgp_session_close(bgp_session_s *session)
 {
     time_t delay = 0;
+    uint8_t buf[BGP_MIN_MESSAGE_SIZE + 2];
+    io_buffer_t notification = {0};
 
     /* Stop all timers */
     timer_del(session->connect_timer);
@@ -756,31 +766,39 @@ bgp_session_close(bgp_session_s *session)
     timer_del(session->hold_timer);
     timer_del(session->update_timer);
 
-    if(session->state > BGP_CONNECT && 
-       session->state < BGP_CLOSING &&
-       session->error_code > 0) {
-        if(session->tcpc && session->tcpc->state == BBL_TCP_STATE_IDLE) {
-            /* Send notification messages */
+    if(session->state > BGP_CONNECT && session->state < BGP_CLOSING) {
+        if(session->error_code > 0) {
             LOG(BGP, "BGP (%s %s - %s) send notification message (error code %u sub-code %u)\n",
                 session->interface->name,
                 session->local_address_str,
                 session->peer_address_str,
                 session->error_code, session->error_subcode);
-            bgp_session_reset_write_buffer(session);
-            bgp_push_notification_message(session);
-            bgp_session_send(session);
-            session->stats.message_tx++;
-            delay = 3;
-        } else {
-            /* The notification can't be sent behind a partially sent
-             * message (e.g. RAW update) and the write buffer may still
-             * be referenced by the TCP session, so reset it instead. */
-            LOG(BGP, "BGP (%s %s - %s) can't send notification message (error code %u sub-code %u) while sending\n",
-                session->interface->name,
-                session->local_address_str,
-                session->peer_address_str,
-                session->error_code, session->error_subcode);
+            if(session->tcpc && session->tcpc->state == BBL_TCP_STATE_IDLE) {
+                bgp_session_reset_write_buffer(session);
+                bgp_push_notification_message(session);
+                bgp_session_send(session);
+                session->stats.message_tx++;
+                delay = 3;
+            } else {
+                /* The write buffer may still be referenced by lwIP,
+                 * so the notification is copied behind the queued data. */
+                notification.data = buf;
+                notification.size = sizeof(buf);
+                bgp_push_notification_message_buf(&notification, session->error_code, session->error_subcode);
+                if(bbl_tcp_send_copy(session->tcpc, notification.data, notification.idx)) {
+                    session->stats.message_tx++;
+                    delay = 3;
+                } else {
+                    /* A partially queued message (e.g. RAW update)
+                     * can't be followed by a notification. */
+                    LOG(BGP, "BGP (%s %s - %s) can't send notification message while sending\n",
+                        session->interface->name,
+                        session->local_address_str,
+                        session->peer_address_str);
+                }
+            }
         }
+        /* Data received while closing is ignored. */
         bgp_session_state_change(session, BGP_CLOSING);
     }
 

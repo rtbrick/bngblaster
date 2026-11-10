@@ -46,11 +46,11 @@ bgp_session_close_tcpc_with_notification(bbl_tcp_ctx_s *tcpc, uint8_t error_code
     notification.data = buf;
     notification.size = sizeof(buf);
     bgp_push_notification_message_buf(&notification, error_code, error_subcode);
-    /* bbl_tcp_send() hands the pointer straight to lwIP's tcp_write() and
-     * lwIP keeps referencing it until the data is acknowledged, so this
-     * stack buffer MUST be copied. */
-    tcpc->tx.flags = TCP_WRITE_FLAG_COPY;
-    bbl_tcp_send(tcpc, notification.data, notification.idx);
+    /* Copied by lwIP (stack buffer), also behind a fully queued OPEN. */
+    if(!bbl_tcp_send_copy(tcpc, notification.data, notification.idx)) {
+        LOG(BGP, "BGP (%s) can't send notification message (error code %u sub-code %u)\n",
+            tcpc->ifname, error_code, error_subcode);
+    }
     /* Deferred: this is reached from inside the connection's own callbacks,
      * where closing/freeing in place would leave lwIP (and bbl_tcp) using
      * freed memory. Deferring also gives the NOTIFICATION a chance to go
@@ -114,6 +114,15 @@ bgp_session_new_connection(bgp_session_s *session, bbl_tcp_ctx_s *tcpc, bool act
             session->interface->name,
             session->local_address_str,
             session->peer_address_str);
+        return false;
+    }
+    if(session->state == BGP_CLOSED || session->state == BGP_CLOSING) {
+        /* Down without reconnect or closing (RFC 4271 section 8.2.2). */
+        LOG(BGP, "BGP (%s %s - %s) rejecting connection attempt (session %s)\n",
+            session->interface->name,
+            session->local_address_str,
+            session->peer_address_str,
+            bgp_session_state_string(session->state));
         return false;
     }
     if(!session->tcpc || session->state < BGP_OPENSENT) {
@@ -203,6 +212,7 @@ bgp_collision_receive_cb(void *arg, uint8_t *buf, uint16_t len)
     uint16_t length;
     uint8_t type;
     uint8_t *start;
+    uint8_t error_code, error_subcode;
     __typeof__(session->peer) primary_peer;
 
     if(!collision) {
@@ -232,8 +242,16 @@ bgp_collision_receive_cb(void *arg, uint8_t *buf, uint16_t len)
     if(size < BGP_MIN_MESSAGE_SIZE) {
         return; /* wait for more bytes */
     }
+    if(!bgp_marker_valid(start)) {
+        bgp_session_close_tcpc_with_notification(collision->tcpc, 1, 1);
+        collision->tcpc = NULL;
+        bgp_session_collision_free(session);
+        return;
+    }
     length = read_be_uint(start+16, 2);
     if(length < BGP_MIN_MESSAGE_SIZE || length > BGP_MAX_MESSAGE_SIZE) {
+        bgp_session_close_tcpc_with_notification(collision->tcpc, 1, 2);
+        collision->tcpc = NULL;
         bgp_session_collision_free(session);
         return;
     }
@@ -250,8 +268,10 @@ bgp_collision_receive_cb(void *arg, uint8_t *buf, uint16_t len)
     /* bgp_open_parse() decodes into session->peer, which still belongs to
      * the primary connection unless this leg wins. */
     primary_peer = session->peer;
-    if(!bgp_open_parse(session, start, length)) {
+    if(!bgp_open_parse(session, start, length, &error_code, &error_subcode)) {
         session->peer = primary_peer;
+        bgp_session_close_tcpc_with_notification(collision->tcpc, error_code, error_subcode);
+        collision->tcpc = NULL;
         bgp_session_collision_free(session);
         return;
     }

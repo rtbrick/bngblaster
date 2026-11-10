@@ -451,6 +451,9 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
   {
     optlen = LWIP_TCP_OPT_LENGTH_SEGMENT(0, pcb);
   }
+  /* ensure that segments can hold at least one data byte with all
+     options (e.g. TCP-AO/MD5 added by hooks), otherwise max_len wraps */
+  mss_local = LWIP_MAX(mss_local, optlen + 1);
 
 
   /*

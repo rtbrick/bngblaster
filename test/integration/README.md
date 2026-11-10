@@ -15,6 +15,11 @@ Functional tests over veth pairs between network namespaces:
   a slow receiver with zero windows (`test_bgp_scale.py`, `bgp_sink.py`)
 * BNG Blaster BGP sessions on 300 local addresses accepted from a peer
   that only connects actively (`test_bgp_listen.py`, `bgp_sink.py`)
+* BNG Blaster BGP against a scripted peer: NOTIFICATION for invalid
+  OPEN messages and headers and for messages unexpected in the current
+  state, peer AS check, messages ignored while closing, connections
+  refused without reconnect, collision Cease closed with FIN, and send
+  MSS by interface MTU for IPv4 and IPv6 (`test_bgp_fsm.py`, `bgp_peer.py`)
 * BNG Blaster ISIS and OSPFv2 against FRR: adjacency (P2P and
   broadcast, L1/L2/L1L2), database synchronization in both directions
   with routes installed by FRR (also by CSNP with HMAC-MD5 as DIS), and
@@ -47,8 +52,8 @@ Functional tests over veth pairs between network namespaces:
   stream updates of LACP LAG interfaces which are not up, running on
   the host without namespaces (`test_lag_loopback.py`)
 * LDP label withdraw and session down, and BGP L2VPN label blocks,
-  with streams sent by the main loop and by TX threads
-  (`test_ldp.py`, `test_bgp_l2vpn.py`)
+  with streams sent by the main loop and by TX threads, and L2VPN
+  counters reset on reconnect (`test_ldp.py`, `test_bgp_l2vpn.py`)
 * LDP between two BNG Blaster instances: wildcard withdraw, fatal
   notification, invalid label mappings, prefix length, implicit null,
   two peers with the same FEC, ldp-disconnect with IPv6 filters and

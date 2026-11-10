@@ -156,6 +156,9 @@ bbl_tcp_ipv6_rx_session(bbl_session_s *session, bbl_ipv6_s *ipv6);
 bool
 bbl_tcp_send(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint32_t len);
 
+bool
+bbl_tcp_send_copy(bbl_tcp_ctx_s *tcpc, uint8_t *buf, uint16_t len);
+
 void
 bbl_tcp_txq_resume(bbl_txq_s *txq);
 
