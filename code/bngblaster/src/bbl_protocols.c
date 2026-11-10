@@ -84,7 +84,10 @@ bbl_ipv4_udp_checksum(uint32_t src, uint32_t dst, uint8_t *udp, uint16_t udp_len
     result += _checksum(&dst, sizeof(dst));
     result += _checksum(udp, 6);
     result += _checksum(udp+8, udp_len-8);
-    return ~_fold(result);
+    /* A computed checksum of zero is sent as all ones,
+     * as zero means no checksum (RFC 768, RFC 8200). */
+    result = (uint16_t)~_fold(result);
+    return result ? result : 0xffff;
 }
 
 uint16_t
@@ -109,7 +112,10 @@ bbl_ipv6_udp_checksum(ipv6addr_t src, ipv6addr_t dst, uint8_t *udp, uint16_t udp
     result += _checksum(dst, sizeof(ipv6addr_t));
     result += _checksum(udp, 6);
     result += _checksum(udp+8, udp_len-8);
-    return ~_fold(result);
+    /* A computed checksum of zero is sent as all ones,
+     * as zero means no checksum (RFC 768, RFC 8200). */
+    result = (uint16_t)~_fold(result);
+    return result ? result : 0xffff;
 }
 
 uint16_t

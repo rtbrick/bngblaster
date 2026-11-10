@@ -1,9 +1,11 @@
 """
-BNG Blaster BGP against GoBGP (unicast, collision, MD5)
+BNG Blaster BGP against GoBGP (unicast, collision, hold time, MD5)
 
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import os
+import signal
 import time
 
 import pytest
@@ -91,6 +93,33 @@ def test_peer_close(bgp):
     wait_until(lambda: bgp.bbl_session()["state"] != "established", 5,
                message="BNG Blaster session down after peer close")
     assert bgp.bbl.terminate(30) == 0
+
+
+def test_hold_time_negotiated(bgp):
+    """The smaller hold time of GoBGP is used (RFC 4271 section 4.2),
+    so a silent peer is detected after 6 instead of 30 seconds."""
+    bgp.start(gobgp={"hold_time": 6})
+    bgp.wait_established()
+    os.kill(bgp.gobgp.proc.pid, signal.SIGSTOP)
+    try:
+        start = time.monotonic()
+        wait_until(lambda: bgp.bbl_session()["state"] != "established", 12,
+                   message="BNG Blaster hold timer expired")
+        assert time.monotonic() - start < 10
+    finally:
+        os.kill(bgp.gobgp.proc.pid, signal.SIGCONT)
+
+
+def test_hold_time_zero(bgp):
+    """Hold time zero disables hold timer and keepalives (RFC 4271
+    section 4.4), the session must stay up without keepalives."""
+    bgp.start(bbl={"bgp": {"hold-time": 0}})
+    bgp.wait_established()
+    keepalive_tx = bgp.bbl_session()["stats"]["keepalive-tx"]
+    time.sleep(8)
+    assert bgp.established()
+    assert bgp.bbl_session()["stats"]["keepalive-tx"] == keepalive_tx
+    bgp.teardown()
 
 
 @pytest.mark.usefixtures("md5_kernel")

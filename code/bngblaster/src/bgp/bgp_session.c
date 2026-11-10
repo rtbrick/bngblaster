@@ -439,6 +439,7 @@ bgp_session_state_openconfirm(bgp_session_s *session)
 static void
 bgp_session_state_established(bgp_session_s *session)
 {
+    time_t hold_time;
     time_t keepalive_interval;
 
     clock_gettime(CLOCK_MONOTONIC, &session->established_timestamp);
@@ -453,19 +454,20 @@ bgp_session_state_established(bgp_session_s *session)
         session->connecting_tcpc = NULL;
     }
 
-    /* Start BGP keepalive */
-    if(session->peer.hold_time < session->config->hold_time) {
-        keepalive_interval = session->peer.hold_time/2U;
+    /* Start BGP keepalive, except for a negotiated
+     * hold time of zero (RFC 4271 section 4.4). */
+    hold_time = bgp_session_hold_time(session);
+    if(hold_time) {
+        keepalive_interval = hold_time/2U;
+        if(!keepalive_interval) {
+            keepalive_interval = 1;
+        }
+        timer_add_periodic(&g_ctx->timer_root, &session->keepalive_timer, 
+                           "BGP KEEPALIVE", keepalive_interval, 0, session,
+                           &bgp_session_keepalive_job);
     } else {
-        keepalive_interval = session->config->hold_time/2U;
+        timer_del(session->keepalive_timer);
     }
-    if(!keepalive_interval) {
-        keepalive_interval = 1;
-    }
-
-    timer_add_periodic(&g_ctx->timer_root, &session->keepalive_timer, 
-                       "BGP KEEPALIVE", keepalive_interval, 0, session,
-                       &bgp_session_keepalive_job);
 
     /* Start BGP updates */
     timer_add(&g_ctx->timer_root, &session->update_timer, 
@@ -813,6 +815,38 @@ bgp_session_hold_timer_job(timer_s *timer)
 void
 bgp_restart_hold_timer(bgp_session_s *session, time_t timeout)
 {
+    if(!timeout) {
+        /* Hold time zero disables the hold timer. */
+        timer_del(session->hold_timer);
+        return;
+    }
     timer_add(&g_ctx->timer_root, &session->hold_timer, 
               "BGP TIMEOUT", timeout, 0, session, &bgp_session_hold_timer_job);
+}
+
+/**
+ * bgp_session_hold_time
+ *
+ * Return the hold time to be used in the current state, which is 
+ * the smaller of the local and received hold time once the OPEN
+ * of the peer is received (RFC 4271 section 4.2).
+ *
+ * @param session BGP session
+ * @return hold time in seconds, zero means no hold timer
+ */
+time_t
+bgp_session_hold_time(bgp_session_s *session)
+{
+    switch(session->state) {
+        case BGP_OPENSENT:
+            return BGP_OPENSENT_HOLD_TIME;
+        case BGP_OPENCONFIRM:
+        case BGP_ESTABLISHED:
+            if(session->peer.hold_time < session->config->hold_time) {
+                return session->peer.hold_time;
+            }
+            return session->config->hold_time;
+        default:
+            return session->config->hold_time;
+    }
 }

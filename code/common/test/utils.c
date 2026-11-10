@@ -224,6 +224,18 @@ test_scan_iso_prefix(void **unused) {
     assert_false(scan_iso_prefix("49.0001/255", &iso_test));
     assert_false(scan_iso_prefix("49.0001/-1", &iso_test));
     assert_false(scan_iso_prefix("49.0001/x", &iso_test));
+
+    /* Without length the prefix covers all address bytes */
+    assert_true(scan_iso_prefix("49.0001", &iso_test));
+    assert_int_equal(iso_test.len, 24);
+    assert_int_equal(iso_test.address[2], 1);
+    assert_true(scan_iso_prefix("49.0001.0002", &iso_test));
+    assert_int_equal(iso_test.len, 40);
+
+    /* Trailing nibble and empty address */
+    assert_false(scan_iso_prefix("49.001", &iso_test));
+    assert_false(scan_iso_prefix("49.001/24", &iso_test));
+    assert_false(scan_iso_prefix("", &iso_test));
 }
 
 static void

@@ -27,7 +27,8 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | Default: `local AS` Range: 0 - 4294967295                          |
 +-----------------------------------+----------------------------------------------------------------------+
 | **hold-time**                     | | BGP hold-time in seconds.                                          |
-|                                   | | Default: 90 Range: 0 - 65535                                       |
+|                                   | | Default: 90 Range: 0, 3 - 65535 (0 disables hold timer and         |
+|                                   | | keepalive). The smaller of the local and peer hold time is used.   |
 +-----------------------------------+----------------------------------------------------------------------+
 | **id**                            | | BGP identifier.                                                    |
 |                                   | | Default: 1.2.3.4                                                   |

@@ -18,7 +18,7 @@
 |                       | | Default: 10                                                    |
 +-----------------------+------------------------------------------------------------------+
 | **service-name**      | | PPPoE discovery service name.                                  |
-|                       | | Default: none                                                  |
+|                       | | Default: none, max 255 characters                              |
 +-----------------------+------------------------------------------------------------------+
 | **host-uniq**         | | PPPoE discovery host-uniq.                                     |
 |                       | | Default: false                                                 |

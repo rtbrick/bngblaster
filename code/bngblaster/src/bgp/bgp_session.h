@@ -57,6 +57,9 @@ bgp_session_close_now(bgp_session_s *session);
 void
 bgp_restart_hold_timer(bgp_session_s *session, time_t timeout);
 
+time_t
+bgp_session_hold_time(bgp_session_s *session);
+
 void
 bgp_error_cb(void *arg, err_t err);
 

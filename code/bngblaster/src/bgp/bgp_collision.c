@@ -428,7 +428,7 @@ bgp_session_collision_promote(bgp_session_s *session, bool trigger_is_primary)
     /* The promoted leg delivered the OPEN: move to OpenConfirm, which
      * sends our KEEPALIVE on it. */
     bgp_session_state_change(session, BGP_OPENCONFIRM);
-    bgp_restart_hold_timer(session, session->config->hold_time);
+    bgp_restart_hold_timer(session, bgp_session_hold_time(session));
     if(leftover) {
         /* Bytes already sitting in the winning buffer: process them now. */
         bgp_receive_cb(session, NULL, 0);

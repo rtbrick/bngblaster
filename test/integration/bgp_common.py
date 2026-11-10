@@ -27,7 +27,7 @@ GOBGP_FAMILIES = {
 
 
 def gobgp_config(families=("ipv4-unicast", "ipv6-unicast"), passive=True,
-                 router_id=GOBGP_ADDRESS, md5=None, ao=None):
+                 router_id=GOBGP_ADDRESS, md5=None, ao=None, hold_time=None):
     """Return GoBGP TOML config. The ao dict contains algorithm, key,
     send_id (GoBGP KeyID) and receive_id (KeyID expected from BNG Blaster)."""
     lines = [
@@ -63,6 +63,9 @@ def gobgp_config(families=("ipv4-unicast", "ipv6-unicast"), passive=True,
         "  [neighbors.timers.config]",
         "    connect-retry = 1",
     ]
+    if hold_time:
+        lines += ["    hold-time = %d" % hold_time,
+                  "    keepalive-interval = %d" % max(1, hold_time // 3)]
     if ao:
         lines += [
             "  [neighbors.tcp-ao.config]",

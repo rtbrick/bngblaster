@@ -494,7 +494,7 @@ bgp_read(bgp_session_s *session)
         }
 
         /* Reset hold timer */
-        bgp_restart_hold_timer(session, session->config->hold_time);
+        bgp_restart_hold_timer(session, bgp_session_hold_time(session));
 
         /* Progress pointer to next BGP message */
         buffer->start_idx += length;

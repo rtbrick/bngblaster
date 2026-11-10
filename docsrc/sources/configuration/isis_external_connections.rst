@@ -8,10 +8,10 @@
 | **system-id**                     | | Mandatory ISIS system identifier.                                  |
 +-----------------------------------+----------------------------------------------------------------------+
 | **l1-metric**                     | | ISIS level 1 interface metric.                                     |
-|                                   | | Default: 10                                                        |
+|                                   | | Default: 10 Range: 0 - 16777215                                    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **l2-metric**                     | | ISIS level 2 interface metric.                                     |
-|                                   | | Default: 10                                                        |
+|                                   | | Default: 10 Range: 0 - 16777215                                    |
 +-----------------------------------+----------------------------------------------------------------------+
 | **te-metric**                     | | Flex-Algo TE metric of the connection.                             |
 |                                   | | Default: 0 (disabled) Range: 0 - 16777215                          |

@@ -546,6 +546,12 @@ scan_iso_prefix(const char *str, iso_prefix *iso)
         }
     }
 
+    /* Reject a trailing nibble and an empty address. */
+    if (digit || !prefix_idx) {
+        free(s);
+        return false;
+    }
+
     tok = strtok_r(NULL, "/", &save);
     if (tok) {
         if (sscanf(tok, "%u", &plen) != 1 || plen > sizeof(iso->address) * 8) {
@@ -553,6 +559,9 @@ scan_iso_prefix(const char *str, iso_prefix *iso)
             return false;
         }
         iso->len = plen;
+    } else {
+        /* Without length, the prefix covers all address bytes. */
+        iso->len = prefix_idx * 8;
     }
     free(s);
     return true;

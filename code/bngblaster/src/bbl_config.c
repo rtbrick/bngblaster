@@ -121,6 +121,27 @@ add_secondary_ipv4(uint32_t ipv4)
     }
 }
 
+static bool
+ipv6_prefix_match(ipv6addr_t ipv6, ipv6addr_t prefix, uint8_t len)
+{
+    uint8_t bytes = len / 8;
+    uint8_t mask;
+
+    if(len > 128) {
+        return false;
+    }
+    if(memcmp(ipv6, prefix, bytes) != 0) {
+        return false;
+    }
+    if(len % 8) {
+        mask = 0xff << (8 - (len % 8));
+        if((ipv6[bytes] & mask) != (prefix[bytes] & mask)) {
+            return false;
+        }
+    }
+    return true;
+}
+
 static void
 add_secondary_ipv6(ipv6addr_t ipv6)
 {
@@ -129,7 +150,7 @@ add_secondary_ipv6(ipv6addr_t ipv6)
 
     while(config) {
         if((memcmp(ipv6, config->ip6.address, IPV6_ADDR_LEN) != 0) &&
-           (memcmp(ipv6, config->ip6.address, BITS_TO_BYTES(config->ip6.len)) == 0)) {
+           ipv6_prefix_match(ipv6, config->ip6.address, config->ip6.len)) {
             /* Add secondary IP address to be served by ICMPv6 */
             LOG(DEBUG, "add secondary IPv6 address %s to network interface %s\n", 
                 format_ipv6_address((ipv6addr_t*)&ipv6), config->interface);
@@ -1063,13 +1084,13 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         if(value) {
             network_config->isis_p2p = json_boolean_value(value);
         }
-        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-l1-metric", 0, 4294967295);
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-l1-metric", 0, 16777215);
         if(value) {
             network_config->isis_l1_metric = json_number_value(value);
         } else {
             network_config->isis_l1_metric = 10;
         }
-        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-l2-metric", 0, 4294967295);
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "isis-l2-metric", 0, 16777215);
         if(value) {
             network_config->isis_l2_metric = json_number_value(value);
         } else {
@@ -1800,6 +1821,11 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
     JSON_OBJ_GET_NUMBER(bgp, value, "bgp", "hold-time", 0, 65535);
     if(value) {
         bgp_config->hold_time = json_number_value(value);
+        if(bgp_config->hold_time == 1 || bgp_config->hold_time == 2) {
+            /* RFC 4271 section 4.2 */
+            fprintf(stderr, "JSON config error: Invalid value for bgp->hold-time (0 or 3 - 65535)\n");
+            return false;
+        }
     } else {
         bgp_config->hold_time = BGP_DEFAULT_HOLD_TIME;
     }
@@ -2455,13 +2481,13 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
                     fprintf(stderr, "JSON config error: Missing value for isis->external->connections->system-id\n");
                     return false;
                 }
-                JSON_OBJ_GET_NUMBER(c, value, "isis->external->connections", "l1-metric", 0, 4294967295);
+                JSON_OBJ_GET_NUMBER(c, value, "isis->external->connections", "l1-metric", 0, 16777215);
                 if(value) {
                     connection->level[ISIS_LEVEL_1_IDX].metric = json_number_value(value);
                 } else {
                     connection->level[ISIS_LEVEL_1_IDX].metric = 10;
                 }
-                JSON_OBJ_GET_NUMBER(c, value, "isis->external->connections", "l2-metric", 0, 4294967295);
+                JSON_OBJ_GET_NUMBER(c, value, "isis->external->connections", "l2-metric", 0, 16777215);
                 if(value) {
                     connection->level[ISIS_LEVEL_2_IDX].metric = json_number_value(value);
                 } else {
@@ -2836,7 +2862,7 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         return false;
     }
 
-    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "keepalive-time", 0, 65535);
+    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "keepalive-time", 1, 65535);
     if(value) {
         ldp_config->keepalive_time = json_number_value(value);
     } else {
@@ -4399,6 +4425,11 @@ json_parse_config(json_t *root)
             g_ctx->config.pppoe_discovery_retry = json_number_value(value);
         }
         if(json_unpack(section, "{s:s}", "service-name", &s) == 0) {
+            if(strlen(s) > PPPOE_MAX_SERVICE_NAME_LEN) {
+                fprintf(stderr, "JSON config error: Invalid value for pppoe->service-name (max %u characters)\n",
+                        PPPOE_MAX_SERVICE_NAME_LEN);
+                return false;
+            }
             g_ctx->config.pppoe_service_name = strdup(s);
         }
         JSON_OBJ_GET_BOOL(section, value, "pppoe", "host-uniq");
@@ -4456,7 +4487,7 @@ json_parse_config(json_t *root)
             if(value) {
                 g_ctx->config.authentication_timeout = json_number_value(value);
             }
-            JSON_OBJ_GET_NUMBER(sub, value, "ppp->authentication", "retry", 0, 65535);
+            JSON_OBJ_GET_NUMBER(sub, value, "ppp->authentication", "retry", 0, 255);
             if(value) {
                 g_ctx->config.authentication_retry = json_number_value(value);
             }
@@ -5402,6 +5433,11 @@ json_parse_config(json_t *root)
                 l2tp_server = l2tp_server->next;
             }
             if(json_unpack(sub, "{s:s}", "name", &s) == 0) {
+                if(strlen(s) > L2TP_MAX_CONFIG_STRING_LEN) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->name (max %u characters)\n",
+                            L2TP_MAX_CONFIG_STRING_LEN);
+                    return false;
+                }
                 l2tp_server->host_name = strdup(s);
             } else {
                 fprintf(stderr, "JSON config error: Missing value for l2tp-server->name\n");
@@ -5450,6 +5486,7 @@ json_parse_config(json_t *root)
         }
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP server configuration but dictionary found\n");
+        return false;
     }
 
     /* L2TP Client Configuration (LAC) */
@@ -5489,6 +5526,11 @@ json_parse_config(json_t *root)
                 return false;
             }
             if(json_unpack(sub, "{s:s}", "name", &s) == 0) {
+                if(strlen(s) > L2TP_MAX_CONFIG_STRING_LEN) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->name (max %u characters)\n",
+                            L2TP_MAX_CONFIG_STRING_LEN);
+                    return false;
+                }
                 l2tp_client->name = strdup(s);
             } else {
                 fprintf(stderr, "JSON config error: Missing value for l2tp-client->name\n");
@@ -5534,9 +5576,19 @@ json_parse_config(json_t *root)
                 l2tp_client->lcp_start = BBL_L2TP_LCP_START_ICCN_TX;
             }
             if(json_unpack(sub, "{s:s}", "calling-number", &s) == 0) {
+                if(strlen(s) > L2TP_MAX_CONFIG_STRING_LEN) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->calling-number (max %u characters)\n",
+                            L2TP_MAX_CONFIG_STRING_LEN);
+                    return false;
+                }
                 l2tp_client->calling_number = strdup(s);
             }
             if(json_unpack(sub, "{s:s}", "called-number", &s) == 0) {
+                if(strlen(s) > L2TP_MAX_CONFIG_STRING_LEN) {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-client->called-number (max %u characters)\n",
+                            L2TP_MAX_CONFIG_STRING_LEN);
+                    return false;
+                }
                 l2tp_client->called_number = strdup(s);
             }
             JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "tx-connect-speed", 1, 4294967295);
@@ -5552,6 +5604,7 @@ json_parse_config(json_t *root)
         }
     } else if(json_is_object(section)) {
         fprintf(stderr, "JSON config error: List expected in L2TP client configuration but dictionary found\n");
+        return false;
     }
 
     /* ARP Client Configuration */

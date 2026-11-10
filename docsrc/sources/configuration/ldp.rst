@@ -21,7 +21,7 @@
 |                                  | | calculated by using the effective keepalive time divided |
 |                                  | | by 3. Assuming an effective keepalive time of 15         |
 |                                  | | seconds results in a keepalive interval of 5 seconds.    |
-|                                  | | Default: 15 Range: 0 - 65535                             |
+|                                  | | Default: 15 Range: 1 - 65535                             |
 +----------------------------------+------------------------------------------------------------+
 | **hold-time**                    | | LDP hello hold time in seconds.                          |
 |                                  | | Default: 15 Range: 0 - 65535                             |

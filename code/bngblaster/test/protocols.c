@@ -924,6 +924,36 @@ test_protocols_isis_jumbo(void **unused) {
     test_protocols_isis_jumbo_len(11997, ETH_TYPE_LLC_JUMBO);
 }
 
+/* A computed UDP checksum of zero must be sent as 0xffff (RFC 768). */
+static void
+test_protocols_udp_checksum_zero(void **unused) {
+    (void) unused;
+
+    uint8_t udp[10] = {0x12, 0x34, 0x56, 0x78, 0x00, 0x0a, 0x00, 0x00, 0x00, 0x00};
+    ipv6addr_t src6 = {0xfe, 0x80, [15] = 1};
+    ipv6addr_t dst6 = {0xfe, 0x80, [15] = 2};
+    uint32_t src4 = htobe32(0x0a000001);
+    uint32_t dst4 = htobe32(0x0a000002);
+    uint32_t v;
+    uint16_t c4, c6;
+    int ones4 = 0, ones6 = 0;
+
+    /* Every payload word is tried, so the sum hits all values. */
+    for(v = 0; v <= 0xffff; v++) {
+        *(uint16_t*)(udp + 8) = v;
+        c4 = bbl_ipv4_udp_checksum(src4, dst4, udp, sizeof(udp));
+        c6 = bbl_ipv6_udp_checksum(src6, dst6, udp, sizeof(udp));
+        assert_int_not_equal(c4, 0);
+        assert_int_not_equal(c6, 0);
+        if(c4 == 0xffff) ones4++;
+        if(c6 == 0xffff) ones6++;
+    }
+    /* A non-zero sum never folds to zero, so 0xffff is only
+     * returned for the one payload with a computed zero. */
+    assert_int_equal(ones4, 1);
+    assert_int_equal(ones6, 1);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -943,6 +973,7 @@ int main() {
         cmocka_unit_test(test_protocols_lacp_invalid_tlv),
         cmocka_unit_test(test_protocols_igmpv3_query_short),
         cmocka_unit_test(test_protocols_isis_jumbo),
+        cmocka_unit_test(test_protocols_udp_checksum_zero),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

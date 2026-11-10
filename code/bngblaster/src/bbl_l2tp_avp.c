@@ -62,6 +62,13 @@ bbl_l2tp_avp_encode(uint8_t **_buf, uint16_t *len, bbl_l2tp_avp_t *avp)
     uint16_t avp_len_field;
     uint8_t *buf = *_buf;
 
+    /* The AVPs are encoded into a buffer of L2TP_MAX_AVP_SIZE. */
+    if(*len + L2TP_AVP_HDR_LEN + avp->len > L2TP_MAX_AVP_SIZE) {
+        LOG(ERROR, "L2TP AVP %u with length %u does not fit into the message\n",
+            avp->type, avp->len);
+        return;
+    }
+
     /* TODO: Currently we do not support to hide (H) AVP values! */
 
     avp_len_field = avp->len + L2TP_AVP_HDR_LEN;

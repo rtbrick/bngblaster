@@ -301,7 +301,8 @@
                 },
                 "service-name": {
                     "type": "string",
-                    "description": "PPPoE discovery service name"
+                    "description": "PPPoE discovery service name",
+                    "maxLength": 255
                 },
                 "host-uniq": {
                     "type": "boolean",
@@ -361,7 +362,7 @@
                             "description": "Authentication request max retry",
                             "default": 30,
                             "minimum": 0,
-                            "maximum": 65535
+                            "maximum": 255
                         },
                         "protocol": {
                             "type": "string",
@@ -522,7 +523,7 @@
                     "type": "integer",
                     "description": "DHCP retry",
                     "default": 10,
-                    "minimum": 0,
+                    "minimum": 1,
                     "maximum": 255
                 },
                 "release-interval": {
@@ -1182,7 +1183,8 @@
                 "properties": {
                     "name": {
                         "type": "string",
-                        "description": "L2TP LNS server hostname (AVP 7)"
+                        "description": "L2TP LNS server hostname (AVP 7)",
+                        "maxLength": 255
                     },
                     "address": {
                         "type": "string",
@@ -1311,7 +1313,8 @@
                     },
                     "name": {
                         "type": "string",
-                        "description": "L2TP LAC tunnel name (AVP 7)"
+                        "description": "L2TP LAC tunnel name (AVP 7)",
+                        "maxLength": 255
                     },
                     "network-interface": {
                         "type": "string",
@@ -1409,11 +1412,13 @@
                     },
                     "calling-number": {
                         "type": "string",
-                        "description": "Calling number AVP value"
+                        "description": "Calling number AVP value",
+                        "maxLength": 255
                     },
                     "called-number": {
                         "type": "string",
-                        "description": "Called number AVP value"
+                        "description": "Called number AVP value",
+                        "maxLength": 255
                     },
                     "tx-connect-speed": {
                         "type": "integer",
@@ -1664,12 +1669,33 @@
                     "description": "ISIS level 1 interface metric",
                     "default": 10,
                     "minimum": 0,
-                    "maximum": 4294967295
+                    "maximum": 16777215
                 },
                 "isis-l2-metric": {
                     "type": "integer",
                     "description": "ISIS level 2 interface metric",
                     "default": 10,
+                    "minimum": 0,
+                    "maximum": 16777215
+                },
+                "isis-te-metric": {
+                    "type": "integer",
+                    "description": "ISIS Flex-Algo TE metric",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 16777215
+                },
+                "isis-delay": {
+                    "type": "integer",
+                    "description": "ISIS Flex-Algo min/max link delay in microseconds",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 16777215
+                },
+                "isis-admin-group": {
+                    "type": "integer",
+                    "description": "ISIS Flex-Algo admin group (32 bit mask)",
+                    "default": 0,
                     "minimum": 0,
                     "maximum": 4294967295
                 },
@@ -1921,7 +1947,7 @@
                     "type": "integer",
                     "description": "Set inner-vlan-min/max equally",
                     "minimum": 0,
-                    "maximum": 4094
+                    "maximum": 4095
                 },
                 "third-vlan": {
                     "type": "integer",
@@ -2908,6 +2934,11 @@
                     "minimum": 1,
                     "maximum": 3
                 },
+                "overload": {
+                    "type": "boolean",
+                    "description": "Set the overload bit in the self originated LSP",
+                    "default": false
+                },
                 "protocol-ipv4": {
                     "type": "boolean",
                     "description": "Enable IPv4 routing",
@@ -3095,6 +3126,98 @@
                     "minimum": 0,
                     "maximum": 1048575
                 },
+                "sr-node-sids": {
+                    "type": "array",
+                    "description": "ISIS SR node SIDs, one per SR algorithm (mutually exclusive with sr-node-sid)",
+                    "maxItems": 4,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "algo": {
+                                "type": "integer",
+                                "description": "SR algorithm",
+                                "default": 0,
+                                "minimum": 0,
+                                "maximum": 255
+                            },
+                            "index": {
+                                "type": "integer",
+                                "description": "SR node SID index",
+                                "minimum": 0,
+                                "maximum": 1048575
+                            }
+                        },
+                        "required": [
+                            "index"
+                        ]
+                    }
+                },
+                "node-msd": {
+                    "type": "integer",
+                    "description": "ISIS node maximum SID depth (BMI-MSD), 0 = disabled",
+                    "default": 0,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "flex-algo": {
+                    "type": "array",
+                    "description": "ISIS Flex-Algo definitions",
+                    "maxItems": 4,
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "algo": {
+                                "type": "integer",
+                                "description": "Flex-Algo algorithm",
+                                "minimum": 128,
+                                "maximum": 255
+                            },
+                            "metric-type": {
+                                "type": "string",
+                                "description": "Flex-Algo metric type",
+                                "default": "igp",
+                                "enum": [
+                                    "igp",
+                                    "min-delay",
+                                    "te"
+                                ]
+                            },
+                            "priority": {
+                                "type": "integer",
+                                "description": "Flex-Algo definition priority",
+                                "default": 128,
+                                "minimum": 0,
+                                "maximum": 255
+                            },
+                            "m-flag": {
+                                "type": "boolean",
+                                "description": "Flex-Algo prefix metric (M) flag",
+                                "default": false
+                            },
+                            "exclude-any": {
+                                "type": "integer",
+                                "description": "Exclude-any admin group mask",
+                                "minimum": 0,
+                                "maximum": 4294967295
+                            },
+                            "include-any": {
+                                "type": "integer",
+                                "description": "Include-any admin group mask",
+                                "minimum": 0,
+                                "maximum": 4294967295
+                            },
+                            "include-all": {
+                                "type": "integer",
+                                "description": "Include-all admin group mask",
+                                "minimum": 0,
+                                "maximum": 4294967295
+                            }
+                        },
+                        "required": [
+                            "algo"
+                        ]
+                    }
+                },
                 "adjacency-sid-base": {
                     "type": "integer",
                     "description": "Adjacency SID base",
@@ -3148,12 +3271,35 @@
                                     "l1-metric": {
                                         "type": "integer",
                                         "description": "Level 1 interface metric",
-                                        "default": 10
+                                        "default": 10,
+                                        "maximum": 16777215
                                     },
                                     "l2-metric": {
                                         "type": "integer",
                                         "description": "Level 2 interface metric",
-                                        "default": 10
+                                        "default": 10,
+                                        "maximum": 16777215
+                                    },
+                                    "te-metric": {
+                                        "type": "integer",
+                                        "description": "Flex-Algo TE metric",
+                                        "default": 0,
+                                        "minimum": 0,
+                                        "maximum": 16777215
+                                    },
+                                    "delay": {
+                                        "type": "integer",
+                                        "description": "Flex-Algo min/max link delay in microseconds",
+                                        "default": 0,
+                                        "minimum": 0,
+                                        "maximum": 16777215
+                                    },
+                                    "admin-group": {
+                                        "type": "integer",
+                                        "description": "Flex-Algo admin group (32 bit mask)",
+                                        "default": 0,
+                                        "minimum": 0,
+                                        "maximum": 4294967295
                                     }
                                 }
                             }
@@ -3182,6 +3328,11 @@
                         2,
                         3
                     ]
+                },
+                "overload": {
+                    "type": "boolean",
+                    "description": "Advertise all non-stub links with maximum metric (RFC 6987)",
+                    "default": false
                 },
                 "auth-key": {
                     "type": "string",
@@ -3339,7 +3490,7 @@
                     "type": "integer",
                     "description": "Session keepalive time in seconds",
                     "default": 15,
-                    "minimum": 0,
+                    "minimum": 1,
                     "maximum": 65535
                 },
                 "hold-time": {
@@ -3484,10 +3635,16 @@
                 },
                 "hold-time": {
                     "type": "integer",
-                    "description": "BGP hold-time in seconds",
+                    "description": "BGP hold-time in seconds (0 or 3 - 65535)",
                     "default": 90,
                     "minimum": 0,
-                    "maximum": 65535
+                    "maximum": 65535,
+                    "not": {
+                        "enum": [
+                            1,
+                            2
+                        ]
+                    }
                 },
                 "id": {
                     "type": "string",

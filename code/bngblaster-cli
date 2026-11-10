@@ -15,6 +15,7 @@ import socket
 import os
 import json
 import ast
+import re
 
 def error(*args, **kwargs):
     """print error and exit"""
@@ -41,23 +42,39 @@ Examples:
     sys.exit(1)
 
 
+def argument_value(arg):
+    if re.fullmatch(r"-?[0-9]+", arg):
+        # integer arguments like "session-id 1"
+        return int(arg)
+    if re.fullmatch(r"-?[0-9]+\.[0-9]+", arg):
+        # decimal arguments like "pps 0.5"
+        return float(arg)
+    if arg in ("true", "True"):
+        return True
+    if arg in ("false", "False"):
+        return False
+    if arg.startswith("[") or arg.startswith("{"):
+        # list arguments like "sessions [1,2]"
+        try:
+            return json.loads(arg)
+        except ValueError:
+            try:
+                return ast.literal_eval(arg)
+            except (ValueError, SyntaxError):
+                pass
+    # string arguments like "group 239.0.0.1"
+    return arg
+
+
 def build_request(argv):
     request = {}
     request["command"] = argv[2]
-    if(len(argv)) > 4:
+    if len(argv) > 3:
+        if (len(argv) - 3) % 2:
+            raise ValueError("argument %s without value" % argv[-1])
         request["arguments"] = {}
         for i in range(3, len(argv), 2):
-            arg = argv[i+1]
-            try:
-                # integer arguments like "session-id 1"
-                request["arguments"][argv[i]] = int(arg)
-            except:
-                try:
-                    # list arguments like "sessions [1,2]""
-                    request["arguments"][argv[i]] = ast.literal_eval(arg)
-                except:
-                    # string arguments like "group 239.0.0.1"
-                    request["arguments"][argv[i]] = arg
+            request["arguments"][argv[i]] = argument_value(argv[i+1])
     return request
 
 
@@ -67,14 +84,16 @@ def send_request(socket_path, request):
         try:
             client.connect(socket_path)
             client.send(json.dumps(request).encode('utf-8'))
-            data = ""
+            # Decode once at the end, as a multi-byte UTF-8
+            # character can be split between two reads.
+            data = bytearray()
             while True:
-                junk = client.recv(1024)
+                junk = client.recv(65536)
                 if junk:
-                    data += junk.decode('utf-8')
+                    data += junk
                 else:
                     break
-            return json.loads(data)
+            return json.loads(data.decode('utf-8'))
         except Exception as e:
             error(e)
         finally:
@@ -94,11 +113,14 @@ def main():
     try:
         request = build_request(sys.argv)
     except Exception as e:
-        error("invalid command")
+        error("invalid command: %s" % e)
     #print(json.dumps(request).encode('utf-8'))
     data = send_request(socket_path, request)
 
-    if sys.argv[2] == "commands":
+    if data.get("status") != "ok":
+        # Error replies have no command specific content.
+        print(json.dumps(data, indent=4))
+    elif sys.argv[2] == "commands":
         for cmd in data["commands"]:
             arguments = []
             for arg in cmd.get("arguments", []):
