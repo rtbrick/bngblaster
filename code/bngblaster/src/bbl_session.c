@@ -538,6 +538,16 @@ bbl_session_reset(bbl_session_s *session) {
     session->stats.icmpv6_tx = 0;
 }
 
+static void
+bbl_session_idle_queue_remove(bbl_session_s *session)
+{
+    if(CIRCLEQ_PREV(session, session_idle_qnode)) {
+        CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+        CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
+        CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
+    }
+}
+
 static bool
 bbl_session_start(bbl_session_s *session)
 {
@@ -552,7 +562,9 @@ bbl_session_start(bbl_session_s *session)
         g_ctx->sessions_terminated--;
     }
     /* Put on idle list */
-    CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+    if(!CIRCLEQ_PREV(session, session_idle_qnode)) {
+        CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
+    }
     return true;
 }
 
@@ -656,6 +668,9 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             ENABLE_ENDPOINT(session->endpoint.ipv6);
             ENABLE_ENDPOINT(session->endpoint.ipv6pd);
         } else if(new_state == BBL_TERMINATED) {
+            /* A session terminated before it was started (idle)
+             * must not stay on the idle queue. */
+            bbl_session_idle_queue_remove(session);
             /* Increment sessions terminated if new state is terminated */
             g_ctx->sessions_terminated++;
             assert(g_ctx->sessions_terminated <= g_ctx->sessions);
@@ -1888,11 +1903,7 @@ bbl_session_ctrl_stop_restart(int fd, uint32_t session_id, json_t *arguments, bo
             } else {
                 session->reconnect_disabled = true;
                 timer_del(session->timer_reconnect);
-                if(CIRCLEQ_PREV(session, session_idle_qnode)) {
-                    CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
-                    CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
-                    CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
-                }
+                bbl_session_idle_queue_remove(session);
                 bbl_session_clear(session);
             }
             return bbl_ctrl_status(fd, "ok", 200, NULL);
@@ -1919,11 +1930,7 @@ bbl_session_ctrl_stop_restart(int fd, uint32_t session_id, json_t *arguments, bo
                 } else {
                     session->reconnect_disabled = true;
                     timer_del(session->timer_reconnect);
-                    if(CIRCLEQ_PREV(session, session_idle_qnode)) {
-                        CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
-                        CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
-                        CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
-                    }
+                    bbl_session_idle_queue_remove(session);
                     bbl_session_clear(session);
                 }
             }

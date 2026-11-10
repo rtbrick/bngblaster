@@ -8,6 +8,8 @@ veth pair (N:1 VLAN mode).
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import time
+
 import pytest
 
 from helpers import BngBlaster, wait_until
@@ -26,8 +28,8 @@ def bbl(local_veth, processes, tmp_path):
     return start
 
 
-def ipoe_config(veth, sessions):
-    return {
+def ipoe_config(veth, sessions, start_rate=None):
+    config = {
         "interfaces": {
             "network": [{"interface": veth.if1, "address": GATEWAY + "/16",
                          "gateway": "10.0.0.2", "vlan": VLAN,
@@ -46,6 +48,9 @@ def ipoe_config(veth, sessions):
         "sessions": {"count": sessions, "reconnect": True},
         "dhcp": {"enable": False}
     }
+    if start_rate:
+        config["sessions"]["start-rate"] = start_rate
+    return config
 
 
 def counters(bbl):
@@ -92,3 +97,26 @@ def test_static_restart(local_veth, bbl):
     assert_static(instance, sessions)
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
+
+def test_restart_idle(local_veth, bbl):
+    """session-restart of idle sessions during a rate-limited ramp-up
+    (sessions-pending | session-restart) must not corrupt the idle queue."""
+    sessions = 20
+    instance = bbl(ipoe_config(local_veth, sessions, start_rate=5))
+    wait_until(lambda: counters(instance)["sessions-established"] >= 2, 10,
+               message="first sessions established")
+
+    pending = [s["session-id"] for s in instance.ctrl("sessions-pending")["sessions-pending"]
+               if s["session-state"] == "Idle"]
+    assert len(pending) > 10
+    # Idle sessions behind the queue head, reconnected by the reconnect timer.
+    for session_id in pending[5:]:
+        instance.ctrl("session-restart", **{"session-id": session_id})
+    time.sleep(1.5)
+    # And the session-start path for one of them, if still terminated.
+    instance.ctrl("session-start", **{"session-id": pending[-1]})
+
+    wait_until(lambda: counters(instance)["sessions-established"] == sessions, 30,
+               message="all sessions established")
+    assert_static(instance, sessions)
+    assert instance.terminate(EXIT_TIMEOUT) == 0
