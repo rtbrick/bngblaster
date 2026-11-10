@@ -39,6 +39,9 @@ ospf_lsa_update_age(ospf_lsa_s *lsa, struct timespec *now);
 void
 ospf_lsa_purge_all_external(ospf_instance_s *instance);
 
+void
+ospf_lsa_purge_all_self(ospf_instance_s *instance);
+
 bool
 ospf_lsa_self_update(ospf_instance_s *ospf_instance);
 
@@ -83,6 +86,6 @@ ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface,
                         ospf_pdu_s *pdu);
 
 bool
-ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint16_t lsa_count, uint8_t *buf, uint16_t len);
+ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8_t *buf, uint16_t len);
 
 #endif

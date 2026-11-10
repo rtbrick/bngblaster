@@ -5,6 +5,7 @@ Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
 import ipaddress
+import time
 
 import pytest
 
@@ -207,4 +208,125 @@ def test_overload(ospf, tmp_path):
     wait_until(lambda: topo.prefixes <= ospf.frr_routes("ip"), 30,
                message="FRR routes to all nodes")
     assert all(ospf.frr_metric(prefix) >= OSPF_MAX_LINK_METRIC for prefix in topo.prefixes)
+    ospf.teardown()
+
+
+@pytest.mark.parametrize("frr", [
+    {"area": "0.0.0.1"},
+    {"router_id": BBL_ROUTER_ID},
+], ids=["area", "router-id"])
+def test_header_mismatch(ospf, frr):
+    """PDUs of another area or with the own router-id are discarded
+    (RFC 2328 section 8.2), no neighbor is created."""
+    ospf.start(frr=frr)
+    ospf.assert_not_established(duration=6)
+    assert ospf.bbl_neighbors() == []
+    ospf.teardown()
+
+
+def test_bbl_master(ospf, tmp_path):
+    """The BNG Blaster with the higher router-id is master of the database
+    exchange. It stays in state Exchange until the last DD packet is
+    acknowledged (RFC 2328 section 10.8), the neighbor does not fall
+    back from Full to Loading when the acknowledgement arrives. The
+    topology requires several DD packets of the BNG Blaster."""
+    frr_router_id = "10.9.0.2"
+    topo = ospf.lspgen(tmp_path / "ospf", 200)
+    ospf.frr_redistribute_connected(FRR_PREFIXES)
+    ospf.start(frr={"router_id": frr_router_id, "redistribute": True}, bbl={"mrt": topo.mrt})
+    ospf.wait_established()
+    wait_until(lambda: topo.prefixes <= ospf.frr_routes("ip"), 30,
+               message="FRR routes to all nodes")
+    wait_until(lambda: bbl_lsas(ospf, OSPF_LSA_TYPE_EXTERNAL, frr_router_id) >=
+               frr_external_ids(FRR_PREFIXES), 15, message="FRR external LSAs")
+    log = open(ospf.bbl.path("log")).read()
+    assert "state Exchange -> Loading" in log or "state Exchange -> Full" in log
+    assert "Full -> Loading" not in log
+    ospf.teardown()
+
+
+def test_router_id_change(ospf, tmp_path):
+    """FRR changes its router-id. The neighbor with the previous router-id
+    is removed after the dead interval and the router LSA of the BNG Blaster
+    links to the new neighbor, so FRR still routes to all nodes."""
+    topo = ospf.lspgen(tmp_path / "ospf", 10)
+    ospf.start(bbl={"mrt": topo.mrt})
+    ospf.wait_established()
+    wait_until(lambda: topo.prefixes <= ospf.frr_routes("ip"), 30,
+               message="FRR routes to all nodes")
+    ospf.frr.vtysh_exec("configure terminal", "router ospf", "ospf router-id 10.10.0.3")
+    ospf.frr.vtysh_exec("clear ip ospf process")
+    wait_until(lambda: [(n["router-id"], n["state"]) for n in ospf.bbl_neighbors()] ==
+               [("10.10.0.3", "Full")], 20, message="only the new neighbor in BNG Blaster")
+    wait_until(lambda: topo.prefixes <= ospf.frr_routes("ip"), 30,
+               message="FRR routes to all nodes after router-id change")
+    ospf.teardown()
+
+
+def test_restart_flush_network_lsa(ospf):
+    """The BNG Blaster is restarted without purge and is no longer DR.
+    The network LSA of the previous run is flushed (RFC 2328 section 13.4)
+    instead of staying in the FRR database until MaxAge."""
+    ospf.start(frr={"p2p": False, "priority": 1},
+               bbl={"p2p": False, "ospf": {"router-priority": 64}})
+    ospf.wait_established()
+    wait_until(lambda: ospf.frr_network_lsas() == {BBL_ROUTER_ID}, 10,
+               message="network LSA of the BNG Blaster in FRR database")
+    ospf.bbl.kill()
+    wait_until(lambda: ospf.frr_neighbor_state() is None, 15, message="FRR neighbor down")
+    ospf.start_bbl({"p2p": False, "ospf": {"router-priority": 0}})
+    ospf.wait_established()
+    wait_until(lambda: BBL_ROUTER_ID not in ospf.frr_network_lsas(), 15,
+               message="network LSA of the BNG Blaster flushed")
+    ospf.teardown()
+
+
+SR = {"sr-base": 20000, "sr-range": 8000, "sr-node-sid": 1}
+
+
+def frr_opaque_lsas(ospf):
+    """Return the valid (not MaxAge) opaque LSAs of the BNG Blaster in FRR."""
+    database = ospf.frr.vtysh("show ip ospf database opaque-area adv-router %s" % BBL_ROUTER_ID)
+    return [lsa for lsa in database.get("areaLocalOpaqueLsa", {}).get("areas", {}).get("0.0.0.0", [])
+            if lsa.get("lsaAge", 0) < OSPF_MAX_AGE]
+
+
+def test_teardown_purge_opaque(ospf):
+    """Router information and extended prefix LSAs are purged on
+    teardown like all other self originated LSAs."""
+    ospf.start(bbl={"ospf": SR})
+    ospf.wait_established()
+    wait_until(lambda: len(frr_opaque_lsas(ospf)) == 2, 10,
+               message="router information and extended prefix LSA in FRR database")
+    # FRR discards newer instances received within MinLSArrival (1 second).
+    wait_until(lambda: ospf.bbl_neighbors()[0]["retry-tree-entries"] == 0, 10,
+               message="flooding acknowledged")
+    time.sleep(1)
+    ospf.teardown()
+    wait_until(lambda: not frr_opaque_lsas(ospf), 10,
+               message="opaque LSAs of the BNG Blaster purged")
+
+
+def test_segment_routing_algorithm(ospf):
+    """The router information LSA advertises the SR-Algorithm TLV with
+    the SID/Label Range TLV (RFC 8665 section 3.1)."""
+    ospf.start(frr={"segment_routing": True}, bbl={"ospf": SR})
+    ospf.wait_established()
+    # The FRR SR database assumes SPF without TLV, the LSA detail shows the TLV.
+    wait_until(lambda: "Segment Routing Algorithm TLV:\n    Algorithm 0: SPF" in ospf.frr.vtysh(
+               "show ip ospf database opaque-area adv-router %s" % BBL_ROUTER_ID, json_output=False),
+               10, message="SR-Algorithm TLV of the BNG Blaster in FRR")
+    ospf.teardown()
+
+
+def test_database_load_rate(ospf):
+    """The next LS request is sent once the previous is satisfied
+    (RFC 2328 section 10.9), not only with the 1 second retransmission
+    timer, which would take about 25 seconds for 3000 LSAs."""
+    count = 3000
+    ospf.start_frr({"statics": count})
+    wait_until(lambda: ospf.frr_external_count() >= count, 30, message="FRR external LSAs")
+    ospf.start_bbl()
+    ospf.wait_established(timeout=10)
+    assert len(bbl_lsas(ospf, OSPF_LSA_TYPE_EXTERNAL, FRR_ROUTER_ID)) >= count
     ospf.teardown()

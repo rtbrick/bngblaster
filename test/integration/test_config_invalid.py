@@ -49,6 +49,24 @@ def test_config_invalid(topology, tmp_path, args, message):
         assert "Invalid value for %s" % message in f.read()
 
 
+@pytest.mark.parametrize("network,ospf,message", [
+    ({"ospfv2-metric": 65536}, {}, "network->ospfv2-metric (0 - 65535)"),
+    ({}, {"external": {"connections": [{"router-id": "10.10.0.2", "local-ipv4-address": "10.10.1.0",
+                                         "metric": 65536}]}},
+     "ospf->external->connections->metric (0 - 65535)"),
+], ids=["interface-metric", "connection-metric"])
+def test_config_invalid_ospf_metric(topology, tmp_path, network, ospf, message):
+    """OSPF link metrics are 16 bit (RFC 2328 A.4.2)."""
+    instance = BngBlaster(topology.a, tmp_path, "bbl")
+    bbl = config(topology.if_a)
+    bbl["interfaces"]["network"][0].update(dict({"ospfv2-instance-id": 1}, **network))
+    bbl["ospf"] = [dict({"instance-id": 1, "router-id": "10.10.0.1"}, **ospf)]
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start(bbl)
+    with open(instance.path("stdout")) as f:
+        assert "Invalid value for %s" % message in f.read()
+
+
 @pytest.mark.parametrize("ldp,message", [
     ({"targeted-neighbors": [{"address": "10.0.0.256"}]},
      "Invalid value for ldp->targeted-neighbors->address"),

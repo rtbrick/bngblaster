@@ -33,6 +33,16 @@ target_compile_options(test-isis-lsp PRIVATE -Werror -Wall -Wextra -Wno-deprecat
 target_link_options(test-isis-lsp PRIVATE -Wl,--gc-sections)
 add_test(NAME "TestIsisLsp" COMMAND test-isis-lsp)
 
+# The test includes ospf_lsa.c, unused functions referencing the
+# rest of BNG Blaster are removed by the linker.
+add_executable(test-ospf-lsa ospf_lsa.c ../../common/src/checksum.c)
+target_include_directories(test-ospf-lsa PRIVATE $<TARGET_PROPERTY:bngblaster,INCLUDE_DIRECTORIES>)
+target_compile_definitions(test-ospf-lsa PRIVATE $<TARGET_PROPERTY:bngblaster,COMPILE_DEFINITIONS>)
+target_link_libraries(test-ospf-lsa ${libdict} cmocka)
+target_compile_options(test-ospf-lsa PRIVATE -Werror -Wall -Wextra -ffunction-sections -fdata-sections)
+target_link_options(test-ospf-lsa PRIVATE -Wl,--gc-sections)
+add_test(NAME "TestOspfLsa" COMMAND test-ospf-lsa)
+
 if(BNGBLASTER_AF_XDP)
     # The test includes io_af_xdp.c, unused functions referencing the
     # rest of BNG Blaster are removed by the linker.

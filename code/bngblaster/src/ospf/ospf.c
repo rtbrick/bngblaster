@@ -72,6 +72,37 @@ ospf_init() {
 }
 
 /**
+ * Validate the common header of received PDUs, which must have the
+ * own area, not the own router-id (RFC2328 section 8.2) and for
+ * OSPFv3 instance ID 0 as sent (RFC5340 section 4.2.2).
+ *
+ * @param ospf_interface receive interface
+ * @param pdu received OSPF PDU
+ * @return true if valid
+ */
+static bool
+ospf_rx_validate(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
+{
+    bbl_network_interface_s *interface = ospf_interface->interface;
+    ospf_config_s *config = ospf_interface->instance->config;
+
+    if(pdu->area_id != config->area) {
+        ospf_rx_error(interface, pdu, "area");
+        return false;
+    }
+    if(pdu->router_id == config->router_id) {
+        ospf_rx_error(interface, pdu, "own router-id");
+        return false;
+    }
+    if(pdu->pdu_version == OSPF_VERSION_3 && 
+       *OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_INSTANCE_ID) != 0) {
+        ospf_rx_error(interface, pdu, "instance-id");
+        return false;
+    }
+    return true;
+}
+
+/**
  * ospf_handler_rx_ipv4
  *
  * This function handles IPv4 OSPFv2 packets received on network interfaces.
@@ -168,6 +199,16 @@ ospf_handler_rx_ipv4(bbl_network_interface_s *interface,
         interface->stats.ospf_rx_error++;
         return;
     }
+    if(!ospf_rx_validate(ospf_interface, &pdu)) {
+        return;
+    }
+    /* The source must be on the network of the receiving 
+     * interface except on P2P links (RFC2328 section 8.2). */
+    if(ospf_interface->type != OSPF_INTERFACE_P2P &&
+       (ipv4->src ^ interface->ip.address) & ipv4_len_to_mask(interface->ip.len)) {
+        ospf_rx_error(interface, &pdu, "source address");
+        return;
+    }
 
     while(ospf_neighbor) {
         if(ospf_neighbor->router_id == pdu.router_id) {
@@ -255,6 +296,13 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
         interface->stats.ospf_rx_error++;
         return;
     }
+    if(!ospf_rx_validate(ospf_interface, &pdu)) {
+        return;
+    }
+    if(memcmp(ipv6->dst, ipv6_multicast_ospf_dr_routers, sizeof(ipv6addr_t)) == 0 &&
+       !(ospf_interface->state == OSPF_IFSTATE_DR || ospf_interface->state == OSPF_IFSTATE_BACKUP)) {
+        return;
+    }
 
     LOG(PACKET, "OSPFv3 RX %s on interface %s\n",
         ospf_pdu_type_string(pdu.pdu_type), interface->name);
@@ -333,6 +381,8 @@ ospf_teardown_withdraw(ospf_instance_s *instance)
     LOG(OSPF, "Withdraw OSPFv%u instance %u\n", instance->config->version, instance->config->id);
     instance->teardown = true;
     ospf_lsa_self_update(instance);
+    /* Purge the remaining self originated LSA (e.g. router information). */
+    ospf_lsa_purge_all_self(instance);
     if(instance->config->external_purge) {
         ospf_lsa_purge_all_external(instance);
     }

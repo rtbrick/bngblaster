@@ -11,6 +11,30 @@
 
 extern uint8_t g_pdu_buf[];
 
+/**
+ * Decode a hex string into g_pdu_buf.
+ *
+ * @param hex hex string
+ * @return number of bytes or -1 if invalid
+ */
+static int
+ospf_ctrl_hex_decode(const char *hex)
+{
+    size_t hex_len = strlen(hex);
+    size_t i;
+
+    if(hex_len == 0 || hex_len % 2 || hex_len/2 > OSPF_PDU_LEN_MAX) {
+        return -1;
+    }
+    for(i = 0; i < hex_len; i += 2) {
+        if(!(isxdigit((unsigned char)hex[i]) && isxdigit((unsigned char)hex[i+1]))) {
+            return -1;
+        }
+        sscanf(hex+i, "%2hhx", &g_pdu_buf[i/2]);
+    }
+    return hex_len/2;
+}
+
 #define OSPF_CTRL_ARG_INSTANCE(_arguments, _fd, _instance_id, _instance) \
     do { \
         if(json_unpack(_arguments, "{s:i}", "instance", &_instance_id) != 0) { \
@@ -267,9 +291,7 @@ ospf_ctrl_lsa_update(int fd, uint32_t session_id __attribute__((unused)), json_t
     size_t lsa_count;
 
     const char *lsa_string;
-    uint16_t lsa_string_len;
-
-    uint16_t len;
+    int len;
 
     ospf_instance_s *ospf_instance = NULL;
     int instance_id = 0;
@@ -286,10 +308,10 @@ ospf_ctrl_lsa_update(int fd, uint32_t session_id __attribute__((unused)), json_t
             if(!lsa_string) {
                 return bbl_ctrl_status(fd, "error", 500, "failed to read OSPF LSA");
             }
-            lsa_string_len = strlen(lsa_string);
             /* Load LSA from hexstring */
-            for (len = 0; len < (lsa_string_len/2); len++) {
-                sscanf(lsa_string + len*2, "%02hhx", &g_pdu_buf[len]);
+            len = ospf_ctrl_hex_decode(lsa_string);
+            if(len < OSPF_LSA_HDR_LEN) {
+                return bbl_ctrl_status(fd, "error", 400, "invalid OSPF LSA hex string");
             }
             if(!ospf_lsa_load_external(ospf_instance, 1, (uint8_t*)g_pdu_buf, len)) {
                 return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF LSA");
@@ -310,9 +332,7 @@ ospf_ctrl_pdu_update(int fd, uint32_t session_id __attribute__((unused)), json_t
 
     ospf_pdu_s pdu = {0};
     const char *lsa_string;
-    uint16_t lsa_string_len;
-
-    uint16_t len;
+    int len;
 
     ospf_instance_s *ospf_instance = NULL;
     int instance_id = 0;
@@ -329,12 +349,11 @@ ospf_ctrl_pdu_update(int fd, uint32_t session_id __attribute__((unused)), json_t
             if(!lsa_string) {
                 return bbl_ctrl_status(fd, "error", 500, "failed to read OSPF PDU");
             }
-            lsa_string_len = strlen(lsa_string);
-            /* Load LSA from hexstring */
-            for (len = 0; len < (lsa_string_len/2); len++) {
-                sscanf(lsa_string + len*2, "%02hhx", &g_pdu_buf[len]);
+            /* Load PDU from hexstring */
+            len = ospf_ctrl_hex_decode(lsa_string);
+            if(len < 0) {
+                return bbl_ctrl_status(fd, "error", 400, "invalid OSPF PDU hex string");
             }
-
             if(ospf_pdu_load(&pdu, g_pdu_buf, len) != PROTOCOL_SUCCESS) {
                 return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF PDU");
             }

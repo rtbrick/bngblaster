@@ -32,6 +32,13 @@
 #define OSPFV3_FSCOPE_AS                    0x40
 #define OSPFV3_FSCOPE_RESERVED              0x60
 #define OSPFV3_U_BIT                        0x80
+#define OSPFV3_FSCOPE_MASK                  0x60
+
+#define OSPFV3_PREFIX_OPTION_NU             0x01
+#define OSPFV3_PREFIX_OPTION_LA             0x02
+#define OSPFV3_PREFIX_MAX_LEN               128
+/* Bytes of an OSPFv3 address prefix (32-bit words) */
+#define OSPFV3_PREFIX_LEN(_len)             ((((_len)+31)/32)*4)
 
 #define OSPF_PDU_LEN_MIN                    16
 #define OSPF_PDU_LEN_MAX                    UINT16_MAX
@@ -116,7 +123,7 @@
 #define OSPFV2_OFFSET_DBD_DD_SEQ            28
 #define OSPFV2_OFFSET_DBD_LSA               32
 
-#define OSPFV3_OFFSET_DBD_OPTIONS           17
+#define OSPFV3_OFFSET_DBD_OPTIONS           19
 #define OSPFV3_OFFSET_DBD_MTU               20
 #define OSPFV3_OFFSET_DBD_FLAGS             23
 #define OSPFV3_OFFSET_DBD_DD_SEQ            24
@@ -461,6 +468,8 @@ typedef struct ospf_neighbor_ {
 
     bool dbd_more; /* DBD LSA cursor */
 
+    uint32_t lsa_req_pending; /* entries of the last LS request not received */
+
     hb_tree *lsa_update_tree[OSPF_LSA_TYPE_MAX]; /* Send LS Direct Update (unicast) */
     hb_tree *lsa_retry_tree[OSPF_LSA_TYPE_MAX]; /* Send LS Retry Update (unicast) */
     hb_tree *lsa_request_tree[OSPF_LSA_TYPE_MAX]; /* Send LS Request (unicast) */
@@ -470,6 +479,7 @@ typedef struct ospf_neighbor_ {
     struct timer_ *timer_lsa_retry;
     struct timer_ *timer_lsa_request;
     struct timer_ *timer_inactivity;
+    struct timer_ *timer_remove;
 
 } ospf_neighbor_s;
 
@@ -586,6 +596,7 @@ typedef struct ospf_lsa_ {
     uint32_t refcount;
     bool expired;
     bool deleted;
+    bool wrap; /* sequence number wrap in progress */
 
     uint32_t seq; /* Sequence Number */
 

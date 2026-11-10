@@ -402,8 +402,9 @@ class Frr:
                    "-z", str(self.rundir / "zserv.api"),
                    "--vty_socket", str(self.rundir), "-P", "0",
                    "--log", "stdout", "--log-level", "debug", "--limit-fds", "1024"]
-            if daemon != "mgmtd":
-                # Empty config instead of /etc/frr/<daemon>.conf
+            if daemon not in ("mgmtd", "staticd"):
+                # Empty config instead of /etc/frr/<daemon>.conf,
+                # mgmtd backends like staticd have no config file.
                 config_file = self.rundir / ("%s.conf" % daemon)
                 config_file.write_text("")
                 cmd += ["-f", str(config_file)]
@@ -430,6 +431,13 @@ class Frr:
             command += " json"
         out = self.ns.exec(self.vtysh_cmd() + ["-c", command])
         return json.loads(out) if json_output else out
+
+    def vtysh_exec(self, *commands):
+        """Run a sequence of vtysh commands (e.g. configure terminal, ...)."""
+        cmd = self.vtysh_cmd()
+        for command in commands:
+            cmd += ["-c", command]
+        return self.ns.exec(cmd)
 
     def stop(self):
         for proc in reversed(self.procs):

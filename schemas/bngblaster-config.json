@@ -1733,7 +1733,7 @@
                     "description": "OSPFv2 interface metric",
                     "default": 1,
                     "minimum": 0,
-                    "maximum": 4294967295
+                    "maximum": 65535
                 },
                 "ospfv3-instance-id": {
                     "type": "integer",
@@ -1753,9 +1753,9 @@
                 "ospfv3-metric": {
                     "type": "integer",
                     "description": "OSPFv3 interface metric",
-                    "default": 10,
+                    "default": 1,
                     "minimum": 0,
-                    "maximum": 4294967295
+                    "maximum": 65535
                 },
                 "ldp-instance-id": {
                     "type": "integer",
@@ -3452,7 +3452,7 @@
                                         "type": "integer",
                                         "default": 10,
                                         "minimum": 0,
-                                        "maximum": 4294967295
+                                        "maximum": 65535
                                     },
                                     "local-ipv4-address": {
                                         "type": "string",

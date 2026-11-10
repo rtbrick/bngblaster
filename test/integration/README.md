@@ -19,6 +19,16 @@ Functional tests over veth pairs between network namespaces:
   broadcast, L1/L2/L1L2), database synchronization in both directions
   with routes installed by FRR (also by CSNP with HMAC-MD5 as DIS), and
   authentication (`test_isis_frr.py`, `test_ospf_frr.py`)
+* BNG Blaster OSPFv2 against FRR: area and router-id mismatch, database
+  exchange as master, router-id change of the neighbor, flush of the
+  network LSA of a previous run, purge of opaque LSAs on teardown,
+  SR-Algorithm TLV and LS request rate with 3000 LSAs (`test_ospf_frr.py`)
+* BNG Blaster OSPFv3 against FRR: topology of P2P and broadcast links
+  (BNG Blaster as DR, BDR and DROther), prefix encoding in 32-bit words
+  and flush of the network LSA of a previous run (`test_ospf6_frr.py`)
+* BNG Blaster OSPFv2 against another BNG Blaster instance: sequence
+  number wrap of self originated LSAs (slow) and invalid input of the
+  ospf-lsa-update command (`test_ospf_bbl.py`)
 * BNG Blaster ISIS against a scripted neighbor (`isis_peer.py`): P2P
   three-way handshake, hello checks, DIS election, receive rules for
   LSPs and SNPs, CSNP ranges with HMAC-MD5, retransmission, purges,

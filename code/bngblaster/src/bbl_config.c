@@ -1120,7 +1120,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv2-instance-id", 0, 65535);
     if(value) {
         network_config->ospfv2_instance_id = json_number_value(value);
-        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv2-metric", 0, 4294967295);
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv2-metric", 0, 65535);
         if(value) {
             network_config->ospfv2_metric = json_number_value(value);
         } else {
@@ -1142,7 +1142,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv3-instance-id", 0, 65535);
     if(value) {
         network_config->ospfv3_instance_id = json_number_value(value);
-        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv3-metric", 0, 4294967295);
+        JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ospfv3-metric", 0, 65535);
         if(value) {
             network_config->ospfv3_metric = json_number_value(value);
         } else {
@@ -2733,7 +2733,7 @@ json_parse_ospf_config(json_t *ospf, ospf_config_s *ospf_config)
                     return false;
                 }
 
-                JSON_OBJ_GET_NUMBER(c, value, "ospf->external->connections", "metric", 0, 4294967295);
+                JSON_OBJ_GET_NUMBER(c, value, "ospf->external->connections", "metric", 0, 65535);
                 if(value) {
                     connection->metric = json_number_value(value);
                 } else {

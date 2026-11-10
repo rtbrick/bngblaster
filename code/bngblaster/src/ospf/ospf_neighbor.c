@@ -178,7 +178,53 @@ ospf_neighbor_clear(ospf_neighbor_s *ospf_neighbor)
         hb_tree_clear(ospf_neighbor->lsa_ack_tree[type], ospf_lsa_tree_entry_clear);
     }
     timer_del(ospf_neighbor->timer_lsa_retry);
+    timer_del(ospf_neighbor->timer_lsa_request);
+    timer_del(ospf_neighbor->timer_dbd_retry);
+    ospf_neighbor->lsa_req_pending = 0;
     ospf_neighbor->rx.dd = 0;
+}
+
+/**
+ * Remove the neighbor, which is down
+ * for at least one dead interval.
+ */
+static void
+ospf_neighbor_remove_job(timer_s *timer)
+{
+    ospf_neighbor_s *ospf_neighbor = timer->data;
+    ospf_interface_s *ospf_interface = ospf_neighbor->interface;
+    ospf_neighbor_s **ptr = &ospf_interface->neighbors;
+
+    if(ospf_neighbor->state != OSPF_NBSTATE_DOWN) {
+        return;
+    }
+
+    LOG(OSPF, "OSPFv%u neighbor %s removed from interface %s\n",
+        ospf_neighbor->version,
+        format_ipv4_address(&ospf_neighbor->router_id),
+        ospf_interface->interface->name);
+
+    while(*ptr) {
+        if(*ptr == ospf_neighbor) {
+            *ptr = ospf_neighbor->next;
+            break;
+        }
+        ptr = &(*ptr)->next;
+    }
+    if(ospf_interface->neighbors_count) {
+        ospf_interface->neighbors_count--;
+    }
+
+    ospf_neighbor_clear(ospf_neighbor);
+    timer_del(ospf_neighbor->timer_inactivity);
+    timer_del(ospf_neighbor->timer_remove);
+    for(uint8_t type=OSPF_LSA_TYPE_1; type < OSPF_LSA_TYPE_MAX; type++) {
+        hb_tree_free(ospf_neighbor->lsa_update_tree[type], ospf_lsa_tree_entry_clear);
+        hb_tree_free(ospf_neighbor->lsa_retry_tree[type], ospf_lsa_tree_entry_clear);
+        hb_tree_free(ospf_neighbor->lsa_request_tree[type], ospf_lsa_tree_entry_clear);
+        hb_tree_free(ospf_neighbor->lsa_ack_tree[type], ospf_lsa_tree_entry_clear);
+    }
+    free(ospf_neighbor);
 }
 
 static void
@@ -222,6 +268,14 @@ ospf_neighbor_update_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
         ospf_neighbor_state_string(old),
         ospf_neighbor_state_string(state),
         ospf_interface->interface->name);
+
+    if(state == OSPF_NBSTATE_DOWN) {
+        timer_add(&g_ctx->timer_root, &ospf_neighbor->timer_remove, "OSPF NEIGHBOR REMOVE",
+                  ospf_interface->instance->config->dead_interval, 0, ospf_neighbor,
+                  &ospf_neighbor_remove_job);
+    } else {
+        timer_del(ospf_neighbor->timer_remove);
+    }
 
     switch(state) {
         case OSPF_NBSTATE_DOWN:
@@ -274,19 +328,36 @@ ospf_neighbor_update(ospf_neighbor_s *ospf_neighbor, ospf_pdu_s *pdu)
     ospf_interface_s *ospf_interface = ospf_neighbor->interface;
 
     uint8_t priority;
-    uint32_t dr, bdr;
+    uint32_t dr, bdr, id;
+    bool change = false;
 
+    /* The neighbor is identified by router-id, source
+     * address and MAC might change (RFC2328 section 10.5). */
+    memcpy(ospf_neighbor->mac, pdu->mac, ETH_ADDR_LEN);
     if(pdu->pdu_version == OSPF_VERSION_2) {
         priority = *OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_PRIORITY);
         dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_DR);
         bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_BDR);
+        if(ospf_neighbor->ipv4 != *(ipv4addr_t*)pdu->source) {
+            /* The address is used as DR/BDR identifier. */
+            ospf_neighbor->ipv4 = *(ipv4addr_t*)pdu->source;
+            change = true;
+        }
     } else {
         priority = *OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_PRIORITY);
         dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_DR);
         bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_BDR);
+        memcpy(ospf_neighbor->ipv6, pdu->source, sizeof(ipv6addr_t));
+        id = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_INTERFACE_ID);
+        if(ospf_neighbor->id != id) {
+            /* The interface ID is advertised in the router LSA (RFC5340 section 4.2.2.1). */
+            ospf_neighbor->id = id;
+            ospf_lsa_self_update_request(ospf_interface->instance);
+        }
     }
 
-    if(priority != ospf_neighbor->priority ||
+    if(change ||
+       priority != ospf_neighbor->priority ||
        dr != ospf_neighbor->dr ||
        bdr != ospf_neighbor->bdr) {
         ospf_neighbor->priority = priority;
@@ -472,6 +543,9 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     uint8_t options;
     uint8_t flags;
 
+    bool exchange_done = false;
+    struct timespec now;
+
     ospf_interface->stats.db_des_rx++;
 
     if(!ospf_neighbor) {
@@ -545,6 +619,13 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
         }
         ospf_neighbor_dbd_tx(ospf_neighbor);
     } else {
+        if(ospf_neighbor->state > OSPF_NBSTATE_EXCHANGE) {
+            /* Only duplicates are expected in state
+             * Loading and Full (RFC2328 section 10.6). */
+            ospf_rx_error(interface, pdu, "DD sequence");
+            ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
+            return;
+        }
         if(flags & OSPF_DBD_FLAG_I) {
             /* I flag not expected after ExStart */
             ospf_rx_error(interface, pdu, "init");
@@ -575,6 +656,10 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
                 memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
                 ospf_neighbor->dbd_lsa_type_next = OSPF_LSA_TYPE_MAX;
                 ospf_neighbor_dbd_tx(ospf_neighbor);
+            } else {
+                /* The slave acknowledged the last DD packet of the 
+                 * master and has no more (RFC2328 section 10.8). */
+                exchange_done = true;
             }
         } else {
             if(!(flags & OSPF_DBD_FLAG_MS)) {
@@ -593,6 +678,11 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
                 memset(&ospf_neighbor->dbd_lsa_next, UINT8_MAX, sizeof(ospf_lsa_key_s));
                 ospf_neighbor->dbd_lsa_type_next = OSPF_LSA_TYPE_MAX;
                 ospf_neighbor_dbd_tx(ospf_neighbor);
+                /* The slave is done if neither the received packet
+                 * nor the response has more (RFC2328 section 10.8). */
+                if(!(ospf_neighbor->dbd_more || flags & OSPF_DBD_FLAG_M)) {
+                    exchange_done = true;
+                }
             } else {
                 ospf_rx_error(interface, pdu, "DD sequence");
                 ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_EXSTART);
@@ -602,6 +692,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     }
 
     /* Update LSA request-tree. */
+    clock_gettime(CLOCK_MONOTONIC, &now);
     while(OSPF_PDU_CURSOR_PLEN(pdu) >= OSPF_LSA_HDR_LEN) {
         hdr = (ospf_lsa_header_s*)OSPF_PDU_CURSOR(pdu);
         OSPF_PDU_CURSOR_INC(pdu, OSPF_LSA_HDR_LEN);
@@ -615,6 +706,7 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
         search = hb_tree_search(ospf_instance->lsdb[hdr->type], &hdr->id);
         if(search) {
             lsa = *search;
+            ospf_lsa_update_age(lsa, &now);
             if(ospf_lsa_compare(hdr, (ospf_lsa_header_s*)lsa->lsa) != 1) {
                 continue;
             }
@@ -630,8 +722,10 @@ ospf_neighbor_dbd_rx(ospf_interface_s *ospf_interface,
     }
 
     /* Change state to loading if all DBD messages have been exchanged. */
-    if(!(ospf_neighbor->dbd_more || flags & OSPF_DBD_FLAG_M)) {
+    if(exchange_done) {
         ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_LOADING);
+        /* Send the first LS request without waiting for the timer. */
+        ospf_lsa_req_tx(ospf_interface, ospf_neighbor);
         /* Set directly to full if already in sync. */
         ospf_neighbor_full(ospf_neighbor);
     }

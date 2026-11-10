@@ -197,6 +197,26 @@ ospf_hello_v3_encode(bbl_network_interface_s *interface,
     return result;
 }
 
+/**
+ * @return maximum number of neighbors listed in the hello
+ */
+static uint16_t
+ospf_hello_neighbors_max(ospf_interface_s *ospf_interface)
+{
+    uint16_t mtu = ospf_interface->interface->mtu;
+    uint16_t overhead;
+
+    if(ospf_interface->version == OSPF_VERSION_2) {
+        overhead = 20 + OSPF_MD5_DIGEST_LEN + OSPFV2_HELLO_LEN_MIN;
+    } else {
+        overhead = 40 + OSPFV3_HELLO_LEN_MIN;
+    }
+    if(mtu <= overhead) {
+        return 0;
+    }
+    return (mtu - overhead) / IPV4_ADDR_LEN;
+}
+
 void
 ospf_hello_timeout(timer_s *timer)
 {
@@ -258,7 +278,7 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
             ospf_rx_error(interface, pdu, "decode");
             return;
         }
-        options = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_OPTIONS-1) & 0xFFFFFF);
+        options = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_OPTIONS-1)) & 0xFFFFFF;
         hello_interval = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_INTERVAL));
         dead_interval = be16toh(*(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_DEAD_INTERVAL));
         OSPF_PDU_CURSOR_SET(pdu, OSPFV3_OFFSET_HELLO_NBR);
@@ -272,6 +292,12 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
         ospf_rx_error(interface, pdu, "dead-interval");
         return;
     }
+    /* The E-bit must match, as all areas are external 
+     * routing capable (RFC2328 section 10.5). */
+    if(!(options & OSPF_OPTION_E_BIT)) {
+        ospf_rx_error(interface, pdu, "options (E-bit)");
+        return;
+    }
     
     while((OSPF_PDU_CURSOR_GET(pdu)+IPV4_ADDR_LEN) <= pdu->packet_len) {
         ip = *(uint32_t*)OSPF_PDU_CURSOR(pdu);
@@ -282,6 +308,11 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
     }
 
     if(!ospf_neighbor) {
+        /* Limited to the neighbors fitting into the hello. */
+        if(ospf_interface->neighbors_count >= ospf_hello_neighbors_max(ospf_interface)) {
+            ospf_rx_error(interface, pdu, "neighbor limit");
+            return;
+        }
         ospf_neighbor = ospf_neighbor_new(ospf_interface, pdu);
         ospf_neighbor->next = ospf_interface->neighbors;
         ospf_interface->neighbors = ospf_neighbor;
@@ -327,5 +358,4 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
         ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_INIT);
     }
 
-    UNUSED(options);
 }
