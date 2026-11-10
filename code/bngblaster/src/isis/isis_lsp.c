@@ -294,7 +294,7 @@ isis_lsp_lifetime_job(timer_s *timer)
         remaining_lifetime = lsp->lifetime - ago.tv_sec;
         timer_add(&g_ctx->timer_root, 
                   &lsp->timer_lifetime, 
-                  "ISIS LIFETIME", remaining_lifetime, 0, lsp,
+                  "ISIS LIFETIME", timer_coarse_sec(remaining_lifetime), 0, lsp,
                   &isis_lsp_lifetime_job);
     }
 }
@@ -306,7 +306,7 @@ isis_lsp_lifetime(isis_lsp_s *lsp)
     if(lsp->lifetime > 0) {
         timer_add(&g_ctx->timer_root, 
                   &lsp->timer_lifetime, 
-                  "ISIS LIFETIME", lsp->lifetime, 0, lsp,
+                  "ISIS LIFETIME", timer_coarse_sec(lsp->lifetime), 0, lsp,
                   &isis_lsp_lifetime_job);
     } else {
         lsp->expired = true;

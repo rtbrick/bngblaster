@@ -280,7 +280,7 @@ ospf_lsa_lifetime(ospf_lsa_s *lsa)
     time_t sec = 60;
     timer_del(lsa->timer_refresh);
     if(lsa->age < OSPF_LSA_MAX_AGE) {
-        sec = OSPF_LSA_MAX_AGE - lsa->age;
+        sec = timer_coarse_sec(OSPF_LSA_MAX_AGE - lsa->age);
         timer_add(&g_ctx->timer_root, &lsa->timer_lifetime, 
                   "OSPF LIFETIME", sec, 0, 
                   lsa, &ospf_lsa_lifetime_job);

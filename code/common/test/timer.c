@@ -362,6 +362,45 @@ test_timer_smear_preserves_bucket_membership(void **state)
     timer_walk(root);
 }
 
+static void
+test_timer_nsec_normalized(void **state)
+{
+    timer_root_s *root = *state;
+    timer_s *timer = NULL;
+    struct timespec now;
+
+    /* Values of one second or more given as nsec are
+     * normalized, also when the timer is requeued. */
+    timer_add(root, &timer, "NORMALIZE", 0, 2500 * MSEC, NULL, single_shot_cb);
+    assert_non_null(timer);
+    assert_int_equal(timer->timer_bucket->sec, 2);
+    assert_int_equal(timer->timer_bucket->nsec, 500 * MSEC);
+    assert_true(timer->expire.tv_nsec < (long)SEC);
+    clock_gettime(CLOCK_MONOTONIC, &now);
+    assert_true(timer->expire.tv_sec >= now.tv_sec + 2);
+
+    timer_add(root, &timer, "NORMALIZE", 1, 5000 * MSEC, NULL, single_shot_cb);
+    assert_int_equal(timer->timer_bucket->sec, 6);
+    assert_int_equal(timer->timer_bucket->nsec, 0);
+    assert_true(timer->expire.tv_nsec < (long)SEC);
+    timer_del(timer);
+}
+
+static void
+test_timer_coarse_sec(void **state)
+{
+    (void)state;
+    assert_int_equal(timer_coarse_sec(0), 0);
+    assert_int_equal(timer_coarse_sec(1), 1);
+    assert_int_equal(timer_coarse_sec(64), 64);
+    assert_int_equal(timer_coarse_sec(65), 64);
+    assert_int_equal(timer_coarse_sec(127), 64);
+    assert_int_equal(timer_coarse_sec(128), 128);
+    assert_int_equal(timer_coarse_sec(1200), 1024);
+    assert_int_equal(timer_coarse_sec(3600), 2048);
+    assert_int_equal(timer_coarse_sec(65535), 32768);
+}
+
 int
 main(void)
 {
@@ -396,6 +435,10 @@ main(void)
         cmocka_unit_test_setup_teardown(test_timer_smear_preserves_bucket_membership,
                                         setup_timer_root,
                                         teardown_timer_root),
+        cmocka_unit_test_setup_teardown(test_timer_nsec_normalized,
+                                        setup_timer_root,
+                                        teardown_timer_root),
+        cmocka_unit_test(test_timer_coarse_sec),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

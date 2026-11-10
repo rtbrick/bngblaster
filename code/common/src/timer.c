@@ -418,6 +418,34 @@ timer_process_changes(timer_root_s *root)
 }
 
 /**
+ * Return a coarse interval for long timers with
+ * arbitrary values (e.g. received LSP lifetimes).
+ *
+ * Every distinct interval is a timer bucket which
+ * is visited on each timer walk. Intervals up to 64
+ * seconds are returned unchanged, longer ones are
+ * rounded down to a power of two. This limits such
+ * timers to 74 buckets for values up to 65535. The
+ * timer job must restart the timer for the remaining
+ * time.
+ *
+ * @param sec interval in seconds
+ * @return coarse interval in seconds (<= sec)
+ */
+time_t
+timer_coarse_sec(time_t sec)
+{
+    time_t coarse = 64;
+    if(sec <= coarse) {
+        return sec;
+    }
+    while(coarse <= sec / 2) {
+        coarse *= 2;
+    }
+    return coarse;
+}
+
+/**
  * Enqueue a timer with a given callback function onto 
  * the hierarchical timer list.
  */
@@ -427,6 +455,17 @@ timer_add(timer_root_s *root, timer_s **ptimer, char *name,
           void *data, void (*cb)(timer_s *))
 {
     timer_s *timer = *ptimer;
+
+    /* Normalize, as buckets are keyed and expiry is
+     * computed with nsec below one second. */
+    if(nsec < 0 || (unsigned long)nsec >= SEC) {
+        sec += nsec / (long)SEC;
+        nsec %= (long)SEC;
+        if(nsec < 0) {
+            nsec += SEC;
+            sec--;
+        }
+    }
 
     /* This timer already is enqueued. Requeue. */
     if(timer) {

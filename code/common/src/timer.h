@@ -91,6 +91,9 @@ timer_smear_all_buckets(timer_root_s *root);
 void 
 timer_del(timer_s *timer);
 
+time_t
+timer_coarse_sec(time_t sec);
+
 void
 timer_add(timer_root_s *root, timer_s **ptimer, char *name,
           time_t sec, long nsec,
