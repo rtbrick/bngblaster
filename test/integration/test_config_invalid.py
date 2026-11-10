@@ -86,8 +86,10 @@ def test_config_invalid_ospf_metric(topology, tmp_path, network, ospf, message):
      "LDP IPv4 targeted neighbors require IPv4 transport"),
     ({"targeted-neighbors": [{"address": "fc00::1"}]},
      "LDP IPv6 targeted neighbors require ldp->ipv6-transport-address"),
+    ({"instance-id": 0}, "Invalid value for ldp->instance-id (1 - 65535)"),
+    ({"hold-time": 0}, "Invalid value for ldp->hold-time (1 - 65535)"),
 ], ids=["address", "missing-address", "duplicate", "unknown-interface", "duplicate-ipv6",
-        "source-family", "no-ipv4-transport", "no-ipv6-transport"])
+        "source-family", "no-ipv4-transport", "no-ipv6-transport", "instance-id", "hold-time"])
 def test_config_invalid_ldp_targeted(topology, tmp_path, ldp, message):
     cfg = config(topology.if_a)
     cfg["ldp"] = [dict({"instance-id": 1, "lsr-id": "10.10.10.2"}, **ldp)]

@@ -60,10 +60,22 @@ ldp_init()
     return true;
 }
 
+/**
+ * ldp_teardown_job
+ *
+ * Sessions not closed within the teardown-time are closed
+ * without waiting further for the peer.
+ */
 void
 ldp_teardown_job(timer_s *timer) {
     ldp_instance_s *instance = timer->data;
-    UNUSED(instance);
+    ldp_session_s *session = instance->sessions;
+    while(session) {
+        if(session->state != LDP_CLOSED) {
+            ldp_session_closed(session);
+        }
+        session = session->next;
+    }
 }
 
 /**
@@ -98,12 +110,19 @@ void
 ldp_teardown()
 {
     ldp_instance_s *instance = g_ctx->ldp_instances;
+    ldp_adjacency_s *adjacency;
     ldp_session_s *session;
     ldp_session_listen_teardown();
     while(instance) {
         if(!instance->teardown) {
             LOG(LDP, "Teardown LDP instance %u\n", instance->config->id);
             instance->teardown = true;
+            /* Stop discovery, hellos are ignored with teardown. */
+            adjacency = instance->adjacencies;
+            while(adjacency) {
+                timer_del(adjacency->hello_timer);
+                adjacency = adjacency->next;
+            }
             session = instance->sessions;
             while(session) {
                 session->teardown = true;

@@ -1,6 +1,11 @@
 /*
  * BNG Blaster (BBL) - LDP Database
  *
+ * The database of an instance holds one entry per prefix (address and
+ * prefix length) with the label mappings of all sessions (liberal label
+ * retention). The entry label and source are those of the selected
+ * mapping, which is kept as long as the session has a mapping.
+ *
  * Christian Giese, November 2022
  *
  * Copyright (C) 2020-2026, RtBrick, Inc.
@@ -11,15 +16,26 @@
 int
 ldb_db_ipv4_compare(void *id1, void *id2)
 {
-    const uint32_t a = *(const uint32_t*)id1;
-    const uint32_t b = *(const uint32_t*)id2;
-    return (a > b) - (a < b);
+    const ipv4_prefix *a = id1;
+    const ipv4_prefix *b = id2;
+    uint32_t addr_a = be32toh(a->address);
+    uint32_t addr_b = be32toh(b->address);
+    if(addr_a != addr_b) {
+        return (addr_a > addr_b) - (addr_a < addr_b);
+    }
+    return (a->len > b->len) - (a->len < b->len);
 }
 
 int
 ldb_db_ipv6_compare(void *id1, void *id2)
 {
-    return memcmp(id1, id2, sizeof(ipv6addr_t));
+    const ipv6_prefix *a = id1;
+    const ipv6_prefix *b = id2;
+    int result = memcmp(a->address, b->address, sizeof(ipv6addr_t));
+    if(result) {
+        return result;
+    }
+    return (a->len > b->len) - (a->len < b->len);
 }
 
 bool
@@ -34,10 +50,64 @@ ldb_db_init(ldp_instance_s *instance)
  * lock and rebuild their packets (with lock) if the version changes,
  * so the version must be updated after all other fields. */
 static void
-ldb_db_set_active(ldp_db_entry_s *entry, bool active)
+ldb_db_update(ldp_db_entry_s *entry)
 {
-    __atomic_store_n(&entry->active, active, __ATOMIC_RELAXED);
+    ldp_db_mapping_s *mapping = entry->mappings;
+    ldp_db_mapping_s *selected = NULL;
+
+    /* Keep the current source if it still has a mapping. */
+    while(mapping) {
+        if(mapping->session == entry->source || !selected) {
+            selected = mapping;
+            if(mapping->session == entry->source) break;
+        }
+        mapping = mapping->next;
+    }
+    if(selected) {
+        entry->label = selected->label;
+        entry->source = selected->session;
+    }
+    __atomic_store_n(&entry->active, selected != NULL, __ATOMIC_RELAXED);
     __atomic_store_n(&entry->version, entry->version + 1, __ATOMIC_RELEASE);
+}
+
+static void
+ldb_db_mapping_add(ldp_db_entry_s *entry, ldp_session_s *session, uint32_t label)
+{
+    ldp_db_mapping_s **ptr = &entry->mappings;
+    while(*ptr) {
+        if((*ptr)->session == session) {
+            (*ptr)->label = label;
+            ldb_db_update(entry);
+            return;
+        }
+        ptr = &(*ptr)->next;
+    }
+    *ptr = calloc(1, sizeof(ldp_db_mapping_s));
+    (*ptr)->session = session;
+    (*ptr)->label = label;
+    ldb_db_update(entry);
+}
+
+/* Remove the mapping of the session, with any label
+ * or only with the given label (label withdraw with label TLV). */
+static void
+ldb_db_mapping_del(ldp_db_entry_s *entry, ldp_session_s *session, uint32_t label, bool any_label)
+{
+    ldp_db_mapping_s **ptr = &entry->mappings;
+    ldp_db_mapping_s *mapping;
+    while(*ptr) {
+        mapping = *ptr;
+        if(mapping->session == session) {
+            if(any_label || mapping->label == label) {
+                *ptr = mapping->next;
+                free(mapping);
+                ldb_db_update(entry);
+            }
+            return;
+        }
+        ptr = &mapping->next;
+    }
 }
 
 bool
@@ -47,16 +117,17 @@ ldb_db_add_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label)
     ldp_instance_s *instance = session->instance;
     ldp_db_entry_s *entry;
     dict_insert_result result;
+    ipv4_prefix key = {.len = prefix->len, .address = prefix->address};
 
     pthread_rwlock_wrlock(&g_ctx->label_db_lock);
-    search = hb_tree_search(instance->db.ipv4, &prefix->address);
+    search = hb_tree_search(instance->db.ipv4, &key);
     if(search) {
         entry = *search;
     } else {
         entry = calloc(1, sizeof(ldp_db_entry_s));
         entry->afi = IANA_AFI_IPV4;
-        entry->prefix.ipv4.address = prefix->address;
-        result = hb_tree_insert(instance->db.ipv4, &entry->prefix.ipv4.address);
+        entry->prefix.ipv4 = key;
+        result = hb_tree_insert(instance->db.ipv4, &entry->prefix.ipv4);
         if(result.inserted) {
             *result.datum_ptr = entry;
         } else {
@@ -68,24 +139,31 @@ ldb_db_add_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label)
             return false;
         }
     }
-    entry->prefix.ipv4.len = prefix->len;
-    entry->label = label;
-    entry->source = session;
-    ldb_db_set_active(entry, true);
+    ldb_db_mapping_add(entry, session, label);
     pthread_rwlock_unlock(&g_ctx->label_db_lock);
     return true;
 }
 
+/**
+ * ldb_db_lookup_ipv4
+ *
+ * @param instance LDP instance
+ * @param address IPv4 address
+ * @return entry with this address and the longest prefix length
+ */
 ldp_db_entry_s *
 ldb_db_lookup_ipv4(ldp_instance_s *instance, uint32_t address)
 {
     void **search = NULL;
     ldp_db_entry_s *entry;
+    ipv4_prefix key = {.len = UINT8_MAX, .address = address};
 
-    search = hb_tree_search(instance->db.ipv4, &address);
+    search = hb_tree_search_le(instance->db.ipv4, &key);
     if(search) {
         entry = *search;
-        return entry;
+        if(entry->prefix.ipv4.address == address) {
+            return entry;
+        }
     }
     return NULL;
 }
@@ -97,16 +175,19 @@ ldb_db_add_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label)
     ldp_instance_s *instance = session->instance;
     ldp_db_entry_s *entry;
     dict_insert_result result;
+    ipv6_prefix key = {.len = prefix->len};
+
+    memcpy(&key.address, &prefix->address, sizeof(ipv6addr_t));
 
     pthread_rwlock_wrlock(&g_ctx->label_db_lock);
-    search = hb_tree_search(instance->db.ipv6, &prefix->address);
+    search = hb_tree_search(instance->db.ipv6, &key);
     if(search) {
         entry = *search;
     } else {
         entry = calloc(1, sizeof(ldp_db_entry_s));
         entry->afi = IANA_AFI_IPV6;
-        memcpy(&entry->prefix.ipv6, prefix, sizeof(ipv6_prefix));
-        result = hb_tree_insert(instance->db.ipv6, &entry->prefix.ipv6.address);
+        entry->prefix.ipv6 = key;
+        result = hb_tree_insert(instance->db.ipv6, &entry->prefix.ipv6);
         if(result.inserted) {
             *result.datum_ptr = entry;
         } else {
@@ -118,64 +199,92 @@ ldb_db_add_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label)
             return false;
         }
     }
-    entry->prefix.ipv6.len = prefix->len;
-    entry->label = label;
-    entry->source = session;
-    ldb_db_set_active(entry, true);
+    ldb_db_mapping_add(entry, session, label);
     pthread_rwlock_unlock(&g_ctx->label_db_lock);
     return true;
 }
 
+/**
+ * ldb_db_lookup_ipv6
+ *
+ * @param instance LDP instance
+ * @param address IPv6 address
+ * @return entry with this address and the longest prefix length
+ */
 ldp_db_entry_s *
 ldb_db_lookup_ipv6(ldp_instance_s *instance, ipv6addr_t *address)
 {
     void **search = NULL;
     ldp_db_entry_s *entry;
+    ipv6_prefix key = {.len = UINT8_MAX};
 
-    search = hb_tree_search(instance->db.ipv6, address);
+    memcpy(&key.address, address, sizeof(ipv6addr_t));
+    search = hb_tree_search_le(instance->db.ipv6, &key);
     if(search) {
         entry = *search;
-        return entry;
+        if(memcmp(&entry->prefix.ipv6.address, address, sizeof(ipv6addr_t)) == 0) {
+            return entry;
+        }
     }
     return NULL;
 }
 
-/* Deactivate an entry learned from the session, with any label
- * or only with the given label (label withdraw with label TLV). */
-static void
-ldb_db_deactivate(ldp_session_s *session, ldp_db_entry_s *entry, uint32_t label, bool any_label)
+/**
+ * ldb_db_label
+ *
+ * Label of the entry for streams sent on the interface, which prefers
+ * the mapping of a session on this interface (called with lock).
+ *
+ * @param entry LDP database entry
+ * @param interface network interface or NULL
+ * @return label
+ */
+uint32_t
+ldb_db_label(ldp_db_entry_s *entry, bbl_network_interface_s *interface)
 {
-    if(entry->active && entry->source == session && (any_label || entry->label == label)) {
-        ldb_db_set_active(entry, false);
+    ldp_db_mapping_s *mapping = entry->mappings;
+    while(mapping && interface) {
+        if(mapping->session->interface == interface) {
+            return mapping->label;
+        }
+        mapping = mapping->next;
     }
+    return entry->label;
 }
 
 void
 ldb_db_withdraw_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label, bool any_label)
 {
-    ldp_db_entry_s *entry = ldb_db_lookup_ipv4(session->instance, prefix->address);
-    if(entry) {
-        pthread_rwlock_wrlock(&g_ctx->label_db_lock);
-        ldb_db_deactivate(session, entry, label, any_label);
-        pthread_rwlock_unlock(&g_ctx->label_db_lock);
+    void **search = NULL;
+    ipv4_prefix key = {.len = prefix->len, .address = prefix->address};
+
+    pthread_rwlock_wrlock(&g_ctx->label_db_lock);
+    search = hb_tree_search(session->instance->db.ipv4, &key);
+    if(search) {
+        ldb_db_mapping_del(*search, session, label, any_label);
     }
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
 }
 
 void
 ldb_db_withdraw_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label, bool any_label)
 {
-    ldp_db_entry_s *entry = ldb_db_lookup_ipv6(session->instance, &prefix->address);
-    if(entry) {
-        pthread_rwlock_wrlock(&g_ctx->label_db_lock);
-        ldb_db_deactivate(session, entry, label, any_label);
-        pthread_rwlock_unlock(&g_ctx->label_db_lock);
+    void **search = NULL;
+    ipv6_prefix key = {.len = prefix->len};
+
+    memcpy(&key.address, &prefix->address, sizeof(ipv6addr_t));
+    pthread_rwlock_wrlock(&g_ctx->label_db_lock);
+    search = hb_tree_search(session->instance->db.ipv6, &key);
+    if(search) {
+        ldb_db_mapping_del(*search, session, label, any_label);
     }
+    pthread_rwlock_unlock(&g_ctx->label_db_lock);
 }
 
 /**
  * ldb_db_withdraw_session
  *
- * Deactivate all entries learned from the session (e.g. session down
+ * Remove all mappings learned from the session (e.g. session down
  * or label withdraw with wildcard FEC). Entries are kept because traffic
  * streams hold references.
  *
@@ -198,7 +307,7 @@ ldb_db_withdraw_session(ldp_session_s *session, uint32_t label, bool any_label)
         itor = hb_itor_new(trees[i]);
         next = hb_itor_first(itor);
         while(next) {
-            ldb_db_deactivate(session, *hb_itor_datum(itor), label, any_label);
+            ldb_db_mapping_del(*hb_itor_datum(itor), session, label, any_label);
             next = hb_itor_next(itor);
         }
         hb_itor_free(itor);

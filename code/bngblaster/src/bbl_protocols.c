@@ -3478,10 +3478,9 @@ decode_udp(uint8_t *buf, uint16_t len,
             ret_val = decode_dhcp(buf, len, sp, sp_len, (bbl_dhcp_s**)&udp->next);
             break;
         case LDP_PORT:
-            if(udp->src == LDP_PORT) {
-                udp->protocol = UDP_PROTOCOL_LDP;
-                ret_val = decode_ldp_hello(buf, len, sp, sp_len, (bbl_ldp_hello_s**)&udp->next);
-            }
+            /* Only the destination port is fixed (RFC 5036 section 2.4). */
+            udp->protocol = UDP_PROTOCOL_LDP;
+            ret_val = decode_ldp_hello(buf, len, sp, sp_len, (bbl_ldp_hello_s**)&udp->next);
             break;
         default:
             if(udp->dst == g_li_udp_port || udp->src == g_li_udp_port) {

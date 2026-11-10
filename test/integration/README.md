@@ -49,6 +49,13 @@ Functional tests over veth pairs between network namespaces:
 * LDP label withdraw and session down, and BGP L2VPN label blocks,
   with streams sent by the main loop and by TX threads
   (`test_ldp.py`, `test_bgp_l2vpn.py`)
+* LDP between two BNG Blaster instances: wildcard withdraw, fatal
+  notification, invalid label mappings, prefix length, implicit null,
+  two peers with the same FEC, ldp-disconnect with IPv6 filters and
+  hellos from any source port (`test_ldp.py`)
+* BNG Blaster LDP against FRR: label bindings (IPv4, IPv6, dual-stack),
+  hold time, hello adjacency loss, teardown and stream labels
+  (`test_ldp_frr.py`)
 * Jumbo frames (9000 byte stream packets) with PACKET_MMAP
   (`test_jumbo_frames.py`)
 * Stream capture with TX/RX threads including PCAP stop/start at

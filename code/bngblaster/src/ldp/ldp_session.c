@@ -286,7 +286,10 @@ void
 ldp_connected_cb(void *arg)
 {
     ldp_session_s *session = (ldp_session_s*)arg;
-    g_ctx->routing_sessions++;
+    if(!session->counted) {
+        session->counted = true;
+        g_ctx->routing_sessions++;
+    }
     ldp_session_fsm(session, LDP_EVENT_START);
 }
 
@@ -565,6 +568,8 @@ ldp_session_ipv4_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     session->interface = adjacency->interface;
     session->max_pdu_len = session->local.max_pdu_len;
     session->keepalive_time = session->local.keepalive_time;
+    session->teardown = instance->teardown;
+    session->wait_hello = false;
 
     if(ldp->ipv4_transport_address) {
         session->peer.ipv4_address = ldp->ipv4_transport_address;
@@ -592,6 +597,7 @@ ldp_session_ipv4_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
         session->active = false;
     }
 
+    ldp_session_hello(session, adjacency->hold_time);
     ldp_session_connect(session, 0);
 }
 
@@ -628,6 +634,8 @@ ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     session->interface = adjacency->interface;
     session->max_pdu_len = session->local.max_pdu_len;
     session->keepalive_time = session->local.keepalive_time;
+    session->teardown = instance->teardown;
+    session->wait_hello = false;
 
     if(ldp->ipv6_transport_address) {
         memcpy(&session->peer.ipv6_address, ldp->ipv6_transport_address, sizeof(ipv6addr_t));
@@ -655,14 +663,34 @@ ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
         session->active = false;
     }
 
+    ldp_session_hello(session, adjacency->hold_time);
     ldp_session_connect(session, 0);
 }
 
 void
 ldp_session_close_job(timer_s *timer)
 {
-    ldp_session_s *session = timer->data;
-    if(g_ctx->routing_sessions) g_ctx->routing_sessions--;
+    ldp_session_closed(timer->data);
+}
+
+/**
+ * ldp_session_closed
+ *
+ * Close the TCP session and change state to closed.
+ *
+ * @param session LDP session
+ */
+void
+ldp_session_closed(ldp_session_s *session)
+{
+    timer_del(session->close_timer);
+
+    /* Only sessions counted when connected are uncounted. */
+    if(session->counted) {
+        session->counted = false;
+        if(g_ctx->routing_sessions) g_ctx->routing_sessions--;
+    }
+    timer_del(session->keepalive_timeout_timer);
 
     /* Close TCP session */
     if(session->state > LDP_IDLE) {
@@ -670,18 +698,13 @@ ldp_session_close_job(timer_s *timer)
         session->tcpc = NULL;
     }
     ldp_session_state_change(session, LDP_CLOSED);
-    if(!session->teardown) {
+    if(!(session->teardown || session->wait_hello)) {
         ldp_session_connect(session, 5);
     }
 }
 
-/**
- * ldp_session_close
- * 
- * @param session LDP session
- */
-void
-ldp_session_close(ldp_session_s *session)
+static void
+ldp_session_close_internal(ldp_session_s *session, bool notification)
 {
     time_t delay = 0;
 
@@ -700,22 +723,99 @@ ldp_session_close(ldp_session_s *session)
     }
 
     if(session->state > LDP_CONNECT && session->state < LDP_CLOSING) {
-        LOG(LDP, "LDP (%s - %s) send notification message\n",
-            ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
-            ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
-
-        ldp_session_reset_write_buffer(session);
-        ldp_pdu_init(session);
-        ldp_push_notification_message(session);
-        ldp_pdu_close(session);
-        ldp_session_send(session);
-        session->stats.pdu_tx++;
-        session->stats.message_tx++;
-        ldp_session_state_change(session, LDP_CLOSING);
         delay = 3;
+        if(notification) {
+            LOG(LDP, "LDP (%s - %s) send notification message\n",
+                ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
+
+            ldp_session_reset_write_buffer(session);
+            ldp_pdu_init(session);
+            ldp_push_notification_message(session);
+            ldp_pdu_close(session);
+            if(!ldp_session_send(session)) {
+                /* E.g. while a RAW update is sent, the TCP
+                 * session is closed without notification. */
+                LOG(LDP, "LDP (%s - %s) failed to send notification message\n",
+                    ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                    ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
+                delay = 0;
+            }
+        } else {
+            delay = 0;
+        }
+        ldp_session_state_change(session, LDP_CLOSING);
     }
 
     timer_add(&g_ctx->timer_root, &session->close_timer, 
               "LDP CLOSE", delay, 0, session,
               &ldp_session_close_job);
+}
+
+/**
+ * ldp_session_close
+ * 
+ * Close the session with notification.
+ *
+ * @param session LDP session
+ */
+void
+ldp_session_close(ldp_session_s *session)
+{
+    ldp_session_close_internal(session, true);
+}
+
+/**
+ * ldp_session_close_received
+ * 
+ * Close the session without notification after
+ * a fatal error notification was received.
+ *
+ * @param session LDP session
+ */
+void
+ldp_session_close_received(ldp_session_s *session)
+{
+    ldp_session_close_internal(session, false);
+}
+
+static void
+ldp_session_hello_timeout_job(timer_s *timer)
+{
+    ldp_session_s *session = timer->data;
+
+    if(session->state == LDP_CLOSED || session->teardown) {
+        return;
+    }
+    LOG(LDP, "LDP (%s - %s) hello adjacency lost\n",
+        ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
+
+    /* The session is terminated if the last hello adjacency is lost
+     * (RFC 5036 section 2.5.5) and initialised again by the next hello. */
+    session->wait_hello = true;
+    if(session->state == LDP_CLOSING) {
+        return;
+    }
+    if(!session->error_code) {
+        session->error_code = LDP_STATUS_HOLD_TIMER_EXPIRED|LDP_STATUS_FATAL_ERROR;
+    }
+    ldp_session_close(session);
+}
+
+/**
+ * ldp_session_hello
+ *
+ * Restart the hello hold timer of the session with a hello
+ * of any adjacency (link or targeted) received from the peer.
+ *
+ * @param session LDP session
+ * @param hold_time hold time of the adjacency
+ */
+void
+ldp_session_hello(ldp_session_s *session, uint16_t hold_time)
+{
+    timer_add(&g_ctx->timer_root, &session->hello_hold_timer,
+              "LDP HELLO HOLD", hold_time, 0, session,
+              &ldp_session_hello_timeout_job);
 }

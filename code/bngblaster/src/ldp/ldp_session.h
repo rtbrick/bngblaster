@@ -38,4 +38,13 @@ ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
 void
 ldp_session_close(ldp_session_s *session);
 
+void
+ldp_session_close_received(ldp_session_s *session);
+
+void
+ldp_session_closed(ldp_session_s *session);
+
+void
+ldp_session_hello(ldp_session_s *session, uint16_t hold_time);
+
 #endif

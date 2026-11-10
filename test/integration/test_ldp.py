@@ -9,6 +9,10 @@ by the peer and labels of sessions which went down must not be used.
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import ipaddress
+import socket
+import struct
+import sys
 import time
 
 import pytest
@@ -239,3 +243,201 @@ def test_ldp_targeted_ignored(local_veth, bbl):
     assert adjacency1["rx-discovery"] == 0
     assert instance.ctrl("ldp-adjacencies", **{"ldp-instance-id": 2})["ldp-adjacencies"] == []
     assert instance.ctrl("ldp-sessions")["ldp-sessions"] == []
+
+
+def ldp_tlv(tlv_type, value):
+    return struct.pack(">HH", tlv_type, len(value)) + value
+
+
+def ldp_fec(prefix_str=None):
+    """FEC TLV with a prefix element or the wildcard element (type only)."""
+    if prefix_str is None:
+        return ldp_tlv(0x0100, b"\x01")
+    net = ipaddress.ip_network(prefix_str)
+    return ldp_tlv(0x0100, struct.pack(">BHB", 2, 1, net.prefixlen) +
+                   net.network_address.packed[:(net.prefixlen + 7) // 8])
+
+
+def ldp_message(msg_type, *tlvs):
+    body = struct.pack(">I", 1000) + b"".join(tlvs)
+    return struct.pack(">HH", msg_type, len(body)) + body
+
+
+def ldp_pdu(path, *messages):
+    """Write a RAW update file with one LDP PDU of LDP instance 1."""
+    body = socket.inet_aton(LSR_ID_1) + b"\x00\x00" + b"".join(messages)
+    with open(path, "wb") as f:
+        f.write(struct.pack(">HH", 1, len(body)) + body)
+    return str(path)
+
+
+def label(value):
+    return ldp_tlv(0x0200, struct.pack(">I", value))
+
+
+MAPPING, WITHDRAW, NOTIFICATION = 0x0400, 0x0402, 0x0001
+
+
+def link_config(local_veth, streams=None, raw_files=()):
+    config = {
+        "interfaces": {
+            "network": [
+                {"interface": local_veth.if1, "address": "10.0.0.1/24", "gateway": "10.0.0.2",
+                 "ldp-instance-id": 1},
+                {"interface": local_veth.if2, "address": "10.0.0.2/24", "gateway": "10.0.0.1",
+                 "ldp-instance-id": 2}
+            ]
+        },
+        "ldp": [
+            {"instance-id": 1, "lsr-id": LSR_ID_1},
+            {"instance-id": 2, "lsr-id": LSR_ID_2}
+        ],
+        "ldp-raw-update-files": list(raw_files)
+    }
+    if streams:
+        config["streams"] = streams
+    return config
+
+
+def test_ldp_raw_messages(local_veth, bbl, tmp_path):
+    """Label messages of the peer (instance 1) received by instance 2:
+    mappings without generic label or with labels above 20 bit are ignored,
+    the prefix length is part of the database key, a wildcard FEC withdraws
+    all labels without closing the session, a fatal notification closes it."""
+    mapping = ldp_pdu(tmp_path / "mapping.ldp",
+                      ldp_message(MAPPING, ldp_fec("13.37.0.0/16"), label(10000)),
+                      ldp_message(MAPPING, ldp_fec("13.37.0.0/24"), label(10001)),
+                      ldp_message(MAPPING, ldp_fec("13.37.1.0/24")),
+                      ldp_message(MAPPING, ldp_fec("13.37.2.0/24"), label(0x100000)))
+    withdraw = ldp_pdu(tmp_path / "withdraw.ldp", ldp_message(WITHDRAW, ldp_fec("13.37.0.0/24")))
+    wildcard = ldp_pdu(tmp_path / "wildcard.ldp", ldp_message(WITHDRAW, ldp_fec()))
+    notification = ldp_pdu(tmp_path / "notification.ldp",
+                           ldp_message(NOTIFICATION, ldp_tlv(0x0300, struct.pack(">IIH", 0x8000000A, 0, 0))))
+    instance = bbl(link_config(local_veth, raw_files=[mapping, withdraw, wildcard, notification]))
+
+    def session(instance_id):
+        return instance.ctrl("ldp-sessions", **{"ldp-instance-id": instance_id})["ldp-sessions"][0]
+
+    def active():
+        db = instance.ctrl("ldp-database", **{"ldp-instance-id": 2})["ldp-database"]
+        return {e["prefix"]: e["label"] for e in db if e["active"] and e["prefix"].startswith("13.37.")}
+
+    def send(path):
+        # Retried while the previous RAW update is sending.
+        wait_until(lambda: instance.ctrl("ldp-raw-update", file=path, **{"ldp-instance-id": 1})
+                   ["ldp-raw-update"]["started"] == 1, 5, 0.2, message="RAW update started")
+
+    wait_until(lambda: session(1)["state"] == "operational" and session(2)["state"] == "operational", 30,
+               message="LDP session operational")
+    send(mapping)
+    wait_until(lambda: active() == {"13.37.0.0/16": 10000, "13.37.0.0/24": 10001}, 10,
+               message="valid mappings learned")
+    send(withdraw)
+    wait_until(lambda: active() == {"13.37.0.0/16": 10000}, 10, message="/24 withdrawn, /16 kept")
+    send(wildcard)
+    wait_until(lambda: active() == {}, 10, message="all labels withdrawn by wildcard FEC")
+    assert session(2)["state"] == "operational" and session(2)["state-transitions"] == 1
+    send(notification)
+    wait_until(lambda: session(2)["state-transitions"] >= 2, 5, message="session closed by fatal notification")
+    wait_until(lambda: "received fatal error notification" in open(instance.path("log")).read(), 5,
+               message="fatal error notification logged")
+    wait_until(lambda: session(2)["state"] == "operational", 20, message="session operational again")
+
+
+def test_ldp_implicit_null(local_veth, bbl):
+    """The LSR-ID of instance 1 is advertised with implicit null label, which
+    is not sent (RFC 3032), so the stream of instance 2 is sent unlabeled."""
+    instance = bbl(link_config(local_veth, streams=[{
+        "name": "S1", "type": "ipv4", "direction": "downstream", "pps": 100,
+        "network-interface": local_veth.if2, "destination-ipv4-address": "100.0.0.1",
+        "ldp-ipv4-lookup-address": LSR_ID_1}]))
+
+    def info():
+        return instance.ctrl("stream-info", **{"flow-id": 1})["stream-info"]
+    wait_until(lambda: info()["rx-packets"] > 100, 30, message="stream received")
+    db = instance.ctrl("ldp-database", **{"ldp-instance-id": 2})["ldp-database"]
+    assert {e["prefix"]: e["label"] for e in db}[LSR_ID_1 + "/32"] == 3
+    assert "rx-mpls1" not in info()
+
+
+def test_ldp_two_peers(local_veth, bbl, tmp_path):
+    """Two peers (instance 1 and 3) advertise the same FEC with different
+    labels to instance 2 (targeted LDP). If one session goes down, the
+    mapping of the other peer is used."""
+    files = {}
+    for i, base in ((1, 10000), (3, 30000)):
+        files[i] = str(tmp_path / ("update%d.ldp" % i))
+        ldpupdate(["-l", "10.2.3.%d" % i, "-p", prefix(1) + "/32", "-m", str(base), "-P", "1", "-f", files[i]])
+    neighbor = {"address": LSR_ID_2, "network-interface": local_veth.if1}
+    instance = bbl({
+        "interfaces": {"network": [
+            {"interface": local_veth.if1, "address": "10.0.0.1/24", "gateway": "10.0.0.2"},
+            {"interface": local_veth.if2, "address": "10.0.0.2/24", "gateway": "10.0.0.1"}]},
+        "ldp": [
+            {"instance-id": 1, "lsr-id": "10.2.3.1", "raw-update-file": files[1], "targeted-neighbors": [neighbor]},
+            {"instance-id": 3, "lsr-id": "10.2.3.3", "raw-update-file": files[3], "targeted-neighbors": [neighbor]},
+            {"instance-id": 2, "lsr-id": LSR_ID_2, "targeted-hello-accept": True}]})
+
+    def entry():
+        for e in instance.ctrl("ldp-database", **{"ldp-instance-id": 2})["ldp-database"]:
+            if e["prefix"] == prefix(1) + "/32":
+                return e
+        return {}
+
+    def operational():
+        return [s["state"] for s in instance.ctrl("ldp-sessions", **{"ldp-instance-id": 2})["ldp-sessions"]]
+
+    wait_until(lambda: operational() == ["operational", "operational"], 30, message="two sessions operational")
+    wait_until(lambda: entry().get("active"), 10, message="label learned")
+    # Both mappings are received.
+    wait_until(lambda: all(s.get("raw-update-state") == "done" for i in (1, 3)
+                           for s in instance.ctrl("ldp-sessions", **{"ldp-instance-id": i})["ldp-sessions"]),
+               10, message="RAW updates sent")
+    first = entry()["source-identifier"]
+    other = {"10.2.3.1:0": ("10.2.3.3:0", 30000), "10.2.3.3:0": ("10.2.3.1:0", 10000)}[first]
+    instance.ctrl("ldp-disconnect", **{"ldp-instance-id": 1 if first == "10.2.3.1:0" else 3})
+    wait_until(lambda: (entry().get("active"), entry().get("source-identifier"), entry().get("label")) ==
+               (True,) + other, 5, 0.2, message="mapping of the other peer used")
+
+
+def test_ldp_disconnect_ipv6_filter(local_veth, bbl):
+    """ldp-disconnect with IPv6 address filters."""
+    v4, v6 = TARGETED["ipv4"]["transport"], TARGETED["ipv6"]["transport"]
+    ldp = []
+    for i in (0, 1):
+        ldp.append({"instance-id": i + 1, "lsr-id": v4[i], "ipv6-transport-address": v6[i],
+                    "no-ipv4-transport": True, "targeted-neighbors": [{"address": v6[1 - i]}]})
+    instance = bbl({"interfaces": {"network": targeted_interfaces(local_veth)}, "ldp": ldp})
+
+    def states():
+        return [s["state"] for s in instance.ctrl("ldp-sessions", **{"ldp-instance-id": 1})["ldp-sessions"]]
+    wait_until(lambda: states() == ["operational"], 30, message="IPv6 session operational")
+    result = instance.ctrl("ldp-disconnect", **{"ldp-instance-id": 1, "peer-ipv6-address": "fc00:1::99"})
+    assert result["ldp-disconnect"]["disconnected"] == 0
+    assert states() == ["operational"]
+    result = instance.ctrl("ldp-disconnect", **{"ldp-instance-id": 1, "peer-ipv6-address": v6[1]})
+    assert result["ldp-disconnect"]["disconnected"] == 1
+
+
+HELLO_SCRIPT = """
+import socket, struct, sys
+from scapy.all import Ether, IP, UDP, Raw, sendp
+hello = struct.pack(">HHHBB", 0x0400, 4, 15, 0, 0) + struct.pack(">HH", 0x0401, 4) + socket.inet_aton("10.0.0.2")
+msg = struct.pack(">HHI", 0x0100, 4 + len(hello), 1) + hello
+body = socket.inet_aton("10.2.3.2") + b"\\x00\\x00" + msg
+pdu = struct.pack(">HH", 1, len(body)) + body
+sendp(Ether(dst="01:00:5e:00:00:02")/IP(src="10.0.0.2", dst="224.0.0.2", ttl=1)/UDP(sport=12345, dport=646)/Raw(pdu),
+      iface=sys.argv[1], count=3, inter=0.2, verbose=False)
+"""
+
+
+def test_ldp_hello_source_port(topology, processes, tmp_path):
+    """Hellos are accepted from any source port (RFC 5036 section 2.4)."""
+    instance = BngBlaster(topology.a, tmp_path).start({
+        "interfaces": {"network": {"interface": topology.if_a, "address": "10.0.0.1/24",
+                                   "gateway": "10.0.0.2", "ldp-instance-id": 1}},
+        "ldp": [{"instance-id": 1, "lsr-id": LSR_ID_1}]}, logging=("info", "ldp"))
+    processes.append(instance)
+    topology.b.exec([sys.executable, "-c", HELLO_SCRIPT, topology.if_b])
+    wait_until(lambda: instance.ctrl("ldp-adjacencies")["ldp-adjacencies"][0]["state"] == "up", 5,
+               message="LDP adjacency up")

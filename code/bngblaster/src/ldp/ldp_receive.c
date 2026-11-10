@@ -37,12 +37,18 @@ struct keyval_ ldp_status_names[] = {
     { LDP_STATUS_HOLD_TIMER_EXPIRED,        "hold timer expired" },
     { LDP_STATUS_KEEPALIVE_TIMER_EXPIRED,   "keepalive timer expired" },
     { LDP_STATUS_SHUTDOWN,                  "shutdown" },
+    { LDP_STATUS_MISSING_MSG_PARAMS,        "missing message parameters" },
+    { LDP_STATUS_SESSION_REJECTED_NO_HELLO, "session rejected/no hello" },
     { LDP_STATUS_INTERNAL_ERROR,            "internal error" },
     { 0, NULL}
 };
 
+/**
+ * Close the session with a fatal error notification, the status
+ * code is kept if already set by the decoder (RFC 5036 section 3.9).
+ */
 static void 
-ldp_fatal_error(ldp_session_s *session, const char* message)
+ldp_fatal_error(ldp_session_s *session, const char* message, uint32_t status_code)
 {
     LOG(LDP, "LDP (%s - %s) %s\n",
         ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
@@ -51,9 +57,16 @@ ldp_fatal_error(ldp_session_s *session, const char* message)
 
     session->decode_error = true;
     if(!session->error_code) {
-        session->error_code = LDP_STATUS_INTERNAL_ERROR|LDP_STATUS_FATAL_ERROR;
+        session->error_code = status_code|LDP_STATUS_FATAL_ERROR;
     }
     ldp_session_close(session);
+}
+
+/* Messages are accepted from initialization until the session closes. */
+static bool
+ldp_session_receiving(ldp_session_s *session)
+{
+    return session->state >= LDP_INITIALIZED && session->state <= LDP_OPERATIONAL;
 }
 
 static bool
@@ -97,6 +110,10 @@ ldp_notification(ldp_session_s *session, uint8_t *start, uint16_t length)
         status_code, keyval_get_key(ldp_status_names, status_code), 
         (f_bit ? " with forwarding bit set" : ""));
 
+    if(e_bit) {
+        /* The session is closed without notification (RFC 5036 section 3.5.1). */
+        ldp_session_close_received(session);
+    }
     return true;
 }
 
@@ -134,13 +151,17 @@ ldp_label_message(ldp_session_s *session, uint8_t *start, uint16_t length, bool 
         }
         switch(tlv_type) {
             case LDP_TLV_TYPE_FEC:
-                if(tlv_length < LDP_FEC_LEN_MIN) {
+                if(tlv_length < 1) {
                     return false;
                 }
                 fec_element = tlv_start+LDP_TLV_LEN_MIN;
                 fec_length = tlv_length;
-                if(withdraw && *fec_element == LDP_FEC_ELEMENT_TYPE_WILDCARD) {
+                /* The wildcard FEC element is the type only (RFC 5036 section 3.4.1.1). */
+                if(*fec_element == LDP_FEC_ELEMENT_TYPE_WILDCARD) {
                     break;
+                }
+                if(*fec_element == LDP_FEC_ELEMENT_TYPE_PREFIX && tlv_length < LDP_FEC_LEN_MIN) {
+                    return false;
                 }
                 if(*fec_element != LDP_FEC_ELEMENT_TYPE_PREFIX) {
                     /* Unknown FEC (e.g. PWid FEC 128 over targeted
@@ -169,16 +190,33 @@ ldp_label_message(ldp_session_s *session, uint8_t *start, uint16_t length, bool 
     if(!fec_element) {
         return true;
     }
-    if(withdraw && *fec_element == LDP_FEC_ELEMENT_TYPE_WILDCARD) {
-        LOG(LDP, "LDP (%s - %s) withdraw all labels (wildcard FEC)\n",
+    if(label_present && label > LDP_LABEL_MAX) {
+        LOG(LDP, "LDP (%s - %s) ignore label message with invalid label %u\n",
+            ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+            ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id),
+            label);
+        return true;
+    }
+    if(*fec_element == LDP_FEC_ELEMENT_TYPE_WILDCARD) {
+        if(withdraw) {
+            LOG(LDP, "LDP (%s - %s) withdraw all labels (wildcard FEC)\n",
+                ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+                ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
+            ldb_db_withdraw_session(session, label, !label_present);
+        }
+        return true;
+    }
+    if(!withdraw && !label_present) {
+        /* The label TLV is mandatory (RFC 5036 section 3.5.7),
+         * label TLVs other than generic labels are not supported. */
+        LOG(LDP, "LDP (%s - %s) ignore label mapping without generic label\n",
             ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
             ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
-        ldb_db_withdraw_session(session, label, !label_present);
         return true;
     }
 
     /* Read all FEC elements. */
-    while(fec_length >= LDP_FEC_LEN_MIN) {
+    while(fec_length >= LDP_FEC_LEN_MIN && *fec_element == LDP_FEC_ELEMENT_TYPE_PREFIX) {
         fec_afi = read_be_uint(fec_element+1, 2);
         prefix_length = *(fec_element+3);
         prefix_bytes = BITS_TO_BYTES(prefix_length);
@@ -232,14 +270,21 @@ ldp_label_message(ldp_session_s *session, uint8_t *start, uint16_t length, bool 
     return true;
 }
 
+/*
+ * Initialization message (RFC 5036 section 3.5.3), the Common Session
+ * Parameters TLV is mandatory and must have protocol version 1, a
+ * keepalive time other than zero and the own LDP identifier as receiver
+ * (otherwise Session Rejected/No Hello, RFC 5036 section 2.5.3).
+ */
 static bool
 ldp_initialization(ldp_session_s *session, uint8_t *start, uint16_t length)
 {
     uint8_t *tlv_start = start;
     uint16_t tlv_type;
     uint16_t tlv_length;
+    bool common = false;
 
-    while(length > LDP_TLV_LEN_MIN) {
+    while(length >= LDP_TLV_LEN_MIN) {
         tlv_type = read_be_uint(tlv_start, 2) & 0x3FFF;
         tlv_length = read_be_uint(tlv_start+2, 2);
         if(tlv_length+LDP_TLV_LEN_MIN > length) {
@@ -250,14 +295,32 @@ ldp_initialization(ldp_session_s *session, uint8_t *start, uint16_t length)
                 if(tlv_length < 14) {
                     return false;
                 }
+                if(read_be_uint(tlv_start+4, 2) != 1) {
+                    session->error_code = LDP_STATUS_BAD_VERSION|LDP_STATUS_FATAL_ERROR;
+                    return false;
+                }
+                if(read_be_uint(tlv_start+6, 2) == 0) {
+                    session->error_code = LDP_STATUS_BAD_TLV_VALUE|LDP_STATUS_FATAL_ERROR;
+                    return false;
+                }
+                if(*(uint32_t*)(tlv_start+12) != session->local.lsr_id ||
+                   read_be_uint(tlv_start+16, 2) != session->local.label_space_id) {
+                    session->error_code = LDP_STATUS_SESSION_REJECTED_NO_HELLO|LDP_STATUS_FATAL_ERROR;
+                    return false;
+                }
                 session->peer.keepalive_time = read_be_uint(tlv_start+6, 2);
                 session->peer.max_pdu_len = read_be_uint(tlv_start+10, 2);
+                common = true;
                 break;
             default:
                 break;
         }
         length -= (tlv_length+LDP_TLV_LEN_MIN);
         tlv_start += (tlv_length+LDP_TLV_LEN_MIN);
+    }
+    if(!common) {
+        session->error_code = LDP_STATUS_MISSING_MSG_PARAMS|LDP_STATUS_FATAL_ERROR;
+        return false;
     }
     ldp_session_fsm(session, LDP_EVENT_RX_INITIALIZED);
     return true;
@@ -303,7 +366,7 @@ ldp_read(ldp_session_s *session)
     uint16_t msg_length;
     uint32_t msg_id;
 
-    while(!session->decode_error) {
+    while(!session->decode_error && ldp_session_receiving(session)) {
         pdu_start = buffer->data+buffer->start_idx;
         size = buffer->idx - buffer->start_idx;
 
@@ -319,10 +382,13 @@ ldp_read(ldp_session_s *session)
          * the total length of the PDU in octets, excluding the version 
          * and PDU length fields. */
 
-        if(pdu_version != 1 || 
-           pdu_length < LDP_IDENTIFIER_LEN || 
+        if(pdu_version != 1) {
+            ldp_fatal_error(session, "invalid PDU received (version)", LDP_STATUS_BAD_VERSION);
+            return;
+        }
+        if(pdu_length < LDP_IDENTIFIER_LEN || 
            pdu_length > session->max_pdu_len) {
-            ldp_fatal_error(session, "invalid PDU received");
+            ldp_fatal_error(session, "invalid PDU received (length)", LDP_STATUS_BAD_PDU_LEN);
             return;
         }
 
@@ -339,7 +405,7 @@ ldp_read(ldp_session_s *session)
 
         if(lsr_id != session->peer.lsr_id || 
            label_space_id != session->peer.label_space_id) {
-            ldp_fatal_error(session, "invalid PDU received (wrong label space)");
+            ldp_fatal_error(session, "invalid PDU received (wrong label space)", LDP_STATUS_BAD_IDENTIFIER);
             return;
         }
 
@@ -353,7 +419,7 @@ ldp_read(ldp_session_s *session)
             msg_id = read_be_uint(msg_start+4, 4);
             /* The message length includes the mandatory message ID. */
             if(msg_length < 4 || msg_length+4 > pdu_length) {
-                ldp_fatal_error(session, "invalid PDU received");
+                ldp_fatal_error(session, "invalid PDU received (message length)", LDP_STATUS_BAD_MSG_LEN);
                 return;
             }
 
@@ -367,13 +433,13 @@ ldp_read(ldp_session_s *session)
             switch(msg_type) {
                 case LDP_MESSAGE_TYPE_NOTIFICATION:
                     if(!ldp_notification(session, msg_start+8, msg_length-4)) {
-                        ldp_fatal_error(session, "invalid PDU received (notification message)");
+                        ldp_fatal_error(session, "invalid PDU received (notification message)", LDP_STATUS_BAD_TLV_LEN);
                         return;
                     }
                     break;
                 case LDP_MESSAGE_TYPE_INITIALIZATION:
                     if(!ldp_initialization(session, msg_start+8, msg_length-4)) {
-                        ldp_fatal_error(session, "invalid PDU received (initialization message)");
+                        ldp_fatal_error(session, "invalid PDU received (initialization message)", LDP_STATUS_BAD_TLV_LEN);
                         return;
                     }
                     break;
@@ -382,14 +448,22 @@ ldp_read(ldp_session_s *session)
                     ldp_session_fsm(session, LDP_EVENT_RX_KEEPALIVE);
                     break;
                 case LDP_MESSAGE_TYPE_LABEL_MAPPING:
+                    if(session->state != LDP_OPERATIONAL) {
+                        /* Only initialization and keepalive are expected
+                         * before operational (RFC 5036 section 2.5.4). */
+                        break;
+                    }
                     if(!ldp_label_message(session, msg_start+8, msg_length-4, false)) {
-                        ldp_fatal_error(session, "invalid PDU received (label mapping message)");
+                        ldp_fatal_error(session, "invalid PDU received (label mapping message)", LDP_STATUS_BAD_TLV_LEN);
                         return;
                     }
                     break;
                 case LDP_MESSAGE_TYPE_LABEL_WITHDRAW:
+                    if(session->state != LDP_OPERATIONAL) {
+                        break;
+                    }
                     if(!ldp_label_message(session, msg_start+8, msg_length-4, true)) {
-                        ldp_fatal_error(session, "invalid PDU received (label withdraw message)");
+                        ldp_fatal_error(session, "invalid PDU received (label withdraw message)", LDP_STATUS_BAD_TLV_LEN);
                         return;
                     }
                     break;
@@ -404,6 +478,10 @@ ldp_read(ldp_session_s *session)
             }
             pdu_length -= (msg_length+4);
             msg_start += (msg_length+4);
+            if(session->decode_error || !ldp_session_receiving(session)) {
+                /* Session closed by the message (e.g. notification). */
+                return;
+            }
         }
 
         /* Progress pointer to next LDP PDU. */

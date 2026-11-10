@@ -73,6 +73,8 @@
 #define LDP_STATUS_KEEPALIVE_TIMER_EXPIRED          0x00000014
 
 #define LDP_STATUS_SHUTDOWN                         0x0000000A
+#define LDP_STATUS_MISSING_MSG_PARAMS               0x0000000B
+#define LDP_STATUS_SESSION_REJECTED_NO_HELLO        0x0000000E
 #define LDP_STATUS_INTERNAL_ERROR                   0x00000019
 
 #define LDP_STATUS_FATAL_ERROR                      0x80000000
@@ -82,6 +84,9 @@
 #define LDP_DEFAULT_HOLD_TIME                       15
 #define LDP_DEFAULT_TARGETED_HOLD_TIME              45
 #define LDP_DEFAULT_TEARDOWN_TIME                   5
+
+#define LDP_LABEL_IMPLICIT_NULL                     3
+#define LDP_LABEL_MAX                               0xFFFFF
 
 typedef enum ldp_state_ {
     LDP_CLOSED,
@@ -112,7 +117,18 @@ typedef struct ldp_session_ ldp_session_s;
 typedef struct ldp_adjacency_ ldp_adjacency_s;
 
 /*
- * LDP database entry
+ * LDP label mapping of a session for a database entry.
+ */
+typedef struct ldp_db_mapping_ {
+    ldp_session_s *session;
+    uint32_t label;
+    struct ldp_db_mapping_ *next;
+} ldp_db_mapping_s;
+
+/*
+ * LDP database entry, keyed by prefix and prefix length. The label
+ * and source are those of the selected mapping, the entry is active
+ * as long as any session has a mapping (RFC 5036 liberal retention).
  */
 typedef struct ldp_db_entry_ {
     iana_afi_t afi;
@@ -124,6 +140,7 @@ typedef struct ldp_db_entry_ {
     uint32_t label;
     uint32_t version;
     ldp_session_s *source;
+    ldp_db_mapping_s *mappings;
 } ldp_db_entry_s;
 
 /*
@@ -202,6 +219,7 @@ typedef struct ldp_session_ {
 
     struct timer_ *update_timer;
     struct timer_ *teardown_timer;
+    struct timer_ *hello_hold_timer; /* No hello from the peer (RFC 5036 section 2.5.5). */
 
     io_buffer_t read_buf;
     io_buffer_t write_buf;
@@ -214,6 +232,8 @@ typedef struct ldp_session_ {
 
     bool decode_error;
     bool active;
+    bool counted; /* Counted in routing_sessions. */
+    bool wait_hello; /* Reconnect only with the next hello. */
     ldp_state_t state;
     uint32_t state_transitions;
     uint16_t max_pdu_len;

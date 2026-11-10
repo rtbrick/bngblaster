@@ -158,6 +158,19 @@ The LDP transport IP address can be explicitly configured for the
 LDP instance using the option ``ipv4-transport-address``. The ``lsr-id``
 is used as a transport IP address if not explicitly configured.
 
+The session is terminated if no hello (link or targeted) of the peer
+is received within the hold time (RFC 5036), and established again with
+the next hello. On teardown, the BNG Blaster stops sending hellos and
+closes all sessions, sessions not closed within **teardown-time** are
+closed without waiting for the peer.
+
+The BNG Blaster advertises its addresses and the LSR identifier and
+interface prefixes with implicit null label, and with IPv6 transport
+enabled also its IPv6 addresses and prefixes (RFC 7552). A dual-stack
+instance establishes the session with the preferred transport only if
+the peer has the same preference. An IPv4 only instance ignores the
+dual-stack capability of the peer.
+
 .. note:: 
     
     It is currently not supported to setup multiple links between 
@@ -203,7 +216,10 @@ label using the learned label mappings.
 The traffic stream configuration options ``ldp-ipv4-lookup-address``
 and ``ldp-ipv6-lookup-address`` specify the lookup IPv4 or IPv6 address.
 This means that traffic will not start until this address is found in the 
-corresponding label database of the sending network interface function. 
+corresponding label database of the sending network interface function,
+which is the LDP instance of the interface (``ldp-instance-id``) or
+of a targeted neighbor using this interface. The implicit null label
+(3) is not sent, the stream is sent without this label.
 
 .. code-block:: json
 
@@ -254,10 +270,14 @@ corresponding label database of the sending network interface function.
         ]
     }
 
-Labels withdrawn by the peer (label withdraw message) and all labels of a
-session which went down are kept as inactive entries (``active`` false) and
-are not used by traffic streams, which stop sending until the label is
-advertised again.
+The database has one entry per prefix (address and prefix length) with
+the label mappings of all sessions. The entry shows the label of the
+selected mapping, which is kept as long as its session advertises the
+prefix, traffic streams prefer the mapping of a session on their network
+interface. Labels withdrawn by the peer (label withdraw message) and all
+labels of a session which went down are removed, entries without mapping
+are kept as inactive entries (``active`` false) and are not used by traffic
+streams, which stop sending until the label is advertised again.
 
 The ``ldp-ipv4-lookup-address`` and ``ldp-ipv6-lookup-address`` are mutually exclusive
 and must exactly match the prefix address as shown in the LDP database. This means
@@ -265,8 +285,9 @@ that if the prefix is `10.0.0.0/24`, the lookup address should be `10.0.0.0`.
 
 .. note::
 
-    There is currently no longest prefix match supported, 
-    meaning that the actual prefix length is ignored! 
+    There is currently no longest prefix match supported, if several
+    prefixes with this address exist, the one with the longest prefix
+    length is used. 
 
 RAW Update Files
 ~~~~~~~~~~~~~~~~

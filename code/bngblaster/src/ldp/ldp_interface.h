@@ -26,6 +26,9 @@ ldp_targeted_adjacency_add(ldp_instance_s *instance,
                            ldp_targeted_neighbor_config_s *neighbor,
                            bool configured);
 
+void
+ldp_targeted_adjacency_free(ldp_adjacency_s *adjacency);
+
 bool
 ldp_targeted_init();
 

@@ -1760,7 +1760,7 @@
                 "ldp-instance-id": {
                     "type": "integer",
                     "description": "Assign interface to LDP instance",
-                    "minimum": 0,
+                    "minimum": 1,
                     "maximum": 65535
                 },
                 "cfm-cc": {
@@ -3485,7 +3485,7 @@
                 "instance-id": {
                     "type": "integer",
                     "description": "LDP instance identifier",
-                    "minimum": 0,
+                    "minimum": 1,
                     "maximum": 65535
                 },
                 "keepalive-time": {
@@ -3499,7 +3499,7 @@
                     "type": "integer",
                     "description": "Hello hold time in seconds",
                     "default": 15,
-                    "minimum": 0,
+                    "minimum": 1,
                     "maximum": 65535
                 },
                 "teardown-time": {

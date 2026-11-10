@@ -244,6 +244,10 @@ void
 ldp_hello_job(timer_s *timer)
 {
     ldp_adjacency_s *adjacency = timer->data;
+    if(adjacency->instance->teardown) {
+        timer->periodic = false;
+        return;
+    }
     if(adjacency->targeted_wait_resolve && ldp_hello_targeted_resolved(adjacency)) {
         /* Send first hello and continue with the regular interval. */
         ldp_hello_start(adjacency);
@@ -290,8 +294,8 @@ ldp_hello_hold_timeout_job(timer_s *timer)
         LOG(LDP, "LDP targeted hold timeout for %s\n",
             ldp_targeted_peer_address(adjacency));
         if(!adjacency->targeted_configured) {
-            /* Stop hellos to an accepted peer which no longer sends hellos. */
-            timer_del(adjacency->hello_timer);
+            /* Remove an accepted peer which no longer sends hellos. */
+            ldp_targeted_adjacency_free(adjacency);
         }
     } else {
         LOG(LDP, "LDP hold timeout on interface %s\n", adjacency->interface->name);
@@ -319,7 +323,8 @@ ldp_hello_restart_hold_timeout(ldp_adjacency_s *adjacency)
  * ldp_hello_session
  *
  * Search the session for a received hello. Link and targeted
- * adjacencies to the same peer share one session.
+ * adjacencies to the same peer share one session, whose hello
+ * hold timer is restarted with every hello of the peer.
  *
  * @return true if a new session should be initialised, with the
  *         closed session to reuse or NULL
@@ -339,12 +344,66 @@ ldp_hello_session(ldp_adjacency_s *adjacency,
                 *_session = session;
                 return true;
             } else {
+                ldp_session_hello(session, adjacency->hold_time);
                 return false;
             }
         }
         session = session->next;
     }
     return true;
+}
+
+/**
+ * ldp_hello_transport
+ *
+ * Check the dual-stack capability TLV (RFC 7552 section 6.1), which is
+ * ignored by single-stack instances. A dual-stack instance establishes
+ * the session only with the hellos of the preferred transport and
+ * ignores peers with another preference.
+ *
+ * @param adjacency LDP adjacency
+ * @param ldp received LDP hello
+ * @param family address family of the hello (4 or 6)
+ * @return true if the session should be initialised with this hello
+ */
+static bool
+ldp_hello_transport(ldp_adjacency_s *adjacency, bbl_ldp_hello_s *ldp, uint8_t family)
+{
+    ldp_config_s *config = adjacency->instance->config;
+    uint8_t local;
+
+    if(config->no_ipv4_transport || !ipv6_addr_not_zero(&config->ipv6_transport_address) ||
+       !ldp->dual_stack_capability) {
+        return true;
+    }
+    local = config->prefer_ipv4_transport ? 4 : 6;
+    if(ldp->dual_stack_capability != local) {
+        LOG(LDP, "LDP transport connection mismatch with %s (local %u, peer %u)\n",
+            format_ipv4_address(&ldp->lsr_id), local, ldp->dual_stack_capability);
+        return false;
+    }
+    return family == local;
+}
+
+/**
+ * ldp_hello_link_hold_time
+ *
+ * The hold time is the minimum of the local and the currently
+ * received hold time, with zero as default (RFC 5036 section 2.5.5).
+ */
+static void
+ldp_hello_link_hold_time(ldp_adjacency_s *adjacency, bbl_ldp_hello_s *ldp)
+{
+    uint16_t hold_time = adjacency->instance->config->hold_time;
+    uint16_t received = ldp->hold_time ? ldp->hold_time : LDP_DEFAULT_HOLD_TIME;
+
+    if(received < hold_time) {
+        hold_time = received;
+    }
+    if(hold_time != adjacency->hold_time) {
+        adjacency->hold_time = hold_time;
+        ldp_hello_start(adjacency);
+    }
 }
 
 /**
@@ -409,7 +468,7 @@ ldp_hello_targeted_adjacency(bbl_network_interface_s *interface,
         }
         instance = instance->next;
     }
-    if(!(accept && accept->config->targeted_hello_accept)) {
+    if(!(accept && accept->config->targeted_hello_accept && !accept->teardown)) {
         LOG(PACKET, "LDP RX targeted hello from %s ignored\n",
             ipv6 ? format_ipv6_address(src) : format_ipv4_address(src));
         return NULL;
@@ -437,18 +496,15 @@ ldp_hello_targeted_rx(ldp_adjacency_s *adjacency,
         ldp_targeted_peer_address(adjacency), adjacency->interface->name);
     adjacency->hello_rx++;
 
-    /* A hold time of zero means default (45 seconds). */
-    if(!ldp->hold_time) {
-        ldp->hold_time = LDP_DEFAULT_TARGETED_HOLD_TIME;
+    /* A hold time of zero means default (45 seconds), the hold time is
+     * the minimum of the local and the received one (RFC 5036 section 2.5.5). */
+    uint16_t hold_time = adjacency->instance->config->targeted_hold_time;
+    uint16_t received = ldp->hold_time ? ldp->hold_time : LDP_DEFAULT_TARGETED_HOLD_TIME;
+    if(received < hold_time) {
+        hold_time = received;
     }
-    if(adjacency->state == LDP_ADJACENCY_STATE_DOWN) {
-        adjacency->hold_time = adjacency->instance->config->targeted_hold_time;
-    }
-    /* The hellos of accepted adjacencies are stopped on hold timeout. */
-    if(ldp->hold_time < adjacency->hold_time || !adjacency->hello_timer) {
-        if(ldp->hold_time < adjacency->hold_time) {
-            adjacency->hold_time = ldp->hold_time;
-        }
+    if(hold_time != adjacency->hold_time || !adjacency->hello_timer) {
+        adjacency->hold_time = hold_time;
         ldp_hello_start(adjacency);
     }
     ldp_hello_restart_hold_timeout(adjacency);
@@ -479,27 +535,23 @@ ldp_hello_ipv4_rx(bbl_network_interface_s *interface,
             return;
         }
         adjacency = ldp_hello_targeted_adjacency(interface, false, &ipv4->src, &ipv4->dst);
-        if(!adjacency) {
+        if(!adjacency || adjacency->instance->teardown) {
             return;
         }
         ldp_hello_targeted_rx(adjacency, ldp);
     } else {
-        if(!(adjacency && adjacency->hello_ipv4)) {
+        if(!(adjacency && adjacency->hello_ipv4) || adjacency->instance->teardown) {
             return;
         }
         LOG(PACKET, "LDP RX IPv4 hello on interface %s\n", interface->name);
-        if(ldp->hold_time > 0 && ldp->hold_time < adjacency->hold_time) {
-            adjacency->hold_time = ldp->hold_time;
-            ldp_hello_start(adjacency);
-        }
+        ldp_hello_link_hold_time(adjacency, ldp);
         ldp_hello_restart_hold_timeout(adjacency);
     }
 
     if(!ldp_hello_session(adjacency, ldp, &session)) {
         return;
     }
-    if(ldp->dual_stack_capability &&
-       ldp->dual_stack_capability != 4) {
+    if(!ldp_hello_transport(adjacency, ldp, 4)) {
         return;
     }
     /* Init LDP session. */
@@ -531,27 +583,23 @@ ldp_hello_ipv6_rx(bbl_network_interface_s *interface,
             return;
         }
         adjacency = ldp_hello_targeted_adjacency(interface, true, ipv6->src, ipv6->dst);
-        if(!adjacency) {
+        if(!adjacency || adjacency->instance->teardown) {
             return;
         }
         ldp_hello_targeted_rx(adjacency, ldp);
     } else {
-        if(!(adjacency && adjacency->hello_ipv6)) {
+        if(!(adjacency && adjacency->hello_ipv6) || adjacency->instance->teardown) {
             return;
         }
         LOG(PACKET, "LDP RX IPv6 hello on interface %s\n", interface->name);
-        if(ldp->hold_time > 0 && ldp->hold_time < adjacency->hold_time) {
-            adjacency->hold_time = ldp->hold_time;
-            ldp_hello_start(adjacency);
-        }
+        ldp_hello_link_hold_time(adjacency, ldp);
         ldp_hello_restart_hold_timeout(adjacency);
     }
 
     if(!ldp_hello_session(adjacency, ldp, &session)) {
         return;
     }
-    if(ldp->dual_stack_capability &&
-       ldp->dual_stack_capability != 6) {
+    if(!ldp_hello_transport(adjacency, ldp, 6)) {
         return;
     }
     /* Init LDP session. */

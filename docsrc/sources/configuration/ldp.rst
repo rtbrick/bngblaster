@@ -6,7 +6,7 @@
 | Attribute                        | Description                                                |
 +==================================+============================================================+
 | **instance-id**                  | | Mandatory LDP instance identifier.                       |
-| **instance-id**                  | | Range: 0 - 65535                                         |
+|                                  | | Range: 1 - 65535                                         |
 +----------------------------------+------------------------------------------------------------+
 | **keepalive-time**               | | LDP session keepalive time in seconds.                   |
 |                                  | | The **keepalive-time** defines the local LDP session     |
@@ -24,9 +24,10 @@
 |                                  | | Default: 15 Range: 1 - 65535                             |
 +----------------------------------+------------------------------------------------------------+
 | **hold-time**                    | | LDP hello hold time in seconds.                          |
-|                                  | | Default: 15 Range: 0 - 65535                             |
+|                                  | | Default: 15 Range: 1 - 65535                             |
 +----------------------------------+------------------------------------------------------------+
-| **teardown-time**                | | LDP teardown time in seconds.                            |
+| **teardown-time**                | | Maximum time in seconds to wait for LDP sessions to      |
+|                                  | | close gracefully on teardown before they are closed.     |
 |                                  | | Default: 5 Range: 0 - 65535                              |
 +----------------------------------+------------------------------------------------------------+
 | **hostname**                     | | LDP hostname.                                            |

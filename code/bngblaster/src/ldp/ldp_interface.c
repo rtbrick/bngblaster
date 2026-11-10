@@ -35,6 +35,7 @@ ldp_interface_init(bbl_network_interface_s *interface,
     adjacency->interface = interface;
     adjacency->hold_time = config->hold_time;
     interface->ldp_adjacency = adjacency;
+    interface->ldp_instance = instance;
 
     if(!config->no_ipv4_transport) {
         adjacency->hello_ipv4 = true;
@@ -104,6 +105,9 @@ ldp_targeted_adjacency_add(ldp_instance_s *instance,
     adjacency->interface = interface;
     adjacency->hold_time = config->targeted_hold_time;
     adjacency->targeted = true;
+    if(!interface->ldp_instance) {
+        interface->ldp_instance = instance;
+    }
     adjacency->targeted_configured = configured;
     if(neighbor->ipv6) {
         adjacency->hello_ipv6 = true;
@@ -128,6 +132,32 @@ ldp_targeted_adjacency_add(ldp_instance_s *instance,
         ldp_targeted_peer_address(adjacency), ldp_targeted_local_address(adjacency),
         interface->name, config->id);
     return adjacency;
+}
+
+/**
+ * ldp_targeted_adjacency_free
+ *
+ * Remove an accepted targeted adjacency from the instance.
+ *
+ * @param adjacency targeted LDP adjacency
+ */
+void
+ldp_targeted_adjacency_free(ldp_adjacency_s *adjacency)
+{
+    ldp_adjacency_s **ptr = &adjacency->instance->adjacencies;
+
+    while(*ptr) {
+        if(*ptr == adjacency) {
+            *ptr = adjacency->next;
+            break;
+        }
+        ptr = &(*ptr)->next;
+    }
+    LOG(LDP, "Remove LDP targeted neighbor %s from LDP instance %u\n",
+        ldp_targeted_peer_address(adjacency), adjacency->instance->config->id);
+    timer_del(adjacency->hello_timer);
+    timer_del(adjacency->hold_timer);
+    free(adjacency);
 }
 
 /**

@@ -139,7 +139,7 @@ def label_type(label: int) -> int:
 def main():
     # parse arguments
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument('-l', '--lsr-id', metavar='ADDRESS', type=ipaddress.ip_address, required=True, help='LSR identifier')
+    parser.add_argument('-l', '--lsr-id', metavar='ADDRESS', type=ipaddress.IPv4Address, required=True, help='LSR identifier (IPv4)')
     parser.add_argument('-i', '--message-id-base', metavar='N', type=int, default=1000, help='message identifier base')
     parser.add_argument('-w', '--withdraw', action="store_true", help='withdraw')
     parser.add_argument('-a', '--address-base', metavar='ADDRESS', type=ipaddress.ip_address, help='address message base')
@@ -168,10 +168,13 @@ def main():
         log.info("init %s addresses" % (args.address_num))
 
         address = args.address_base
-        for _ in range(args.address_num):
+        for i in range(args.address_num):
+            if i:
+                # The next address is computed only if needed, as the
+                # last one might be at the end of the address space.
+                address += 1
             log.debug("add address %s" % (address))
             addresses.append(address)
-            address += 1
 
     prefixes = []
     if args.prefix_base and args.prefix_num > 0:
@@ -180,7 +183,11 @@ def main():
         prefix = args.prefix_base
         label_index = 0
         label = args.label_base
-        for _ in range(args.prefix_num):
+        for i in range(args.prefix_num):
+            if i:
+                # The next prefix is computed only if needed, as the
+                # last one might be at the end of the address space.
+                prefix = ipaddress.ip_network("%s/%s" % (prefix.broadcast_address+1, prefix.prefixlen))
             log.debug("add prefix %s via label %s" % (prefix, label))
             prefixes.append((prefix, label))
 
@@ -193,8 +200,6 @@ def main():
             else:
                 label_index = 0
                 label = args.label_base
-
-            prefix = ipaddress.ip_network("%s/%s" % (prefix.broadcast_address+1, prefix.prefixlen))
 
     if len(addresses) + len(prefixes) == 0:
         exit(0)

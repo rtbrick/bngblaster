@@ -768,14 +768,18 @@ bbl_stream_network_labels(bbl_stream_s *stream, bbl_stream_vpn_s *vpn,
     bbl_stream_config_s *config = stream->config;
     /* Set by the TX thread, also used by the main thread (VPWS). */
     ldp_db_entry_s *ldp_entry = __atomic_load_n(&stream->ldp_entry, __ATOMIC_RELAXED);
+    uint32_t transport_label = config->tx_mpls1_label;
+    bool transport = config->tx_mpls1;
 
-    if(config->tx_mpls1 || ldp_entry) {
+    if(ldp_entry) {
+        transport_label = ldb_db_label(ldp_entry, stream->tx_network_interface);
+        /* The implicit null label is never sent (RFC 3032 section 2.1). */
+        transport = transport_label != LDP_LABEL_IMPLICIT_NULL;
+    }
+
+    if(transport) {
         eth->mpls = mpls1;
-        if(ldp_entry) {
-            mpls1->label = ldp_entry->label;
-        } else {
-            mpls1->label = config->tx_mpls1_label;
-        }
+        mpls1->label = transport_label;
         mpls1->exp = config->tx_mpls1_exp;
         mpls1->ttl = config->tx_mpls1_ttl;
         if(config->tx_mpls2 || vpn->valid) {
@@ -792,6 +796,12 @@ bbl_stream_network_labels(bbl_stream_s *stream, bbl_stream_vpn_s *vpn,
         /* No transport label (e.g. directly connected PE). */
         eth->mpls = mpls1;
         mpls1->label = vpn->label;
+        mpls1->exp = config->tx_mpls2_exp;
+        mpls1->ttl = config->tx_mpls2_ttl;
+    } else if(ldp_entry && config->tx_mpls2) {
+        /* Implicit null transport label with inner label. */
+        eth->mpls = mpls1;
+        mpls1->label = config->tx_mpls2_label;
         mpls1->exp = config->tx_mpls2_exp;
         mpls1->ttl = config->tx_mpls2_ttl;
     }
@@ -1669,20 +1679,22 @@ static bool
 bbl_stream_ldp_lookup(bbl_stream_s *stream)
 {
     ldp_db_entry_s *entry = stream->ldp_entry;
+    ldp_instance_s *instance;
     uint32_t version;
 
     if(!entry) {
+        /* Instance of link or targeted LDP on the interface. */
+        instance = stream->tx_network_interface->ldp_instance;
+        if(!instance) {
+            return false;
+        }
         if(pthread_rwlock_tryrdlock(&g_ctx->label_db_lock) != 0) {
             return false;
         }
         if(stream->config->ipv4_ldp_lookup_address) {
-            entry = ldb_db_lookup_ipv4(
-                stream->tx_network_interface->ldp_adjacency->instance, 
-                stream->config->ipv4_ldp_lookup_address);
+            entry = ldb_db_lookup_ipv4(instance, stream->config->ipv4_ldp_lookup_address);
         } else if (*(uint64_t*)stream->config->ipv6_ldp_lookup_address) {
-            entry = ldb_db_lookup_ipv6(
-                stream->tx_network_interface->ldp_adjacency->instance, 
-                &stream->config->ipv6_ldp_lookup_address);
+            entry = ldb_db_lookup_ipv6(instance, &stream->config->ipv6_ldp_lookup_address);
         }
         pthread_rwlock_unlock(&g_ctx->label_db_lock);
         if(!entry) {
@@ -2457,9 +2469,8 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
             stream_down->tx_flags |= (STREAM_FLAG_NETWORK|STREAM_FLAG_DOWNSTREAM);
             stream_down->tx_network_interface = network_interface;
             stream_down->tx_interface = network_interface->interface;
-            if(network_interface->ldp_adjacency && 
-               (config->ipv4_ldp_lookup_address || 
-                *(uint64_t*)stream_down->config->ipv6_ldp_lookup_address)) {
+            if(config->ipv4_ldp_lookup_address || 
+               *(uint64_t*)stream_down->config->ipv6_ldp_lookup_address) {
                 stream_down->tx_flags |= STREAM_FLAG_LDP;
             }
             if(config->bgp_evpn || config->bgp_l2vpn) {
@@ -2613,9 +2624,8 @@ bbl_stream_init() {
                     stream->tx_flags |= (STREAM_FLAG_NETWORK|STREAM_FLAG_DOWNSTREAM);
                     stream->tx_network_interface = network_interface;
                     stream->tx_interface = network_interface->interface;
-                    if(network_interface->ldp_adjacency && 
-                    (config->ipv4_ldp_lookup_address || 
-                        *(uint64_t*)stream->config->ipv6_ldp_lookup_address)) {
+                    if(config->ipv4_ldp_lookup_address || 
+                       *(uint64_t*)stream->config->ipv6_ldp_lookup_address) {
                         stream->tx_flags |= STREAM_FLAG_LDP;
                     }
                     if(config->bgp_evpn || config->bgp_l2vpn) {

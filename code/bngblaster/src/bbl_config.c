@@ -1163,7 +1163,7 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     }
 
     /* LDP interface configuration */
-    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ldp-instance-id", 0, 65535);
+    JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ldp-instance-id", 1, 65535);
     if(value) {
         network_config->ldp_instance_id = json_number_value(value);
     }
@@ -2859,7 +2859,7 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         return false;
     }
 
-    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "instance-id", 0, 65535);
+    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "instance-id", 1, 65535);
     if(value) {
         ldp_config->id = json_number_value(value);
     } else {
@@ -2874,7 +2874,7 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         ldp_config->keepalive_time = LDP_DEFAULT_KEEPALIVE_TIME;
     }
 
-    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "hold-time", 0, 65535);
+    JSON_OBJ_GET_NUMBER(ldp, value, "ldp", "hold-time", 1, 65535);
     if(value) {
         ldp_config->hold_time = json_number_value(value);
     } else {
