@@ -303,6 +303,15 @@ class GoBgp:
                 return afi_safi["state"].get("received", 0)
         return 0
 
+    def end_of_rib(self, address, afi, safi):
+        """Return True if End-of-RIB of a family was received."""
+        for afi_safi in self.neighbor(address).get("afi_safis", []):
+            family = afi_safi.get("state", {}).get("family", {})
+            if family.get("afi", 0) == afi and family.get("safi", 0) == safi:
+                state = afi_safi.get("mp_graceful_restart", {}).get("state", {})
+                return state.get("end_of_rib_received", False)
+        return False
+
     def adj_in(self, address, family):
         return self.cli(["neighbor", address, "adj-in", "-a", family])
 
@@ -472,7 +481,7 @@ class Bird:
 
 
 AFI_IP, AFI_IP6, AFI_L2VPN = 1, 2, 25
-SAFI_UNICAST, SAFI_EVPN = 1, 70
+SAFI_UNICAST, SAFI_LABELED_UNICAST, SAFI_EVPN = 1, 4, 70
 
 
 def gobgp_mpls_label(label):

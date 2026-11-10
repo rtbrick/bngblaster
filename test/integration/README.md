@@ -4,9 +4,13 @@ Functional tests over veth pairs between network namespaces:
 
 * BNG Blaster L2TP LAC against BNG Blaster L2TP LNS
   (`test_l2tp_lac_lns.py`)
-* BNG Blaster BGP against GoBGP: IPv4/IPv6 unicast, connection
-  collision, negotiated and zero hold time, MD5, TCP-AO and EVPN
+* BNG Blaster BGP against GoBGP: IPv4/IPv6 unicast and labeled
+  unicast with End-of-RIB and withdraw, connection collision,
+  negotiated and zero hold time, MD5, TCP-AO and EVPN
   (`test_bgp_*.py`)
+* RAW update generator output: path attribute order, empty AS_PATH,
+  End-of-RIB per family, labeled withdraw encoding and L2VPN routes
+  that do not fit into a message (`test_bgpupdate.py`)
 * BNG Blaster RAW updates over 1000 BGP sessions in parallel against
   a slow receiver with zero windows (`test_bgp_scale.py`, `bgp_sink.py`)
 * BNG Blaster BGP sessions on 300 local addresses accepted from a peer

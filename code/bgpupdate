@@ -41,6 +41,9 @@ LOG_LEVELS = {
 
 MPLS_LABEL_MIN = 1
 MPLS_LABEL_MAX = 1048575
+# Label field of withdrawn labeled routes (RFC 8277 section 2.4)
+BGP_WITHDRAW_LABEL = 0x800000
+BGP_WITHDRAW_LABEL_STR = "withdraw"
 
 BGP_UPDATE_MIN_LEN = 34
 BGP_LOCAL_PREF_LEN = 7
@@ -52,6 +55,18 @@ BGP_MP_REACH_IPV6_FIXED_HDR_LEN = 26
 # SCAPY EXTENSIONS
 # ==============================================================
 
+def label_value(label: str):
+    """Label of a labeled prefix string, None for withdrawn routes."""
+    return None if label == BGP_WITHDRAW_LABEL_STR else int(label)
+
+
+def label_field(label) -> bytes:
+    """Encode the 3 byte label field with bottom of stack bit set,
+    or the withdraw compatibility value if label is None."""
+    value = BGP_WITHDRAW_LABEL if label is None else (label << 4) | 1
+    return struct.pack(">I", value)[1:]
+
+
 class BGPFieldLabeledIPv4(Field):
     """Labeled IPv4 Field (CIDR)."""
 
@@ -62,12 +77,12 @@ class BGPFieldLabeledIPv4(Field):
     def h2i(self, pkt, h):
         """Human (x.x.x.x/y/zzzz) to internal representation."""
         ip, mask, label = re.split("/", h)
-        return int(label), int(mask), ip
+        return label_value(label), int(mask), ip
 
     def i2h(self, pkt, i):
         """Internal to human (x.x.x.x/y/zzzz) representation."""
         label, mask, ip = i
-        return "%s/%s/%s" %(ip, mask, label)
+        return "%s/%s/%s" %(ip, mask, BGP_WITHDRAW_LABEL_STR if label is None else label)
 
     def i2repr(self, pkt, i):
         return self.i2h(pkt, i)
@@ -81,7 +96,7 @@ class BGPFieldLabeledIPv4(Field):
         label, mask, ip = i
         len = mask + 24
         ip = socket.inet_aton(ip)
-        return struct.pack(">B", len) + struct.pack(">I", (label << 4) | 1)[1:] + ip[:self.mask2iplen(mask)]
+        return struct.pack(">B", len) + label_field(label) + ip[:self.mask2iplen(mask)]
 
     def addfield(self, pkt, s, val):
         return s + self.i2m(pkt, val)
@@ -103,12 +118,12 @@ class BGPFieldLabeledIPv6(Field):
     def h2i(self, pkt, h):
         """Human (::/y/zzzz) to internal representation."""
         ip, mask, label = re.split("/", h)
-        return int(label), int(mask), ip
+        return label_value(label), int(mask), ip
 
     def i2h(self, pkt, i):
         """Internal to human (::/y/zzzz) representation."""
         label, mask, ip = i
-        return "%s/%s/%s" %(ip, mask, label)
+        return "%s/%s/%s" %(ip, mask, BGP_WITHDRAW_LABEL_STR if label is None else label)
 
     def i2repr(self, pkt, i):
         return self.i2h(pkt, i)
@@ -122,7 +137,7 @@ class BGPFieldLabeledIPv6(Field):
         label, mask, ip = i
         len = mask + 24
         ip = pton_ntop.inet_pton(socket.AF_INET6, ip)
-        return struct.pack(">B", len) + struct.pack(">I", (label << 4) | 1)[1:] + ip[:self.mask2iplen(mask)]
+        return struct.pack(">B", len) + label_field(label) + ip[:self.mask2iplen(mask)]
 
     def addfield(self, pkt, s, val):
         return s + self.i2m(pkt, val)
@@ -678,8 +693,8 @@ def l2vpn(args, log):
                     stream["rx-control-word"] = True
                 streams.append(stream)
 
-    evpn_streams_write(args, log, streams)
     updates = evpn_write(args, log, routes, BGP_SAFI_VPLS)
+    evpn_streams_write(args, log, streams)
     log.info("finished (%s instances in %s updates)" % (args.service_num, updates))
 
 
@@ -731,6 +746,10 @@ def evpn_write(args, log, routes: list, safi: int = BGP_SAFI_EVPN):
             if s_next_hop != next_hop or s_route_attr != route_attr:
                 break
             if fixed_len + len(nlri) + len(s_nlri) > BGP_MAXIMUM_MESSAGE_SIZE:
+                if not nlri:
+                    log.error("route with NLRI of %s bytes does not fit into a BGP update message "
+                              "(reduce --label-block-size)" % len(s_nlri))
+                    exit(1)
                 break
             nlri += s_nlri
             index += 1
@@ -738,7 +757,8 @@ def evpn_write(args, log, routes: list, safi: int = BGP_SAFI_EVPN):
             path_attr = bgp_attr(0x80, 15, struct.pack("!HB", BGP_AFI_L2VPN, safi) + nlri)
         else:
             mp_reach = struct.pack("!HBB", BGP_AFI_L2VPN, safi, len(nh)) + nh + b"\x00" + nlri
-            path_attr = attr + bgp_attr(0x80, 14, mp_reach)
+            # MP_REACH_NLRI first (RFC 7606 section 5.1)
+            path_attr = bgp_attr(0x80, 14, mp_reach) + attr
         messages.append(bgp_update(path_attr))
 
     if args.end_of_rib:
@@ -1026,7 +1046,10 @@ def main():
 
     with open(args.file, file_flags) as f:
         origin_attr = BGPPathAttr(type_flags=64, type_code="ORIGIN", attribute=BGPPAOrigin())
-        as_path_attr = BGPPathAttr(type_flags=64, type_code="AS_PATH", attribute=BGPPAAS4BytesPath(segments = [BGPPAAS4BytesPath.ASPathSegment(segment_type="AS_SEQUENCE", segment_value=args.asn)]))
+        segments = []
+        if args.asn:
+            segments.append(BGPPAAS4BytesPath.ASPathSegment(segment_type="AS_SEQUENCE", segment_value=args.asn))
+        as_path_attr = BGPPathAttr(type_flags=64, type_code="AS_PATH", attribute=BGPPAAS4BytesPath(segments=segments))
 
         if args.local_pref is not None:
             local_pref_attr = BGPPathAttr(type_flags=64, type_code="LOCAL_PREF", attribute=BGPPALocalPref(local_pref=args.local_pref))
@@ -1045,14 +1068,7 @@ def main():
 
                 remaining = BGP_MAXIMUM_MESSAGE_SIZE - (BGP_UPDATE_MIN_LEN + (len(args.asn) * 4))
 
-                if args.local_pref is not None:
-                    remaining -= BGP_LOCAL_PREF_LEN
-                    path_attr.append(local_pref_attr)
-
-                if args.med is not None:
-                    remaining -= BGP_MED_LEN
-                    path_attr.append(med_attr)
-
+                # Attributes are ordered by type code (RFC 4271 section 5).
                 if ip_version == 4:
                     if labeled:
                         remaining -= BGP_MP_REACH_IPV4_FIXED_HDR_LEN
@@ -1062,6 +1078,14 @@ def main():
                         path_attr.append(BGPPathAttr(type_flags=64, type_code="NEXT_HOP", attribute=next_hop_attr))
                 else:
                     remaining -= BGP_MP_REACH_IPV6_FIXED_HDR_LEN
+
+                if args.med is not None:
+                    remaining -= BGP_MED_LEN
+                    path_attr.append(med_attr)
+
+                if args.local_pref is not None:
+                    remaining -= BGP_LOCAL_PREF_LEN
+                    path_attr.append(local_pref_attr)
 
                 if args.withdraw:
                     path_attr = []
@@ -1075,15 +1099,11 @@ def main():
                     prefix, label = prefix_list.pop(0)
                     prefix_count += 1
                     if labeled:
-                        labeled_prefix = "%s/%s" % (prefix, label)
+                        labeled_prefix = "%s/%s" % (prefix, BGP_WITHDRAW_LABEL_STR if args.withdraw else label)
                         if prefix.version == 4:
                             nlri.append(BGPNLRI_LabeledIPv4(prefix=labeled_prefix))
                         else:
                             nlri.append(BGPNLRI_LabeledIPv6(prefix=labeled_prefix))
-                        # There is a limitation which allows to withdraw only one prefix
-                        # per update message for SAFI labeled-unicast. 
-                        if args.withdraw:
-                            break
                     else:
                         if prefix.version == 4:
                             nlri.append(BGPNLRI_IPv4(prefix=str(prefix)))
@@ -1098,16 +1118,18 @@ def main():
                     continue
 
                 if labeled or ip_version == 6:
+                    # afi_safi_specific holds a single packet, so labeled
+                    # withdrawn routes are passed as raw NLRI.
                     if ip_version == 4:
                         # labeled IPv4 unicast
                         if args.withdraw:
-                            mp_reach_attr = BGPPAMPUnreachNLRI(afi=1, safi=4, afi_safi_specific=nlri)
+                            mp_reach_attr = BGPPAMPUnreachNLRI(afi=1, safi=4, afi_safi_specific=Raw(b"".join(raw(n) for n in nlri)))
                         else:
                             mp_reach_attr = BGPPAMPReachNLRI(afi=1, safi=4, nh_v4_addr=next_hops[nh_index], nh_addr_len=4, nlri=nlri)
                     elif labeled and ip_version == 6:
                         # labeled IPv6 unicast
                         if args.withdraw:
-                            mp_reach_attr = BGPPAMPUnreachNLRI(afi=2, safi=4, afi_safi_specific=nlri)
+                            mp_reach_attr = BGPPAMPUnreachNLRI(afi=2, safi=4, afi_safi_specific=Raw(b"".join(raw(n) for n in nlri)))
                         else:
                             mp_reach_attr = BGPPAMPReachNLRI(afi=2, safi=4, nh_v6_addr=next_hops[nh_index], nh_addr_len=16, nlri=nlri)
                     else:
@@ -1117,10 +1139,11 @@ def main():
                         else:
                             mp_reach_attr = BGPPAMPReachNLRI(afi=2, safi=1, nh_v6_addr=next_hops[nh_index], nh_addr_len=16, nlri=nlri)
 
+                    # MP_REACH_NLRI and MP_UNREACH_NLRI first (RFC 7606 section 5.1)
                     if args.withdraw:
-                        path_attr.append(BGPPathAttr(type_flags=144, type_code="MP_UNREACH_NLRI", attribute=mp_reach_attr))
+                        path_attr.insert(0, BGPPathAttr(type_flags=144, type_code="MP_UNREACH_NLRI", attribute=mp_reach_attr))
                     else:
-                        path_attr.append(BGPPathAttr(type_flags=144, type_code="MP_REACH_NLRI", attribute=mp_reach_attr))
+                        path_attr.insert(0, BGPPathAttr(type_flags=144, type_code="MP_REACH_NLRI", attribute=mp_reach_attr))
                     nlri = []    
 
                 # build update message
@@ -1138,10 +1161,16 @@ def main():
 
         # add end-of-rib update message
         if args.end_of_rib:
-            message = BGPHeader(type="UPDATE")/BGPUpdate()
+            if labeled or ip_version == 6:
+                # End-of-RIB is an empty MP_UNREACH_NLRI (RFC 4724 section 2)
+                afi = 1 if ip_version == 4 else 2
+                safi = 4 if labeled else 1
+                message = bgp_update(bgp_attr(0x80, 15, struct.pack("!HB", afi, safi)))
+            else:
+                message = bgp_update(b"")
             log.debug("add end-of-rib")
-            pcap(message)
-            f.write(bytearray(message.build()))
+            pcap(Raw(message))
+            f.write(message)
 
     if args.pcap:
         log.info("create PCAP file %s" % args.pcap)

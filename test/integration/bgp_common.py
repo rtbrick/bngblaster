@@ -22,6 +22,8 @@ GOBGP_AS = 4200000001  # 4-octet AS to verify the capability parsing
 GOBGP_FAMILIES = {
     "ipv4-unicast": "ipv4-unicast",
     "ipv6-unicast": "ipv6-unicast",
+    "ipv4-labeled-unicast": "ipv4-labelled-unicast",
+    "ipv6-labeled-unicast": "ipv6-labelled-unicast",
     "evpn": "l2vpn-evpn",
 }
 

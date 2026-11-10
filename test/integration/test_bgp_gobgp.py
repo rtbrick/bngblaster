@@ -1,5 +1,5 @@
 """
-BNG Blaster BGP against GoBGP (unicast, collision, hold time, MD5)
+BNG Blaster BGP against GoBGP (unicast, labeled unicast, collision, hold time, MD5)
 
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
@@ -11,7 +11,7 @@ import time
 import pytest
 
 from bgp_common import BBL_ADDRESS, BBL_ADDRESS6, BBL_AS, GOBGP_ADDRESS, GOBGP_ADDRESS6, GOBGP_AS, BgpSetup
-from helpers import AFI_IP, AFI_IP6, SAFI_UNICAST, bgpupdate, wait_until
+from helpers import AFI_IP, AFI_IP6, SAFI_LABELED_UNICAST, SAFI_UNICAST, bgpupdate, wait_until
 
 BBL_PREFIXES = 1000
 GOBGP_PREFIXES = 32
@@ -45,6 +45,9 @@ def test_unicast(bgp, tmp_path):
                30, message="GoBGP IPv4 prefixes received")
     wait_until(lambda: bgp.gobgp.received(BBL_ADDRESS, AFI_IP6, SAFI_UNICAST) == BBL_PREFIXES,
                30, message="GoBGP IPv6 prefixes received")
+    # The IPv6 End-of-RIB is an empty MP_UNREACH_NLRI (RFC 4724).
+    wait_until(lambda: bgp.gobgp.end_of_rib(BBL_ADDRESS, AFI_IP6, SAFI_UNICAST), 10,
+               message="GoBGP IPv6 End-of-RIB received")
 
     # GoBGP to BNG Blaster (4-octet AS path)
     for i in range(GOBGP_PREFIXES):
@@ -64,6 +67,42 @@ def test_unicast(bgp, tmp_path):
     bgp.gobgp.cli(["global", "rib", "-a", "ipv4", "del", "10.100.0.0/24"], json_output=False)
     wait_until(lambda: len(bgp.bbl_routes("ipv4-unicast")) == GOBGP_PREFIXES - 1, 10,
                message="BNG Blaster IPv4 route withdrawn")
+    bgp.teardown()
+
+
+def test_labeled_unicast(bgp, tmp_path):
+    """Labeled unicast raw updates with End-of-RIB per family, and
+    withdrawn routes packed into few updates with the RFC 8277 withdraw
+    label instead of one update per prefix."""
+    update, withdraw = str(tmp_path / "labeled.bgp"), str(tmp_path / "withdraw.bgp")
+    for path, args in ((update, ["-l", "100", "--med", "10", "--end-of-rib"]), (withdraw, ["-w"])):
+        bgpupdate(["-f", path, "-a", str(BBL_AS), "-n", BBL_ADDRESS, "-p", "10.200.0.0/24",
+                   "-P", str(BBL_PREFIXES), "-m", "10000", "-M", "100"] + args)
+        bgpupdate(["-f", path, "--append", "-a", str(BBL_AS), "-n", BBL_ADDRESS6, "-p", "fc00:200::/64",
+                   "-P", str(BBL_PREFIXES), "-m", "20000"] + args)
+    # 2 x 1000 withdrawn prefixes fit into 5 updates (one per prefix
+    # would be about 80 KB).
+    assert os.path.getsize(withdraw) < 6 * 4096
+
+    bgp.start(bbl={"bgp": {"raw-update-file": update}},
+              families=("ipv4-labeled-unicast", "ipv6-labeled-unicast"))
+    bgp.wait_established()
+    for afi in (AFI_IP, AFI_IP6):
+        wait_until(lambda: bgp.gobgp.received(BBL_ADDRESS, afi, SAFI_LABELED_UNICAST) == BBL_PREFIXES,
+                   30, message="GoBGP labeled prefixes received (AFI %d)" % afi)
+        wait_until(lambda: bgp.gobgp.end_of_rib(BBL_ADDRESS, afi, SAFI_LABELED_UNICAST), 10,
+                   message="GoBGP labeled End-of-RIB received (AFI %d)" % afi)
+    route = bgp.gobgp.adj_in(BBL_ADDRESS, "ipv4-mpls")["10.200.1.0/24"][0]
+    assert route["nlri"]["labels"] == [10001]
+    route = bgp.gobgp.adj_in(BBL_ADDRESS, "ipv6-mpls")["fc00:200:0:1::/64"][0]
+    assert route["nlri"]["labels"] == [20000]
+
+    response = bgp.bbl.ctrl("bgp-raw-update", file=withdraw)
+    assert response["bgp-raw-update"]["started"] == 1, response
+    for afi in (AFI_IP, AFI_IP6):
+        wait_until(lambda: bgp.gobgp.received(BBL_ADDRESS, afi, SAFI_LABELED_UNICAST) == 0,
+                   30, message="GoBGP labeled prefixes withdrawn (AFI %d)" % afi)
+    assert bgp.established()
     bgp.teardown()
 
 
