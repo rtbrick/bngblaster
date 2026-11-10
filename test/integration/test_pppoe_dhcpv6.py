@@ -18,6 +18,7 @@ SESSIONS = 10
 EXIT_TIMEOUT = 30
 IA_NA_ADDRESS = "fc01:100::2"  # mock_ipv6_ia_na
 IA_PD_PREFIX = "fc01:200::/56"  # mock_ipv6_ia_pd
+BBL_UDP_PORT = 65056
 
 
 @pytest.fixture
@@ -88,4 +89,17 @@ def test_ia_na_default_disabled(local_veth, bbl):
         assert info["ipv6-address"] != IA_NA_ADDRESS
         assert ipaddress.ip_address(info["ipv6-address"]) in ipaddress.ip_network(info["ipv6-prefix"])
         assert info["ipv6-delegated-prefix"] == IA_PD_PREFIX
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_session_traffic_ports(local_veth, bbl):
+    """Every session traffic flow uses the BBL UDP port, not only the first session."""
+    instance = bbl(pppoe_config(local_veth, {}))
+    wait_established(instance)
+
+    for flow_id in range(1, 6 * SESSIONS + 1):
+        info = instance.ctrl("stream-info", **{"flow-id": flow_id})["stream-info"]
+        assert info["session-traffic"]
+        assert (info["source-port"], info["destination-port"]) == (BBL_UDP_PORT, BBL_UDP_PORT), \
+            f"flow {flow_id} (session {info['session-id']}, {info['sub-type']} {info['direction']})"
     assert instance.terminate(EXIT_TIMEOUT) == 0

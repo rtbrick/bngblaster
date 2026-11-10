@@ -2281,6 +2281,28 @@ bbl_stream_alloc(bbl_stream_config_s *config, uint8_t direction, double pps)
     return stream;
 }
 
+/* Iterate layer 4 ports for the next stream of this config.
+ * A step of zero keeps the port fixed, which is the case for
+ * internally generated configs without min/max (session traffic). */
+static void
+bbl_stream_config_port_iterate(bbl_stream_config_s *config)
+{
+    if(config->src_port_step) {
+        if((config->src_port_max - config->src_port_step) < config->src_port) {
+            config->src_port = config->src_port_min;
+        } else {
+            config->src_port += config->src_port_step;
+        }
+    }
+    if(config->dst_port_step) {
+        if((config->dst_port_max - config->dst_port_step) < config->dst_port) {
+            config->dst_port = config->dst_port_min;
+        } else {
+            config->dst_port += config->dst_port_step;
+        }
+    }
+}
+
 static bool
 bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
 {
@@ -2487,17 +2509,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         stream_down->src_port = config->src_port;
         stream_down->dst_port = config->dst_port;
     }
-    /* Iterate layer 4 ports */
-    if((config->src_port_max - config->src_port_step) < config->src_port) {
-        config->src_port = config->src_port_min;
-    } else {
-        config->src_port += config->src_port_step;
-    }
-    if((config->dst_port_max - config->dst_port_step) < config->dst_port) {
-        config->dst_port = config->dst_port_min;
-    } else {
-        config->dst_port += config->dst_port_step;
-    }
+    bbl_stream_config_port_iterate(config);
     return true;
 }
 
@@ -2616,17 +2628,7 @@ bbl_stream_init() {
                     stream->src_port = config->src_port;
                     stream->dst_port = config->dst_port;
 
-                    /* Iterate layer 4 ports */
-                    if((config->src_port_max-config->src_port_step) < config->src_port) {
-                        config->src_port = config->src_port_min;
-                    } else {
-                        config->src_port += config->src_port_step;
-                    }
-                    if((config->dst_port_max-config->dst_port_step) < config->dst_port) {
-                        config->dst_port = config->dst_port_min;
-                    } else {
-                        config->dst_port += config->dst_port_step;
-                    }
+                    bbl_stream_config_port_iterate(config);
 
                     bbl_stream_add(stream);
                     if(stream->type == BBL_TYPE_MULTICAST) {
