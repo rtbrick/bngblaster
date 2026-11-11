@@ -619,7 +619,10 @@ timer_walk(timer_root_s *root)
     /* Process all changes from the last timer run. */
     timer_process_changes(root);
 
-    /* Second pass. Figure out min sleep time. */
+    /* Second pass. Figure out min sleep time. The timers of a bucket have
+     * the same interval and are queued in order of expiry, so the first
+     * timer which is not deleted is the minimum of the bucket. Scanning
+     * further would be quadratic if callbacks restart many expired timers. */
     CIRCLEQ_FOREACH(timer_bucket, &root->timer_bucket_qhead, timer_bucket_qnode) {
         CIRCLEQ_FOREACH(timer, &timer_bucket->timer_qhead, timer_qnode) {
 
@@ -628,14 +631,8 @@ timer_walk(timer_root_s *root)
                 continue;
             }
 
-            /* First timer in the queue becomes the actual minimum. */
-            if(min.tv_sec == 0 && min.tv_nsec == 0) {
-                min.tv_sec = timer->expire.tv_sec;
-                min.tv_nsec = timer->expire.tv_nsec;
-            }
-
-            /* Find the min timer. */
-            if(timespec_compare(&timer->expire, &min) == -1) {
+            if((min.tv_sec == 0 && min.tv_nsec == 0) ||
+               timespec_compare(&timer->expire, &min) == -1) {
                 min.tv_sec = timer->expire.tv_sec;
                 min.tv_nsec = timer->expire.tv_nsec;
 #ifdef BNGBLASTER_TIMER_LOGGING
@@ -643,11 +640,7 @@ timer_walk(timer_root_s *root)
                     timer->name, min.tv_sec, min.tv_nsec / 1000);
 #endif
             }
-            /* Hitting the first non-expired timer means
-             * we're done processing this buckets queue. */
-            if(timespec_compare(&timer->expire, &now) == 1) {
-                break;
-            }
+            break;
         }
     }
 
