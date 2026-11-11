@@ -1,8 +1,9 @@
 FILE(GLOB BBL_SOURCES src/*.c src/io/*.c src/isis/*.c src/ospf/*.c src/ldp/*.c src/bgp/*.c)
 list(SORT BBL_SOURCES)
 
-# Deterministic randomness for symbol name creation
-foreach(_file ${BBL_SOURCES})
+# Deterministic randomness for symbol name creation, source properties
+# are scoped to the directory of the target (also for the common sources).
+foreach(_file ${BBL_SOURCES} ${COMMON_SOURCES})
     file(SHA1 ${_file} checksum)
     string(SUBSTRING ${checksum} 0 8 checksum)
     set_property(SOURCE ${_file} APPEND_STRING PROPERTY COMPILE_FLAGS "-frandom-seed=0x${checksum}")
@@ -88,8 +89,10 @@ if(BNGBLASTER_AF_XDP)
     endif()
 endif()
 
-if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 8.0)
     target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+    target_compile_options(lwipcore PRIVATE "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
+    target_compile_options(lwipcontribportunix PRIVATE "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 endif()
 
 if(BNGBLASTER_CPU_NATIVE)

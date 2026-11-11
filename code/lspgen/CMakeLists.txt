@@ -2,8 +2,9 @@
 FILE(GLOB LSPGEN_SOURCES src/*.c)
 list(SORT LSPGEN_SOURCES)
 
-# Deterministic randomness for symbol name creation
-foreach(_file ${LSPGEN_SOURCES})
+# Deterministic randomness for symbol name creation, source properties
+# are scoped to the directory of the target (also for the common sources).
+foreach(_file ${LSPGEN_SOURCES} ${COMMON_SOURCES})
     file(SHA1 ${_file} checksum)
     string(SUBSTRING ${checksum} 0 8 checksum)
     set_property(SOURCE ${_file} APPEND_STRING PROPERTY COMPILE_FLAGS "-frandom-seed=0x${checksum}")
@@ -12,7 +13,7 @@ endforeach()
 add_executable(lspgen ${COMMON_SOURCES} ${LSPGEN_SOURCES})
 target_link_libraries(lspgen crypto jansson ${libdict} m)
 
-if(CMAKE_CXX_COMPILER_VERSION VERSION_GREATER 8.0)
+if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 8.0)
     target_compile_options(lspgen PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
 endif()
 
