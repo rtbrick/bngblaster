@@ -95,6 +95,7 @@ class Server:
         self.ipcp_acked = False
         self.ip6cp_acked = False
         self.ipcp_term_ignored = False
+        self.ip6cp_delayed = False
         self.ipcp_closed = False
         self.established_at = None
         self.lcp_hold_until = 0
@@ -306,6 +307,11 @@ class Server:
         if self.args.ip6cp != "normal":
             return
         if code == CONF_REQ:
+            if self.args.ip6cp_delay and not self.ip6cp_delayed:
+                # Answer the configure-request of the client later.
+                self.ip6cp_delayed = True
+                self.timer(self.args.ip6cp_delay, lambda: self.ip6cp(code, identifier, data))
+                return
             self.send_ppp(IP6CP, control(CONF_ACK, identifier, data))
             self.check_established()
         elif code == CONF_ACK:
@@ -419,6 +425,7 @@ def main():
     parser.add_argument("--ipcp-oversized", action="store_true", help="IPCP request above 64 byte options")
     parser.add_argument("--relay-session-id", action="store_true", help="PADO with Relay-Session-Id")
     parser.add_argument("--ac-cookie-len", type=int, default=0, help="PADO with AC-Cookie of this length")
+    parser.add_argument("--ip6cp-delay", type=float, default=0, help="delay the IP6CP configure-ack")
     parser.add_argument("--actions", default="", help="comma separated delay:action after established")
     Server(parser.parse_args()).run()
 

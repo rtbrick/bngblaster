@@ -1488,6 +1488,8 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
             if(session->ip6cp_state == BBL_PPP_TERMINATE) {
                 timer_del(session->timer_ip6cp);
                 session->ip6cp_state = BBL_PPP_CLOSED;
+                /* IP6CP closed in the network phase was still pending. */
+                bbl_access_rx_established_pppoe(interface, session, timestamp);
             }
             break;
         case PPP_CODE_CONF_REJECT:
@@ -1716,6 +1718,8 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
             if(session->ipcp_state == BBL_PPP_TERMINATE) {
                 timer_del(session->timer_ipcp);
                 session->ipcp_state = BBL_PPP_CLOSED;
+                /* IPCP closed in the network phase was still pending. */
+                bbl_access_rx_established_pppoe(interface, session, timestamp);
             }
             break;
         case PPP_CODE_CODE_REJECT:

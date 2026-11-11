@@ -159,6 +159,20 @@ def test_icmp_echo_reply(ppp):
     assert ppp.bbl.alive() and ppp.state() == "Established"
 
 
+def test_ipcp_close_in_network_phase(ppp):
+    """ipcp-close while IP6CP is still negotiated: IP6CP is opened before
+    the terminate-ack of IPCP, which then completes the network phase
+    (the session stayed in PPP Network)."""
+    ppp.start_server("--ip6cp-delay", 3, "--ipcp-ignore-first-term")
+    ppp.start_bbl()
+    wait_until(lambda: ppp.session()["ipcp-state"] == "Opened", 10, message="IPCP opened")
+    assert ppp.state() == "PPP Network"
+    ppp.bbl.ctrl("ipcp-close", **{"session-id": 1})
+    ppp.wait_state("Established", 20)
+    session = ppp.session()
+    assert (session["ipcp-state"], session["ip6cp-state"]) == ("Closed", "Opened")
+
+
 def test_ipcp_close_retransmit(ppp):
     """ipcp-close on an established session with the first terminate-request
     lost: it is retransmitted, IPCP is closed and can be opened again."""
