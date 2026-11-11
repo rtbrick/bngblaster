@@ -150,6 +150,9 @@ typedef struct bbl_stream_args_
 #define STREAM_FLAG_A10NSP          (1 << 14)
 #define STREAM_FLAG_EVPN            (1 << 15) /* label resolved from BGP EVPN or L2VPN routes */
 
+/* STREAM_FLAG_SESSION_TRAFFIC is set in rx_flags once session traffic
+ * received on an access interface is verified (see rx_session_id). */
+
 /* RX interface type flags (rx_flags), exactly one is set if
  * the RX interface union below is valid. The type never changes
  * once set, only the interface. */
@@ -246,6 +249,14 @@ typedef struct bbl_stream_
 
     uint32_t rx_mpls1_label;
     uint32_t rx_mpls2_label;
+
+    /* Expected session of verified session traffic received on access
+     * interfaces (STREAM_FLAG_SESSION_TRAFFIC set in rx_flags), RX copy
+     * to avoid reading TX cache lines and the session per packet. */
+    uint32_t rx_session_id;
+    uint16_t rx_session_outer_vlan;
+    uint16_t rx_session_inner_vlan;
+    uint8_t  rx_session_mac[ETH_ADDR_LEN];
 
     /* Main Thread */
     char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */

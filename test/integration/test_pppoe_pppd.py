@@ -188,3 +188,40 @@ def test_session_traffic_ipcp_reopen(pppd, stop_verified):
     wait_until(lambda: not pppd.bbl.ctrl("sessions-pending")["sessions-pending"], 15,
                message="session traffic verified again")
     assert verified() == (2, 2)
+
+
+def test_session_traffic_wrong_session(pppd):
+    """Verified downstream session traffic of session 1 routed by pppd to
+    session 2 is counted as wrong session of session 1 and not received
+    (verified path with the expected session copied to the stream)."""
+    topology = pppd.topology
+    vlan = topology.if_b + ".100"
+    topology.b.exec(["ip", "link", "add", "link", topology.if_b, "name", vlan, "type", "vlan", "id", "100"])
+    topology.b.exec(["ip", "link", "set", vlan, "up"])
+    helpers.kernel_address(topology.b, vlan, "192.168.1.2/24")
+    topology.b.exec(["sysctl", "-qw", "net.ipv4.ip_forward=1"])
+    pppd.start_pppd("require-pap")
+    pppd.start_bbl(interfaces={
+        "network": {"interface": topology.if_a, "vlan": 100, "address": "192.168.1.1/24",
+                    "gateway": "192.168.1.2"},
+        "access": [{"interface": topology.if_a, "type": "pppoe", "outer-vlan": 0, "inner-vlan": 0,
+                    "vlan-mode": "N:1", "username": USERNAME, "password": PASSWORD}]},
+        sessions={"count": 2, "reconnect": False},
+        **{"session-traffic": {"autostart": True, "ipv4-pps": 20}})
+    wait_until(lambda: pppd.bbl.ctrl("session-counters")["session-counters"]["sessions-established"] == 2,
+               30, message="sessions established")
+    wait_until(lambda: pppd.bbl.ctrl("session-counters")["session-counters"]["session-traffic-flows-verified"] == 4,
+               15, message="session traffic verified")
+
+    def traffic(session_id):
+        return pppd.bbl.ctrl("session-info", **{"session-id": session_id})["session-info"]["session-traffic"]
+
+    address = {i: pppd.bbl.ctrl("session-info", **{"session-id": i})["session-info"]["ipv4-address"] for i in (1, 2)}
+    links = helpers.run(topology.b.cmd(["ip", "-o", "-4", "addr", "show"]))
+    ppp2 = [l.split()[1] for l in links.splitlines() if "peer %s/32" % address[2] in l][0]
+    topology.b.exec(["ip", "route", "replace", address[1] + "/32", "dev", ppp2])
+    wait_until(lambda: traffic(1)["downstream-ipv4-wrong-session"] >= 20, 10, message="wrong session counted")
+    received = traffic(1)["downstream-ipv4-rx-packets"]
+    time.sleep(1)
+    assert traffic(1)["downstream-ipv4-rx-packets"] == received
+    assert traffic(2)["downstream-ipv4-wrong-session"] == 0

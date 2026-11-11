@@ -3107,13 +3107,12 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
         rx_last_seq = stream->rx_last_seq;
         if(rx_last_seq) {
             /* Stream already verified */
-            if(unlikely(!mac && (stream->tx_flags & STREAM_FLAG_SESSION_TRAFFIC))) {
+            if(unlikely(!mac && (stream->rx_flags & STREAM_FLAG_SESSION_TRAFFIC))) {
                 /* Session traffic delivered to another session. */
-                session = stream->session;
-                if(session && (bbl->outer_vlan_id != session->vlan_key.outer_vlan_id ||
-                               bbl->inner_vlan_id != session->vlan_key.inner_vlan_id ||
-                               bbl->session_id != session->session_id ||
-                               memcmp(session->client_mac, eth->dst, ETH_ADDR_LEN) != 0)) {
+                if(bbl->outer_vlan_id != stream->rx_session_outer_vlan ||
+                   bbl->inner_vlan_id != stream->rx_session_inner_vlan ||
+                   bbl->session_id != stream->rx_session_id ||
+                   memcmp(stream->rx_session_mac, eth->dst, ETH_ADDR_LEN) != 0) {
                     if(stream->rx_wrong_session < UINT32_MAX) {
                         stream->rx_wrong_session++;
                     }
@@ -3203,6 +3202,13 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                         }
                         return NULL;
                     }
+                    /* Expected session for the verified path. */
+                    stream->rx_session_id = session->session_id;
+                    stream->rx_session_outer_vlan = session->vlan_key.outer_vlan_id;
+                    stream->rx_session_inner_vlan = session->vlan_key.inner_vlan_id;
+                    memcpy(stream->rx_session_mac, session->client_mac, ETH_ADDR_LEN);
+                    __atomic_store_n(&stream->rx_flags, stream->rx_flags|STREAM_FLAG_SESSION_TRAFFIC,
+                                     __ATOMIC_RELEASE);
                 }
             }
             if(stream->rx_nat && eth->type == ETH_TYPE_IPV4) {
