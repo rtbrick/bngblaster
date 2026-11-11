@@ -165,10 +165,19 @@ void
 isis_teardown_job(timer_s *timer) {
     isis_instance_s *instance = timer->data;
     isis_adjacency_s *adjacency;
+    isis_adjacency_p2p_s *adjacency_p2p;
     for(int i=0; i<ISIS_LEVELS; i++) {
         adjacency = instance->level[i].adjacency;
         while(adjacency) {
             isis_adjacency_down(adjacency, "teardown");
+            adjacency_p2p = adjacency->interface->isis_adjacency_p2p;
+            if(adjacency->p2p && adjacency_p2p &&
+               adjacency_p2p->state != ISIS_P2P_ADJACENCY_STATE_DOWN) {
+                /* Signal the neighbor that the adjacency is down. */
+                adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
+                adjacency_p2p->peer->state = ISIS_PEER_STATE_DOWN;
+                adjacency->interface->send_requests |= BBL_IF_SEND_ISIS_P2P_HELLO;
+            }
             adjacency = adjacency->next;
         }
     }

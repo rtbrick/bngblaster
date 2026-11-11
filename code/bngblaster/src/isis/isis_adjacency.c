@@ -131,6 +131,12 @@ isis_adjacency_up(isis_adjacency_s *adjacency)
     if(adjacency->state == ISIS_ADJACENCY_STATE_UP) {
         return;
     }
+    if(adjacency->instance->teardown) {
+        /* Hellos received after the teardown job set the adjacencies
+         * down must not bring them up again, the instance would never
+         * terminate (routing sessions). */
+        return;
+    }
 
     LOG(ISIS, "ISIS %s adjacency UP to %s on interface %s \n", 
         isis_level_string(adjacency->level), 

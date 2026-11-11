@@ -167,6 +167,11 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
 
     adjacency_p2p->stats.hello_rx++;
 
+    if(instance->teardown && adjacency_p2p->state == ISIS_P2P_ADJACENCY_STATE_DOWN) {
+        /* Set down by the teardown job, keep it down. */
+        return;
+    }
+
     if((interface->isis_adjacency[ISIS_LEVEL_1_IDX]) && config->level1_auth_hello) {
         auth = config->level1_auth;
         key = config->level1_key;

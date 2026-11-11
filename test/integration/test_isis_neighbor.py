@@ -11,6 +11,7 @@ SPDX-License-Identifier: BSD-3-Clause
 import hashlib
 import hmac
 import struct
+import threading
 import time
 
 import pytest
@@ -438,6 +439,58 @@ def test_pseudonode_lsp(setup):
     wait_until(lambda: not adjacency_up(bbl), 15, message="adjacency down")
     db = database(bbl)
     assert all(db[i]["lifetime-remaining"] == 0 for i in pseudo if i in db)
+
+
+class P2PHellos(threading.Thread):
+    """Neighbor which keeps sending P2P hellos with state up."""
+    def __init__(self, peer, circuit, interval=1):
+        super().__init__(daemon=True)
+        self.peer, self.circuit, self.interval = peer, circuit, interval
+        self.stop = False
+
+    def run(self):
+        while not self.stop:
+            self.peer.send(self.peer.p2p_hello(ip.P2P_UP, neighbor=BBL_SYSID,
+                                               neighbor_circuit=self.circuit, hold=30))
+            time.sleep(self.interval)
+
+
+def test_teardown_p2p_hellos(setup):
+    """Hellos received after isis-teardown do not bring the P2P adjacency
+    up again, so the instance terminates."""
+    bbl, peer = setup(isis={"teardown-time": 1})
+    hellos = P2PHellos(peer, p2p_up(peer))
+    hellos.start()
+    try:
+        wait_until(lambda: adjacency_up(bbl), 5, message="adjacency up")
+        assert bbl.ctrl("isis-teardown")["code"] == 200
+        wait_until(lambda: not adjacency_up(bbl), 10, message="adjacency down")
+        time.sleep(3)
+        assert not adjacency_up(bbl)
+        assert bbl.terminate(30) == 0
+    finally:
+        hellos.stop = True
+    assert open(bbl.path("log")).read().count("adjacency UP") == 1
+
+
+def test_terminate_p2p_hellos_ospf(topology, processes, tmp_path):
+    """Terminate with IS-IS P2P and OSPF: OSPF keeps the instance running
+    after the IS-IS teardown, hellos received meanwhile do not bring the
+    IS-IS adjacency up again."""
+    config = bbl_config(topology.if_a, isis={"teardown-time": 1},
+                        network={"ospfv2-instance-id": 1, "ospfv2-type": "p2p"})
+    config["ospf"] = [{"instance-id": 1, "version": 2, "router-id": "10.10.0.1"}]
+    bbl = BngBlaster(topology.a, tmp_path).start(config, logging=("info", "isis"))
+    processes.append(bbl)
+    peer = ip.IsisPeer(topology.b, topology.if_b, sysid=PEER_SYSTEM_ID)
+    hellos = P2PHellos(peer, p2p_up(peer), interval=0.3)
+    hellos.start()
+    try:
+        wait_until(lambda: adjacency_up(bbl), 5, message="adjacency up")
+        assert bbl.terminate(30) == 0
+    finally:
+        hellos.stop = True
+        peer.close()
 
 
 @pytest.mark.slow
