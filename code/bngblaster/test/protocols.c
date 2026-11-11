@@ -169,6 +169,10 @@ test_protocols_ethernet_over_mpls_no_cw(void **unused) {
     test_protocols_ethernet_over_mpls(false, 0x00, 100, 0, false);
     test_protocols_ethernet_over_mpls(false, 0x02, 100, 200, true);
     test_protocols_ethernet_over_mpls(false, 0x00, 100, 200, true);
+    /* Destination MAC starting with nibble 4 or 6 (IPv4/IPv6 candidate). */
+    test_protocols_ethernet_over_mpls(false, 0x40, 0, 0, false);
+    test_protocols_ethernet_over_mpls(false, 0x64, 0, 0, false);
+    test_protocols_ethernet_over_mpls(false, 0x46, 100, 0, false);
 }
 
 /* ARP within EVPN VPWS services (vpws-arp) with and without PW control
@@ -954,6 +958,99 @@ test_protocols_udp_checksum_zero(void **unused) {
     assert_int_equal(ones6, 1);
 }
 
+/* Server DUIDs up to 130 bytes and the Client Identifier are decoded,
+ * longer DUIDs are invalid (RFC 8415 section 11.1). */
+static void
+test_protocols_dhcpv6_duid(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[1024];
+    uint16_t len = 0;
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    uint8_t client_duid[20];
+    uint8_t server_duid[DHCPV6_DUID_LEN_MAX + 1];
+    ipv6addr_t src_ip = {0};
+    ipv6addr_t dst_ip = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_dhcpv6_s dhcpv6 = {0};
+    bbl_ethernet_header_s *decoded;
+    bbl_dhcpv6_s *decoded_dhcpv6;
+
+    memset(client_duid, 0x11, sizeof(client_duid));
+    memset(server_duid, 0x22, sizeof(server_duid));
+    inet_pton(AF_INET6, "fe80::1", src_ip);
+    inet_pton(AF_INET6, "fe80::2", dst_ip);
+    eth.dst = dst;
+    eth.src = src;
+    eth.type = ETH_TYPE_IPV6;
+    eth.next = &ipv6;
+    ipv6.src = src_ip;
+    ipv6.dst = dst_ip;
+    ipv6.protocol = IPV6_NEXT_HEADER_UDP;
+    ipv6.ttl = 64;
+    ipv6.next = &udp;
+    udp.src = DHCPV6_UDP_SERVER;
+    udp.dst = DHCPV6_UDP_CLIENT;
+    udp.protocol = UDP_PROTOCOL_DHCPV6;
+    udp.next = &dhcpv6;
+    dhcpv6.type = DHCPV6_MESSAGE_REPLY;
+    dhcpv6.xid = 0x123456;
+    dhcpv6.client_duid = client_duid;
+    dhcpv6.client_duid_len = sizeof(client_duid);
+    dhcpv6.server_duid = server_duid;
+    dhcpv6.server_duid_len = 100;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    decoded_dhcpv6 = (bbl_dhcpv6_s*)((bbl_udp_s*)((bbl_ipv6_s*)decoded->next)->next)->next;
+    assert_int_equal(decoded_dhcpv6->server_duid_len, 100);
+    assert_memory_equal(decoded_dhcpv6->server_duid, server_duid, 100);
+    assert_int_equal(decoded_dhcpv6->client_duid_len, sizeof(client_duid));
+    assert_memory_equal(decoded_dhcpv6->client_duid, client_duid, sizeof(client_duid));
+
+    dhcpv6.server_duid_len = DHCPV6_DUID_LEN_MAX + 1;
+    len = 0;
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), DECODE_ERROR);
+    free(sp);
+}
+
+/* The Relay-Session-Id tag is decoded and encoded (RFC 2516 appendix A). */
+static void
+test_protocols_pppoe_relay_session_id(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[512];
+    uint16_t len = 0;
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    uint8_t relay_session_id[12] = {1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12};
+    bbl_ethernet_header_s eth = {0};
+    bbl_pppoe_discovery_s pppoe = {0};
+    bbl_ethernet_header_s *decoded;
+    bbl_pppoe_discovery_s *decoded_pppoe;
+
+    eth.dst = dst;
+    eth.src = src;
+    eth.type = ETH_TYPE_PPPOE_DISCOVERY;
+    eth.next = &pppoe;
+    pppoe.code = PPPOE_PADR;
+    pppoe.relay_session_id = relay_session_id;
+    pppoe.relay_session_id_len = sizeof(relay_session_id);
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    decoded_pppoe = (bbl_pppoe_discovery_s*)decoded->next;
+    assert_int_equal(decoded_pppoe->relay_session_id_len, sizeof(relay_session_id));
+    assert_memory_equal(decoded_pppoe->relay_session_id, relay_session_id, sizeof(relay_session_id));
+    free(sp);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -974,6 +1071,8 @@ int main() {
         cmocka_unit_test(test_protocols_igmpv3_query_short),
         cmocka_unit_test(test_protocols_isis_jumbo),
         cmocka_unit_test(test_protocols_udp_checksum_zero),
+        cmocka_unit_test(test_protocols_dhcpv6_duid),
+        cmocka_unit_test(test_protocols_pppoe_relay_session_id),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

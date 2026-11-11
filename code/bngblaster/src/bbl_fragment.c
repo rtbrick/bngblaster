@@ -8,6 +8,12 @@
  */
 #include "bbl.h"
 
+static uint32_t
+bbl_fragment_hash(bbl_ipv4_s *ipv4)
+{
+    return (ipv4->src ^ ipv4->dst ^ (ipv4->id * 2654435761U) ^ ipv4->protocol) % BBL_FRAGMENT_HASH_SIZE;
+}
+
 static void
 bbl_fragment_free(bbl_fragment_s *ipv4_fragment)
 {
@@ -19,7 +25,40 @@ bbl_fragment_free(bbl_fragment_s *ipv4_fragment)
     } else {
         g_ctx->ipv4_fragments = ipv4_fragment->next;
     }
+    if(ipv4_fragment->hash_next) {
+        ipv4_fragment->hash_next->hash_prev = ipv4_fragment->hash_prev;
+    }
+    if(ipv4_fragment->hash_prev) {
+        ipv4_fragment->hash_prev->hash_next = ipv4_fragment->hash_next;
+    } else {
+        g_ctx->ipv4_fragment_hash[(ipv4_fragment->src ^ ipv4_fragment->dst ^
+                                   (ipv4_fragment->id * 2654435761U) ^ ipv4_fragment->protocol) %
+                                  BBL_FRAGMENT_HASH_SIZE] = ipv4_fragment->hash_next;
+    }
+    g_ctx->ipv4_fragment_count--;
     free(ipv4_fragment);
+}
+
+/* Mark the 8 byte blocks of a fragment as received and
+ * return the number of new blocks (duplicates and overlaps
+ * are not counted, RFC 791 reassembly by fragment offset). */
+static uint16_t
+bbl_fragment_blocks(bbl_fragment_s *fragment, uint16_t offset, uint16_t length)
+{
+    uint16_t block = offset / 8;
+    uint16_t last = (offset + length + 7) / 8;
+    uint16_t added = 0;
+    uint64_t bit;
+
+    while(block < last && block < BBL_FRAGMENT_BLOCKS) {
+        bit = 1ULL << (block % 64);
+        if(!(fragment->blocks[block / 64] & bit)) {
+            fragment->blocks[block / 64] |= bit;
+            added++;
+        }
+        block++;
+    }
+    return added;
 }
 
 /**
@@ -55,24 +94,45 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
     uint16_t length;
     time_t timestamp;
 
+    uint32_t hash;
+
+    if(!g_ctx->ipv4_fragment_hash) return;
+
+    hash = bbl_fragment_hash(ipv4);
+    fragment = g_ctx->ipv4_fragment_hash[hash];
     while(fragment) {
         if(fragment->id == ipv4->id &&
            fragment->src == ipv4->src &&
-           fragment->dst == ipv4->dst) {
+           fragment->dst == ipv4->dst &&
+           fragment->protocol == ipv4->protocol) {
             break;
         }
-        fragment = fragment->next;
+        fragment = fragment->hash_next;
     }
     if(!fragment) {
+        if(g_ctx->ipv4_fragment_count >= BBL_FRAGMENT_MAX) {
+            /* Limit the memory, entries expire after 10 seconds. */
+            return;
+        }
         fragment = calloc(1, sizeof(bbl_fragment_s));
+        if(!fragment) {
+            return;
+        }
         fragment->id = ipv4->id;
         fragment->src = ipv4->src;
         fragment->dst = ipv4->dst;
+        fragment->protocol = ipv4->protocol;
         if(g_ctx->ipv4_fragments) {
             g_ctx->ipv4_fragments->prev = fragment;
             fragment->next = g_ctx->ipv4_fragments;
         }
         g_ctx->ipv4_fragments = fragment;
+        if(g_ctx->ipv4_fragment_hash[hash]) {
+            g_ctx->ipv4_fragment_hash[hash]->hash_prev = fragment;
+            fragment->hash_next = g_ctx->ipv4_fragment_hash[hash];
+        }
+        g_ctx->ipv4_fragment_hash[hash] = fragment;
+        g_ctx->ipv4_fragment_count++;
     }
 
     offset = (ipv4->offset & 0x1FFF) * 8;
@@ -104,17 +164,17 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
     fragment->timestamp = timestamp;
 
     memcpy(fragment->buf+offset, ipv4->payload, ipv4->payload_len);
-    fragment->received += ipv4->payload_len;
+    fragment->received += bbl_fragment_blocks(fragment, offset, ipv4->payload_len);
 
     if(!(ipv4->offset & IPV4_MF)) {
         /* Last fragment received. */
         fragment->expected = offset + ipv4->payload_len;
     }
-    if(fragment->received == fragment->expected) {
+    if(fragment->expected && fragment->received == (fragment->expected + 7) / 8) {
         /* All fragments received. */
-        if(packet_is_bbl(fragment->buf, fragment->received)) {
+        if(packet_is_bbl(fragment->buf, fragment->expected)) {
             /* Currently, we support only the reassembly of BBL stream packets. */
-            bbl_start = fragment->buf + (fragment->received-BBL_HEADER_LEN);
+            bbl_start = fragment->buf + (fragment->expected-BBL_HEADER_LEN);
             bbl.type = *(bbl_start+8);
             bbl.sub_type = *(bbl_start+9);
             bbl.direction = *(bbl_start+10);
@@ -197,6 +257,8 @@ void
 bbl_fragment_init()
 {
     if(!g_ctx->config.traffic_reassemble_fragments) return;
+
+    g_ctx->ipv4_fragment_hash = calloc(BBL_FRAGMENT_HASH_SIZE, sizeof(bbl_fragment_s*));
 
     timer_add_periodic(&g_ctx->timer_root, &g_ctx->fragmentation_timer,
                        "FRAGMENT", 3, 0, NULL,

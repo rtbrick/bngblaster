@@ -1759,6 +1759,17 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
             BUMP_WRITE_BUFFER(buf, len, pppoe->ac_cookie_len);
             pppoe_len += pppoe->ac_cookie_len;
         }
+        if(pppoe->relay_session_id) {
+            /* Returned unmodified to the relay (RFC 2516 appendix A). */
+            *(uint16_t*)buf = htobe16(PPPOE_TAG_RELAY_SESSION_ID);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint16_t*)buf = htobe16(pppoe->relay_session_id_len);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            pppoe_len += 4;
+            memcpy(buf, pppoe->relay_session_id, pppoe->relay_session_id_len);
+            BUMP_WRITE_BUFFER(buf, len, pppoe->relay_session_id_len);
+            pppoe_len += pppoe->relay_session_id_len;
+        }
         if(pppoe->access_line) {
             *(uint16_t*)buf = htobe16(PPPOE_TAG_VENDOR);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -2961,11 +2972,20 @@ decode_dhcpv6(uint8_t *buf, uint16_t len,
                 }
                 break;
             case DHCPV6_OPTION_SERVERID:
-                if(option_len < 2) {
+                /* DUID up to 130 bytes (RFC 8415 section 11.1) */
+                if(option_len < 2 || option_len > DHCPV6_DUID_LEN_MAX) {
                     return DECODE_ERROR;
                 }
                 dhcpv6->server_duid = buf;
                 dhcpv6->server_duid_len = option_len;
+                break;
+            case DHCPV6_OPTION_CLIENTID:
+                /* Echoed by the A10NSP and LNS mock servers (RFC 8415 section 18.3). */
+                if(option_len < 2 || option_len > DHCPV6_DUID_LEN_MAX) {
+                    return DECODE_ERROR;
+                }
+                dhcpv6->client_duid = buf;
+                dhcpv6->client_duid_len = option_len;
                 break;
             case DHCPV6_OPTION_DNS_SERVERS:
                 if(option_len >= 16) {
@@ -4556,6 +4576,10 @@ decode_pppoe_discovery(uint8_t *buf, uint16_t len,
                 pppoe->ac_cookie = buf;
                 pppoe->ac_cookie_len = pppoe_tag_len;
                 break;
+            case PPPOE_TAG_RELAY_SESSION_ID:
+                pppoe->relay_session_id = buf;
+                pppoe->relay_session_id_len = pppoe_tag_len;
+                break;
             case PPPOE_TAG_MAX_PAYLOAD:
                 if(pppoe_tag_len >= sizeof(uint16_t)) {
                     pppoe->max_payload = be16toh(*(uint16_t*)buf);
@@ -4729,6 +4753,7 @@ decode_ethernet_frame(uint8_t *buf, uint16_t len,
     bbl_ethernet_header_s *eth;
     bbl_mpls_s *mpls;
     bool cw_valid = false;
+    protocol_error_t ret;
 
     if(len < 14 || sp_len < sizeof(bbl_ethernet_header_s)) {
         return DECODE_ERROR;
@@ -4816,11 +4841,26 @@ decode_ethernet_frame(uint8_t *buf, uint16_t len,
         /* Check next 4 bit to set type to IPv4 or IPv6 */
         switch((*buf >> 4) & 0xf) {
             case 4: 
-                eth->type = NB_ETH_TYPE_IPV4; 
-                break;
             case 6:
-                eth->type = NB_ETH_TYPE_IPV6; 
-                break;
+                if(((*buf >> 4) & 0xf) == 4) {
+                    eth->type = ETH_TYPE_IPV4;
+                    ret = decode_ipv4(buf, len, sp, sp_len, eth, (bbl_ipv4_s**)&eth->next);
+                } else {
+                    eth->type = ETH_TYPE_IPV6;
+                    ret = decode_ipv6(buf, len, sp, sp_len, eth, (bbl_ipv6_s**)&eth->next);
+                }
+                if(ret == PROTOCOL_SUCCESS || eompls) {
+                    return ret;
+                }
+                /* Ethernet over MPLS without control word with a destination
+                 * MAC address starting with nibble 4 or 6 (RFC 4448 section 4.6). */
+                if(decode_ethernet_frame(buf, len, sp, sp_len, (bbl_ethernet_header_s**)&eth->next, true) == PROTOCOL_SUCCESS) {
+                    eth->type = ETH_TYPE_ETH;
+                    return PROTOCOL_SUCCESS;
+                }
+                eth->type = ((*buf >> 4) & 0xf) == 4 ? ETH_TYPE_IPV4 : ETH_TYPE_IPV6;
+                eth->next = NULL;
+                return ret;
             default: 
                 if(eompls) {
                     return UNKNOWN_PROTOCOL;

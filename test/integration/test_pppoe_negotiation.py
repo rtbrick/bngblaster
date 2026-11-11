@@ -263,3 +263,64 @@ def test_outstanding_after_lcp_restart(ppp):
     assert ppp.counters()["sessions-outstanding"] == 1
     ppp.wait_state("Established")
     assert ppp.counters()["sessions-outstanding"] == 0
+
+
+def test_lcp_reject_after_eighth_option(ppp):
+    """An unknown LCP option after the 8th option is rejected alone
+    (RFC 1661 section 5.4), the session is established afterwards."""
+    ppp.start_server("--lcp-extra")
+    ppp.start_bbl()
+    ppp.wait_state("Established")
+    rejects = ppp.received("lcp", CONF_REJ)
+    assert rejects and rejects[0]["options"] == [0x88], rejects
+
+
+def test_ip6cp_reject_unknown_option(ppp):
+    """IP6CP rejects the IPv6-Compression-Protocol option instead of
+    acknowledging it (RFC 5072 section 4)."""
+    ppp.start_server("--ip6cp-compression")
+    ppp.start_bbl(access={"ipv6": True})
+    wait_until(lambda: ppp.session()["ip6cp-state"] == "Opened", 20, message="IP6CP opened")
+    rejects = ppp.received("ip6cp", CONF_REJ)
+    assert rejects and rejects[0]["options"] == [2], rejects
+    acks = [p for p in ppp.received("ip6cp", CONF_ACK) if 2 in p["options"]]
+    assert not acks, acks
+
+
+def test_ipcp_oversized_request(ppp):
+    """An IPCP request with more option bytes than can be echoed is not
+    acknowledged with other options (RFC 1661 section 5.2)."""
+    ppp.start_server("--ipcp-oversized")
+    ppp.start_bbl()
+    wait_until(lambda: len([p for p in ppp.received("ipcp", CONF_REQ)]) >= 2, 20, message="IPCP requests")
+    time.sleep(3)
+    assert not ppp.received("ipcp", CONF_ACK), ppp.received("ipcp")
+
+
+def test_ncp_unknown_code(ppp):
+    """An unknown IPCP code is answered with Code-Reject (RFC 1661
+    section 5.6)."""
+    ppp.start_server("--actions", "1:ipcp-unknown-code")
+    ppp.start_bbl()
+    ppp.wait_state("Established")
+    wait_until(lambda: ppp.received("ipcp", CODE_REJ), 10, message="IPCP code-reject")
+
+
+def test_pap_identifier(ppp):
+    """Retransmitted PAP requests have a new Identifier (RFC 1334
+    section 2.2.1)."""
+    ppp.start_server("--pap-delay", "3")
+    ppp.start_bbl(ppp={"authentication": {"timeout": 1, "retry": 10}})
+    wait_until(lambda: len(ppp.received("pap", 1)) >= 2, 10, message="PAP retransmission")
+    ids = [p["id"] for p in ppp.received("pap", 1)]
+    assert len(set(ids)) == len(ids), ids
+
+
+def test_relay_session_id(ppp):
+    """The Relay-Session-Id of the PADO is returned in the PADR (RFC 2516
+    appendix A)."""
+    ppp.start_server("--relay-session-id")
+    ppp.start_bbl()
+    ppp.wait_state("Established")
+    padr = ppp.received("padr")
+    assert padr and padr[0]["relay_session_id"] == ["relay-012345"], padr

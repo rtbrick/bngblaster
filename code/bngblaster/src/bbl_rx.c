@@ -89,6 +89,12 @@ bbl_rx_thread(bbl_interface_s *interface,
         /* Access and network interfaces are bound to the LAG. */
         interface = interface->lag->interface;
     }
+    /* Same order as in bbl_rx_handler: emulated A10NSP over
+     * network interfaces (Ethernet over MPLS) first. */
+    if(interface->a10nsp && eth->mpls && eth->type == ETH_TYPE_ETH) {
+        ((bbl_ethernet_header_s*)eth->next)->mpls = eth->mpls;
+        return bbl_rx_stream_a10nsp(interface->a10nsp, (bbl_ethernet_header_s*)eth->next);
+    }
     network_interface = interface->network_vlan[eth->vlan_outer];
     if(network_interface) {
         return bbl_rx_stream_network(network_interface, eth);

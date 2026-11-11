@@ -112,6 +112,7 @@ typedef struct bbl_session_
     bool restart; /* session-restart, reconnect regardless of config */
 
     uint8_t chap_identifier;
+    uint8_t pap_identifier;
     uint8_t chap_response[CHALLENGE_LEN];
 
     /* Access Line */
@@ -145,6 +146,8 @@ typedef struct bbl_session_
     uint16_t pppoe_session_id;
     uint8_t *pppoe_ac_cookie;
     uint16_t pppoe_ac_cookie_len;
+    uint8_t *pppoe_relay_session_id;
+    uint16_t pppoe_relay_session_id_len;
     uint8_t *pppoe_service_name;
     uint16_t pppoe_service_name_len;
     uint64_t pppoe_host_uniq;

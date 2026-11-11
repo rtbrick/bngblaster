@@ -109,6 +109,8 @@ typedef struct bbl_ctx_
     ldp_raw_update_s *ldp_raw_updates;
 
     bbl_fragment_s *ipv4_fragments;
+    bbl_fragment_s **ipv4_fragment_hash;
+    uint32_t ipv4_fragment_count;
 
     /* Scratchpad memory */
     uint8_t *sp;
@@ -120,7 +122,10 @@ typedef struct bbl_ctx_
         uint8_t *write_buf;
         uint32_t write_idx;
         bool filename_optarg;
-        bool wrote_header;
+        bool wrote_header; /* header pushed to the write buffer */
+        bool flushed_header; /* header written to the file */
+        bool write_error; /* write error logged */
+        bool write_partial; /* buffer starts with the rest of a block */
         bool include_streams;
     } pcap;
 

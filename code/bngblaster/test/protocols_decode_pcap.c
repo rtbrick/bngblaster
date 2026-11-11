@@ -50,9 +50,10 @@ packet_handler (u_char *user_data, const struct pcap_pkthdr* pkthdr, const u_cha
         g_input_packets_next->next = calloc(1, sizeof(input_packets_t));
         g_input_packets_next = g_input_packets_next->next;
     }
-    g_input_packets_next->packet = malloc(pkthdr->len);
-    g_input_packets_next->len = pkthdr->len;
-    memcpy(g_input_packets_next->packet, (uint8_t*)packet, pkthdr->len);
+    /* Only caplen bytes are captured. */
+    g_input_packets_next->packet = malloc(pkthdr->caplen);
+    g_input_packets_next->len = pkthdr->caplen;
+    memcpy(g_input_packets_next->packet, (uint8_t*)packet, pkthdr->caplen);
 }
 
 int

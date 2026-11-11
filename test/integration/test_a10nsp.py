@@ -51,10 +51,12 @@ def pseudowire():
     topo.b.delete()
 
 
-def test_network_interface_vlan(pseudowire, processes, tmp_path):
+@pytest.mark.parametrize("rx_threads", [0, 1])
+def test_network_interface_vlan(pseudowire, processes, tmp_path, rx_threads):
     """PPPoE sessions over A10NSP on a network interface with VLAN are
     established and session traffic is verified in both directions, as
-    replies and downstream traffic carry the network interface VLAN."""
+    replies and downstream traffic carry the network interface VLAN. With
+    RX threads, A10NSP stream traffic is received as in the main thread."""
     peer_mac = helpers.run(pseudowire.a.cmd(["cat", "/sys/class/net/%s/address" % pseudowire.net_a])).strip()
     relay = subprocess.Popen(pseudowire.b.cmd([sys.executable, RELAY, pseudowire.acc_b, pseudowire.net_b,
                                                "--vlan", str(VLAN), "--peer-mac", peer_mac]),
@@ -72,6 +74,8 @@ def test_network_interface_vlan(pseudowire, processes, tmp_path):
         "dhcpv6": {"enable": False},
         "ppp": {"ip6cp": {"enable": False}}
     }
+    if rx_threads:
+        config["interfaces"]["links"] = [{"interface": pseudowire.net_a, "rx-threads": rx_threads}]
     instance = BngBlaster(pseudowire.a, tmp_path, "bbl").start(config)
     processes.append(instance)
     wait_until(lambda: counters(instance)["sessions-established"] == SESSIONS, 30,
@@ -113,3 +117,28 @@ def test_dhcpv6_renew(local_veth, processes, tmp_path):
     assert session["dhcpv6-state"] == "Bound", session
     assert session["dhcpv6-tx-solicit"] == 1, session
     assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_dhcpv6_reply_client_id(local_veth, processes, tmp_path):
+    """The A10NSP DHCPv6 replies carry the Client Identifier of the request
+    (RFC 8415 section 18.3)."""
+    from scapy.utils import rdpcap
+    from scapy.layers.dhcp6 import DHCP6_Advertise, DHCP6_Reply, DHCP6OptClientId
+    config = {
+        "interfaces": {
+            "a10nsp": [{"interface": local_veth.if1}],
+            "access": [{"interface": local_veth.if2, "type": "ipoe", "outer-vlan": 100, "inner-vlan": 7,
+                        "ipv4": False}]
+        },
+        "sessions": {"count": 1},
+        "dhcpv6": {"enable": True}
+    }
+    instance = BngBlaster(local_veth.ns, tmp_path, "bbl").start(config)
+    processes.append(instance)
+    wait_until(lambda: instance.ctrl("session-info", **{"session-id": 1})["session-info"]["dhcpv6-state"]
+               == "Bound", 30, message="DHCPv6 bound")
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+    replies = [p for p in rdpcap(instance.path("pcap")) if DHCP6_Advertise in p or DHCP6_Reply in p]
+    assert replies
+    assert all(DHCP6OptClientId in p for p in replies), [p.summary() for p in replies]
+

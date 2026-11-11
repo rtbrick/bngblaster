@@ -1224,6 +1224,85 @@ bbl_access_ncp_failed(bbl_session_s *session, bool ipcp)
     bbl_access_rx_established_pppoe(NULL, session, NULL);
 }
 
+static const uint8_t lcp_accepted[] = { PPP_LCP_OPTION_MRU, PPP_LCP_OPTION_AUTH, PPP_LCP_OPTION_MAGIC };
+static const uint8_t ipcp_accepted[] = { PPP_IPCP_OPTION_ADDRESS };
+static const uint8_t ip6cp_accepted[] = { PPP_IP6CP_OPTION_IDENTIFIER };
+
+/**
+ * bbl_access_ppp_reject_options
+ *
+ * Copy all options of a Configure-Request which are not accepted
+ * (RFC 1661 section 5.4), as many as fit into the options buffer.
+ *
+ * @return length of the rejected options (0 if all are accepted)
+ */
+static uint16_t
+bbl_access_ppp_reject_options(uint8_t *options, uint16_t options_len,
+                              const uint8_t *accepted, uint8_t accepted_count,
+                              uint8_t *buf)
+{
+    uint16_t len = 0;
+    uint8_t option_type;
+    uint8_t option_len;
+    bool accept;
+    uint8_t i;
+
+    while(options && options_len >= 2) {
+        option_type = options[0];
+        option_len = options[1];
+        if(option_len < 2 || option_len > options_len) {
+            break;
+        }
+        accept = false;
+        for(i = 0; i < accepted_count; i++) {
+            if(option_type == accepted[i]) {
+                accept = true;
+                break;
+            }
+        }
+        if(!accept && (len + option_len) <= PPP_OPTIONS_BUFFER) {
+            memcpy(buf+len, options, option_len);
+            len += option_len;
+        }
+        options += option_len;
+        options_len -= option_len;
+    }
+    return len;
+}
+
+/* Code-Reject of an unknown NCP code (RFC 1661 section 5.6),
+ * with the header of the rejected packet. */
+static void
+bbl_access_ncp_code_reject(bbl_session_s *session, bool ipcp, uint8_t code, uint8_t identifier,
+                           uint8_t *data, uint16_t data_len)
+{
+    uint8_t *options = ipcp ? session->ipcp_options : session->ip6cp_options;
+    uint16_t len = 4;
+    options[0] = code;
+    options[1] = identifier;
+    *(uint16_t*)&options[2] = htobe16(4 + data_len);
+    if(data && data_len) {
+        /* The rejected packet is truncated to the buffer. */
+        if(data_len > PPP_OPTIONS_BUFFER - 4) {
+            data_len = PPP_OPTIONS_BUFFER - 4;
+        }
+        memcpy(options+4, data, data_len);
+        len += data_len;
+    }
+    if(ipcp) {
+        session->ipcp_options_len = len;
+        session->ipcp_peer_identifier = ++session->ipcp_identifier;
+        session->ipcp_response_code = PPP_CODE_CODE_REJECT;
+        session->send_requests |= BBL_SEND_IPCP_RESPONSE;
+    } else {
+        session->ip6cp_options_len = len;
+        session->ip6cp_peer_identifier = ++session->ip6cp_identifier;
+        session->ip6cp_response_code = PPP_CODE_CODE_REJECT;
+        session->send_requests |= BBL_SEND_IP6CP_RESPONSE;
+    }
+    bbl_session_tx_qnode_insert(session);
+}
+
 static void
 bbl_access_rx_ip6cp(bbl_access_interface_s *interface, 
                     bbl_session_s *session,
@@ -1274,6 +1353,24 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
                     session->send_requests |= BBL_SEND_IP6CP_RESPONSE;
                     bbl_session_tx_qnode_insert(session);
                 }
+                break;
+            }
+            session->ip6cp_options_len = bbl_access_ppp_reject_options(ip6cp->options, ip6cp->options_len,
+                                                                       ip6cp_accepted, sizeof(ip6cp_accepted),
+                                                                       session->ip6cp_options);
+            if(session->ip6cp_options_len) {
+                /* Unknown options, for example IPv6-Compression-Protocol (RFC 5072). */
+                LOG(PPPOE, "IP6CP (ID: %u) conf-reject send\n", session->session_id);
+                session->ip6cp_peer_identifier = ip6cp->identifier;
+                session->ip6cp_response_code = PPP_CODE_CONF_REJECT;
+                session->send_requests |= BBL_SEND_IP6CP_RESPONSE;
+                bbl_session_tx_qnode_insert(session);
+                break;
+            }
+            if(ip6cp->options_len > PPP_OPTIONS_BUFFER) {
+                /* A Configure-Ack must echo all options (RFC 1661 section 5.2). */
+                LOG(PPPOE, "IP6CP (ID: %u) conf-request with %u byte options discarded\n",
+                    session->session_id, ip6cp->options_len);
                 break;
             }
             if(ip6cp->ipv6_identifier) {
@@ -1365,7 +1462,27 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
                 session->ip6cp_state = BBL_PPP_CLOSED;
             }
             break;
+        case PPP_CODE_CONF_REJECT:
+            /* The Interface-Identifier is the only option, without it
+             * IP6CP can not be negotiated (RFC 5072 section 4.1). */
+            if(!bbl_access_ncp_pending(session->ip6cp_state)) {
+                break;
+            }
+            LOG(PPPOE, "IP6CP (ID: %u) conf-reject received\n", session->session_id);
+            session->ip6cp_retries = 0;
+            if(++session->ip6cp_failures > PPP_MAX_FAILURE) {
+                LOG(PPPOE, "IP6CP (ID: %u) Max-Failure reached\n", session->session_id);
+                bbl_access_ncp_failed(session, false);
+                break;
+            }
+            session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+            session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
+            bbl_session_tx_qnode_insert(session);
+            break;
+        case PPP_CODE_CODE_REJECT:
+            break;
         default:
+            bbl_access_ncp_code_reject(session, false, ip6cp->code, ip6cp->identifier, ip6cp->options, ip6cp->options_len);
             break;
     }
 }
@@ -1373,30 +1490,11 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
 static void
 bbl_access_rx_ipcp_conf_reject(bbl_session_s *session, bbl_ipcp_s *ipcp)
 {
-    uint16_t len = ipcp->options_len;
-    uint8_t *buf = ipcp->options;
-    uint8_t option_type = 0;
-    uint8_t option_len = 0;
-
     LOG(PPPOE, "IPCP (ID: %u) conf-reject send\n", session->session_id);
 
-    session->ipcp_options_len = 0;
-    while(len >= 2) {
-        option_type = *buf;
-        option_len = *(buf+1);
-        if(option_len < 2 || option_len > len) {
-            break;
-        }
-        if(option_type != PPP_IPCP_OPTION_ADDRESS) {
-            if((session->ipcp_options_len + option_len) <= PPP_OPTIONS_BUFFER) {
-                memcpy(session->ipcp_options+session->ipcp_options_len, buf, option_len);
-                session->ipcp_options_len += option_len;
-            }
-        }
-        buf = buf+option_len;
-        len -= option_len;
-    }
-
+    session->ipcp_options_len = bbl_access_ppp_reject_options(ipcp->options, ipcp->options_len,
+                                                              ipcp_accepted, sizeof(ipcp_accepted),
+                                                              session->ipcp_options);
     session->ipcp_peer_identifier = ipcp->identifier;
     session->ipcp_response_code = PPP_CODE_CONF_REJECT;
     session->send_requests |= BBL_SEND_IPCP_RESPONSE;
@@ -1457,8 +1555,16 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                 }
                 break;
             }
-            if(ipcp->option_dns1 || ipcp->option_dns2 || ipcp->unknown_options) {
+            if(bbl_access_ppp_reject_options(ipcp->options, ipcp->options_len,
+                                             ipcp_accepted, sizeof(ipcp_accepted),
+                                             session->ipcp_options)) {
                 bbl_access_rx_ipcp_conf_reject(session, ipcp);
+                return;
+            }
+            if(ipcp->options_len > PPP_OPTIONS_BUFFER) {
+                /* A Configure-Ack must echo all options (RFC 1661 section 5.2). */
+                LOG(PPPOE, "IPCP (ID: %u) conf-request with %u byte options discarded\n",
+                    session->session_id, ipcp->options_len);
                 return;
             }
             if(ipcp->address) {
@@ -1584,7 +1690,10 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                 session->ipcp_state = BBL_PPP_CLOSED;
             }
             break;
+        case PPP_CODE_CODE_REJECT:
+            break;
         default:
+            bbl_access_ncp_code_reject(session, true, ipcp->code, ipcp->identifier, ipcp->options, ipcp->options_len);
             break;
     }
 }
@@ -1643,28 +1752,6 @@ bbl_access_lcp_mru(bbl_session_s *session)
 static void
 bbl_access_rx_lcp_conf_reject(bbl_session_s *session, bbl_lcp_s *lcp)
 {
-    uint8_t type;
-    uint8_t len;
-    session->lcp_options_len = 0;
-
-    for(int i=0; i < PPP_MAX_OPTIONS; i++) {
-        if(lcp->option[i]) {
-            type = lcp->option[i][0];
-            len = lcp->option[i][1];
-            switch (type) {
-                case PPP_LCP_OPTION_MRU:
-                case PPP_LCP_OPTION_AUTH:
-                case PPP_LCP_OPTION_MAGIC:
-                    break;
-                default:
-                    if((session->lcp_options_len + len) <= PPP_OPTIONS_BUFFER) {                        
-                        memcpy(&session->lcp_options[session->lcp_options_len], lcp->option[i], len);
-                        session->lcp_options_len += len;
-                    }
-                    break;
-            }
-        }
-    }
     session->lcp_peer_identifier = lcp->identifier;
     session->lcp_response_code = PPP_CODE_CONF_REJECT;
     session->send_requests |= BBL_SEND_LCP_RESPONSE;
@@ -1886,8 +1973,17 @@ bbl_access_rx_lcp(bbl_access_interface_s *interface,
             bbl_session_tx_qnode_insert(session);
             break;
         case PPP_CODE_CONF_REQUEST:
-            if(lcp->unknown_options) {
+            session->lcp_options_len = bbl_access_ppp_reject_options(lcp->options, lcp->options_len,
+                                                                     lcp_accepted, sizeof(lcp_accepted),
+                                                                     session->lcp_options);
+            if(session->lcp_options_len) {
                 bbl_access_rx_lcp_conf_reject(session, lcp);
+                return;
+            }
+            if(lcp->options_len > PPP_OPTIONS_BUFFER) {
+                /* A Configure-Ack must echo all options (RFC 1661 section 5.2). */
+                LOG(PPPOE, "LCP (ID: %u) conf-request with %u byte options discarded\n",
+                    session->session_id, lcp->options_len);
                 return;
             }
             if(session->lcp_state == BBL_PPP_OPENED) {
@@ -2298,6 +2394,17 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
                     session->pppoe_ac_cookie = malloc(pppoed->ac_cookie_len);
                     session->pppoe_ac_cookie_len = pppoed->ac_cookie_len;
                     memcpy(session->pppoe_ac_cookie, pppoed->ac_cookie, pppoed->ac_cookie_len);
+                }
+                if(session->pppoe_relay_session_id) {
+                    free(session->pppoe_relay_session_id);
+                    session->pppoe_relay_session_id = NULL;
+                    session->pppoe_relay_session_id_len = 0;
+                }
+                if(pppoed->relay_session_id_len) {
+                    /* Store Relay-Session-Id */
+                    session->pppoe_relay_session_id = malloc(pppoed->relay_session_id_len);
+                    session->pppoe_relay_session_id_len = pppoed->relay_session_id_len;
+                    memcpy(session->pppoe_relay_session_id, pppoed->relay_session_id, pppoed->relay_session_id_len);
                 }
                 if(!session->pppoe_service_name_len && pppoed->service_name_len) {
                     /* Request the first service offered. */

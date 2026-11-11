@@ -125,6 +125,7 @@
 #define PPPOE_MAX_SERVICE_NAME_LEN      255 /* Configured service name */
 #define PPPOE_TAG_HOST_UNIQ             0x0103
 #define PPPOE_TAG_AC_COOKIE             0x0104
+#define PPPOE_TAG_RELAY_SESSION_ID      0x0110
 #define PPPOE_TAG_VENDOR                0x0105
 #define PPPOE_TAG_MAX_PAYLOAD           0x0120
 
@@ -697,6 +698,8 @@ typedef struct bbl_pppoe_discovery_ {
     uint16_t       ac_name_len;
     uint8_t       *ac_cookie;
     uint16_t       ac_cookie_len;
+    uint8_t       *relay_session_id;
+    uint16_t       relay_session_id_len;
     uint8_t       *host_uniq;
     uint16_t       host_uniq_len;
     uint16_t       max_payload;
@@ -922,9 +925,9 @@ typedef struct bbl_dhcpv6_ {
     uint8_t       *interface_id;
     uint8_t        interface_id_len;
     uint8_t       *client_duid;
-    uint8_t        client_duid_len;
+    uint16_t       client_duid_len;
     uint8_t       *server_duid;
-    uint8_t        server_duid_len;
+    uint16_t       server_duid_len;
     ipv6addr_t    *dns1;
     ipv6addr_t    *dns2;
     bool           rapid;

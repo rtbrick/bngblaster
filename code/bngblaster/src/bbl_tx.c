@@ -378,7 +378,8 @@ bbl_tx_encode_packet_pap_request(bbl_session_s *session)
     bbl_pap_s pap = {0};
 
     pap.code = PAP_CODE_REQUEST;
-    pap.identifier = 1;
+    /* New identifier for each request (RFC 1334 section 2.2.1). */
+    pap.identifier = ++session->pap_identifier;
     pap.username = session->username;
     pap.username_len = strlen(session->username);
     pap.password = session->password;
@@ -1012,6 +1013,8 @@ bbl_encode_padr(bbl_session_s *session)
     pppoe.code = PPPOE_PADR;
     pppoe.ac_cookie = session->pppoe_ac_cookie;
     pppoe.ac_cookie_len = session->pppoe_ac_cookie_len;
+    pppoe.relay_session_id = session->pppoe_relay_session_id;
+    pppoe.relay_session_id_len = session->pppoe_relay_session_id_len;
     if(session->pppoe_service_name) {
         pppoe.service_name = session->pppoe_service_name;
         pppoe.service_name_len = session->pppoe_service_name_len;

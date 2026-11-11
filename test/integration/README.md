@@ -110,6 +110,10 @@ Functional tests over veth pairs between network namespaces:
   records and querier version, zapping, RA on N:1 sessions, DHCP rebind,
   DHCPv6 DUID, transaction ID, release and IA-separate
   (`test_ipoe_access.py`, `ipoe_peer.py`)
+* Reassembly of fragmented stream traffic through a Linux router, also
+  with duplicated fragments (`test_fragments.py`)
+* PCAP capture to a FIFO with a new section header for the next
+  listener (`test_pcap.py`)
 * HTTP server tested with curl (IPv4 and IPv6) and connections reset
   by the client, HTTP client response after a session reconnect
   (`test_http.py`)

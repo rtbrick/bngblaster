@@ -25,6 +25,8 @@ ETH_P_ALL = 0x0003
 ETH_DISCOVERY, ETH_SESSION = 0x8863, 0x8864
 PADI, PADO, PADR, PADS, PADT = 0x09, 0x07, 0x19, 0x65, 0xa7
 TAG_SERVICE_NAME, TAG_AC_NAME, TAG_HOST_UNIQ, TAG_AC_COOKIE = 0x0101, 0x0102, 0x0103, 0x0104
+TAG_RELAY_SESSION_ID = 0x0110
+RELAY_SESSION_ID = b"relay-012345"
 LCP, PAP, CHAP, IPCP, IP6CP = 0xc021, 0xc023, 0xc223, 0x8021, 0x8057
 CONF_REQ, CONF_ACK, CONF_NAK, CONF_REJ, TERM_REQ, TERM_ACK, CODE_REJ, PROT_REJ = 1, 2, 3, 4, 5, 6, 7, 8
 ECHO_REQ, ECHO_REP, DISCARD_REQ = 9, 10, 11
@@ -78,6 +80,8 @@ class Server:
         self.ipcp_closed = False
         self.established_at = None
         self.lcp_hold_until = 0
+        self.lcp_rejected = set()   # own LCP options rejected by the client
+        self.ip6cp_rejected = set() # own IP6CP options rejected by the client
         self.timers = []
         self.actions = []
         for item in filter(None, args.actions.split(",")):
@@ -109,7 +113,8 @@ class Server:
         names = [v.decode(errors="replace") for t, v in tags if t == TAG_SERVICE_NAME]
         self.record(kind={PADI: "padi", PADR: "padr", PADT: "padt"}.get(code, "disc-%d" % code),
                     dst=dst.hex(":"), service_names=names,
-                    cookie=[v.hex() for t, v in tags if t == TAG_AC_COOKIE])
+                    cookie=[v.hex() for t, v in tags if t == TAG_AC_COOKIE],
+                    relay_session_id=[v.decode(errors="replace") for t, v in tags if t == TAG_RELAY_SESSION_ID])
         host_uniq = [(t, v) for t, v in tags if t == TAG_HOST_UNIQ]
         if code == PADI:
             self.padi_count += 1
@@ -121,8 +126,9 @@ class Server:
                 return
             offered = [(TAG_SERVICE_NAME, n.encode()) for n in self.args.service_names.split(",")] \
                 if self.args.service_names else [(TAG_SERVICE_NAME, b"")]
+            relay = [(TAG_RELAY_SESSION_ID, RELAY_SESSION_ID)] if self.args.relay_session_id else []
             self.send_discovery(PADO, 0, [(TAG_AC_NAME, b"ppp-peer")] + offered + host_uniq +
-                                [(TAG_AC_COOKIE, b"good-cookie")])
+                                [(TAG_AC_COOKIE, b"good-cookie")] + relay)
         elif code == PADR:
             requested = [(t, v) for t, v in tags if t == TAG_SERVICE_NAME][:1]
             self.send_discovery(PADS, SESSION_ID, requested + host_uniq)
@@ -136,6 +142,10 @@ class Server:
             opts.insert(1, (LCP_AUTH, struct.pack("!H", PAP)))
         elif self.args.auth == "chap":
             opts.insert(1, (LCP_AUTH, struct.pack("!HB", CHAP, 5)))
+        if self.args.lcp_extra:
+            # Repeated MRU options, then an unknown option after the 8th option.
+            opts += [(LCP_MRU, struct.pack("!H", 1492))] * 6 + [(0x88, b"\x01\x02")]
+        opts = [(k, v) for k, v in opts if k not in self.lcp_rejected]
         self.send_ppp(LCP, control(CONF_REQ, self.next_id(), encode_options(opts)))
         self.timer(2, self.lcp_retransmit)
 
@@ -173,6 +183,9 @@ class Server:
         elif code == CONF_ACK:
             self.lcp_acked = True
             self.lcp_check()
+        elif code == CONF_REJ:
+            self.lcp_rejected |= {k for k, _ in options(data)}
+            self.lcp_request()
         elif code == ECHO_REQ:
             self.send_ppp(LCP, control(ECHO_REP, identifier, b"\x11\x22\x33\x44" + data[4:]))
         elif code == TERM_REQ:
@@ -193,7 +206,7 @@ class Server:
     # Authentication
 
     def pap(self, code, identifier, data):
-        self.record(kind="pap", code=code)
+        self.record(kind="pap", code=code, id=identifier)
         if code == 1:
             self.timer(self.args.pap_delay, lambda: self.pap_ack(identifier))
 
@@ -218,13 +231,20 @@ class Server:
 
     def ipcp_request(self):
         if not self.ipcp_acked and self.auth_done:
+            # Oversized: more than 64 bytes of (repeated) address options.
+            count = 12 if self.args.ipcp_oversized else 1
             self.send_ppp(IPCP, control(CONF_REQ, self.next_id(),
-                                        encode_options([(IPCP_ADDRESS, SERVER_ADDRESS)])))
+                                        encode_options([(IPCP_ADDRESS, SERVER_ADDRESS)] * count)))
             self.timer(2, self.ipcp_request)
 
     def ip6cp_request(self):
         if not self.ip6cp_acked and self.auth_done:
-            self.send_ppp(IP6CP, control(CONF_REQ, self.next_id(), encode_options([(1, b"\x00" * 7 + b"\x01")])))
+            opts = [(1, b"\x00" * 7 + b"\x01")]
+            if self.args.ip6cp_compression:
+                # IPv6-Compression-Protocol (RFC 5072 section 4.2)
+                opts.append((2, b"\x00\x4f"))
+            opts = [(k, v) for k, v in opts if k not in self.ip6cp_rejected]
+            self.send_ppp(IP6CP, control(CONF_REQ, self.next_id(), encode_options(opts)))
             self.timer(2, self.ip6cp_request)
 
     def ipcp(self, code, identifier, data):
@@ -262,7 +282,8 @@ class Server:
             self.ipcp_closed = True
 
     def ip6cp(self, code, identifier, data):
-        self.record(kind="ip6cp", code=code, id=identifier)
+        self.record(kind="ip6cp", code=code, id=identifier,
+                    options=[k for k, _ in options(data)] if code in (CONF_REQ, CONF_ACK, CONF_NAK, CONF_REJ) else [])
         if self.args.ip6cp != "normal":
             return
         if code == CONF_REQ:
@@ -271,6 +292,9 @@ class Server:
         elif code == CONF_ACK:
             self.ip6cp_acked = True
             self.check_established()
+        elif code == CONF_REJ:
+            self.ip6cp_rejected |= {k for k, _ in options(data)}
+            self.ip6cp_request()
         elif code == TERM_REQ:
             self.send_ppp(IP6CP, control(TERM_ACK, identifier))
 
@@ -300,6 +324,8 @@ class Server:
             self.send_ppp(LCP, control(DISCARD_REQ, self.next_id(), b"\x11\x22\x33\x44"))
         elif action == "unknown-protocol":
             self.send_ppp(0x80fd, control(CONF_REQ, self.next_id(), b"\x1a\x04\x78\x00"))
+        elif action == "ipcp-unknown-code":
+            self.send_ppp(IPCP, control(15, self.next_id(), b"\x01\x02"))
         elif action == "lcp-hold":
             # Ignore configure-requests of the client for some time.
             self.lcp_hold_until = time.monotonic() + 3
@@ -361,6 +387,10 @@ def main():
     parser.add_argument("--ipcp", choices=["normal", "ignore", "nak-always"], default="normal")
     parser.add_argument("--ipcp-ignore-first-term", action="store_true")
     parser.add_argument("--ip6cp", choices=["normal", "ignore"], default="normal")
+    parser.add_argument("--lcp-extra", action="store_true", help="unknown LCP option after the 8th option")
+    parser.add_argument("--ip6cp-compression", action="store_true", help="IP6CP compression option")
+    parser.add_argument("--ipcp-oversized", action="store_true", help="IPCP request above 64 byte options")
+    parser.add_argument("--relay-session-id", action="store_true", help="PADO with Relay-Session-Id")
     parser.add_argument("--actions", default="", help="comma separated delay:action after established")
     Server(parser.parse_args()).run()
 

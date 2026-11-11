@@ -20,8 +20,8 @@
 #include <bbl_def.h>
 #include <bbl_protocols.h>
 
-#define SCRATCHPAD_LEN     1514
-#define BUFFER_SIZE        64000
+/* SCRATCHPAD_LEN as in production (bbl_def.h) */
+#define BUFFER_SIZE        65535
 
 static uint8_t scratchpad[SCRATCHPAD_LEN];
 static uint8_t buffer[BUFFER_SIZE];
@@ -33,6 +33,7 @@ int main(int argc, char *argv[]) {
     uint8_t *sp = scratchpad;
     uint8_t *buf = buffer;
     uint8_t *input = NULL;
+    off_t size;
     uint16_t len;
     int fd;
 
@@ -40,9 +41,13 @@ int main(int argc, char *argv[]) {
     fd = open(argv[1], O_RDONLY);
     assert(fd >= 0);
 
-    /* find file size */
-    len = lseek(fd, 0, SEEK_END);
-    assert(len);
+    /* find file size, inputs above the maximum packet size are ignored */
+    size = lseek(fd, 0, SEEK_END);
+    if(size <= 0 || size > BUFFER_SIZE) {
+        close(fd);
+        return 0;
+    }
+    len = size;
 
     /* jump back to beginning */
     lseek(fd, 0, SEEK_SET);
@@ -54,17 +59,20 @@ int main(int argc, char *argv[]) {
             fd, /* file descriptor */
             0); /* offset */
 
-    if(len <= BUFFER_SIZE) {
-        /* copy input to buffer */
-        buf += BUFFER_SIZE - len;
-        memcpy(buf, input, len);
-        /* call test function */
-        decode_result = decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &eth);
-        if(decode_result == PROTOCOL_SUCCESS) {
-            printf("OK\n");
-        } else {
-            printf("FAILED\n");
-        }
+    assert(input != MAP_FAILED);
+
+    /* copy input to the end of the buffer, so that reads
+     * beyond the packet are detected by ASAN */
+    buf += BUFFER_SIZE - len;
+    memcpy(buf, input, len);
+    /* call test function */
+    decode_result = decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &eth);
+    if(decode_result == PROTOCOL_SUCCESS) {
+        printf("OK\n");
+    } else {
+        printf("FAILED\n");
     }
+    munmap(input, len);
+    close(fd);
     return 0;
 }

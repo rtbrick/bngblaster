@@ -401,6 +401,11 @@ bbl_session_free(bbl_session_s *session)
         session->pppoe_ac_cookie = NULL;
     }
     session->pppoe_ac_cookie_len = 0;
+    if(session->pppoe_relay_session_id) {
+        free(session->pppoe_relay_session_id);
+        session->pppoe_relay_session_id = NULL;
+    }
+    session->pppoe_relay_session_id_len = 0;
     
     if(!g_ctx->config.pppoe_service_name) {
         if(session->pppoe_service_name) {
@@ -461,6 +466,11 @@ bbl_session_reset(bbl_session_s *session) {
         session->pppoe_ac_cookie = NULL;
     }
     session->pppoe_ac_cookie_len = 0;
+    if(session->pppoe_relay_session_id) {
+        free(session->pppoe_relay_session_id);
+        session->pppoe_relay_session_id = NULL;
+    }
+    session->pppoe_relay_session_id_len = 0;
     if(!g_ctx->config.pppoe_service_name) {
         if(session->pppoe_service_name) {
             free(session->pppoe_service_name);

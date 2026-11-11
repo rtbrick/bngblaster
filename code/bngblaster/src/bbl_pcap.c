@@ -61,11 +61,34 @@ pcapng_init()
     } else {
         g_ctx->pcap.write_idx = 0;
     }
+    /* The next listener or file needs a new section header. */
+    g_ctx->pcap.wrote_header = false;
+    g_ctx->pcap.flushed_header = false;
+    g_ctx->pcap.write_partial = false;
 
     /*
      * Open the file.
      */
     pcapng_open();
+}
+
+/*
+ * Drop the buffered blocks. The section header is pushed again
+ * if it was not yet written, the buffer holds complete blocks
+ * only after a partial write was rebased.
+ */
+static void
+pcapng_drop_buffer()
+{
+    if(g_ctx->pcap.write_partial) {
+        /* Dropping the rest of a partially written block
+         * would corrupt the capture. */
+        return;
+    }
+    g_ctx->pcap.write_idx = 0;
+    if(!g_ctx->pcap.flushed_header) {
+        g_ctx->pcap.wrote_header = false;
+    }
 }
 
 /*
@@ -111,14 +134,31 @@ pcapng_fflush()
                 /* Our listener just went away.
                  * Restart the fifo and write a PCAP header for the next listener. */
                 close(g_ctx->pcap.fd);
+                g_ctx->pcap.fd = -1;
                 pcapng_init();
                 break;
+            case EAGAIN:
+            case EINTR:
+                /* Slow reader (FIFO), keep the buffer until it runs full. */
+                if(g_ctx->pcap.write_idx >= (PCAPNG_WRITEBUFSIZE/16)*15) {
+                    pcapng_drop_buffer();
+                }
+                break;
             default:
-                /* Reset the buffer for unresponsive callers. */
-                pcapng_init();
+                /* For example ENOSPC or EIO, drop the buffered packets
+                 * but keep the file, which would be truncated by reopening. */
+                if(!g_ctx->pcap.write_error) {
+                    g_ctx->pcap.write_error = true;
+                    LOG(ERROR, "failed to write pcap file %s with error %s (%d)\n",
+                        g_ctx->pcap.filename, strerror(errno), errno);
+                }
+                pcapng_drop_buffer();
                 break;
         }
         return;
+    }
+    if(res > 0) {
+        g_ctx->pcap.flushed_header = true;
     }
 
     /* Full write? */
@@ -126,6 +166,7 @@ pcapng_fflush()
         LOG(PCAP, "drained %u bytes buffer to pcap file %s\n",
             g_ctx->pcap.write_idx, g_ctx->pcap.filename);
         g_ctx->pcap.write_idx = 0;
+        g_ctx->pcap.write_partial = false;
         return;
     }
 
@@ -134,6 +175,7 @@ pcapng_fflush()
         /* Rebase the buffer.*/
         memmove(g_ctx->pcap.write_buf, g_ctx->pcap.write_buf+res, g_ctx->pcap.write_idx - res);
         g_ctx->pcap.write_idx -= res;
+        g_ctx->pcap.write_partial = true;
     }
 }
 
