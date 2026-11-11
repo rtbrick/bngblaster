@@ -713,7 +713,8 @@ bbl_ctrl_socket_thread(void *thread_data)
     sleep.tv_nsec = 10 * MSEC;
 
     teardown_signals_block();
-    __atomic_store_n(&ctrl->active, true, __ATOMIC_RELAXED);
+    /* Active is set by bbl_ctrl_socket_init() before the thread is
+     * created, so that bbl_ctrl_socket_close() always joins it. */
     while(__atomic_load_n(&ctrl->active, __ATOMIC_RELAXED)) {
         fd = accept(ctrl->socket, 0, 0);
         if(fd > 0) {
@@ -839,6 +840,15 @@ bbl_ctrl_socket_thread(void *thread_data)
                                     break;
                                 }
                                 pthread_mutex_lock(&ctrl->mutex);
+                                if(!__atomic_load_n(&ctrl->active, __ATOMIC_RELAXED)) {
+                                    /* bbl_ctrl_socket_close() already rejected waiting
+                                     * commands (it clears active before it takes the
+                                     * mutex), nobody would execute this one. */
+                                    pthread_mutex_unlock(&ctrl->mutex);
+                                    close(buffer);
+                                    bbl_ctrl_status(fd, "warning", 503, "not available while stopping");
+                                    break;
+                                }
                                 ctrl->main.fd = buffer;
                                 ctrl->main.action = i;
                                 ctrl->main.session_id = session_id;
@@ -917,7 +927,9 @@ bbl_ctrl_socket_init()
         LOG_NOARG(ERROR, "Failed to init ctrl condition\n");
         return false;
     }
+    __atomic_store_n(&ctrl->active, true, __ATOMIC_RELAXED);
     if(pthread_create(&ctrl->thread, NULL, bbl_ctrl_socket_thread, (void *)ctrl) != 0) {
+        __atomic_store_n(&ctrl->active, false, __ATOMIC_RELAXED);
         LOG_NOARG(ERROR, "Failed to create ctrl thread\n");
         return false;
     }
