@@ -1092,6 +1092,79 @@ test_ospf_lsa_size(void **unused)
     lsdb_delete_ctx(ctx);
 }
 
+typedef struct test_router_lsa_ {
+    uint32_t router_lsas;
+    uint32_t max_links;
+} test_router_lsa_t;
+
+static void
+test_router_lsa_cb(lsdb_packet_t *packet, uint16_t lsa_type, uint8_t *lsa, uint16_t lsa_len, void *arg)
+{
+    test_router_lsa_t *result = arg;
+    UNUSED(packet);
+    UNUSED(lsa_len);
+    if ((lsa_type & 0xff) == 1 && read_be_uint(lsa+4, 4) == 0xc0a80001) {
+        result->router_lsas++;
+        if (read_be_uint(lsa+22, 2) > result->max_links) {
+            result->max_links = read_be_uint(lsa+22, 2);
+        }
+    }
+}
+
+static void
+test_router_lsa_packet_cb(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet, void *arg)
+{
+    UNUSED(node);
+    test_foreach_lsa(ctx, packet, test_router_lsa_cb, arg);
+}
+
+static void
+test_ospf_router_lsa_new_packet(void **unused)
+{
+    const char *filename = "router-lsa.json";
+    lsdb_ctx_t *ctx;
+    test_router_lsa_t result = {0};
+    char *buf;
+    size_t len = 0;
+    int i;
+    UNUSED(unused);
+
+    /* The Extended-Prefix-LSAs of 600 SID prefixes fill the first packet,
+     * the OSPFv2 Router-LSA (not split) with 602 links (7.2K) starts in the
+     * next packet instead of being truncated in the first one. */
+    buf = calloc(1, 64 * 1024);
+    assert_non_null(buf);
+    len += sprintf(buf+len, "{\"instance\": \"default\", \"protocol\": \"ospf2\", \"area0.0.0.0\": ["
+                   "{\"node_id\": \"192.168.0.1\", \"hostname\": \"n1\", \"capability_list\": "
+                   "[{\"router_id\": \"192.168.0.1\", \"srgb_base\": 10000, \"srgb_range\": 2000}], "
+                   "\"ipv4_prefix_list\": [{\"ipv4_prefix\": \"192.168.0.1/32\", \"metric\": 0, "
+                   "\"segment_id\": 1, \"node_flag\": true}");
+    for (i = 0; i < 600; i++) {
+        len += sprintf(buf+len, ", {\"ipv4_prefix\": \"10.0.%d.%d/32\", \"metric\": 10, \"segment_id\": %d}",
+                       i / 256, i % 256, 100 + i);
+    }
+    len += sprintf(buf+len, "], \"neighbor_list\": [{\"remote_node_id\": \"192.168.0.2\", "
+                   "\"local_link_id\": \"172.16.0.1\", \"metric\": 10}]}, "
+                   "{\"node_id\": \"192.168.0.2\", \"hostname\": \"n2\", \"ipv4_prefix_list\": "
+                   "[{\"ipv4_prefix\": \"192.168.0.2/32\", \"metric\": 0}], \"neighbor_list\": "
+                   "[{\"remote_node_id\": \"192.168.0.1\", \"local_link_id\": \"172.16.0.2\", \"metric\": 10}]}]}");
+    test_write_file(filename, buf);
+    free(buf);
+
+    ctx = lsdb_alloc_ctx("default");
+    assert_non_null(ctx);
+    lspgen_init_ctx(ctx);
+    ctx->config_filename = strdup(filename);
+    ctx->config_read = true;
+    assert_true(lspgen_read_config(ctx));
+    unlink(filename);
+    lspgen_gen_packet(ctx);
+    test_foreach_packet(ctx, test_router_lsa_packet_cb, &result);
+    assert_int_equal(result.router_lsas, 1);
+    assert_int_equal(result.max_links, 602);
+    lsdb_delete_ctx(ctx);
+}
+
 static void
 test_link_multiplier(void **unused)
 {
@@ -1493,6 +1566,7 @@ main(void)
         cmocka_unit_test(test_delete_node),
         cmocka_unit_test(test_parse_sr_algo),
         cmocka_unit_test(test_ospf_lsa_size),
+        cmocka_unit_test(test_ospf_router_lsa_new_packet),
         cmocka_unit_test(test_link_multiplier),
         cmocka_unit_test(test_ospf3_external_lsid),
         cmocka_unit_test(test_purge),

@@ -2019,6 +2019,19 @@ lspgen_should_start_new_packet (lsdb_ctx_t *ctx, struct lsdb_packet_ *packet, st
         }
 
         /*
+         * LSAs which can not be split start in a new packet if the whole
+         * LSA does not fit into this one, but would fit into a new packet.
+         */
+        if (packet->prev_attr_cp[1] && !lspgen_attr_continues_lsa(packet, attr) &&
+            !lspgen_lsa_can_split(ctx, attr->key.attr_cp[1]) &&
+            lspgen_packet_len(packet) + lspgen_calculate_auth_len(ctx) + attr->lsa_size >
+            LSPGEN_PACKET_BUF_SIZE - 60) {
+            LOG(PACKET, "%s of %u bytes starts a new packet\n",
+                val2key(ospf_attr_names, attr->key.attr_cp[1]), attr->lsa_size);
+            return true;
+        }
+
+        /*
          * Continue LSAs exceeding the maximum size in a new packet.
          */
         if (lspgen_lsa_is_full(ctx, packet, attr) && lspgen_lsa_can_split(ctx, attr->key.attr_cp[1])) {
@@ -2167,6 +2180,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
     lsdb_ctx_t *ctx;
     struct lsdb_packet_ *packet;
     struct lsdb_attr_ *attr;
+    struct lsdb_attr_ *lsa_start;
     dict_itor *itor;
     uint32_t id;
 
@@ -2213,6 +2227,23 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
         timer_add_periodic(&ctx->timer_root, &node->refresh_timer, "refresh",
                            lspgen_refresh_interval(node), 0, node, &lspgen_refresh_cb);
     }
+
+    /*
+     * Sum up the size of each LSA in its first attribute, the attributes
+     * of an LSA follow each other (see lspgen_attr_continues_lsa).
+     */
+    lsa_start = NULL;
+    do {
+        attr = *dict_itor_datum(itor);
+        if (lsa_start && lsa_start->key.attr_cp[0] == attr->key.attr_cp[0] &&
+            lsa_start->key.attr_cp[1] == attr->key.attr_cp[1] && !attr->key.start_tlv) {
+            lsa_start->lsa_size += attr->size;
+        } else {
+            lsa_start = attr;
+            attr->lsa_size = attr->size;
+        }
+    } while (dict_itor_next(itor));
+    dict_itor_first(itor);
 
     do {
         attr = *dict_itor_datum(itor);

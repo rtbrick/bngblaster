@@ -398,6 +398,7 @@ typedef struct lsdb_attr_ {
     } key;
 
     uint32_t size; /* on-the wire space required in bytes */
+    uint32_t lsa_size; /* OSPF: size of the LSA started by this attribute */
     struct lsdb_node_ *parent;
 } lsdb_attr_t;
 
