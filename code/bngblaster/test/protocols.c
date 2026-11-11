@@ -414,6 +414,40 @@ test_protocols_lcp_chap(void **unused) {
     free(sp);
 }
 
+/* LCP padding (lcp-padding) is sent as zero bytes, not as the
+ * content left in the encode buffer. */
+static void
+test_protocols_lcp_padding(void **unused) {
+    (void) unused;
+
+    uint8_t buf[256];
+    uint16_t len = 0;
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    uint8_t zero[32] = {0};
+
+    bbl_ethernet_header_s eth = {0};
+    bbl_pppoe_session_s pppoe = {0};
+    bbl_lcp_s lcp = {0};
+
+    memset(buf, 0xff, sizeof(buf));
+    eth.dst = dst;
+    eth.src = src;
+    eth.type = ETH_TYPE_PPPOE_SESSION;
+    eth.next = &pppoe;
+    pppoe.session_id = 1;
+    pppoe.protocol = PROTOCOL_LCP;
+    pppoe.next = &lcp;
+    lcp.code = PPP_CODE_ECHO_REQUEST;
+    lcp.identifier = 1;
+    lcp.magic = 0x12345678;
+    lcp.padding = sizeof(zero);
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_true(len > sizeof(zero));
+    assert_memory_equal(buf + len - sizeof(zero), zero, sizeof(zero));
+}
+
 /* DHCP Offer with non-zero bytes after the END option. RFC 2132 3.2: END marks
  * the end of valid information, so the trailing bytes must be ignored. */
 static void
@@ -1115,6 +1149,7 @@ int main() {
         cmocka_unit_test(test_protocols_ethernet_over_mpls_nested),
         cmocka_unit_test(test_protocols_bbl_flow_id),
         cmocka_unit_test(test_protocols_lcp_chap),
+        cmocka_unit_test(test_protocols_lcp_padding),
         cmocka_unit_test(test_protocols_dhcp_end_option),
         cmocka_unit_test(test_protocols_dhcp_agent_option_repeated),
         cmocka_unit_test(test_protocols_dhcpv6_timer_byte_order),

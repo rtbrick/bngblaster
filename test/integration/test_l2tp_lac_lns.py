@@ -535,6 +535,28 @@ def test_session_restart(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+def test_lns_lcp_padding(topology, processes, tmp_path):
+    """LCP packets of the LNS with the maximum lcp-padding fit into an L2TP
+    data frame (MTU 1500), larger values are rejected (up to 65535 broke
+    the LCP negotiation of the LNS)."""
+    config = lns_config(topology.if_b)
+    config["l2tp-server"][0]["lcp-padding"] = 1401
+    lns = BngBlaster(topology.b, tmp_path, "lns-invalid")
+    processes.append(lns)
+    with pytest.raises(RuntimeError):
+        lns.start(config)
+
+    config["l2tp-server"][0]["lcp-padding"] = 1400
+    lns = BngBlaster(topology.b, tmp_path, "lns").start(config, logging=("info", "l2tp"))
+    processes.append(lns)
+    lac = BngBlaster(topology.a, tmp_path, "lac").start(lac_config(topology.if_a, sessions=1),
+                                                        logging=("info", "l2tp"))
+    processes.append(lac)
+    wait_until(lambda: lac_counters(lac)["sessions-established"] == 1, 30, message="LAC session established")
+    assert "L2TP Encode Error" not in open(lns.path("log")).read()
+    assert_clean_exit(lac, lns)
+
+
 def test_lac_lns_same_instance(local_veth, processes, tmp_path):
     """LAC and LNS in one instance: the PAP reply of the LNS naming its own
     session does not relink the LAC session to the LNS session, which sent

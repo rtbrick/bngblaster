@@ -14,6 +14,7 @@
 /* Overhead of PPP over L2TP: IPv4, UDP, L2TP header with length
  * and offset, PPP address, control and protocol. */
 #define L2TP_PPP_OVERHEAD           (20 + 8 + 16 + 4)
+#define L2TP_MAX_LCP_PADDING        1400
 #define L2TP_MAX_AVP_SIZE           1024
 #define L2TP_MAX_MESSAGE_LEN        244 /* Error and disconnect messages of control commands (RFC3145: 255 byte AVP - 11) */
 #define L2TP_MAX_CONFIG_STRING_LEN  255 /* Host name, calling and called number */

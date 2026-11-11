@@ -48,7 +48,7 @@
 |                                           | | Default: 0 Range: 0 - 255                                         |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **lcp-padding**                           | | Add fixed padding to LCP packets send from LNS.                   |
-|                                           | | Default: 0 Range: 0 - 65535                                       |
+|                                           | | Default: 0 Range: 0 - 1400                                        |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **lcp-keepalive-interval**                | | LCP echo-request keepalive interval in seconds send from LNS      |
 |                                           | | to client. Disabled if set to 0.                                  |

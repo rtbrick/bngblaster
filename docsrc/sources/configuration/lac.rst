@@ -62,7 +62,7 @@
 |                                           | | Default: 0 Range: 0 - 255                                         |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **lcp-padding**                           | | Add fixed padding to LCP packets sent from the LAC.               |
-|                                           | | Default: 0 Range: 0 - 65535                                       |
+|                                           | | Default: 0 Range: 0 - 1400                                        |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **lcp-start**                             | | Event which starts the LCP negotiation of a PPPoL2TP session      |
 |                                           | | once the ICCN has been generated (iccn-tx or iccn-ack).           |

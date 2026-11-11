@@ -1572,6 +1572,7 @@ encode_ppp_lcp(uint8_t *buf, uint16_t *len,
         }
     }
     if(lcp->padding) {
+        memset(buf, 0x0, lcp->padding);
         BUMP_WRITE_BUFFER(buf, len, lcp->padding);
     }
     return PROTOCOL_SUCCESS;

@@ -4262,8 +4262,10 @@ json_parse_l2tp_tunnel_config(json_t *sub, const char *scope, bbl_l2tp_tunnel_co
     }
     value = json_object_get(sub, "lcp-padding");
     if(value) {
-        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= 65535)) {
-            fprintf(stderr, "JSON config error: Invalid value for %s->lcp-padding (0 - 65535)\n", scope);
+        /* Padded LCP packets must fit into an L2TP data frame
+         * on a network interface with MTU 1500. */
+        if(!(json_is_number(value) && json_number_value(value) >= 0 && json_number_value(value) <= L2TP_MAX_LCP_PADDING)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->lcp-padding (0 - %u)\n", scope, L2TP_MAX_LCP_PADDING);
             return false;
         }
         config->lcp_padding = json_number_value(value);
