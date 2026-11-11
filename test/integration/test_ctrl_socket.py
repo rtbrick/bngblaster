@@ -145,7 +145,13 @@ def test_socket_used_by_other_instance(instance, topology, processes, tmp_path):
     other = BngBlaster(topology.b, tmp_path, "other")
     other.socket = instance.socket
     processes.append(other)
-    with pytest.raises(RuntimeError):
-        other.start(config(topology.if_b))
+    # The socket path exists already, so start() can return before the
+    # second instance exited (test-info is answered by the first one).
+    try:
+        other.start(config(topology.if_b), wait_started=False)
+    except RuntimeError:
+        pass
+    wait_until(lambda: other.proc.poll() is not None, 10, 0.1, "second instance exit")
+    assert other.proc.returncode != 0
     assert "used by another instance" in open(other.path("stdout")).read()
     assert instance.ctrl("test-info")["code"] == 200
