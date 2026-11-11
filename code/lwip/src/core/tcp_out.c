@@ -482,6 +482,8 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
   if (pcb->unsent != NULL) {
     u16_t space;
     u16_t unsent_optlen;
+    u32_t unsent_used;
+    u8_t extend_last = 1;
 
     /* @todo: this could be sped up by keeping last_unsent in the pcb */
     for (last_unsent = pcb->unsent; last_unsent->next != NULL;
@@ -489,8 +491,19 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
 
     /* Usable space at the end of the last unsent segment */
     unsent_optlen = LWIP_TCP_OPT_LENGTH_SEGMENT(last_unsent->flags, pcb);
-    LWIP_ASSERT("mss_local is too small", mss_local >= last_unsent->len + unsent_optlen);
-    space = mss_local - (last_unsent->len + unsent_optlen);
+    unsent_used = (u32_t)last_unsent->len + unsent_optlen;
+#if TCP_OVERSIZE
+    unsent_used += pcb->unsent_oversize;
+#endif /* TCP_OVERSIZE */
+    if (unsent_used > mss_local) {
+      /* mss_local falls back to pcb->mss while snd_wnd_max is 0 or 1 and
+         shrinks below the last unsent segment once the peer opens a small
+         window: do not extend this segment (bngblaster: was an assert) */
+      space = 0;
+      extend_last = 0;
+    } else {
+      space = mss_local - (last_unsent->len + unsent_optlen);
+    }
 
     /*
      * Phase 1: Copy data directly into an oversized pbuf.
@@ -505,7 +518,7 @@ tcp_write(struct tcp_pcb *pcb, const void *arg, u16_t len, u8_t apiflags)
     LWIP_ASSERT("unsent_oversize mismatch (pcb vs. last_unsent)",
                 pcb->unsent_oversize == last_unsent->oversize_left);
 #endif /* TCP_OVERSIZE_DBGCHECK */
-    oversize = pcb->unsent_oversize;
+    oversize = extend_last ? pcb->unsent_oversize : 0;
     if (oversize > 0) {
       LWIP_ASSERT("inconsistent oversize vs. space", oversize <= space);
       seg = last_unsent;
