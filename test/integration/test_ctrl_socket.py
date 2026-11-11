@@ -64,6 +64,39 @@ def test_main_loop_commands(instance):
     assert instance.ctrl("network-interfaces")["code"] == 200
 
 
+LI_SENDER = """
+import socket, struct, sys, time
+ifname, dst = sys.argv[1], bytes.fromhex(sys.argv[2].replace(":", ""))
+src = bytes.fromhex("020000000002")
+sock = socket.socket(socket.AF_PACKET, socket.SOCK_RAW)
+sock.bind((ifname, 0))
+def checksum(data):
+    s = sum(struct.unpack("!%dH" % (len(data) // 2), data))
+    s = (s >> 16) + (s & 0xffff)
+    return ~(s + (s >> 16)) & 0xffff
+for _ in range(2):
+    for flow in range(int(sys.argv[3])):
+        udp = struct.pack("!HHHH", 49152, 49152, 8 + 8, 0) + struct.pack("!I", 0x40000000 | flow) + bytes(4)
+        ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, 20 + len(udp), 0, 0, 64, 17, 0,
+                         bytes([192, 0, 2, 1]), bytes([192, 0, 2, 10]))
+        ip = ip[:10] + struct.pack("!H", checksum(ip)) + ip[12:]
+        sock.send(dst + src + b"\\x08\\x00" + ip + udp)
+        if flow % 500 == 0:
+            time.sleep(0.005)
+"""
+
+
+def test_li_flows_bounded(instance, topology):
+    """LI flows are limited to 65536, each new 4 byte LI header allocated
+    another flow without limit."""
+    mac = topology.a.exec(["cat", "/sys/class/net/%s/address" % topology.if_a]).strip()
+    topology.b.exec(["python3", "-c", LI_SENDER, topology.if_b, mac, "66000"], timeout=120)
+    time.sleep(1)
+    assert instance.terminate() == 0
+    li = instance.report()["report"]["li-statistics"]
+    assert li["flows"] == 65536 and li["rx-packets"] > 66000, li
+
+
 @pytest.mark.parametrize("request_data", [b"", b'{"command": '])
 def test_idle_client(instance, request_data):
     """A client which does not send a complete request is timed out, other

@@ -395,6 +395,8 @@ class Server:
             if len(ip) >= 28 and ip[9] == 1:
                 self.record(kind="icmp", type=ip[20], src=socket.inet_ntoa(ip[12:16]),
                             dst=socket.inet_ntoa(ip[16:20]))
+            elif len(ip) >= 32 and ip[9] == 2:
+                self.record(kind="igmp", type=ip[24])
             return
         ccode, cid, clen = struct.unpack("!BBH", body[2:6])
         data = body[6:2 + clen]

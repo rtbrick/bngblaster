@@ -58,7 +58,7 @@ bbl_igmp_version(bbl_session_s *session)
  *
  * Reset IGMP on session reset. Groups joined via control
  * socket are joined again once the session is established,
- * zapping groups are restarted by the initial join.
+ * initial and zapping groups are restarted by the initial join.
  */
 void
 bbl_igmp_reset(bbl_session_s *session)
@@ -69,7 +69,7 @@ bbl_igmp_reset(bbl_session_s *session)
     session->igmp_robustness = 2;
     for(i=0; i < IGMP_MAX_GROUPS; i++) {
         group = &session->igmp_groups[i];
-        if(!group->zapping && (group->state == IGMP_GROUP_JOINING || group->state == IGMP_GROUP_ACTIVE)) {
+        if(!group->zapping && !group->initial && (group->state == IGMP_GROUP_JOINING || group->state == IGMP_GROUP_ACTIVE)) {
             group->state = IGMP_GROUP_JOINING;
             group->robustness_count = session->igmp_robustness;
             group->send = true;
@@ -85,6 +85,27 @@ bbl_igmp_reset(bbl_session_s *session)
     }
     session->igmp_querier_version = 0;
     session->igmp_querier_expire = 0;
+}
+
+/**
+ * bbl_igmp_stop
+ *
+ * Stop IGMP timers and zapping and reset the groups
+ * (session reset, LCP restart or IPCP down).
+ */
+void
+bbl_igmp_stop(bbl_session_s *session)
+{
+    timer_del(session->timer_igmp);
+    timer_del(session->timer_igmp_join);
+    timer_del(session->timer_igmp_query);
+    timer_del(session->timer_zapping);
+    session->zapping_joined_group = NULL;
+    session->zapping_leaved_group = NULL;
+    session->zapping_count = 0;
+    session->zapping_view_start_time.tv_sec = 0;
+    session->zapping_view_start_time.tv_nsec = 0;
+    bbl_igmp_reset(session);
 }
 
 /**

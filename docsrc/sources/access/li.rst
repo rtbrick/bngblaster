@@ -33,6 +33,8 @@ mediation device as shown in the following example.
     }
 
 The received flows can be displayed with the command `li-flows`.
+Up to 65536 flows are tracked, packets of further flows are only
+counted as received LI packets.
 
 ``$ sudo bngblaster-cli run.sock li-flows``
 

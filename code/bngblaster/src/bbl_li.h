@@ -39,6 +39,9 @@ typedef struct bbl_li_flow_
     uint64_t     packets_rx_ipv6_no_next_header;
 } bbl_li_flow_t;
 
+void
+bbl_li_flow_free(void *key, void *datum);
+
 void 
 bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_qmx_li_s *qmx_li);
 

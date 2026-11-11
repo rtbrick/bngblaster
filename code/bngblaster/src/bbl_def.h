@@ -57,6 +57,7 @@
 
 #define BBL_SESSION_HASHTABLE_SIZE 128993 /* is a prime number */
 #define BBL_LI_HASHTABLE_SIZE 32771 /* is a prime number */
+#define BBL_LI_FLOWS_MAX 65536 /* LI flows tracked, further flows are only counted */
 
 #define BBL_DEFAULT_TTL             64
 
@@ -220,12 +221,13 @@ typedef enum {
 typedef enum {
     BBL_PPP_DISABLED    = 0,
     BBL_PPP_REJECTED    = 1,
-    BBL_PPP_CLOSED      = 2,
-    BBL_PPP_INIT        = 3,
-    BBL_PPP_LOCAL_ACK   = 4,
-    BBL_PPP_PEER_ACK    = 5,
-    BBL_PPP_OPENED      = 6,
-    BBL_PPP_TERMINATE   = 7,
+    BBL_PPP_CLOSED      = 2,    /* closed locally (ipcp-close), only reopened locally */
+    BBL_PPP_STOPPED     = 3,    /* terminated by the peer or failed, reopened by the peer */
+    BBL_PPP_INIT        = 4,
+    BBL_PPP_LOCAL_ACK   = 5,
+    BBL_PPP_PEER_ACK    = 6,
+    BBL_PPP_OPENED      = 7,
+    BBL_PPP_TERMINATE   = 8,
     BBL_PPP_MAX
 } __attribute__ ((__packed__)) ppp_state_t;
 

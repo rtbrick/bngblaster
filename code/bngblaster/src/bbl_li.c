@@ -40,6 +40,13 @@ bbl_li_sub_packet_type_string(uint8_t sub_packet_type)
     }
 }
 
+void
+bbl_li_flow_free(void *key, void *datum)
+{
+    UNUSED(key);
+    free(datum);
+}
+
 /**
  * bbl_qmx_li_handler_rx
  *
@@ -67,7 +74,15 @@ bbl_qmx_li_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s 
         li_flow = *search;
     } else {
         /* New flow ... */
+        if(dict_count(g_ctx->li_flow_dict) >= BBL_LI_FLOWS_MAX) {
+            interface->stats.li_rx++;
+            return;
+        }
         li_flow = calloc(1, sizeof(bbl_li_flow_t));
+        if(!li_flow) {
+            interface->stats.li_rx++;
+            return;
+        }
         li_flow->src_ipv4 = ipv4->src;
         li_flow->dst_ipv4 = ipv4->dst;
         li_flow->src_port = udp->src;

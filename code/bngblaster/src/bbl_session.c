@@ -65,6 +65,7 @@ ppp_state_string(uint32_t state)
         case BBL_PPP_DISABLED: return "Disabled";
         case BBL_PPP_REJECTED: return "Rejected";
         case BBL_PPP_CLOSED: return "Closed";
+        case BBL_PPP_STOPPED: return "Stopped";
         case BBL_PPP_INIT: return "Init";
         case BBL_PPP_LOCAL_ACK: return "Local-Ack";
         case BBL_PPP_PEER_ACK: return "Peer-Ack";
@@ -164,6 +165,8 @@ bbl_session_ncp_down(bbl_session_s *session, bool ipcp)
         ENABLE_ENDPOINT(session->endpoint.ipv4);
         bbl_session_traffic_reset(session, session->session_traffic.ipv4_up);
         bbl_session_traffic_reset(session, session->session_traffic.ipv4_down);
+        /* Joined again once IPCP is opened. */
+        bbl_igmp_stop(session);
     } else {
         session->ipv6_prefix.len = 0;
         session->delegated_ipv6_prefix.len = 0;
@@ -188,7 +191,8 @@ bbl_session_ncp_open(bbl_session_s *session, bool ipcp) {
     if(session->session_state == BBL_ESTABLISHED ||
        session->session_state == BBL_PPP_NETWORK) {
         if(ipcp) {
-            if(session->ipcp_state == BBL_PPP_CLOSED) {
+            if(session->ipcp_state == BBL_PPP_CLOSED ||
+               session->ipcp_state == BBL_PPP_STOPPED) {
                 session->ipcp_state = BBL_PPP_INIT;
                 session->ipcp_retries = 0;
                 session->ipcp_failures = 0;
@@ -198,7 +202,8 @@ bbl_session_ncp_open(bbl_session_s *session, bool ipcp) {
             }
         } else {
             /* ip6cp */
-            if(session->ip6cp_state == BBL_PPP_CLOSED) {
+            if(session->ip6cp_state == BBL_PPP_CLOSED ||
+               session->ip6cp_state == BBL_PPP_STOPPED) {
                 session->ip6cp_state = BBL_PPP_INIT;
                 session->ip6cp_retries = 0;
                 session->ip6cp_failures = 0;
@@ -222,6 +227,9 @@ bbl_session_ncp_close(bbl_session_s *session, bool ipcp) {
                 session->send_requests |= BBL_SEND_IPCP_REQUEST;
                 bbl_session_ncp_down(session, true);
                 bbl_session_tx_qnode_insert(session);
+            } else if(session->ipcp_state == BBL_PPP_STOPPED) {
+                /* Not reopened by the peer after a local close. */
+                session->ipcp_state = BBL_PPP_CLOSED;
             }
         } else { /* ip6cp */
             if(session->ip6cp_state == BBL_PPP_OPENED) {
@@ -231,6 +239,8 @@ bbl_session_ncp_close(bbl_session_s *session, bool ipcp) {
                 session->send_requests |= BBL_SEND_IP6CP_REQUEST;
                 bbl_session_ncp_down(session, false);
                 bbl_session_tx_qnode_insert(session);
+            } else if(session->ip6cp_state == BBL_PPP_STOPPED) {
+                session->ip6cp_state = BBL_PPP_CLOSED;
             }
         }
     }

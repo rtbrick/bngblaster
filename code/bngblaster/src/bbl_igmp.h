@@ -17,6 +17,7 @@ typedef struct bbl_igmp_group_
     bool     send;
     bool     zapping;
     bool     zapping_result;
+    bool     initial; /* autostart initial join, joined again by the next initial join */
     uint32_t group;
     uint32_t source[IGMP_MAX_SOURCES];
     uint64_t packets;
@@ -32,6 +33,9 @@ bbl_igmp_version(bbl_session_s *session);
 
 void
 bbl_igmp_reset(bbl_session_s *session);
+
+void
+bbl_igmp_stop(bbl_session_s *session);
 
 void
 bbl_igmp_established(bbl_session_s *session);

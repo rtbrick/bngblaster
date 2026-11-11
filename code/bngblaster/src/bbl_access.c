@@ -277,6 +277,16 @@ bbl_access_icmpv6_echo_reply(bbl_session_s *session,
     ipv6_tx.next = &icmpv6_tx;
     ipv6_tx.dst = ipv6->src;
     ipv6_tx.src = ipv6->dst;
+    if(ipv6->dst[0] == 0xff) {
+        /* Echo request to multicast: reply from a unicast address of
+         * the session (RFC 4443 section 4.2), global unless link-local
+         * scope or no global address. */
+        if((ipv6->dst[1] & 0x0f) > 2 && ipv6_addr_not_zero(&session->ipv6_address)) {
+            ipv6_tx.src = session->ipv6_address;
+        } else {
+            ipv6_tx.src = session->link_local_ipv6_address;
+        }
+    }
     ipv6_tx.ttl = 255;
     icmpv6_tx.type = IPV6_ICMPV6_ECHO_REPLY;
     return bbl_txq_to_buffer(session->access_interface->txq, &eth_tx);
@@ -509,6 +519,7 @@ bbl_access_igmp_initial_join(timer_s *timer)
     group->robustness_count = session->igmp_robustness;
     group->state = IGMP_GROUP_JOINING;
     group->send = true;
+    group->initial = true;
     session->zapping_count = 1;
     session->send_requests |= BBL_SEND_IGMP;
     bbl_session_tx_qnode_insert(session);
@@ -1171,12 +1182,35 @@ bbl_access_ncp_pending(uint8_t state)
     }
 }
 
+/* NCP terminated by the peer, failed or rejected */
+static bool
+bbl_access_ncp_failed_state(uint8_t state)
+{
+    return state == BBL_PPP_STOPPED || state == BBL_PPP_REJECTED;
+}
+
+/* Start IGMP once IPCP is opened in established state. */
+static void
+bbl_access_igmp_start_pppoe(bbl_session_s *session)
+{
+    if(session->l2tp == false && !session->a10nsp_session &&
+       g_ctx->config.igmp_group &&
+       session->igmp_autostart &&
+       g_ctx->config.igmp_start_delay) {
+        timer_add(&g_ctx->timer_root, &session->timer_igmp_join, "IGMP Join", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
+    }
+    bbl_igmp_established(session);
+}
+
 /**
  * bbl_access_rx_established_pppoe
  *
  * Evaluate the NCP states in the network phase: the session is
  * established once no NCP is pending and at least one is opened,
  * and cleared if all NCPs failed (timeout, rejected or closed).
+ * An established session is cleared once no NCP is left after
+ * the peer or a failure closed the last one (a local close keeps
+ * the session to be reopened locally).
  *
  * @param interface receiving interface
  * @param session corresponding session
@@ -1189,6 +1223,16 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
 {
     UNUSED(interface);
 
+    if(session->session_state == BBL_ESTABLISHED) {
+        if((session->ipcp_state == BBL_PPP_DISABLED || bbl_access_ncp_failed_state(session->ipcp_state)) &&
+           (session->ip6cp_state == BBL_PPP_DISABLED || bbl_access_ncp_failed_state(session->ip6cp_state)) &&
+           !(session->ipcp_state == BBL_PPP_DISABLED && session->ip6cp_state == BBL_PPP_DISABLED)) {
+            LOG(PPPOE, "PPP (ID: %u) No NCP left (IPCP %s, IP6CP %s)\n", session->session_id,
+                ppp_state_string(session->ipcp_state), ppp_state_string(session->ip6cp_state));
+            bbl_session_clear(session);
+        }
+        return;
+    }
     if(session->session_state != BBL_PPP_NETWORK) {
         return;
     }
@@ -1218,21 +1262,32 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
         timer_add(&g_ctx->timer_root, &session->timer_session, "Session", g_ctx->config.pppoe_session_time, 0, session, &bbl_access_session_timeout);
     }
     if(session->ipcp_state == BBL_PPP_OPENED) {
-        if(session->l2tp == false && !session->a10nsp_session &&
-           g_ctx->config.igmp_group && 
-           session->igmp_autostart && 
-           g_ctx->config.igmp_start_delay) {
-            /* Start IGMP */
-            timer_add(&g_ctx->timer_root, &session->timer_igmp_join, "IGMP Join", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
-        }
-        bbl_igmp_established(session);
+        bbl_access_igmp_start_pppoe(session);
     }
+}
+
+/* IPCP opened, in the network phase or reopened in established state. */
+static void
+bbl_access_ipcp_opened(bbl_access_interface_s *interface,
+                       bbl_session_s *session,
+                       struct timespec *timestamp)
+{
+    session->ipcp_state = BBL_PPP_OPENED;
+    if(session->session_state == BBL_ESTABLISHED) {
+        bbl_access_igmp_start_pppoe(session);
+    } else {
+        bbl_access_rx_established_pppoe(interface, session, timestamp);
+    }
+    ACTIVATE_ENDPOINT(session->endpoint.ipv4);
+    session->version++;
+    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
+        format_ipv4_address(&session->ip_address));
 }
 
 /**
  * bbl_access_ncp_failed
  *
- * IPCP or IP6CP failed (timeout or Max-Failure).
+ * IPCP or IP6CP failed (timeout, Max-Failure or terminated by peer).
  *
  * @param session corresponding session
  * @param ipcp true for IPCP, false for IP6CP
@@ -1240,14 +1295,16 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
 void
 bbl_access_ncp_failed(bbl_session_s *session, bool ipcp)
 {
+    /* A failed local close (Terminate) ends Closed, all other
+     * failures Stopped, where the peer can reopen the NCP. */
     if(ipcp) {
         timer_del(session->timer_ipcp);
         session->send_requests &= ~BBL_SEND_IPCP_REQUEST;
-        session->ipcp_state = BBL_PPP_CLOSED;
+        session->ipcp_state = session->ipcp_state == BBL_PPP_TERMINATE ? BBL_PPP_CLOSED : BBL_PPP_STOPPED;
     } else {
         timer_del(session->timer_ip6cp);
         session->send_requests &= ~BBL_SEND_IP6CP_REQUEST;
-        session->ip6cp_state = BBL_PPP_CLOSED;
+        session->ip6cp_state = session->ip6cp_state == BBL_PPP_TERMINATE ? BBL_PPP_CLOSED : BBL_PPP_STOPPED;
     }
     bbl_access_rx_established_pppoe(NULL, session, NULL);
 }
@@ -1368,6 +1425,14 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
                 session->ip6cp_failures = 0;
                 session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
                 session->send_requests |= BBL_SEND_IP6CP_REQUEST;
+            } else if(session->ip6cp_state == BBL_PPP_STOPPED) {
+                /* Reopened by the peer (RFC 1661 section 4.1, Stopped + RCR). */
+                LOG(PPPOE, "IP6CP (ID: %u) Reopened by peer\n", session->session_id);
+                session->ip6cp_state = BBL_PPP_INIT;
+                session->ip6cp_retries = 0;
+                session->ip6cp_failures = 0;
+                session->ip6cp_request_code = PPP_CODE_CONF_REQUEST;
+                session->send_requests |= BBL_SEND_IP6CP_REQUEST;
             } else if(session->ip6cp_state < BBL_PPP_INIT) {
                 /* Closed (RFC 1661 section 4.1, Closed + RCR: sta) or
                  * rejected, NCP packets before the network phase are
@@ -1474,8 +1539,8 @@ bbl_access_rx_ip6cp(bbl_access_interface_s *interface,
             session->ip6cp_options_len = 0;
             session->send_requests |= BBL_SEND_IP6CP_RESPONSE;
             bbl_session_tx_qnode_insert(session);
-            if(session->ip6cp_state > BBL_PPP_CLOSED) {
-                /* Closed by peer (RFC 1661 section 4.1, RTR) */
+            if(session->ip6cp_state > BBL_PPP_STOPPED) {
+                /* Terminated by peer (RFC 1661 section 4.1, RTR) */
                 LOG(PPPOE, "IP6CP (ID: %u) Terminated by peer\n", session->session_id);
                 if(session->ip6cp_state == BBL_PPP_OPENED) {
                     bbl_session_ncp_down(session, false);
@@ -1570,6 +1635,14 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                 session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
                 session->send_requests |= BBL_SEND_IPCP_REQUEST;
                 bbl_session_tx_qnode_insert(session);
+            } else if(session->ipcp_state == BBL_PPP_STOPPED) {
+                /* Reopened by the peer (RFC 1661 section 4.1, Stopped + RCR). */
+                LOG(PPPOE, "IPCP (ID: %u) Reopened by peer\n", session->session_id);
+                session->ipcp_state = BBL_PPP_INIT;
+                session->ipcp_retries = 0;
+                session->ipcp_failures = 0;
+                session->ipcp_request_code = PPP_CODE_CONF_REQUEST;
+                session->send_requests |= BBL_SEND_IPCP_REQUEST;
             } else if(session->ipcp_state < BBL_PPP_INIT) {
                 /* Closed (RFC 1661 section 4.1, Closed + RCR: sta) or
                  * rejected, NCP packets before the network phase are
@@ -1611,12 +1684,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                     session->ipcp_state = BBL_PPP_PEER_ACK;
                     break;
                 case BBL_PPP_LOCAL_ACK:
-                    session->ipcp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(interface, session, timestamp);
-                    ACTIVATE_ENDPOINT(session->endpoint.ipv4);
-                    session->version++;
-                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id, 
-                        format_ipv4_address(&session->ip_address));
+                    bbl_access_ipcp_opened(interface, session, timestamp);
                     break;
                 default:
                     break;
@@ -1687,12 +1755,7 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
                     session->ipcp_state = BBL_PPP_LOCAL_ACK;
                     break;
                 case BBL_PPP_PEER_ACK:
-                    session->ipcp_state = BBL_PPP_OPENED;
-                    bbl_access_rx_established_pppoe(interface, session, timestamp);
-                    ACTIVATE_ENDPOINT(session->endpoint.ipv4);
-                    session->version++;
-                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
-                        format_ipv4_address(&session->ip_address));
+                    bbl_access_ipcp_opened(interface, session, timestamp);
                     break;
                 default:
                     break;
@@ -1704,8 +1767,8 @@ bbl_access_rx_ipcp(bbl_access_interface_s *interface,
             session->ipcp_options_len = 0;
             session->send_requests |= BBL_SEND_IPCP_RESPONSE;
             bbl_session_tx_qnode_insert(session);
-            if(session->ipcp_state > BBL_PPP_CLOSED) {
-                /* Closed by peer (RFC 1661 section 4.1, RTR) */
+            if(session->ipcp_state > BBL_PPP_STOPPED) {
+                /* Terminated by peer (RFC 1661 section 4.1, RTR) */
                 LOG(PPPOE, "IPCP (ID: %u) Terminated by peer\n", session->session_id);
                 if(session->ipcp_state == BBL_PPP_OPENED) {
                     bbl_session_ncp_down(session, true);
@@ -1846,6 +1909,7 @@ bbl_access_lcp_restart(bbl_session_s *session, bool peer)
     timer_del(session->timer_lcp_echo);
     timer_del(session->timer_ipcp);
     timer_del(session->timer_ip6cp);
+    bbl_igmp_stop(session);
 
     /* Reset upper layer session states. The configure-request of
      * the peer (peer restart) is answered by the caller, which sets

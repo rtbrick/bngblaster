@@ -17,6 +17,8 @@ scenarios:
                      --ra-delay seconds after the first Reply
   ra                 one RA to all nodes after --ra-delay seconds
   igmp               IGMP log only
+  echo6              one RA after --ra-delay seconds, then an ICMPv6 echo
+                     request to ff02::1 every second, replies logged
   igmp-query         IGMPv3 general query (max resp 2s) after --query-delay
                      seconds, IGMPv2 general query 4 seconds later
 
@@ -32,7 +34,7 @@ from scapy.layers.dhcp import BOOTP, DHCP
 from scapy.layers.dhcp6 import (DHCP6_Advertise, DHCP6_Release, DHCP6_Reply, DHCP6_Request, DHCP6_Solicit,
                                 DHCP6OptClientId, DHCP6OptIA_NA, DHCP6OptIAAddress, DHCP6OptServerId)
 from scapy.layers.inet import IP, UDP
-from scapy.layers.inet6 import (ICMPv6ND_RA, ICMPv6NDOptPrefixInfo, ICMPv6NDOptSrcLLAddr, IPv6)
+from scapy.layers.inet6 import (ICMPv6EchoReply, ICMPv6EchoRequest, ICMPv6ND_RA, ICMPv6NDOptPrefixInfo, ICMPv6NDOptSrcLLAddr, IPv6)
 from scapy.layers.l2 import Ether
 from scapy.contrib.igmp import IGMP
 from scapy.contrib.igmpv3 import IGMPv3, IGMPv3gr, IGMPv3mq, IGMPv3mr
@@ -174,6 +176,14 @@ class Peer:
         elif scenario == "ra" and not self.ra_sent and now >= self.start + self.args.ra_delay:
             self.ra_sent = True
             self.ra()
+        elif scenario == "echo6" and now >= self.start + self.args.ra_delay and now >= self.next_ra:
+            if not self.ra_sent:
+                self.ra_sent = True
+                self.ra()
+            else:
+                self.send(Ether(src=self.mac, dst="33:33:00:00:00:01") /
+                          IPv6(src=SERVER6_LL, dst="ff02::1") / ICMPv6EchoRequest(id=1, seq=1))
+            self.next_ra = now + 1
         while self.queries and now >= self.queries[0][0]:
             self.query(self.queries.pop(0)[1])
 
@@ -193,6 +203,8 @@ class Peer:
                 self.dhcpv6(pkt)
             elif IP in pkt and pkt[IP].proto == 2:
                 self.igmp(pkt)
+            elif IPv6 in pkt and ICMPv6EchoReply in pkt:
+                self.write(proto="echo-reply", src=pkt[IPv6].src, dst=pkt[IPv6].dst)
 
 
 def main():

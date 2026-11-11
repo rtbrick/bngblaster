@@ -157,6 +157,37 @@ def test_igmp_rejoin_after_reconnect(ipoe):
     wait_until(lambda: state() == ["active"], 5, message="group active")
 
 
+def test_igmp_initial_join_after_reconnect(ipoe):
+    """The autostart initial join group is joined once after reconnects,
+    it was kept and joined again besides the new initial join."""
+    ipoe.peer("igmp")
+    ipoe.start(igmp={"autostart": True, "start-delay": 1, "group": "239.2.0.1"})
+    ipoe.established(1)
+
+    def igmp_groups():
+        return [(g["group"], g["state"]) for g in ipoe.bbl.ctrl("igmp-info", **{"session-id": 1})["igmp-groups"]]
+
+    wait_until(lambda: igmp_groups() == [("239.2.0.1", "active")], 10, message="initial join")
+    for flap in (1, 2):
+        assert ipoe.bbl.ctrl("session-restart", **{"session-id": 1})["code"] == 200
+        wait_until(lambda: ipoe.info()["flapped"] == flap, 10, message="session flapped")
+        ipoe.established(1)
+        time.sleep(4)
+    assert igmp_groups() == [("239.2.0.1", "active")]
+
+
+def test_icmpv6_echo_multicast(ipoe):
+    """ICMPv6 echo request to ff02::1 is answered from the link-local
+    address of the session, not from the multicast destination
+    (RFC 4443 section 4.2)."""
+    ipoe.peer("echo6", "--ra-delay", "1")
+    ipoe.start(access={"ipv4": False, "ipv6": True})
+    ipoe.established(1)
+    wait_until(lambda: ipoe.entries(proto="echo-reply"), 10, message="ICMPv6 echo reply")
+    reply = ipoe.entries(proto="echo-reply")[0]
+    assert reply["src"].startswith("fe80:") and reply["dst"] == "fe80::1", reply
+
+
 def test_igmpv3_records_and_querier(ipoe):
     """IGMPv3 joins use CHANGE_TO_EXCLUDE, query responses MODE_IS_EXCLUDE
     after a delay within the max response time (RFC 3376 sections 5.1

@@ -41,16 +41,7 @@ bbl_dhcp_stop(bbl_session_s *session, bool keep_address)
     session->dns2 = 0;
 
     /* Stop multicast ... */
-    timer_del(session->timer_igmp);
-    timer_del(session->timer_igmp_join);
-    timer_del(session->timer_igmp_query);
-    timer_del(session->timer_zapping);
-    session->zapping_joined_group = NULL;
-    session->zapping_leaved_group = NULL;
-    session->zapping_count = 0;
-    session->zapping_view_start_time.tv_sec = 0;
-    session->zapping_view_start_time.tv_nsec = 0;
-    bbl_igmp_reset(session);
+    bbl_igmp_stop(session);
 
     /* Reset DHCP */
     timer_del(session->timer_dhcp_retry);

@@ -108,7 +108,7 @@ def test_ipcp_timeout_dual_stack(ppp):
     ppp.start_bbl(ppp={"ipcp": {"conf-request-timeout": 1, "conf-request-retry": 2}})
     ppp.wait_state("Established", 30)
     session = ppp.session()
-    assert (session["ipcp-state"], session["ip6cp-state"]) == ("Closed", "Opened")
+    assert (session["ipcp-state"], session["ip6cp-state"]) == ("Stopped", "Opened")
 
 
 def test_ipcp_nak_max_failure(ppp):
@@ -123,15 +123,69 @@ def test_ipcp_nak_max_failure(ppp):
 
 
 def test_ipcp_terminate_by_peer(ppp):
-    """IPCP terminate-request of the server closes IPCP and stops IPv4,
+    """IPCP terminate-request of the server stops IPCP and IPv4,
     the session stays established with IPv6."""
     ppp.start_server("--actions", "2:ipcp-term")
     ppp.start_bbl()
     ppp.wait_state("Established")
-    wait_until(lambda: ppp.session()["ipcp-state"] == "Closed", 10, message="IPCP closed")
+    wait_until(lambda: ppp.session()["ipcp-state"] == "Stopped", 10, message="IPCP stopped")
     session = ppp.session()
     assert session["session-state"] == "Established" and session["ip6cp-state"] == "Opened"
     assert session.get("ipv4-address") in (None, "0.0.0.0")
+
+
+def test_ipcp_reopen_by_peer(ppp):
+    """IPCP terminated by the server is opened again by a configure-request
+    of the server (RFC 1661 Stopped + RCR), it was answered with
+    terminate-ack forever."""
+    ppp.start_server("--actions", "2:ipcp-term,5:ipcp-reneg")
+    ppp.start_bbl()
+    ppp.wait_state("Established")
+    wait_until(lambda: ppp.session()["ipcp-state"] != "Opened", 10, message="IPCP terminated")
+    wait_until(lambda: ppp.session()["ipcp-state"] == "Opened", 10, message="IPCP opened again")
+    assert ppp.session()["ipv4-address"] == "10.0.0.100"
+
+
+def test_ipcp_terminate_by_peer_ipv4_only(ppp):
+    """IPCP terminate-request of the server on an IPv4 only session: no
+    NCP is left, the session is terminated instead of staying established."""
+    ppp.start_server("--actions", "2:ipcp-term")
+    ppp.start_bbl(access={"ipv6": False})
+    ppp.wait_state("Established")
+    ppp.wait_state("Terminated", 15)
+    assert ppp.counters()["sessions-established"] == 0
+
+
+def test_igmp_ipcp_reopen(ppp):
+    """IGMP autostart: IPCP down resets the initial join, which is sent
+    again once the server opened IPCP again."""
+    ppp.start_server("--actions", "4:ipcp-term,6:ipcp-reneg")
+    ppp.start_bbl(igmp={"autostart": True, "start-delay": 1, "group": "239.2.0.1"})
+    ppp.wait_state("Established")
+    wait_until(lambda: ppp.received("igmp"), 10, message="initial join")
+    wait_until(lambda: ppp.session()["ipcp-state"] != "Opened", 10, message="IPCP terminated")
+    reports = len(ppp.received("igmp"))
+    wait_until(lambda: ppp.session()["ipcp-state"] == "Opened", 10, message="IPCP opened again")
+    wait_until(lambda: len(ppp.received("igmp")) > reports, 10, message="initial join after IPCP reopen")
+    groups = ppp.bbl.ctrl("igmp-info", **{"session-id": 1})["igmp-groups"]
+    assert [g["group"] for g in groups] == ["239.2.0.1"], groups
+
+
+def test_igmp_lcp_restart(ppp):
+    """IGMP autostart: the initial join group is reset on LCP restart,
+    the initial join after the restart took another slot (joined twice)."""
+    ppp.start_server("--actions", "4:lcp-term-ack")
+    ppp.start_bbl(igmp={"autostart": True, "start-delay": 1, "group": "239.2.0.1", "group-count": 8})
+    ppp.wait_state("Established")
+    wait_until(lambda: ppp.received("igmp"), 10, message="initial join")
+    reports = len(ppp.received("igmp"))
+    requests = len(ppp.received("lcp", CONF_REQ))
+    wait_until(lambda: len(ppp.received("lcp", CONF_REQ)) > requests, 10, message="LCP restart")
+    ppp.wait_state("Established")
+    wait_until(lambda: len(ppp.received("igmp")) > reports, 10, message="initial join after LCP restart")
+    time.sleep(1)
+    groups = ppp.bbl.ctrl("igmp-info", **{"session-id": 1})["igmp-groups"]
+    assert len(groups) == 1, groups
 
 
 def test_ipcp_renegotiation_by_peer(ppp):

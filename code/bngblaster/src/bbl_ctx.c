@@ -138,7 +138,7 @@ bbl_ctx_del() {
     /* Free hash table dictionaries. */
     dict_free(g_ctx->vlan_session_dict, NULL);
     dict_free(g_ctx->l2tp_session_dict, NULL);
-    dict_free(g_ctx->li_flow_dict, NULL);
+    dict_free(g_ctx->li_flow_dict, bbl_li_flow_free);
     dict_free(g_ctx->bgp_session_dict, NULL);
     dict_free(g_ctx->ldp_session_dict, NULL);
 
