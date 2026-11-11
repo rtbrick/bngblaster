@@ -1705,6 +1705,14 @@ bbl_stream_ctrl(bbl_stream_s *stream, struct timespec *now)
         stream->last_sync_loss = loss;
         bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
         if(unlikely(!stream->verified)) {
+            if(!stream->rx_first_seq && !__atomic_load_n(&stream->reset, __ATOMIC_ACQUIRE) &&
+               __atomic_load_n(&stream->rx_last_seq, __ATOMIC_RELAXED)) {
+                /* The RX thread stored the sequence number of a packet received
+                 * before the reset after it was cleared (no handshake), so it
+                 * continues in the verified path without first sequence number.
+                 * The RX thread does not write rx_first_seq in this state. */
+                stream->rx_first_seq = __atomic_load_n(&stream->rx_last_seq, __ATOMIC_RELAXED);
+            }
             if(stream->rx_first_seq) {
                 if(stream->tx_flags & STREAM_FLAG_SESSION_TRAFFIC) {
                     if(session) {
