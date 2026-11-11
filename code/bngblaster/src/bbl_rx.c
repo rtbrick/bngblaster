@@ -97,11 +97,18 @@ bbl_rx_thread(bbl_interface_s *interface,
     }
     network_interface = interface->network_vlan[eth->vlan_outer];
     if(network_interface) {
-        return bbl_rx_stream_network(network_interface, eth);
+        if(bbl_rx_stream_network(network_interface, eth)) return true;
     } else if(interface->access) {
-        return bbl_rx_stream_access(interface->access, eth);
+        if(bbl_rx_stream_access(interface->access, eth)) return true;
     } else if(interface->a10nsp) {
-        return bbl_rx_stream_a10nsp(interface->a10nsp, eth);
+        if(bbl_rx_stream_a10nsp(interface->a10nsp, eth)) return true;
+    }
+    /* Packets of known unicast streams which are not accepted (e.g. wrong
+     * session or sent before stream-reset) are counted by bbl_stream_rx
+     * and dropped, the main thread would process them a second time. */
+    if(eth->bbl && eth->bbl->type == BBL_TYPE_UNICAST &&
+       bbl_stream_index_get(eth->bbl->flow_id)) {
+        return true;
     }
     return false;
 }
