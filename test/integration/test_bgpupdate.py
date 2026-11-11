@@ -155,3 +155,53 @@ def test_l2vpn_route_too_large(tmp_path):
     updates = decode(str(path))
     assert codes(updates[0])[0] == ATTR_MP_REACH
     assert streams.exists()
+
+
+@pytest.mark.parametrize("asn_num", [64, 255])
+def test_as_path_long(tmp_path, asn_num):
+    """AS_PATH of 64 or more ASNs (more than 255 bytes) is encoded with
+    the extended length flag and the updates do not exceed 4096 bytes."""
+    path = str(tmp_path / "update.bgp")
+    asns = list(range(65001, 65001 + asn_num))
+    bgpupdate(["-f", path, "-n", "10.0.0.1", "-p", "10.0.0.0/32", "-P", "3000"] +
+              [a for asn in asns for a in ("-a", str(asn))])
+    updates = decode(path)
+    as_path = struct.pack("!BB", 2, asn_num) + b"".join(struct.pack("!I", a) for a in asns)
+    assert all(attr(update, ATTR_AS_PATH) == as_path for update in updates)
+    assert sum(len(update["nlri"]) for update in updates) == 3000 * 5
+
+
+def run_bgpupdate(args):
+    return subprocess.run([sys.executable, helpers.BGPUPDATE_BIN] + args,
+                          stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, timeout=60)
+
+
+@pytest.mark.parametrize("args, message", [
+    (["-n", "10.0.0.1", "-p", "255.255.255.0/24", "-P", "3"], "prefix base and count out of range"),
+    (["-n", "fc00::1", "-p", "ffff:ffff:ffff:ffff::/64", "-P", "2"], "prefix base and count out of range"),
+    (["-n", "255.255.255.255", "-p", "10.0.0.0/24", "-N", "2"], "next-hop base and count out of range"),
+    (["-n", "10.0.0.1", "-p", "10.0.0.0/24"] + ["-a", "1"] * 256, "more than 255 ASNs"),
+    (["-n", "10.0.0.1", "-p", "10.0.0.0/24", "-N", "0"], "out of range"),
+    (["-n", "10.0.0.1", "-p", "10.0.0.0/24", "-m", "100", "-M", "0"], "out of range"),
+    (["-n", "10.0.0.1", "-p", "10.0.0.0/24", "-a", "4294967296"], "out of range"),
+    (["-n", "10.0.0.1", "-p", "10.0.0.0/24", "-l", "-1"], "out of range"),
+    (["-n", "10.0.0.1", "-p", "10.0.0.0/24", "--med", "4294967296"], "out of range"),
+], ids=["prefix-range-ipv4", "prefix-range-ipv6", "next-hop-range", "asn-num", "next-hop-num", "label-num",
+        "asn", "local-pref", "med"])
+def test_invalid_arguments(tmp_path, args, message):
+    """Invalid arguments are rejected with an error message and without
+    writing a file (traceback or fewer prefixes written with exit code 0
+    before)."""
+    path = tmp_path / "update.bgp"
+    result = run_bgpupdate(["-f", str(path)] + args)
+    assert result.returncode != 0, result.stdout
+    assert message in result.stdout
+    assert "Traceback" not in result.stdout
+    assert not path.exists()
+
+
+def test_output_file_error(tmp_path):
+    result = run_bgpupdate(["-f", str(tmp_path / "missing" / "update.bgp"), "-n", "10.0.0.1", "-p", "10.0.0.0/24"])
+    assert result.returncode == 1
+    assert "No such file or directory" in result.stdout
+    assert "Traceback" not in result.stdout

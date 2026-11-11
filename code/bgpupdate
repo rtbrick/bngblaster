@@ -13,6 +13,7 @@ import json
 import logging
 import struct
 import sys
+from collections import deque
 
 try:
     from scapy.all import *
@@ -46,6 +47,7 @@ BGP_WITHDRAW_LABEL = 0x800000
 BGP_WITHDRAW_LABEL_STR = "withdraw"
 
 BGP_UPDATE_MIN_LEN = 34
+BGP_AS_PATH_MAX_ASN = 255
 BGP_LOCAL_PREF_LEN = 7
 BGP_MED_LEN = 7
 BGP_MP_REACH_IPV4_FIXED_HDR_LEN = 14
@@ -800,22 +802,22 @@ def format_rd(rd: bytes) -> str:
 def main():
     # parse arguments
     parser = argparse.ArgumentParser(description=DESCRIPTION)
-    parser.add_argument('-a', '--asn', type=int, default=[], action='append', help='autonomous system number')
+    parser.add_argument('-a', '--asn', type=int_range(0, 0xffffffff), default=[], action='append', help='autonomous system number (repeat for an AS path of up to %s ASNs)' % BGP_AS_PATH_MAX_ASN)
     parser.add_argument('-n', '--next-hop-base', metavar='ADDRESS', type=ipaddress.ip_address, required=True, help='next-hop base address (IPv4 or IPv6)')
-    parser.add_argument('-N', '--next-hop-num', metavar='N', type=int, default=1, help='next-hop count')
+    parser.add_argument('-N', '--next-hop-num', metavar='N', type=int_range(1, 0xffffffff), default=1, help='next-hop count')
     parser.add_argument('-p', '--prefix-base', metavar='PREFIX', type=ipaddress.ip_network, help='prefix base network (IPv4 or IPv6)')
-    parser.add_argument('-P', '--prefix-num', metavar='N', type=int, default=1, help='prefix count')
+    parser.add_argument('-P', '--prefix-num', metavar='N', type=int_range(0, 0xffffffff), default=1, help='prefix count')
     parser.add_argument('-m', '--label-base', metavar='LABEL', type=label_type, help='label base')
-    parser.add_argument('-M', '--label-num', metavar='N', type=int, default=1, help='label count')
-    parser.add_argument('-l', '--local-pref', type=int, help='local preference')
+    parser.add_argument('-M', '--label-num', metavar='N', type=int_range(1, MPLS_LABEL_MAX), default=1, help='label count')
+    parser.add_argument('-l', '--local-pref', type=int_range(0, 0xffffffff), help='local preference')
     parser.add_argument('-f', '--file', type=str, default="out.bgp", help='output file')
     parser.add_argument('-w', '--withdraw', action="store_true", help="withdraw prefixes")
     parser.add_argument('-s', '--streams', type=str, help="generate BNG Blaster traffic stream file")
-    parser.add_argument('--med', type=int, help="MED")
+    parser.add_argument('--med', type=int_range(0, 0xffffffff), help="MED")
     parser.add_argument('--stream-tx-label', metavar='LABEL', type=label_type, help="stream TX outer label")
     parser.add_argument('--stream-tx-inner-label', metavar='LABEL', type=label_type, help="stream TX inner label")
     parser.add_argument('--stream-rx-label', metavar='LABEL', type=label_type, help="stream RX label")
-    parser.add_argument('--stream-rx-label-num', metavar='N', type=int, default=1, help="stream RX label count")
+    parser.add_argument('--stream-rx-label-num', metavar='N', type=int_range(1, MPLS_LABEL_MAX), default=1, help="stream RX label count")
     parser.add_argument('--stream-pps', metavar='N', type=float, default=1.0, help="stream packets per seconds")
     parser.add_argument('--stream-interface', metavar='IFACE', type=str, help="stream interface")
     parser.add_argument('--stream-group-id', metavar='N', type=int, help="stream group identifier")
@@ -871,6 +873,11 @@ def main():
     # init logging
     log = init_logging(args.log_level)
 
+    if len(args.asn) > BGP_AS_PATH_MAX_ASN:
+        # one AS_SEQUENCE segment
+        log.error("more than %s ASNs (-a)" % BGP_AS_PATH_MAX_ASN)
+        exit(1)
+
     if sum((args.evpn_vpws, args.evpn_elan, args.l2vpn)) > 1:
         log.error("--evpn-vpws, --evpn-elan and --l2vpn are mutually exclusive")
         exit(1)
@@ -905,6 +912,15 @@ def main():
 
     ip_version = args.prefix_base.version
 
+    max_address = (1 << args.prefix_base.max_prefixlen) - 1
+    if int(args.next_hop_base) + args.next_hop_num - 1 > max_address:
+        log.error("next-hop base and count out of range")
+        exit(1)
+    if args.prefix_num and int(args.prefix_base.network_address) + \
+       (args.prefix_num - 1) * args.prefix_base.num_addresses > max_address:
+        log.error("prefix base and count out of range")
+        exit(1)
+
     streams = []
     stream_label_index = 0
     stream_label = args.stream_rx_label
@@ -928,7 +944,7 @@ def main():
     #    0: ["<prefix1>", "<prefix2>", "..."],
     #    1: ["<prefix1>", "<prefix2>", "..."]
     # }
-    prefixes = {i: [] for i in range(args.next_hop_num)}
+    prefixes = {i: deque() for i in range(args.next_hop_num)}
     next_hops = []
     for nh_index in range(args.next_hop_num):
         next_hops.append(str(args.next_hop_base+nh_index))
@@ -1049,7 +1065,10 @@ def main():
         segments = []
         if args.asn:
             segments.append(BGPPAAS4BytesPath.ASPathSegment(segment_type="AS_SEQUENCE", segment_value=args.asn))
-        as_path_attr = BGPPathAttr(type_flags=64, type_code="AS_PATH", attribute=BGPPAAS4BytesPath(segments=segments))
+        # extended length flag for AS_PATH longer than 255 bytes (64 or more ASNs)
+        as_path_extended = 2 + len(args.asn) * 4 > 255
+        as_path_attr = BGPPathAttr(type_flags=0x50 if as_path_extended else 0x40, type_code="AS_PATH",
+                                   attribute=BGPPAAS4BytesPath(segments=segments))
 
         if args.local_pref is not None:
             local_pref_attr = BGPPathAttr(type_flags=64, type_code="LOCAL_PREF", attribute=BGPPALocalPref(local_pref=args.local_pref))
@@ -1066,7 +1085,7 @@ def main():
 
                 nlri = []
 
-                remaining = BGP_MAXIMUM_MESSAGE_SIZE - (BGP_UPDATE_MIN_LEN + (len(args.asn) * 4))
+                remaining = BGP_MAXIMUM_MESSAGE_SIZE - (BGP_UPDATE_MIN_LEN + (len(args.asn) * 4) + as_path_extended)
 
                 # Attributes are ordered by type code (RFC 4271 section 5).
                 if ip_version == 4:
@@ -1096,7 +1115,7 @@ def main():
                     remaining -= prefix_attr_len
 
                     # get next prefix and label
-                    prefix, label = prefix_list.pop(0)
+                    prefix, label = prefix_list.popleft()
                     prefix_count += 1
                     if labeled:
                         labeled_prefix = "%s/%s" % (prefix, BGP_WITHDRAW_LABEL_STR if args.withdraw else label)
@@ -1184,4 +1203,9 @@ def main():
 
 
 if __name__ == "__main__":
-    main()
+    try:
+        main()
+    except OSError as e:
+        # e.g. output file not writable
+        logging.getLogger().error(e)
+        exit(1)

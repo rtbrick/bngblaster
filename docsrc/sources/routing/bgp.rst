@@ -308,7 +308,8 @@ streams for use with the BNG Blaster.
 
     options:
       -h, --help            show this help message and exit
-      -a ASN, --asn ASN     autonomous system number
+      -a ASN, --asn ASN     autonomous system number (repeat for an AS path of up
+                            to 255 ASNs)
       -n ADDRESS, --next-hop-base ADDRESS
                             next-hop base address (IPv4 or IPv6)
       -N N, --next-hop-num N
