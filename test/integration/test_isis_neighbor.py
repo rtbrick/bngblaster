@@ -317,6 +317,43 @@ def test_lsp_receive_rules(setup):
     assert bbl.alive()
 
 
+def test_own_lsp_via_csnp(setup):
+    """An own LSP which is not originated, announced by a CSNP first (the
+    normal order on a new P2P adjacency) and received after the request,
+    is purged with a higher sequence number (ISO 10589 7.3.16.4)."""
+    bbl, peer = setup()
+    p2p_up(peer)
+    wait_until(lambda: adjacency_up(bbl), 5, message="adjacency up")
+    ext = ip.tlv(ip.TLV_EXT_IS_REACH, peer.sysid + b"\x00" + b"\x00\x00\x0a\x00")
+    own = ip.lsp_id(BBL_SYSID, 0, 7)
+    data = ip.lsp(ip.L2_LSP, own, 100, 1200, ext)
+    cksum = int.from_bytes(data[24:26], "big")
+    peer.send(peer.snp(ip.L2_CSNP, [(1200, own, 100, cksum)]), dst=ip.MAC_L2)
+    assert peer.wait(5, lambda p: p.type == ip.L2_PSNP and any(e[1] == own for e in p.entries())), \
+        "own LSP not requested"
+    peer.send(data, dst=ip.MAC_L2)
+    p = peer.wait(5, lambda p: p.type == ip.L2_LSP and p.lsp_id == own)
+    assert p and p.seq == 101 and p.lifetime == 0, "own LSP not purged"
+    assert database(bbl)["%s.00-07" % BBL_SYSTEM_ID]["source-type"] == "self"
+
+
+def test_teardown_purge_header_only(setup):
+    """isis-teardown purges the self originated LSPs with the header and
+    the authentication TLV only (RFC 5304 section 2, RFC 6232)."""
+    bbl, peer = setup(isis={"level2-auth-key": KEY, "level2-auth-type": "md5", "teardown-time": 5})
+    p2p_up(peer, auth=KEY)
+    wait_until(lambda: adjacency_up(bbl), 5, message="adjacency up")
+    frag0 = ip.lsp_id(BBL_SYSID)
+    wait_until(lambda: database(bbl)["%s.00-00" % BBL_SYSTEM_ID]["lifetime-remaining"] > 0, 5,
+               message="self LSP originated")
+    assert bbl.ctrl("isis-teardown")["code"] == 200
+    purge = peer.wait(10, lambda p: p.type == ip.L2_LSP and p.lsp_id == frag0 and p.lifetime == 0)
+    assert purge, "self LSP not purged"
+    assert [t for t, _, _ in purge.tlvs] == [ip.TLV_AUTH], "purge with TLV body"
+    auth = [off for t, v, off in purge.tlvs if t == ip.TLV_AUTH]
+    assert ip.hmac_ok(purge.raw[:purge.length], KEY, auth[0] + 1), "invalid HMAC"
+
+
 def test_csnp_ranges_md5(setup, tmp_path):
     """CSNPs of a large LSDB describe every LSP exactly once in contiguous
     ranges, and each one has a valid HMAC-MD5 (RFC 5304)."""

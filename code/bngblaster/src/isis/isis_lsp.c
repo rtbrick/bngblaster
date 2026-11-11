@@ -639,7 +639,7 @@ isis_lsp_fragment(isis_instance_s *instance, uint8_t level, uint16_t fragment, b
     lsp->instance = instance;
 
     clock_gettime(CLOCK_MONOTONIC, &lsp->timestamp);
-    if(purge || instance->teardown) {
+    if(purge) {
         lsp->lifetime = 0;
         isis_lsp_lifetime(lsp);
     } else {
@@ -784,6 +784,40 @@ isis_lsp_self_dis(isis_adjacency_s *adjacency)
 }
 
 /**
+ * Purge all self originated LSPs (incl. pseudonode LSPs)
+ * with header only, as required by routers which enforce
+ * the purge rules of RFC 5304 and RFC 6232.
+ */
+static void
+isis_lsp_self_purge_all(isis_instance_s *instance, uint8_t level)
+{
+    hb_tree *lsdb = instance->level[level-1].lsdb;
+    isis_lsp_s *lsp;
+    hb_itor *itor;
+    uint64_t lsp_id = 0;
+    uint64_t system_id;
+    bool next;
+
+    if(!lsdb) return;
+
+    memcpy(&lsp_id, instance->config->system_id, ISIS_SYSTEM_ID_LEN);
+    lsp_id = be64toh(lsp_id);
+    system_id = lsp_id >> 16;
+
+    itor = hb_itor_new(lsdb);
+    next = hb_itor_search_ge(itor, &lsp_id);
+    while(next) {
+        lsp = *hb_itor_datum(itor);
+        if(lsp->id >> 16 != system_id) break;
+        if(lsp->source.type == ISIS_SOURCE_SELF && !lsp->expired) {
+            isis_lsp_purge(lsp);
+        }
+        next = hb_itor_next(itor);
+    }
+    hb_itor_free(itor);
+}
+
+/**
  * This function adds/updates 
  * the self originated LSP entries. 
  *
@@ -817,6 +851,11 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
     ipv4_prefix loopback_prefix;
 
     isis_external_connection_s *external_connection = NULL;
+
+    if(instance->teardown) {
+        isis_lsp_self_purge_all(instance, level);
+        return true;
+    }
 
     lsp = isis_lsp_fragment(instance, level, fragment, false);
     if(!lsp) return false;
@@ -1136,19 +1175,25 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
             isis_lsp_rx_ack(lsp, adjacency, true);
             return;
         }
-    } else if(own) {
+    }
+    if(own && !(lsp && lsp->source.type == ISIS_SOURCE_EXTERNAL)) {
         /* Own LSP which is not originated (e.g. of a previous instance),
-         * purged with a higher sequence number (ISO 10589 7.3.16.4). */
-        lsp = isis_lsp_new(lsp_id, level, adjacency->instance);
-        result = hb_tree_insert(lsdb,  &lsp->id);
-        if(result.inserted) {
-            *result.datum_ptr = lsp;
-        } else {
-            LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");
-            isis_lsp_free(lsp);
-            return;
+         * purged with a higher sequence number (ISO 10589 7.3.16.4).
+         * The LSP may already exist as request placeholder
+         * if it was announced by a CSNP first. */
+        if(!lsp) {
+            lsp = isis_lsp_new(lsp_id, level, adjacency->instance);
+            result = hb_tree_insert(lsdb,  &lsp->id);
+            if(result.inserted) {
+                *result.datum_ptr = lsp;
+            } else {
+                LOG_NOARG(ISIS, "Failed to add LSP to LSDB\n");
+                isis_lsp_free(lsp);
+                return;
+            }
         }
         lsp->source.type = ISIS_SOURCE_SELF;
+        lsp->source.adjacency = NULL;
         lsp->seq = seq;
         if(lifetime) {
             isis_lsp_purge(lsp);
@@ -1161,7 +1206,7 @@ isis_lsp_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu, uint8_t
         }
         isis_lsp_rx_ack(lsp, adjacency, true);
         return;
-    } else {
+    } else if(!lsp) {
         /* Create new LSP. */
         lsp = isis_lsp_new(lsp_id, level, adjacency->instance);
         result = hb_tree_insert(lsdb,  &lsp->id);
