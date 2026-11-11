@@ -329,6 +329,17 @@ def test_pap_identifier(ppp):
     assert len(set(ids)) == len(ids), ids
 
 
+def test_pado_echo_tags_limit(ppp):
+    """A PADO with tags to echo above 1024 bytes (AC-Cookie) is discarded,
+    which overflowed the TX frame of the PADR with large tags."""
+    ppp.start_server("--ac-cookie-len", 1200)
+    ppp.start_bbl()
+    wait_until(lambda: len(ppp.received("padi")) >= 3, 15, message="PADI retries")
+    assert ppp.received("padr") == []
+    assert "Tags to echo exceed 1024 bytes in PADO" in open(ppp.bbl.path("log")).read()
+    assert ppp.state() == "PPPoE Init"
+
+
 def test_relay_session_id(ppp):
     """The Relay-Session-Id of the PADO is returned in the PADR (RFC 2516
     appendix A)."""

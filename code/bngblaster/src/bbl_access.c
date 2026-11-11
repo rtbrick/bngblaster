@@ -2404,6 +2404,14 @@ bbl_access_rx_discovery(bbl_access_interface_s *interface,
                    !bbl_access_pppoe_host_uniq(session, pppoed, "PADO")) {
                     return;
                 }
+                /* AC-Cookie, Relay-Session-Id and Service-Name are echoed
+                 * in the PADR, which must fit into the TX buffers. */
+                if(pppoed->ac_cookie_len + pppoed->relay_session_id_len +
+                   (session->pppoe_service_name_len ? 0 : pppoed->service_name_len) > PPPOE_ECHO_TAGS_MAX) {
+                    LOG(PPPOE, "PPPoE Error (ID: %u) Tags to echo exceed %u bytes in PADO\n",
+                        session->session_id, PPPOE_ECHO_TAGS_MAX);
+                    return;
+                }
                 /* Store server MAC address */
                 memcpy(session->server_mac, eth->src, ETH_ADDR_LEN);
                 if(session->pppoe_ac_cookie) {

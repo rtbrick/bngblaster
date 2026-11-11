@@ -146,7 +146,8 @@ class Server:
                 if self.args.service_names else [(TAG_SERVICE_NAME, b"")]
             relay = [(TAG_RELAY_SESSION_ID, RELAY_SESSION_ID)] if self.args.relay_session_id else []
             self.send_discovery(PADO, 0, [(TAG_AC_NAME, b"ppp-peer")] + offered + host_uniq +
-                                [(TAG_AC_COOKIE, b"good-cookie")] + relay)
+                                [(TAG_AC_COOKIE, b"c" * self.args.ac_cookie_len if self.args.ac_cookie_len
+                                  else b"good-cookie")] + relay)
         elif code == PADR:
             requested = [(t, v) for t, v in tags if t == TAG_SERVICE_NAME][:1]
             self.send_discovery(PADS, SESSION_ID, requested + host_uniq)
@@ -417,6 +418,7 @@ def main():
     parser.add_argument("--ip6cp-compression", action="store_true", help="IP6CP compression option")
     parser.add_argument("--ipcp-oversized", action="store_true", help="IPCP request above 64 byte options")
     parser.add_argument("--relay-session-id", action="store_true", help="PADO with Relay-Session-Id")
+    parser.add_argument("--ac-cookie-len", type=int, default=0, help="PADO with AC-Cookie of this length")
     parser.add_argument("--actions", default="", help="comma separated delay:action after established")
     Server(parser.parse_args()).run()
 

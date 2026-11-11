@@ -10,6 +10,10 @@
 #ifndef __BBL_ACCESS_H__
 #define __BBL_ACCESS_H__
 
+/* Maximum sum of AC-Cookie, Relay-Session-Id and Service-Name
+ * of a PADO, which are echoed in the PADR. */
+#define PPPOE_ECHO_TAGS_MAX 1024
+
 typedef struct bbl_access_interface_
 {
     char *name; /* interface name */
