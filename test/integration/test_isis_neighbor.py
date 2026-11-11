@@ -146,6 +146,16 @@ def test_p2p_three_way(setup):
     wait_until(lambda: not adjacency_up(bbl), 5, message="adjacency down")
 
 
+def test_p2p_two_way(setup):
+    """RFC 5303 section 3.1: hellos without the three-way adjacency TLV
+    are handled by the two-way handshake of ISO 10589, the adjacency is
+    up with the first hello of the neighbor."""
+    bbl, peer = setup()
+    peer.send(peer.p2p_hello(hold=600))
+    wait_until(lambda: adjacency_up(bbl), 5, message="adjacency up")
+    assert peer.wait(5, lambda p: is_p2p_hello(p) and p2p_state(p)[0] == ip.P2P_UP)
+
+
 def test_level_mismatch(setup, topology, tmp_path):
     """An interface with the default isis-level 3 on a level 2 instance
     has only a level 2 adjacency. Level 1 LSPs, also via control socket,

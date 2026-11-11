@@ -154,6 +154,7 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
 
     uint8_t received_state = ISIS_P2P_ADJACENCY_STATE_UP;
     uint8_t state;
+    bool three_way = false;
     uint8_t *system_id;
 
     if(!adjacency_p2p) {
@@ -201,6 +202,7 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
     tlv = isis_pdu_first_tlv(pdu);
     while(tlv) {
         if(tlv->type == ISIS_TLV_P2P_ADJACENCY_STATE && tlv->len >= 1) {
+            three_way = true;
             received_state = tlv->value[0];
             if(tlv->len >= 5) {
                 peer->ext_circuit_id = be32toh(*(uint32_t*)&tlv->value[1]);
@@ -218,23 +220,30 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
         tlv = isis_pdu_next_tlv(pdu);
     }
 
-    /* State transition table (RFC 5303 section 3.2) */
-    switch(received_state) {
-        case ISIS_P2P_ADJACENCY_STATE_DOWN:
-            state = ISIS_P2P_ADJACENCY_STATE_INIT;
-            break;
-        case ISIS_P2P_ADJACENCY_STATE_INIT:
-            state = ISIS_P2P_ADJACENCY_STATE_UP;
-            break;
-        case ISIS_P2P_ADJACENCY_STATE_UP:
-            if(adjacency_p2p->state == ISIS_P2P_ADJACENCY_STATE_DOWN) {
-                state = ISIS_P2P_ADJACENCY_STATE_DOWN;
-            } else {
+    if(!three_way) {
+        /* Hellos without adjacency state TLV are handled
+         * by the two-way handshake of ISO 10589 (RFC 5303
+         * section 3.1), the adjacency is up immediately. */
+        state = ISIS_P2P_ADJACENCY_STATE_UP;
+    } else {
+        /* State transition table (RFC 5303 section 3.2) */
+        switch(received_state) {
+            case ISIS_P2P_ADJACENCY_STATE_DOWN:
+                state = ISIS_P2P_ADJACENCY_STATE_INIT;
+                break;
+            case ISIS_P2P_ADJACENCY_STATE_INIT:
                 state = ISIS_P2P_ADJACENCY_STATE_UP;
-            }
-            break;
-        default:
-            return;
+                break;
+            case ISIS_P2P_ADJACENCY_STATE_UP:
+                if(adjacency_p2p->state == ISIS_P2P_ADJACENCY_STATE_DOWN) {
+                    state = ISIS_P2P_ADJACENCY_STATE_DOWN;
+                } else {
+                    state = ISIS_P2P_ADJACENCY_STATE_UP;
+                }
+                break;
+            default:
+                return;
+        }
     }
     peer->state = state == ISIS_P2P_ADJACENCY_STATE_UP ? ISIS_PEER_STATE_UP : ISIS_PEER_STATE_INIT;
 
