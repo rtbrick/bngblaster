@@ -641,7 +641,7 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                 return;
             } else if(ipv4->offset & ~IPV4_DF) {
                 interface->stats.ipv4_fragmented_rx++;
-                bbl_fragment_rx(NULL, interface, eth, ipv4);
+                bbl_fragment_rx(NULL, interface, NULL, eth, ipv4);
             }
             break;
         case ETH_TYPE_IPV6:

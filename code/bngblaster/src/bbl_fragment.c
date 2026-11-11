@@ -73,12 +73,14 @@ bbl_fragment_blocks(bbl_fragment_s *fragment, uint16_t offset, uint16_t length)
  *
  * @param access_interface pointer to access interface on which packet was received
  * @param network_interface pointer to network interface on which packet was received
- * @param eth pointer to ethernet header structure of received packet
+ * @param session pointer to session (access interface only)
+ * @param eth pointer to ethernet header structure of received packet (NULL for PPPoL2TP)
  * @param ipv4 pointer to IPv4 header structure of received packet
  */
 void
 bbl_fragment_rx(bbl_access_interface_s *access_interface,
                 bbl_network_interface_s *network_interface,
+                bbl_session_s *session,
                 bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4)
 {
     if(!g_ctx->config.traffic_reassemble_fragments) return;
@@ -198,11 +200,14 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
             bbl.timestamp.tv_sec = *(uint32_t*)(bbl_start+40);
             bbl.timestamp.tv_nsec = *(uint32_t*)(bbl_start+44);
 
-            if(!eth) {
+            if(!eth && session) {
                 /* PPPoL2TP (LAC) traffic has no ethernet header, the
-                 * stream is verified with the reassembled IPv4 packet. */
+                 * stream is verified with the reassembled IPv4 packet
+                 * and the client MAC address of the session. */
                 memset(&eth_local, 0x0, sizeof(eth_local));
+                eth_local.dst = session->client_mac;
                 eth_local.type = ETH_TYPE_IPV4;
+                eth_local.next = ipv4;
                 eth_local.tos = ipv4->tos;
                 eth_local.ttl = ipv4->ttl;
                 clock_gettime(CLOCK_MONOTONIC, &eth_local.timestamp);

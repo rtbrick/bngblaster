@@ -50,14 +50,14 @@ class Setup:
         self.lac = None
         helpers.kernel_address(topology.b, topology.if_b, LNS_ADDRESS + "/24")
 
-    def start_lns(self):
+    def start_lns(self, ppp_options=()):
         etc = self.tmp_path / "etc"
         (etc / "ppp").mkdir(parents=True)
         (etc / "xl2tpd").mkdir()
         (etc / "ppp" / "options").write_text("")
         (etc / "ppp" / "options.xl2tpd").write_text("\n".join([
             "require-pap", "debug", "logfile " + self.pppd_log, "lcp-echo-interval 0",
-            "noipdefault", "nodefaultroute"]) + "\n")
+            "noipdefault", "nodefaultroute"] + list(ppp_options)) + "\n")
         (etc / "ppp" / "pap-secrets").write_text('* * "test" *\n')
         (etc / "ppp" / "pap-secrets").chmod(0o600)
         (etc / "xl2tpd" / "xl2tpd.conf").write_text("\n".join([
@@ -145,6 +145,27 @@ def test_icmp_client(xl2tpd):
         return clients and clients[0]["received"]
 
     wait_until(lambda: (received() or 0) >= 3, 15, message="ICMP replies")
+    assert xl2tpd.lac.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_reassemble_downstream_fragments(xl2tpd):
+    """Downstream stream traffic of PPPoL2TP sessions is fragmented by the
+    LNS (pppd MTU 1000) and reassembled by the LAC, the stream is verified
+    with the session (crashed with a missing ethernet header)."""
+    xl2tpd.topology.b.exec(["sysctl", "-qw", "net.ipv4.ip_forward=1"])
+    xl2tpd.start_lns(ppp_options=["mtu 1000"])
+    xl2tpd.start_lac(access={"stream-group-id": 1},
+                     traffic={"reassemble-fragments": True, "autostart": True},
+                     streams=[{"name": "down", "stream-group-id": 1, "type": "ipv4",
+                               "direction": "downstream", "pps": 20, "length": 1400,
+                               "ipv4-df": False}])
+
+    def stream():
+        streams = xl2tpd.lac.ctrl("session-streams", **{"session-id": 1})["session-streams"]["streams"]
+        return [s for s in streams if s["direction"] == "downstream"][0]
+
+    wait_until(lambda: stream()["rx-packets"] >= 10, 15, message="reassembled downstream packets")
+    assert stream()["rx-fragments"] == 2
     assert xl2tpd.lac.terminate(EXIT_TIMEOUT) == 0
 
 

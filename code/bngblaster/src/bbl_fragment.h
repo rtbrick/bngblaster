@@ -40,6 +40,7 @@ typedef struct bbl_fragment_ {
 void
 bbl_fragment_rx(bbl_access_interface_s *access_interface,
                 bbl_network_interface_s *network_interface,
+                bbl_session_s *session,
                 bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4);
 
 void

@@ -823,7 +823,7 @@ bbl_access_rx_ipv4(bbl_access_interface_s *interface,
         session->stats.accounting_bytes_rx += eth ? eth->length : ipv4->len + 2;
         session->stats.ipv4_fragmented_rx++;
         interface->stats.ipv4_fragmented_rx++;
-        bbl_fragment_rx(interface, NULL, eth, ipv4);
+        bbl_fragment_rx(interface, NULL, session, eth, ipv4);
         return;
     }
 
