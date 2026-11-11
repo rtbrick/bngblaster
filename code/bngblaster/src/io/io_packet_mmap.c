@@ -26,6 +26,18 @@
 extern bool g_init_phase;
 extern bool g_traffic;
 
+/* Frames longer than accepted by the kernel are dropped and counted,
+ * the first one is logged (as with io-mode raw). */
+static void
+io_packet_mmap_tx_to_long(io_handle_s *io, uint16_t len)
+{
+    if(io->stats.to_long == 0) {
+        LOG(ERROR, "PACKET_MMAP frame on interface %s to long (%u byte, max %u), please check MTU settings!\n",
+            io->interface->name, len, io->tx_max_len);
+    }
+    io->stats.to_long++;
+}
+
 static void
 poll_kernel(io_handle_s *io, short events)
 {
@@ -187,6 +199,10 @@ io_packet_mmap_tx_job(timer_s *timer)
                     ctrl = false;
                     continue;
                 }
+                if(unlikely(io->buf_len > io->tx_max_len)) {
+                    io_packet_mmap_tx_to_long(io, io->buf_len);
+                    continue;
+                }
             } else {
                 if(!(g_traffic && g_init_phase == false && interface->state == INTERFACE_UP)) {
                     bbl_stream_io_stop(io);
@@ -195,6 +211,10 @@ io_packet_mmap_tx_job(timer_s *timer)
                 stream = bbl_stream_io_send_iter(io, now);
                 if(unlikely(stream == NULL)) {
                     break;
+                }
+                if(unlikely(stream->tx_len > io->tx_max_len)) {
+                    io_packet_mmap_tx_to_long(io, stream->tx_len);
+                    continue;
                 }
                 memcpy(io->buf, stream->tx_buf, stream->tx_len);
                 io->buf_len = stream->tx_len;
@@ -380,6 +400,11 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
                 /* First send all control traffic which has higher priority. */
                 slot = bbl_txq_read_slot(txq);
                 if(slot) {
+                    if(unlikely(slot->packet_len > io->tx_max_len)) {
+                        io_packet_mmap_tx_to_long(io, slot->packet_len);
+                        bbl_txq_read_next(txq);
+                        continue;
+                    }
                     io->buf_len = slot->packet_len;
                     memcpy(io->buf, slot->packet, slot->packet_len);
                     bbl_txq_read_next(txq);
@@ -396,6 +421,10 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
                 stream = bbl_stream_io_send_iter(io, now);
                 if(unlikely(stream == NULL)) {
                     break;
+                }
+                if(unlikely(stream->tx_len > io->tx_max_len)) {
+                    io_packet_mmap_tx_to_long(io, stream->tx_len);
+                    continue;
                 }
                 memcpy(io->buf, stream->tx_buf, stream->tx_len);
                 io->buf_len = stream->tx_len;
@@ -441,6 +470,20 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
     }
 }
 
+/* The kernel discards frames longer than the interface MTU with ethernet
+ * header and one VLAN tag (tpacket_snd), silently with PACKET_LOSS. */
+static void
+io_packet_mmap_tx_max_len(io_handle_s *io)
+{
+    struct ifreq ifr = {0};
+
+    io->tx_max_len = UINT16_MAX;
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", io->interface->name);
+    if(ioctl(io->fd, SIOCGIFMTU, &ifr) == 0 && ifr.ifr_mtu > 0 && ifr.ifr_mtu < UINT16_MAX - 18) {
+        io->tx_max_len = ifr.ifr_mtu + 14 + 4;
+    }
+}
+
 bool
 io_packet_mmap_init(io_handle_s *io)
 {
@@ -451,6 +494,9 @@ io_packet_mmap_init(io_handle_s *io)
     
     if(!io_socket_open(io)) {
         return false;
+    }
+    if(io->direction == IO_EGRESS) {
+        io_packet_mmap_tx_max_len(io);
     }
 
     if(thread) {

@@ -93,6 +93,7 @@ typedef struct io_handle_ {
     uint8_t *ring; /* ring buffer */
     unsigned int cursor; /* ring buffer cursor */
     unsigned int queued;
+    uint16_t tx_max_len; /* max frame length accepted by the kernel (packet_mmap) */
 
     io_thread_s *thread;
 
