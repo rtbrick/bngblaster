@@ -136,3 +136,16 @@ def test_stalled_client_main_loop(topology, processes, tmp_path):
     assert " 15 received" in out or " 14 received" in out, out
     assert instance.ctrl("test-info")["code"] == 200
     assert instance.terminate() == 0
+
+
+def test_socket_used_by_other_instance(instance, topology, processes, tmp_path):
+    """A second instance with the control socket path of a running instance
+    fails without removing that socket (it unlinked the socket of the
+    running instance, which kept running without control socket)."""
+    other = BngBlaster(topology.b, tmp_path, "other")
+    other.socket = instance.socket
+    processes.append(other)
+    with pytest.raises(RuntimeError):
+        other.start(config(topology.if_b))
+    assert "used by another instance" in open(other.path("stdout")).read()
+    assert instance.ctrl("test-info")["code"] == 200

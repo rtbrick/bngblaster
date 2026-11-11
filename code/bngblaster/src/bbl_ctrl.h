@@ -24,6 +24,7 @@ typedef struct bbl_ctrl_thread_ {
     pthread_cond_t cond;
 
     volatile bool active;
+    bool bound; /* socket path bound by this instance */
 
     /** Commands to be executed in main thread */
     struct {

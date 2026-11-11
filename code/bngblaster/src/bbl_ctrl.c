@@ -886,6 +886,7 @@ bbl_ctrl_socket_init()
 {
     bbl_ctrl_thread_s *ctrl;
     struct sockaddr_un addr = {0};
+    int probe;
 
     if(!g_ctx->ctrl_socket_path) {
         return true;
@@ -905,11 +906,23 @@ bbl_ctrl_socket_init()
     }
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, g_ctx->ctrl_socket_path, sizeof(addr.sun_path)-1);
+    /* Remove a stale socket file only, the socket of another
+     * running instance accepts the connection. */
+    probe = socket(AF_UNIX, SOCK_STREAM, 0);
+    if(probe >= 0) {
+        if(connect(probe, (struct sockaddr *)&addr, SUN_LEN(&addr)) == 0) {
+            close(probe);
+            fprintf(stderr, "Error: Ctrl socket %s is used by another instance\n", g_ctx->ctrl_socket_path);
+            return false;
+        }
+        close(probe);
+    }
     unlink(g_ctx->ctrl_socket_path);
     if(bind(ctrl->socket, (struct sockaddr *)&addr, SUN_LEN(&addr)) != 0) {
         fprintf(stderr, "Error: Failed to bind ctrl socket %s (error %d)\n", g_ctx->ctrl_socket_path, errno);
         return false;
     }
+    ctrl->bound = true;
     if(listen(ctrl->socket, BACKLOG) != 0) {
         fprintf(stderr, "Error: Failed to listen on ctrl socket %s (error %d)\n", g_ctx->ctrl_socket_path, errno);
         return false;
@@ -964,7 +977,9 @@ bbl_ctrl_socket_close()
             close(ctrl->socket);
         }
         timer_del(ctrl->main.timer);
-        unlink(g_ctx->ctrl_socket_path);
+        if(ctrl->bound) {
+            unlink(g_ctx->ctrl_socket_path);
+        }
         free(g_ctx->ctrl_thread);
         g_ctx->ctrl_thread = NULL;
     }
