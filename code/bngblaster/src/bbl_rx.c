@@ -92,7 +92,9 @@ bbl_rx_thread(bbl_interface_s *interface,
     /* Same order as in bbl_rx_handler: emulated A10NSP over
      * network interfaces (Ethernet over MPLS) first. */
     if(interface->a10nsp && eth->mpls && eth->type == ETH_TYPE_ETH) {
+        /* The inner header has no RX timestamp of its own. */
         ((bbl_ethernet_header_s*)eth->next)->mpls = eth->mpls;
+        ((bbl_ethernet_header_s*)eth->next)->timestamp = eth->timestamp;
         return bbl_rx_stream_a10nsp(interface->a10nsp, (bbl_ethernet_header_s*)eth->next);
     }
     network_interface = interface->network_vlan[eth->vlan_outer];
@@ -143,7 +145,9 @@ bbl_rx_handler(bbl_interface_s *interface,
 
     /* Traffic for emulated A10NSP switches (over network interfaces). */
     if(interface->a10nsp && eth->mpls && eth->type == ETH_TYPE_ETH) {
+        /* The inner header has no RX timestamp of its own. */
         ((bbl_ethernet_header_s*)eth->next)->mpls = eth->mpls;
+        ((bbl_ethernet_header_s*)eth->next)->timestamp = eth->timestamp;
         if(!bbl_rx_stream_a10nsp(interface->a10nsp, (bbl_ethernet_header_s*)eth->next)) {
             bbl_a10nsp_rx_handler(interface->a10nsp, (bbl_ethernet_header_s*)eth->next);
         }

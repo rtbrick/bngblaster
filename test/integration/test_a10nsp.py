@@ -84,6 +84,10 @@ def test_network_interface_vlan(pseudowire, processes, tmp_path, rx_threads):
                message="session traffic verified")
     info = instance.ctrl("session-info", **{"session-id": 1})["session-info"]
     assert info["a10nsp"]["interface"] == "%s:%d" % (pseudowire.net_a, VLAN)
+    # Upstream received over MPLS carries the RX timestamp (was 0).
+    streams = instance.ctrl("session-streams", **{"session-id": 1})["session-streams"]["streams"]
+    upstream = [s for s in streams if s["direction"] == "upstream"]
+    assert upstream and all(s["rx-first-epoch"] > 0 for s in upstream), upstream
     assert instance.terminate(EXIT_TIMEOUT) == 0
     relay.send_signal(signal.SIGTERM)
     stats = json.loads(relay.communicate(timeout=10)[0])
