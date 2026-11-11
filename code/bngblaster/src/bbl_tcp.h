@@ -72,6 +72,10 @@ typedef struct bbl_tcp_ctx_
     uint8_t *sp; /* optional scratchpad buffer */
     uint16_t sp_len;
 
+    /* Buffer referenced by data queued without copy, owned by this
+     * context and freed with it (see bbl_tcp_ctx_free). */
+    uint8_t *free_buf;
+
     bbl_tcp_state_t state;
     err_t err;
 

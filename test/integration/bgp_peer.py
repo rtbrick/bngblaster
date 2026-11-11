@@ -26,6 +26,7 @@ Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
 import argparse
+import subprocess
 import json
 import select
 import socket
@@ -88,6 +89,12 @@ class Connection:
             if len(self.buf) < length:
                 return
             msg = {"type": msg_type}
+            if self.buf[:16] != b"\xff" * 16:
+                msg["marker"] = "invalid"
+            if length < 19:
+                self.messages.append({"type": msg_type, "length": length})
+                self.buf = b""
+                return
             if msg_type == MSG_NOTIFICATION and length >= 21:
                 msg["code"], msg["subcode"] = self.buf[19], self.buf[20]
             self.messages.append(msg)
@@ -230,9 +237,32 @@ def mode_collision_closing(args):
     return {"collision": active.result(), "primary": passive.result()}
 
 
+def mode_collision_pending(args):
+    # The OPEN of the BNG Blaster on the primary connection is not acknowledged
+    # (dropped by the test until --unblock is run), the collision connection
+    # wins. Messages received on the primary connection afterwards are
+    # returned, the unacknowledged OPEN must not be overwritten.
+    server = listen(args.local)
+    server.settimeout(args.timeout)
+    passive = Connection(server.accept()[0])
+    active = Connection(connect(args.local, args.peer, 5))
+    if not active.wait_message(MSG_OPEN, 10):
+        return {"error": "no OPEN from BNG Blaster"}
+    active.messages = []
+    active.send(open_message(**json.loads(args.steps)[0]["open"]))
+    active.send(message(MSG_KEEPALIVE))
+    if not active.wait_message(MSG_KEEPALIVE, 5):
+        return {"error": "collision connection not promoted", "collision": active.result()}
+    subprocess.run(args.unblock, shell=True, check=True)
+    passive.poll(args.wait)
+    return {"collision": active.result(), "primary": passive.result()}
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["accept", "connect", "collision", "collision-closing"])
+    parser.add_argument("mode", choices=["accept", "connect", "collision", "collision-closing",
+                                         "collision-pending"])
+    parser.add_argument("--unblock", default="true")
     parser.add_argument("--local", required=True)
     parser.add_argument("--peer", required=True)
     parser.add_argument("--steps", default="[]")
@@ -241,7 +271,8 @@ def main():
     parser.add_argument("--lose", choices=["active", "passive"], default="passive")
     args = parser.parse_args()
     result = {"accept": mode_accept, "connect": mode_connect, "collision": mode_collision,
-              "collision-closing": mode_collision_closing}[args.mode](args)
+              "collision-closing": mode_collision_closing,
+              "collision-pending": mode_collision_pending}[args.mode](args)
     print(json.dumps(result))
 
 

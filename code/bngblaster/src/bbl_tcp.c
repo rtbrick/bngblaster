@@ -176,6 +176,15 @@ bbl_tcp_ctx_free(bbl_tcp_ctx_s *tcpc) {
             free(tcpc->ifname);
             tcpc->ifname = NULL;
         }
+        if(tcpc->free_buf) {
+            /* Segments still queued after a graceful close would keep
+             * referencing the buffer, which is freed now. */
+            if(bbl_tcp_pending(tcpc)) {
+                bbl_tcp_reset(tcpc);
+            }
+            free(tcpc->free_buf);
+            tcpc->free_buf = NULL;
+        }
         bbl_tcp_close(tcpc);
         free(tcpc);
     }

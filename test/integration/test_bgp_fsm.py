@@ -196,6 +196,23 @@ def test_collision_closing(setup):
     assert "openconfirm -> established" not in setup.log()
 
 
+def test_collision_pending_data(setup):
+    """The OPEN of the BNG Blaster on the primary connection is not yet
+    acknowledged when the collision connection wins: the promoted connection
+    gets a new write buffer, the unacknowledged OPEN is not overwritten by
+    the KEEPALIVE of the promoted connection (corrupted message)."""
+    rule = ["INPUT", "-p", "tcp", "--dport", "179", "-m", "length", "--length", "53:65535", "-j", "DROP"]
+    setup.topology.b.exec(["iptables", "-A"] + rule)
+    peer = setup.peer_start("collision-pending", [peer_open(id="10.0.0.9")], wait=6,
+                            unblock="iptables -D " + " ".join(rule))
+    setup.start_bbl(reconnect=True)
+    result = json.loads(peer.communicate(timeout=90)[0])
+    assert "error" not in result, result
+    primary = result["primary"]["messages"]
+    assert not [m for m in primary if m.get("marker") or "length" in m], result
+    assert 4 not in [m["type"] for m in primary], result
+
+
 def max_tcp_payload(capture, source):
     sizes = [int(m) for m in re.findall(r"%s\.\d+ > \S+: tcp (\d+)" % re.escape(source), capture)]
     return max(sizes) if sizes else 0

@@ -390,6 +390,18 @@ bgp_session_collision_promote(bgp_session_s *session, bool trigger_is_primary)
         session->local_address_str,
         session->peer_address_str);
 
+    if(bbl_tcp_pending(old_primary)) {
+        /* Messages of the old primary are queued without copy and reference
+         * the write buffer, which is reused for the promoted connection.
+         * The old primary takes over the buffer, the session a new one. */
+        old_primary->free_buf = session->write_buf.data;
+        session->write_buf.data = malloc(session->write_buf.size);
+        if(!session->write_buf.data) {
+            /* Keep the shared buffer (previous behaviour). */
+            session->write_buf.data = old_primary->free_buf;
+            old_primary->free_buf = NULL;
+        }
+    }
     bgp_session_close_tcpc_with_notification(old_primary, 6, 7);
 
     session->tcpc = collision->tcpc;
