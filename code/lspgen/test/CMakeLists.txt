@@ -8,3 +8,5 @@ target_include_directories(test-lspgen PRIVATE ../src ../../common/src)
 target_link_libraries(test-lspgen cmocka crypto jansson ${libdict} m)
 target_compile_options(test-lspgen PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations)
 add_test(NAME "TestLspgen" COMMAND test-lspgen)
+
+bbl_reproducible_build_directory()

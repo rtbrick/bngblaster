@@ -1520,6 +1520,182 @@ test_packet_size(void **unused)
     }
 }
 
+static void
+test_seq_cache_precedence(void **unused)
+{
+    lsdb_ctx_t *ctx;
+    lsdb_node_t *node;
+    UNUSED(unused);
+
+    ctx = test_ctx(PROTO_ISIS, 5);
+    test_generate(ctx);
+    lspgen_write_seq_cache(ctx);
+    lsdb_delete_ctx(ctx);
+
+    /* An explicit sequence (-q) wins over the cache. */
+    ctx = test_ctx(PROTO_ISIS, 5);
+    ctx->sequence = 100;
+    ctx->sequence_set = true;
+    lspgen_set_protocol_defaults(ctx);
+    test_gen_attr(ctx);
+    lspgen_read_seq_cache(ctx);
+    node = test_get_node(ctx, "1921.6800.0000.00");
+    assert_non_null(node);
+    assert_int_equal(node->sequence, 100);
+    lsdb_delete_ctx(ctx);
+    unlink("isis-level1-sequence-cache.json");
+
+    /* An exhausted OSPF sequence is not cached, the next
+     * run starts again with the initial sequence. */
+    ctx = test_ctx(PROTO_OSPF2, 5);
+    ctx->sequence = INT32_MAX;
+    ctx->sequence_set = true;
+    test_generate(ctx);
+    lspgen_write_seq_cache(ctx);
+    assert_false(ctx->error);
+    lsdb_delete_ctx(ctx);
+    ctx = test_ctx(PROTO_OSPF2, 5);
+    test_gen_attr(ctx);
+    lspgen_read_seq_cache(ctx);
+    node = test_get_node(ctx, "192.168.0.0");
+    assert_non_null(node);
+    assert_int_equal(node->sequence, 0x80000001);
+    lsdb_delete_ctx(ctx);
+    unlink("ospf2-area0.0.0.0-sequence-cache.json");
+}
+
+static void
+test_pseudonode_cb(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t *packet, void *arg)
+{
+    uint32_t *pseudonodes = arg;
+    UNUSED(ctx);
+
+    /* LSP ID at offset 12: system ID, pseudonode number, fragment. */
+    assert_memory_equal(packet->data+12, node->key.node_id, 7);
+    if (packet->data[18]) {
+        (*pseudonodes)++;
+    }
+}
+
+static void
+test_pseudonode_lsp_id(void **unused)
+{
+    lsdb_ctx_t *ctx;
+    uint32_t pseudonodes = 0;
+    UNUSED(unused);
+
+    /* A pseudonode must not share the LSP ID of its node. */
+    test_write_file("pseudonode.json",
+        "{\"instance\": \"default\", \"protocol\": \"isis\", \"level2\": ["
+        "{\"node_id\": \"0000.0000.0001.00\", \"area_list\": [\"49.0001/24\"],"
+        " \"neighbor_list\": [{\"remote_node_id\": \"0000.0000.0001.01\", \"metric\": 10}]},"
+        "{\"node_id\": \"0000.0000.0001.01\","
+        " \"neighbor_list\": [{\"remote_node_id\": \"0000.0000.0001.00\", \"metric\": 0}]}]}");
+    ctx = test_read_config("pseudonode.json");
+    assert_int_equal(test_foreach_packet(ctx, test_pseudonode_cb, &pseudonodes), 2);
+    assert_int_equal(pseudonodes, 1);
+    lsdb_delete_ctx(ctx);
+    unlink("pseudonode.json");
+}
+
+/* Destination MAC of the first packet in a pcapng file. */
+static uint64_t
+test_pcap_dst_mac(const char *filename)
+{
+    uint8_t data[4096];
+    uint32_t offset, block_type, block_len;
+    size_t len;
+    FILE *file;
+
+    file = fopen(filename, "r");
+    assert_non_null(file);
+    len = fread(data, 1, sizeof(data), file);
+    fclose(file);
+
+    offset = 0;
+    while (offset + 34 <= len) {
+        block_type = data[offset] | data[offset+1] << 8 | data[offset+2] << 16 | (uint32_t)data[offset+3] << 24;
+        block_len = data[offset+4] | data[offset+5] << 8 | data[offset+6] << 16 | (uint32_t)data[offset+7] << 24;
+        if (block_type == 6) {
+            /* Enhanced packet block, the packet follows 28 bytes of header. */
+            return read_be_uint(data+offset+28, 6);
+        }
+        assert_true(block_len >= 12);
+        offset += block_len;
+    }
+    fail();
+    return 0;
+}
+
+static void
+test_pcap_level_mac(void **unused)
+{
+    lsdb_ctx_t *ctx;
+    uint8_t level;
+    UNUSED(unused);
+
+    for (level = 1; level <= 2; level++) {
+        ctx = test_ctx(PROTO_ISIS, 5);
+        ctx->topology_id.level = level;
+        test_generate(ctx);
+        ctx->pcap_filename = strdup("level.pcap");
+        lspgen_dump_pcap(ctx);
+        assert_false(ctx->error);
+        /* AllL1ISs or AllL2ISs */
+        assert_int_equal(test_pcap_dst_mac("level.pcap"), level == 1 ? 0x0180c2000014 : 0x0180c2000015);
+        lsdb_delete_ctx(ctx);
+        unlink("level.pcap");
+    }
+}
+
+static void
+test_error_flag(void **unused)
+{
+    lsdb_ctx_t *ctx;
+    UNUSED(unused);
+
+    ctx = test_ctx(PROTO_ISIS, 5);
+    test_generate(ctx);
+    assert_false(ctx->error);
+
+    /* Output files which can not be written. */
+    ctx->mrt_filename = strdup("/nonexistent/x.mrt");
+    lspgen_dump_mrt(ctx);
+    assert_true(ctx->error);
+    ctx->error = false;
+    ctx->pcap_filename = strdup("/nonexistent/x.pcap");
+    lspgen_dump_pcap(ctx);
+    assert_true(ctx->error);
+    ctx->error = false;
+    ctx->stream_filename = strdup("/dev/full");
+    lspgen_dump_stream(ctx);
+    assert_true(ctx->error);
+    ctx->error = false;
+    ctx->config_filename = strdup("/dev/full");
+    lspgen_write_config(ctx);
+    assert_true(ctx->error);
+    ctx->error = false;
+    ctx->graphviz_filename = strdup("/nonexistent/x");
+    lsdb_dump_graphviz(ctx);
+    assert_true(ctx->error);
+    lsdb_delete_ctx(ctx);
+
+    /* IS-IS fragments exhausted, prefixes are dropped. */
+    ctx = test_ctx(PROTO_ISIS, 5);
+    ctx->lsp_buffer_size = ISIS_MIN_LSP_BUFFER_SIZE;
+    ctx->num_ext = 50000;
+    test_generate(ctx);
+    assert_true(ctx->error);
+    lsdb_delete_ctx(ctx);
+
+    /* OSPFv2 Router-LSA exceeds the packet buffer. */
+    ctx = test_ctx(PROTO_OSPF2, 20);
+    ctx->link_multiplier = 150;
+    test_generate(ctx);
+    assert_true(ctx->error);
+    lsdb_delete_ctx(ctx);
+}
+
 static int
 test_setup(void **unused)
 {
@@ -1576,6 +1752,10 @@ main(void)
         cmocka_unit_test(test_seq_cache_ospf),
         cmocka_unit_test(test_flex_algo_no_sr),
         cmocka_unit_test(test_packet_size),
+        cmocka_unit_test(test_seq_cache_precedence),
+        cmocka_unit_test(test_pseudonode_lsp_id),
+        cmocka_unit_test(test_pcap_level_mac),
+        cmocka_unit_test(test_error_flag),
     };
     return cmocka_run_group_tests(tests, test_setup, test_teardown);
 }

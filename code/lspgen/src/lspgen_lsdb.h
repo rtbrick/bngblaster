@@ -159,6 +159,7 @@ typedef struct lsdb_ctx_
     bool ctrl_packet_first;
     bool ctrl_request_done; /* request of this connection completely written */
     bool ctrl_error; /* BNG Blaster rejected a request */
+    bool error; /* output incomplete or not written, exit with failure */
     uint8_t ctrl_reply_wait; /* seconds waited for the reply */
     char ctrl_reply[256];
     uint16_t ctrl_reply_len;
@@ -451,6 +452,7 @@ lsdb_attr_t *lsdb_add_node_attr(lsdb_node_t *, lsdb_attr_t *);
 void lsdb_reset_attr_template(lsdb_attr_t *);
 void lsdb_delete_link(lsdb_ctx_t *, lsdb_link_t *);
 void lsdb_delete_node(lsdb_ctx_t *, lsdb_node_t *);
+uint32_t lsdb_max_sequence(lsdb_ctx_t *);
 void lsdb_bump_sequence(lsdb_node_t *);
 lsdb_ctx_t *lsdb_alloc_ctx(char *);
 void lsdb_delete_ctx(lsdb_ctx_t *);

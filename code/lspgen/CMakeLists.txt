@@ -13,9 +13,7 @@ endforeach()
 add_executable(lspgen ${COMMON_SOURCES} ${LSPGEN_SOURCES})
 target_link_libraries(lspgen crypto jansson ${libdict} m)
 
-if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 8.0)
-    target_compile_options(lspgen PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
-endif()
+bbl_reproducible_build(lspgen)
 
 if(BNGBLASTER_CPU_NATIVE)
     target_compile_options(lspgen PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -march=native -mtune=native)

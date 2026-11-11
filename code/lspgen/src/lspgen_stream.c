@@ -133,6 +133,7 @@ lspgen_dump_stream(lsdb_ctx_t *ctx)
     ctx->stream_file = fopen(ctx->stream_filename, "w");
     if (!ctx->stream_file) {
         LOG(ERROR, "Error opening stream file %s\n", ctx->stream_filename);
+        ctx->error = true;
         dict_itor_free(itor);
         return;
     }
@@ -148,12 +149,12 @@ lspgen_dump_stream(lsdb_ctx_t *ctx)
     dict_itor_free(itor);
 
     res = json_dumpf(root_obj, ctx->stream_file, JSON_INDENT(2));
-    if (res == -1) {
+    if (fclose(ctx->stream_file) || res == -1) {
         LOG(ERROR, "Error generating stream file %s\n", ctx->stream_filename);
+        ctx->error = true;
     }
 
     /* done */
     json_decref(root_obj);
-    fclose(ctx->stream_file);
     ctx->stream_file = NULL;
 }

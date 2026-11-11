@@ -59,7 +59,7 @@ lspgen_gen_isis_packet_header(lsdb_ctx_t *ctx, lsdb_node_t *node, lsdb_packet_t 
     /* LSP ID */
     sysid = read_be_uint(node->key.node_id, 6);
     push_be_uint(buf, 6, sysid); /* System ID */
-    push_be_uint(buf, 1, 0); /* PSN # */
+    push_be_uint(buf, 1, node->key.node_id[6]); /* PSN # */
     push_be_uint(buf, 1, packet->key.id); /* Fragment # */
 
     push_be_uint(buf, 4, node->sequence); /* Sequence */
@@ -2128,6 +2128,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
             if (id > MAX_ISIS_FRAGMENT-1) {
                 dict_itor_free(itor);
                 LOG(ERROR, "Exhausted fragments for node %s\n", lsdb_format_node(node));
+                ctx->error = true;
                 return;
             }
         }
@@ -2140,6 +2141,7 @@ lspgen_gen_isis_packet_node(lsdb_node_t *node)
             if (!packet) {
                 dict_itor_free(itor);
                 LOG(ERROR, "Failed to add packet for node %s\n", lsdb_format_node(node));
+                ctx->error = true;
                 return;
             }
             tlv_start_idx = packet->buf[0].idx;
@@ -2255,6 +2257,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
         if (lspgen_lsa_is_full(ctx, packet, attr) && !lspgen_lsa_can_split(ctx, attr->key.attr_cp[1])) {
             if (!node->lsa_overflow) {
                 node->lsa_overflow = true;
+                ctx->error = true;
                 LOG(ERROR, "%s of node %s exceeds %u bytes, dropping further entries\n",
                     val2key(ospf_attr_names, attr->key.attr_cp[1]), lsdb_format_node(node),
                     lspgen_lsa_len(packet));
@@ -2277,6 +2280,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
             if (id > MAX_OSPF_PACKET-1) {
                 dict_itor_free(itor);
                 LOG(ERROR, "Exhausted packets for node %s\n", lsdb_format_node(node));
+                ctx->error = true;
                 return;
             }
         }
@@ -2289,6 +2293,7 @@ lspgen_gen_ospf_packet_node(lsdb_node_t *node)
             if (!packet) {
                 dict_itor_free(itor);
                 LOG(ERROR, "Failed to add packet for node %s\n", lsdb_format_node(node));
+                ctx->error = true;
                 return;
             }
         }

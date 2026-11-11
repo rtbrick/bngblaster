@@ -167,7 +167,12 @@ lspgen_dump_pcap_node (struct lsdb_ctx_ *ctx, struct lsdb_node_ *node)
             push_le_uint(&buf, 4, packet->buf[0].idx+eth_header_length); /* original packet length */
 
             /* Fake an Ethernet & LLC header */
-            push_be_uint(&buf, 6, 0x0180c2000014); /* Destination MAC */
+            /* AllL1ISs or AllL2ISs */
+            if (ctx->topology_id.level == 2) {
+                push_be_uint(&buf, 6, 0x0180c2000015); /* Destination MAC */
+            } else {
+                push_be_uint(&buf, 6, 0x0180c2000014); /* Destination MAC */
+            }
             push_be_uint(&buf, 6, 0xf41e5e000000); /* Source MAC */
             if (packet->buf[0].idx + ISIS_LLC_HDR_LEN > ISIS_ETH_MAX_802_3_LEN) {
                 push_be_uint(&buf, 2, ISIS_ETH_TYPE_LLC_JUMBO);
@@ -259,6 +264,7 @@ lspgen_dump_pcap (struct lsdb_ctx_ *ctx)
     ctx->pcap_file = fopen(ctx->pcap_filename, "w");
     if (!ctx->pcap_file) {
         LOG(ERROR, "Error opening PCAP file %s\n", ctx->pcap_filename);
+        ctx->error = true;
         dict_itor_free(itor);
         return;
     }
@@ -283,6 +289,7 @@ lspgen_dump_pcap (struct lsdb_ctx_ *ctx)
     write_error = ferror(ctx->pcap_file);
     if (fclose(ctx->pcap_file) || write_error) {
         LOG(ERROR, "Error writing PCAP file %s\n", ctx->pcap_filename);
+        ctx->error = true;
     }
     ctx->pcap_file = NULL;
 }

@@ -525,16 +525,19 @@ lsdb_delete_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
  * is exhausted at 0xffffffff for IS-IS and 0x7fffffff for OSPF (signed),
  * as the next value would be invalid (IS-IS 0, OSPF 0x80000000).
  */
+uint32_t
+lsdb_max_sequence(lsdb_ctx_t *ctx)
+{
+    if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+        return INT32_MAX;
+    }
+    return UINT32_MAX;
+}
+
 void
 lsdb_bump_sequence(lsdb_node_t *node)
 {
-    uint32_t max_sequence;
-
-    max_sequence = UINT32_MAX;
-    if (node->ctx->protocol_id == PROTO_OSPF2 || node->ctx->protocol_id == PROTO_OSPF3) {
-        max_sequence = INT32_MAX;
-    }
-    if (node->sequence == max_sequence) {
+    if (node->sequence == lsdb_max_sequence(node->ctx)) {
         LOG(ERROR, "Sequence number of node %s exhausted\n", lsdb_format_node(node));
         return;
     }
@@ -1157,6 +1160,7 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
 
     if (snprintf(filename, sizeof(filename), "%s.dot", ctx->graphviz_filename) >= (int)sizeof(filename)) {
         LOG(ERROR, "Graphviz file name %s too long\n", ctx->graphviz_filename);
+        ctx->error = true;
         return;
     }
 
@@ -1180,6 +1184,7 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
     graphviz = fopen(filename, "w");
     if (!graphviz) {
         LOG(ERROR, "Error opening graphviz file %s\n", filename);
+        ctx->error = true;
         dict_itor_free(itor);
         return;
     }
@@ -1238,6 +1243,7 @@ lsdb_dump_graphviz(lsdb_ctx_t *ctx)
     write_error = ferror(graphviz);
     if (fclose(graphviz) || write_error) {
         LOG(ERROR, "Error writing graphviz file %s\n", filename);
+        ctx->error = true;
         return;
     }
     LOG(NORMAL, "Wrote %u nodes into graphviz file %s\n", nodes, filename);

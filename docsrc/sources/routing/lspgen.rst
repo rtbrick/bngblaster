@@ -12,7 +12,11 @@ hence its name. However, with the introduction of OSPF support in BNG Blaster,
 The default protocol is ISIS which can be changed using the argument
 ``-P ospf2`` or ``-P ospf3``. The arguments are processed in the given order
 and the area (``-a``), connector (``-C``), sequence number (``-q``) and level
-(``-V``) depend on the protocol, so ``-P`` must be set before those arguments.
+(``-V``) depend on the protocol, so ``-P`` must be set before those arguments
+and may be given only once. Invalid argument values are rejected. ``lspgen``
+exits with failure if an output file could not be written or the output is
+incomplete, for example if the link state entries of a node do not fit into
+the maximum number of ISIS fragments or OSPF packets.
 
 .. code-block:: none
 
@@ -393,6 +397,10 @@ in the current working directory (``isis-level<level>-sequence-cache.json``,
 The next run of ``lspgen`` for
 the same level or area increments those sequence numbers by one, so that the
 updated link state packets replace the previous ones in the network.
+An explicit sequence number (``-q``) takes precedence over the sequence cache.
+A sequence number which can not be incremented any more (ISIS 0xffffffff,
+OSPF 0x7fffffff) is not stored, the next run starts again with the initial
+sequence number.
 With the argument ``-G``, all link state packets are generated as purges.
 
 Control Socket

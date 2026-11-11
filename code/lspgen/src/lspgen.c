@@ -1552,7 +1552,7 @@ lspgen_log_ctx(struct lsdb_ctx_ *ctx)
  * iso remote_id xxxx.xxxx.xxxx.xx or
  * ipv4 remote_id:local_ip xxx.xxx.xxx.xxx:yyy.yyy.yyy.yyy
 */
-void
+bool
 lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
 {
     uint64_t iso_node_id; /* Used for ISO */
@@ -1564,7 +1564,7 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
 
     if (ctx->num_connector >= (sizeof(ctx->connector)/sizeof(ctx->connector[0]))) {
         LOG(ERROR, "Maximum connector limit (%u) exceeded\n", ctx->num_connector);
-        return;
+        return false;
     }
 
     src_len = strlen(conn_src);
@@ -1586,7 +1586,7 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
 
         if (!colon_found) {
             LOG(ERROR, "Connector '%s' not in remote_id:local_ip format\n", conn_src);
-            return;
+            return false;
         }
 
         remote_id = 0;
@@ -1594,12 +1594,12 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
         tok = strtok(conn_src, ":");
         if (!(tok && scan_ipv4_address(tok, &remote_id))) {
             LOG(ERROR, "Invalid connector remote_id %s\n", conn_src);
-            return;
+            return false;
         }
         tok = strtok(NULL, ":");
         if (!(tok && scan_ipv4_address(tok, &local_ip))) {
             LOG(ERROR, "Invalid connector local_ip %s\n", tok ? tok : "");
-            return;
+            return false;
         }
         /* Addresses are in network byte order. */
         memcpy(ctx->connector[ctx->num_connector].remote_node_id, &remote_id, sizeof(remote_id));
@@ -1632,7 +1632,7 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
         dst_len = strlen(&conn_dst[2]);
         if (dst_len == 0 || dst_len > 16) {
             LOG(ERROR, "illegal connector length %s\n", conn_src);
-            return;
+            return false;
         }
 
         shift = (16 - dst_len) * 4;
@@ -1642,6 +1642,7 @@ lspgen_add_connector(struct lsdb_ctx_ *ctx, char *conn_src)
             lsdb_format_node_id(ctx->connector[ctx->num_connector].remote_node_id));
         ctx->num_connector++;
     }
+    return true;
 }
 
 /* Get out of event loop */
@@ -1709,13 +1710,41 @@ lspgen_parse_number(const char *arg, const char *name, int base, long min, long 
     return value;
 }
 
+/*
+ * Parse a prefix option and exit on invalid values.
+ */
+static void
+lspgen_parse_ipv4_prefix(const char *arg, const char *name, ipv4_prefix *prefix)
+{
+    ipv4_prefix value;
+
+    if (!scan_ipv4_prefix(arg, &value)) {
+        LOG(ERROR, "Invalid %s %s\n", name, arg);
+        exit(EXIT_FAILURE);
+    }
+    *prefix = value;
+}
+
+static void
+lspgen_parse_ipv6_prefix(const char *arg, const char *name, ipv6_prefix *prefix)
+{
+    ipv6_prefix value;
+
+    if (!scan_ipv6_prefix(arg, &value)) {
+        LOG(ERROR, "Invalid %s %s\n", name, arg);
+        exit(EXIT_FAILURE);
+    }
+    *prefix = value;
+}
+
 int
 main(int argc, char *argv[])
 {
     int opt, idx;
     char *end;
     long value;
-    bool ctrl_error;
+    bool error;
+    bool protocol_set = false;
     struct lsdb_ctx_ *ctx;
 
     /*
@@ -1744,6 +1773,12 @@ main(int argc, char *argv[])
                 ctx->purge = true;
                 break;
             case 'P':
+                /* Options before -P are parsed for the earlier protocol. */
+                if (protocol_set) {
+                    LOG_NOARG(ERROR, "Protocol may be given only once\n");
+                    exit(EXIT_FAILURE);
+                }
+                protocol_set = true;
                 ctx->protocol_id = key2val(proto_names, optarg);
                 if (ctx->protocol_id == PROTO_UNKNOWN) {
                     LOG(ERROR, "Unknown protocol %s\n", optarg);
@@ -1755,32 +1790,35 @@ main(int argc, char *argv[])
                 lspgen_set_protocol_defaults(ctx);
                 break;
             case 'r':
-                if (ctx->config_filename) {
-                    ctx->config_write = false;
-                    free(ctx->config_filename);
-                }
-                ctx->config_filename = strdup(optarg);
-                ctx->config_read = true;
-                break;
             case 'w':
-                if (ctx->config_filename) {
-                    ctx->config_read = false;
-                    free(ctx->config_filename);
+                if ((opt == 'r' && ctx->config_write) || (opt == 'w' && ctx->config_read)) {
+                    LOG_NOARG(ERROR, "Read (-r) and write (-w) of a config file may not be combined\n");
+                    exit(EXIT_FAILURE);
                 }
+                free(ctx->config_filename);
                 ctx->config_filename = strdup(optarg);
-                ctx->config_write = true;
+                if (opt == 'r') {
+                    ctx->config_read = true;
+                } else {
+                    ctx->config_write = true;
+                }
                 break;
             case 'a':
                 if (ctx->protocol_id == PROTO_ISIS) {
-                    if (ctx->num_area < 3) {
-                        if (!scan_iso_prefix(optarg, &ctx->area[ctx->num_area++])) {
-                            LOG(ERROR, "Invalid ISO area %s\n", optarg);
-                            exit(EXIT_FAILURE);
-                        }
+                    if (ctx->num_area >= 3) {
+                        LOG_NOARG(ERROR, "At most 3 ISO areas are supported\n");
+                        exit(EXIT_FAILURE);
+                    }
+                    if (!scan_iso_prefix(optarg, &ctx->area[ctx->num_area++])) {
+                        LOG(ERROR, "Invalid ISO area %s\n", optarg);
+                        exit(EXIT_FAILURE);
                     }
                 } else {
                     /* ospf2 and ospf3 */
-                    scan_ipv4_address(optarg, &ctx->topology_id.area);
+                    if (!scan_ipv4_address(optarg, &ctx->topology_id.area)) {
+                        LOG(ERROR, "Invalid OSPF area %s\n", optarg);
+                        exit(EXIT_FAILURE);
+                    }
                 }
                 break;
             case 'b':
@@ -1850,6 +1888,10 @@ main(int argc, char *argv[])
             case 'T':
                 /* authentication-type */
                 ctx->authentication_type = get_authentication_type(optarg);
+                if (ctx->authentication_type == ISIS_AUTH_NONE && strcmp(optarg, "none") != 0) {
+                    LOG(ERROR, "Invalid authentication-type %s\n", optarg);
+                    exit(EXIT_FAILURE);
+                }
                 break;
             case 't':
                 /* logging */
@@ -1872,11 +1914,13 @@ main(int argc, char *argv[])
                 break;
             case 'C':
                 /* connector */
-                lspgen_add_connector(ctx, optarg);
+                if (!lspgen_add_connector(ctx, optarg)) {
+                    exit(EXIT_FAILURE);
+                }
                 break;
             case 'n':
                 /* base prefix for ipv4 loopbacks */
-                scan_ipv4_prefix(optarg, &ctx->ipv4_node_prefix);
+                lspgen_parse_ipv4_prefix(optarg, "ipv4-node-prefix", &ctx->ipv4_node_prefix);
                 break;
             case 'm':
                 free(ctx->mrt_filename);
@@ -1884,23 +1928,23 @@ main(int argc, char *argv[])
                 break;
             case 'N':
                 /* base prefix for ipv6 loopbacks */
-                scan_ipv6_prefix(optarg, &ctx->ipv6_node_prefix);
+                lspgen_parse_ipv6_prefix(optarg, "ipv6-node-prefix", &ctx->ipv6_node_prefix);
                 break;
             case 'l':
                 /* base prefix for ipv4 interface */
-                scan_ipv4_prefix(optarg, &ctx->ipv4_link_prefix);
+                lspgen_parse_ipv4_prefix(optarg, "ipv4-link-prefix", &ctx->ipv4_link_prefix);
                 break;
             case 'L':
                 /* base prefix for ipv6 interfaces */
-                scan_ipv6_prefix(optarg, &ctx->ipv6_link_prefix);
+                lspgen_parse_ipv6_prefix(optarg, "ipv6-link-prefix", &ctx->ipv6_link_prefix);
                 break;
             case 'x':
                 /* base prefix for ipv4 externals */
-                scan_ipv4_prefix(optarg, &ctx->ipv4_ext_prefix);
+                lspgen_parse_ipv4_prefix(optarg, "ipv4-external-prefix", &ctx->ipv4_ext_prefix);
                 break;
             case 'X':
                 /* base prefix for ipv6 externals */
-                scan_ipv6_prefix(optarg, &ctx->ipv6_ext_prefix);
+                lspgen_parse_ipv6_prefix(optarg, "ipv6-external-prefix", &ctx->ipv6_ext_prefix);
                 break;
             case 'e':
                 ctx->num_ext = lspgen_parse_number(optarg, "external-count", 10, 0, INT_MAX);
@@ -1934,8 +1978,8 @@ main(int argc, char *argv[])
                 break;
             case 'q':
                 /* sequence */
-                ctx->sequence = strtoul(optarg, NULL, 0);
-                ctx->sequence_set = ctx->sequence != 0;
+                ctx->sequence = lspgen_parse_number(optarg, "sequence", 0, 1, UINT32_MAX);
+                ctx->sequence_set = true;
                 lspgen_set_protocol_defaults(ctx);
                 break;
             case 'Q':
@@ -1944,7 +1988,7 @@ main(int argc, char *argv[])
                 break;
             case 's':
                 /* seed value such that random graph generation becomes deterministic */
-                ctx->seed = strtol(optarg, NULL, 0);
+                ctx->seed = lspgen_parse_number(optarg, "seed", 0, 0, UINT32_MAX);
                 break;
             case 'S':
                 /* open control socket to BNG Blaster */
@@ -1965,11 +2009,7 @@ main(int argc, char *argv[])
                     LOG(ERROR, "Level may not be set for protocol %s\n", lsdb_format_proto(ctx));
                     exit(EXIT_FAILURE);
                 }
-                ctx->topology_id.level = atoi(optarg);
-                if (ctx->topology_id.level < 1 || ctx->topology_id.level > 2) {
-                    LOG(ERROR, "Level %u is not supported\n", ctx->topology_id.level);
-                    exit(EXIT_FAILURE);
-                }
+                ctx->topology_id.level = lspgen_parse_number(optarg, "level", 10, 1, 2);
                 break;
             case 'h': /* fall through */
             default:
@@ -1986,6 +2026,11 @@ main(int argc, char *argv[])
         ctx->protocol_id != PROTO_ISIS) {
         LOG(ERROR, "Link delay, TE metric, node MSD and ELC are not supported for protocol %s\n",
             lsdb_format_proto(ctx));
+        exit(EXIT_FAILURE);
+    }
+    if (ctx->sequence_set && ctx->sequence == 0x80000000 &&
+        (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3)) {
+        LOG_NOARG(ERROR, "Invalid sequence 0x80000000 (reserved in OSPF)\n");
         exit(EXIT_FAILURE);
     }
     if (!lspgen_add_flex_algo_to_sr_algo(ctx)) {
@@ -2119,7 +2164,7 @@ main(int argc, char *argv[])
      * Flush and close all we have.
      */
 EXIT:
-    ctrl_error = ctx->ctrl_error;
+    error = ctx->error || ctx->ctrl_error;
     lsdb_delete_ctx(ctx);
-    return ctrl_error ? EXIT_FAILURE : 0;
+    return error ? EXIT_FAILURE : 0;
 }

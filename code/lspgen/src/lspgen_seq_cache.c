@@ -20,7 +20,13 @@ lspgen_write_node_seq_cache(lsdb_node_t *node, json_t *level_arr)
     str = json_string(lsdb_format_node_no_name(node));
     json_object_set_new(node_obj, "node_id", str);
     json_object_set_new(node_obj, "hostname", json_string(node->node_name));
-    if (node->sequence) {
+    /*
+     * An exhausted sequence can not be bumped by the next run,
+     * which then starts again with the initial sequence.
+     */
+    if (node->sequence == lsdb_max_sequence(node->ctx)) {
+        LOG(ERROR, "Sequence number of node %s exhausted, not cached\n", lsdb_format_node(node));
+    } else if (node->sequence) {
         char seq[12];
         snprintf(seq, sizeof(seq), "0x%08x", node->sequence);
         json_object_set_new(node_obj, "sequence", json_string(seq));
@@ -121,18 +127,19 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
     ctx->seq_cache_file = fopen(seq_cache_filename, "w");
     if (!ctx->seq_cache_file) {
         LOG(ERROR, "Error opening sequence cache file %s\n", seq_cache_filename);
+        ctx->error = true;
         json_decref(root_obj);
         return;
     }
 
     res = json_dumpf(root_obj, ctx->seq_cache_file, JSON_INDENT(2));
-    if (res == -1) {
-        LOG(ERROR, "Error writing sequence cache file %s\n", seq_cache_filename);
-    }
-
-    /* Done */
     json_decref(root_obj);
-    fclose(ctx->seq_cache_file);
+    if (fclose(ctx->seq_cache_file) || res == -1) {
+        ctx->seq_cache_file = NULL;
+        LOG(ERROR, "Error writing sequence cache file %s\n", seq_cache_filename);
+        ctx->error = true;
+        return;
+    }
     ctx->seq_cache_file = NULL;
 
     LOG(NORMAL, "Wrote %u nodes to file %s\n", num_nodes, seq_cache_filename);
@@ -189,6 +196,12 @@ lspgen_read_seq_cache(lsdb_ctx_t *ctx)
     seq_cache_filename = lspgen_seq_cache_filename(ctx);
     if (!seq_cache_filename) {
         LOG_NOARG(ERROR, "Error building sequence cache file\n");
+        return;
+    }
+
+    /* An explicit sequence (-q) takes precedence over the cache. */
+    if (ctx->sequence_set) {
+        LOG(NORMAL, "Sequence set by option, ignoring sequence cache file %s\n", seq_cache_filename);
         return;
     }
 

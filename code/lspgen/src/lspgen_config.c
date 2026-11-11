@@ -854,6 +854,7 @@ lspgen_write_config(lsdb_ctx_t *ctx)
     ctx->config_file = fopen(ctx->config_filename, "w");
     if (!ctx->config_file) {
         LOG(ERROR, "Error opening config file %s\n", ctx->config_filename);
+        ctx->error = true;
         dict_itor_free(itor);
         return;
     }
@@ -875,6 +876,9 @@ lspgen_write_config(lsdb_ctx_t *ctx)
         break;
     default:
         LOG_NOARG(ERROR, "Unknown protocol\n");
+        json_decref(arr);
+        dict_itor_free(itor);
+        res = -1;
         goto done;
     }
 
@@ -899,14 +903,14 @@ lspgen_write_config(lsdb_ctx_t *ctx)
     dict_itor_free(itor);
 
     res = json_dumpf(root_obj, ctx->config_file, JSON_INDENT(2));
-    if (res == -1) {
-        LOG(ERROR, "Error writing config file %s\n", ctx->config_filename);
-    }
 
     /* Done */
 done:
     json_decref(root_obj);
-    fclose(ctx->config_file);
+    if (fclose(ctx->config_file) || res == -1) {
+        LOG(ERROR, "Error writing config file %s\n", ctx->config_filename);
+        ctx->error = true;
+    }
     ctx->config_file = NULL;
 }
 
