@@ -108,7 +108,9 @@ typedef struct bbl_ctx_
     ldp_instance_s *ldp_instances;
     ldp_raw_update_s *ldp_raw_updates;
 
-    bbl_fragment_s *ipv4_fragments;
+    bbl_fragment_s *ipv4_fragments; /* newest first */
+    bbl_fragment_s *ipv4_fragments_tail; /* oldest */
+    uint64_t ipv4_fragments_evicted;
     bbl_fragment_s **ipv4_fragment_hash;
     uint32_t ipv4_fragment_count;
 

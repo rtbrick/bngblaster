@@ -19,6 +19,8 @@ bbl_fragment_free(bbl_fragment_s *ipv4_fragment)
 {
     if(ipv4_fragment->next) {
         ipv4_fragment->next->prev = ipv4_fragment->prev;
+    } else {
+        g_ctx->ipv4_fragments_tail = ipv4_fragment->prev;
     }
     if(ipv4_fragment->prev) {
         ipv4_fragment->prev->next = ipv4_fragment->next;
@@ -113,8 +115,15 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
     }
     if(!fragment) {
         if(g_ctx->ipv4_fragment_count >= BBL_FRAGMENT_MAX) {
-            /* Limit the memory, entries expire after 10 seconds. */
-            return;
+            /* Limit the memory by evicting the oldest entry, which is
+             * likely incomplete because of loss (entries expire after
+             * 10 seconds), instead of refusing all new packets. */
+            if(!g_ctx->ipv4_fragments_evicted) {
+                LOG(INFO, "IPv4 reassembly of more than %u packets, oldest are evicted\n",
+                    BBL_FRAGMENT_MAX);
+            }
+            g_ctx->ipv4_fragments_evicted++;
+            bbl_fragment_free(g_ctx->ipv4_fragments_tail);
         }
         fragment = calloc(1, sizeof(bbl_fragment_s));
         if(!fragment) {
@@ -127,6 +136,8 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
         if(g_ctx->ipv4_fragments) {
             g_ctx->ipv4_fragments->prev = fragment;
             fragment->next = g_ctx->ipv4_fragments;
+        } else {
+            g_ctx->ipv4_fragments_tail = fragment;
         }
         g_ctx->ipv4_fragments = fragment;
         if(g_ctx->ipv4_fragment_hash[hash]) {
