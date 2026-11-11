@@ -11,6 +11,10 @@
 
 #define IO_JUMBO_BLOCK_SIZE 12288
 
+/* Packets processed per RX job run in the main thread, so that
+ * other timers (TX, protocols, control socket) are not starved. */
+#define IO_RX_BUDGET        8192
+
 typedef struct io_handle_ io_handle_s;
 typedef struct io_thread_ io_thread_s;
 

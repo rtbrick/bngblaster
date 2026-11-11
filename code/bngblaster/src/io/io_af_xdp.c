@@ -1371,6 +1371,7 @@ io_af_xdp_rx_job(timer_s *timer)
     uint32_t idx_rx = 0;
     uint32_t rcvd;
     uint32_t i;
+    uint32_t budget = IO_RX_BUDGET;
 
     protocol_error_t decode_result;
     bool pcap = false;
@@ -1383,7 +1384,8 @@ io_af_xdp_rx_job(timer_s *timer)
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
 
-    while((rcvd = xsk_ring_cons__peek(&q->rx, AF_XDP_BURST, &idx_rx))) {
+    while(budget && (rcvd = xsk_ring_cons__peek(&q->rx, budget < AF_XDP_BURST ? budget : AF_XDP_BURST, &idx_rx))) {
+        budget -= rcvd;
         for(i = 0; i < rcvd; i++) {
             desc = xsk_ring_cons__rx_desc(&q->rx, idx_rx + i);
             addrs[i] = desc->addr;

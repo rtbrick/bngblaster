@@ -33,17 +33,59 @@ set_qdisc_bypass(io_handle_s *io)
     return true;
 }
 
-/* Set fanout group. */
+/* Set fanout group. The group ID is 16 bit, a group of another
+ * interface with the same ID is rejected with EINVAL by the kernel,
+ * in which case the next ID is tried. The RX threads of an interface
+ * walk the same sequence and therefore join the same group. */
 static bool
 set_fanout(io_handle_s *io)
 {
+    uint16_t fanout_id = io->fanout_id & 0xffff;
+    int fanout_arg;
+    int i;
+
     if(io->fanout_id && io->direction == IO_INGRESS) {
-        int fanout_arg = (io->fanout_id | (io->fanout_type << 16));
-        if(setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == -1) {
-            LOG(ERROR, "Failed to set fanout group for interface %s - %s (%d)\n",
-                io->interface->name, strerror(errno), errno);
-            return false;    
+        for(i = 0; i < 64; i++) {
+            if(!fanout_id) fanout_id++;
+            fanout_arg = (fanout_id | (io->fanout_type << 16));
+            if(setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == 0) {
+                return true;
+            }
+            if(errno != EINVAL) {
+                break;
+            }
+            fanout_id++;
         }
+        LOG(ERROR, "Failed to set fanout group for interface %s - %s (%d)\n",
+            io->interface->name, strerror(errno), errno);
+        return false;
+    }
+    return true;
+}
+
+/* Discard frames rejected by the kernel (e.g. above the MTU) instead
+ * of stopping the TX ring at this frame. */
+static bool
+set_packet_loss(io_handle_s *io)
+{
+    int one = 1;
+    if(setsockopt(io->fd, SOL_PACKET, PACKET_LOSS, &one, sizeof(one)) == -1) {
+        LOG(ERROR, "Failed to set packet loss for interface %s - %s (%d)\n",
+            io->interface->name, strerror(errno), errno);
+        return false;
+    }
+    return true;
+}
+
+/* Receive stripped VLAN tags as auxiliary data (raw RX). */
+static bool
+set_packet_auxdata(io_handle_s *io)
+{
+    int one = 1;
+    if(setsockopt(io->fd, SOL_PACKET, PACKET_AUXDATA, &one, sizeof(one)) == -1) {
+        LOG(ERROR, "Failed to set packet auxdata for interface %s - %s (%d)\n",
+            io->interface->name, strerror(errno), errno);
+        return false;
     }
     return true;
 }
@@ -158,7 +200,14 @@ io_socket_open(io_handle_s *io) {
         if(!set_packet_version(io, TPACKET_V2)) {
             return false;
         }
+        if(io->direction == IO_EGRESS && !set_packet_loss(io)) {
+            return false;
+        }
         if(!set_ring(io, slots)) {
+            return false;
+        }
+    } else if(io->direction == IO_INGRESS) {
+        if(!set_packet_auxdata(io)) {
             return false;
         }
     }

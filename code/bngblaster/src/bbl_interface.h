@@ -16,6 +16,7 @@ typedef struct bbl_interface_
     interface_type_t type; /* interface type */
     interface_state_t state; /* interface state */
     uint32_t state_transitions; /* interface state transitions */
+    bool link_down; /* physical link down (DPDK link state) */
     uint32_t ifindex; /* internal interface index */
     uint32_t kernel_index; /* kernel interface index  */
     int lock_fd; /* see bbl_interface_lock() */
@@ -43,6 +44,7 @@ typedef struct bbl_interface_
     struct {
         struct timer_ *rx_job;
         struct timer_ *tx_job;
+        struct timer_ *link_job;
         io_handle_s *rx;
         io_handle_s *tx;
         struct io_af_xdp_state_ *af_xdp_state;
@@ -57,6 +59,9 @@ interface_state_string(interface_state_t state);
 
 void
 bbl_interface_unlock_all();
+
+void
+bbl_interface_link_state(bbl_interface_s *interface, bool up);
 
 bool
 bbl_interface_init();

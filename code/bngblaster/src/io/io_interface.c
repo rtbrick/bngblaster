@@ -575,7 +575,7 @@ address_warning(bbl_interface_s *interface)
 
     if(getifaddrs(&ifaddr) == 0) {
         for(ifa = ifaddr; ifa != NULL; ifa = ifa->ifa_next) {
-            if(strcmp(ifa->ifa_name, interface->name) == 0) {
+            if(ifa->ifa_addr && strcmp(ifa->ifa_name, interface->name) == 0) {
                 if(ifa->ifa_addr->sa_family == AF_INET) {
                     ipv4 = (struct sockaddr_in *) ifa->ifa_addr;
                     inet_ntop(AF_INET, &(ipv4->sin_addr), address, INET6_ADDRSTRLEN);

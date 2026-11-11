@@ -272,6 +272,28 @@ bbl_interface_get(char *interface_name)
     return NULL;
 }
 
+/**
+ * bbl_interface_link_state
+ *
+ * Apply the physical link state (main thread only). A disabled
+ * interface stays disabled, LAG members are selected by the LAG.
+ */
+void
+bbl_interface_link_state(bbl_interface_s *interface, bool up)
+{
+    if(interface->link_down == !up) {
+        return;
+    }
+    interface->link_down = !up;
+    LOG(INFO, "Interface (%s) link %s\n", interface->name, up ? "up" : "down");
+    if(interface->lag_member) {
+        bbl_lag_member_link(interface);
+    } else if(interface->type != LAG_INTERFACE && interface->state != INTERFACE_DISABLED) {
+        interface->state = up ? INTERFACE_UP : INTERFACE_DOWN;
+        interface->state_transitions++;
+    }
+}
+
 static int
 bbl_interface_ctrl_enable_disable(int fd, json_t *arguments, bool enable)
 {
@@ -293,7 +315,7 @@ bbl_interface_ctrl_enable_disable(int fd, json_t *arguments, bool enable)
                     if(interface->lag_member) {
                         bbl_lag_member_enable(interface);
                     } else {
-                        interface->state = INTERFACE_UP;
+                        interface->state = interface->link_down ? INTERFACE_DOWN : INTERFACE_UP;
                     }
                     LOG(INFO, "Interface (%s) enabled\n", interface->name);
                 }

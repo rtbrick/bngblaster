@@ -62,42 +62,75 @@ static struct rte_eth_conf port_conf = {
     },
 };
 
-static bbl_interface_s *
-io_dpdk_get_interface_by_port_id(uint16_t port_id)
+/* Mbufs of a TX queue: the descriptors may hold all of them until
+ * the driver cleans up in rte_eth_tx_burst, plus burst and caches. */
+static unsigned int
+io_dpdk_tx_mbufs(bbl_link_config_s *config)
 {
-    bbl_interface_s *interface;
-    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
-        if(interface->port_id == port_id) {
-            return interface;
-        }
-    }
-    return NULL;
+    unsigned int num = (2 * config->io_slots_tx) + BURST_SIZE_TX + MBUF_CACHE_SIZE;
+    return num > NUM_MBUFS_TX ? num : NUM_MBUFS_TX;
 }
 
-static bool
-io_dpdk_link_status(uint16_t port_id)
+/**
+ * io_dpdk_link_status
+ *
+ * Read the link state of the DPDK port of the interface and apply
+ * it in the main thread (interface-disable and LAG members).
+ */
+static void
+io_dpdk_link_status(bbl_interface_s *interface)
 {
     struct rte_eth_link link = {0};
-    bbl_interface_s *interface;
-    
-    interface = io_dpdk_get_interface_by_port_id(port_id);
-    if(!interface) return false; /* unlikely */
-    
-    if(rte_eth_link_get_nowait(port_id, &link) == 0) {
-        if(link.link_status) {
-            interface->state = INTERFACE_UP;
-            LOG(DPDK, "DPDK: interface %s (%u) link up (speed %u Mbps %s)\n", 
-                interface->name, port_id, (unsigned)link.link_speed,
-                (link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ? ("full-duplex") : ("half-duplex"));
-        } else {
-            interface->state = INTERFACE_DOWN;
-            LOG(DPDK, "DPDK: interface %s (%u) link down\n", 
-                interface->name, port_id);
-        }
-    } else {
-        return false;
+    uint16_t port_id = interface->port_id;
+
+    if(rte_eth_link_get_nowait(port_id, &link) != 0) {
+        return;
     }
-    return true;
+    if(link.link_status && interface->link_down) {
+        LOG(DPDK, "DPDK: interface %s (%u) link up (speed %u Mbps %s)\n", 
+            interface->name, port_id, (unsigned)link.link_speed,
+            (link.link_duplex == RTE_ETH_LINK_FULL_DUPLEX) ? ("full-duplex") : ("half-duplex"));
+    } else if(!link.link_status && !interface->link_down) {
+        LOG(DPDK, "DPDK: interface %s (%u) link down\n", 
+            interface->name, port_id);
+    }
+    bbl_interface_link_state(interface, link.link_status);
+}
+
+static void
+io_dpdk_link_job(timer_s *timer)
+{
+    io_dpdk_link_status(timer->data);
+}
+
+void
+io_dpdk_set_max_stream_len()
+{
+    uint32_t len = RTE_MBUF_DEFAULT_DATAROOM - BBL_MAX_STREAM_OVERHEAD;
+    if(len < g_ctx->config.io_max_stream_len) {
+        g_ctx->config.io_max_stream_len = len;
+    }
+}
+
+/**
+ * io_dpdk_cleanup
+ *
+ * Stop and close all DPDK ports and release the EAL,
+ * which also stops the EAL interrupt thread.
+ */
+void
+io_dpdk_cleanup()
+{
+    uint16_t port_id;
+
+    if(!g_ctx->dpdk) {
+        return;
+    }
+    RTE_ETH_FOREACH_DEV(port_id) {
+        rte_eth_dev_stop(port_id);
+        rte_eth_dev_close(port_id);
+    }
+    rte_eal_cleanup();
 }
 
 static bool
@@ -110,18 +143,6 @@ io_dpdk_dev_info(uint16_t port_id, struct rte_eth_dev_info *dev_info)
         return false;
     }
     return true;
-}
-
-int 
-io_dpdk_event_callback(uint16_t port_id, enum rte_eth_event_type type, void *cb_arg, void *ret_param)
-{
-    RTE_SET_USED(cb_arg);
-    RTE_SET_USED(ret_param);
-
-    LOG(DPDK, "DPDK: %s event\n", type == RTE_ETH_EVENT_INTR_LSC ? "LSC interrupt" : "unknown");
-
-    io_dpdk_link_status(port_id);
-    return 0;
 }
 
 bool
@@ -203,6 +224,7 @@ io_dpdk_rx_job(timer_s *timer)
     struct rte_mbuf *packet;
     uint16_t nb_rx;
     uint16_t i;
+    uint32_t budget = IO_RX_BUDGET;
 
     protocol_error_t decode_result;
     bool pcap = false;
@@ -215,11 +237,13 @@ io_dpdk_rx_job(timer_s *timer)
     //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-    while(true) {
-        nb_rx = rte_eth_rx_burst(interface->port_id, io->queue, packet_burst, BURST_SIZE_RX);
+    while(budget) {
+        nb_rx = rte_eth_rx_burst(interface->port_id, io->queue, packet_burst,
+                                 budget < BURST_SIZE_RX ? budget : BURST_SIZE_RX);
         if(nb_rx == 0) {
             break;
         }
+        budget -= nb_rx;
         /* Prefetch the first few packets of the burst before processing
          * starts, so their data has time to land before it's touched. */
         for(i = 0; i < PREFETCH_OFFSET && i < nb_rx; i++) {
@@ -773,12 +797,6 @@ io_dpdk_interface_init(bbl_interface_s *interface)
         return false;
     }
 
-    ret = rte_eth_dev_callback_register(port_id, RTE_ETH_EVENT_INTR_LSC, (rte_eth_dev_cb_fn)io_dpdk_event_callback, NULL);
-    if(ret < 0) {
-        LOG(ERROR, "DPDK: interface %s (%u) failed to register callback (error %d)\n",
-            interface->name, port_id, ret);
-        return false;
-    }
 
     id = nb_rx_queue;
     for(queue = 0; queue < nb_rx_queue; queue++) {
@@ -839,7 +857,7 @@ io_dpdk_interface_init(bbl_interface_s *interface)
                 config->tx_interval, io, &io_dpdk_tx_job);
         }
         io->queue = queue;
-        if(!io_dpdk_add_mbuf_pool(io, NUM_MBUFS_TX)) {
+        if(!io_dpdk_add_mbuf_pool(io, io_dpdk_tx_mbufs(config))) {
             LOG(ERROR, "DPDK: interface %s (%u) failed to create TX mbuf pool for queue %u\n",
                 interface->name, port_id, queue);
             return false;
@@ -878,7 +896,12 @@ io_dpdk_interface_init(bbl_interface_s *interface)
         return false;
     }
 
-    io_dpdk_link_status(port_id);
+    /* The link state is polled by the main thread, as the EAL interrupt
+     * thread (LSC callback) must not change the interface state. */
+    interface->link_down = false;
+    io_dpdk_link_status(interface);
+    timer_add_periodic(&g_ctx->timer_root, &interface->io.link_job, "DPDK Link", 1, 0,
+                       interface, &io_dpdk_link_job);
     return true;
 }
 

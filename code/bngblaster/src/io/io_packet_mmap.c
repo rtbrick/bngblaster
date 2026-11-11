@@ -54,6 +54,7 @@ io_packet_mmap_rx_job(timer_s *timer)
 
     bbl_ethernet_header_s *eth;
     uint16_t vlan;
+    uint32_t budget = IO_RX_BUDGET;
 
     protocol_error_t decode_result;
     bool pcap = false;
@@ -74,7 +75,7 @@ io_packet_mmap_rx_job(timer_s *timer)
     //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-    while(TP_STATUS_LOAD(tphdr) & TP_STATUS_USER) {
+    while((TP_STATUS_LOAD(tphdr) & TP_STATUS_USER) && budget--) {
         io->buf = (uint8_t*)tphdr + tphdr->tp_mac;
         io->buf_len = tphdr->tp_snaplen;
         io->stats.packets++;
@@ -236,9 +237,9 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
 {
     io_handle_s *io = thread->io;
 
-    uint16_t cursor = io->cursor;
-    uint16_t frame_size = io->req.tp_frame_size;
-    uint16_t frame_nr = io->req.tp_frame_nr;
+    uint32_t cursor = io->cursor;
+    uint32_t frame_size = io->req.tp_frame_size; /* 64K with 64K pages */
+    uint32_t frame_nr = io->req.tp_frame_nr;
     uint8_t *frame_ptr;
     uint8_t *ring = io->ring;
 
@@ -290,6 +291,9 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
             }
             /* Process packet */
             if(io_thread_rx_handler(thread, io) == IO_FULL) {
+                /* The frame is retried, count it once. */
+                io->stats.packets--;
+                io->stats.bytes -= io->buf_len;
                 break;
             }
             /* Return ownership back to kernel */

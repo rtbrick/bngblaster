@@ -728,6 +728,7 @@ json_parse_link(json_t *link, bbl_link_config_s *link_config)
         } else if(strcmp(s, "dpdk") == 0) {
             link_config->io_mode = IO_MODE_DPDK;
             g_ctx->dpdk = true;
+            io_dpdk_set_max_stream_len();
 #endif
 #if BNGBLASTER_AF_XDP
         } else if(strcmp(s, "af_xdp") == 0) {
@@ -5166,6 +5167,7 @@ json_parse_config(json_t *root)
             } else if(strcmp(s, "dpdk") == 0) {
                 g_ctx->config.io_mode = IO_MODE_DPDK;
                 g_ctx->dpdk = true;
+                io_dpdk_set_max_stream_len();
 #endif
 #if BNGBLASTER_AF_XDP
             } else if(strcmp(s, "af_xdp") == 0) {

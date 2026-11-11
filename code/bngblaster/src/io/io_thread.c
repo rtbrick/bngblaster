@@ -122,11 +122,8 @@ rx_handler(io_thread_s *thread, io_handle_s *io)
                 if(unlikely(io_capture_active(thread))) io_capture_packet(io, io->buf, io->buf_len);
                 return IO_SUCCESS;
             }
-        } else if(decode_result == UNKNOWN_PROTOCOL) {
-            io->stats.unknown++;
-        } else {
-            io->stats.protocol_errors++;
         }
+        /* Decode errors are counted by the main thread. */
     }
     /** Redirect to main thread. */
     return redirect(thread, io);

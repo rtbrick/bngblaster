@@ -12,6 +12,50 @@ extern bool g_init_phase;
 extern bool g_traffic;
 
 /**
+ * io_raw_recv
+ *
+ * Receive a packet with the outer VLAN tag stripped by the
+ * kernel (skb_vlan_untag) from the auxiliary data.
+ */
+static ssize_t
+io_raw_recv(io_handle_s *io)
+{
+    struct iovec iov = { .iov_base = io->buf, .iov_len = IO_BUFFER_LEN };
+    union {
+        struct cmsghdr cmsg;
+        char buf[CMSG_SPACE(sizeof(struct tpacket_auxdata))];
+    } control;
+    struct msghdr msg = {0};
+    struct cmsghdr *cmsg;
+    struct tpacket_auxdata *aux;
+    ssize_t len;
+
+    msg.msg_iov = &iov;
+    msg.msg_iovlen = 1;
+    msg.msg_control = &control;
+    msg.msg_controllen = sizeof(control);
+
+    io->vlan_tci = 0;
+    io->vlan_tpid = 0;
+    len = recvmsg(io->fd, &msg, 0);
+    if(len <= 0) {
+        return len;
+    }
+    for(cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+        if(cmsg->cmsg_level == SOL_PACKET && cmsg->cmsg_type == PACKET_AUXDATA &&
+           cmsg->cmsg_len >= CMSG_LEN(sizeof(struct tpacket_auxdata))) {
+            aux = (struct tpacket_auxdata*)CMSG_DATA(cmsg);
+            if(aux->tp_status & TP_STATUS_VLAN_VALID) {
+                io->vlan_tci = aux->tp_vlan_tci;
+                io->vlan_tpid = ((aux->tp_status & TP_STATUS_VLAN_TPID_VALID) && aux->tp_vlan_tpid) ?
+                                aux->tp_vlan_tpid : ETH_TYPE_VLAN;
+            }
+        }
+    }
+    return len;
+}
+
+/**
  * This job is for RAW RX in main thread!
  */
 void
@@ -25,6 +69,8 @@ io_raw_rx_job(timer_s *timer)
 
     protocol_error_t decode_result;
     bool pcap = false;
+    ssize_t len;
+    uint32_t budget = IO_RX_BUDGET;
 
     /* Echo replies copy received data into a TXQ slot, which
      * also needs room for VLAN tags stripped by the kernel. */
@@ -39,11 +85,12 @@ io_raw_rx_job(timer_s *timer)
     //clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
     io->timestamp.tv_sec = timer->timestamp->tv_sec;
     io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
-    while(true) {
-        io->buf_len = recv(io->fd, io->buf, IO_BUFFER_LEN, 0);
-        if(io->buf_len < 14 || io->buf_len > IO_BUFFER_LEN) {
+    while(budget--) {
+        len = io_raw_recv(io);
+        if(len < 14 || len > IO_BUFFER_LEN) {
             break;
         }
+        io->buf_len = len;
         io->stats.packets++;
         io->stats.bytes += io->buf_len;
         if(io->buf_len > max_len) {
@@ -52,6 +99,16 @@ io_raw_rx_job(timer_s *timer)
         }
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
+            if(io->vlan_tpid) {
+                /* Restore stripped outer VLAN tag */
+                eth->vlan_inner = eth->vlan_outer;
+                eth->vlan_inner_priority = eth->vlan_outer_priority;
+                eth->vlan_outer = io->vlan_tci & BBL_ETH_VLAN_ID_MAX;
+                eth->vlan_outer_priority = io->vlan_tci >> 13;
+                if(io->vlan_tpid == ETH_TYPE_QINQ) {
+                    eth->qinq = true;
+                }
+            }
             /* Copy RX timestamp */
             eth->timestamp.tv_sec = io->timestamp.tv_sec;
             eth->timestamp.tv_nsec = io->timestamp.tv_nsec;
@@ -219,19 +276,21 @@ io_raw_thread_rx_run_fn(io_thread_s *thread)
      * than after a single empty round. */
     uint32_t idle_rounds = 0;
     const uint32_t idle_spin_rounds = 10000;
+    ssize_t len;
 
     while(thread->active) {
         /* Get RX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
         /* Receive from socket */
-        io->buf_len = recv(io->fd, io->buf, IO_BUFFER_LEN, 0);
-        if(io->buf_len < 14 || io->buf_len > IO_BUFFER_LEN) {
+        len = io_raw_recv(io);
+        if(len < 14 || len > IO_BUFFER_LEN) {
             if(++idle_rounds >= idle_spin_rounds) {
                 nanosleep(&sleep, &rem);
                 idle_rounds = 0;
             }
             continue;
         }
+        io->buf_len = len;
         idle_rounds = 0;
         /* Process packet */
         if(io_thread_rx_handler(thread, io) == IO_FULL) {
@@ -284,6 +343,12 @@ io_raw_thread_tx_run_fn(io_thread_s *thread)
                 io->stats.bytes += slot->packet_len;
                 bbl_txq_read_next(txq);
                 if(burst) burst--;
+            } else if(errno == EMSGSIZE) {
+                /* Retrying would always fail. */
+                io->buf_len = slot->packet_len;
+                io_raw_tx_lo_long(io);
+                io->buf_len = 0;
+                bbl_txq_read_next(txq);
             } else {
                 LOG(IO, "RAW sendto on interface %s failed with error %s (%d)\n",
                     io->interface->name, strerror(errno), errno);

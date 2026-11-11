@@ -93,6 +93,9 @@ void
 bbl_lag_member_disable(bbl_interface_s *interface);
 
 void
+bbl_lag_member_link(bbl_interface_s *interface);
+
+void
 bbl_lag_rx_lacp(bbl_interface_s *interface, bbl_ethernet_header_s *eth);
 
 int

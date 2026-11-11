@@ -15,4 +15,10 @@ io_dpdk_init();
 bool
 io_dpdk_interface_init(bbl_interface_s *interface);
 
+void
+io_dpdk_set_max_stream_len();
+
+void
+io_dpdk_cleanup();
+
 #endif

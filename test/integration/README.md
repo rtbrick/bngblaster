@@ -101,6 +101,15 @@ Functional tests over veth pairs between network namespaces:
   by the main loop, idle clients and clients not reading the response
   of a main loop command, terminate with session selectors
   (`test_ctrl_socket.py`)
+* IO and network interfaces: raw RX with VLAN, control packets above the
+  kernel MTU (raw and packet_mmap), ICMPv6 echo destination, DAD and NS
+  hop limit, gateway MAC change, tun link, fanout group collision, LAG
+  member RX threads, LACP partner changes and partner systems
+  (`test_io_interfaces.py`, `lacp_peer.py`)
+* IPoE access sessions: IGMP joins, leaves, autostart, rejoin, IGMPv3
+  records and querier version, zapping, RA on N:1 sessions, DHCP rebind,
+  DHCPv6 DUID, transaction ID, release and IA-separate
+  (`test_ipoe_access.py`, `ipoe_peer.py`)
 * HTTP server tested with curl (IPv4 and IPv6) and connections reset
   by the client, HTTP client response after a session reconnect
   (`test_http.py`)

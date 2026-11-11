@@ -177,6 +177,7 @@ typedef struct bbl_stream_
     bbl_session_s *session;
     endpoint_state_t *endpoint;
     uint32_t session_version;
+    uint32_t network_version;
     uint16_t tx_flags;
     volatile bool reset;
     volatile bool enabled;

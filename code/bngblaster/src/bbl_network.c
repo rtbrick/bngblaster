@@ -144,6 +144,7 @@ bbl_network_interfaces_add()
         /* Copy gateway MAC from config (default 00:00:00:00:00:00) */
         memcpy(network_interface->gateway_mac, network_config->gateway_mac, ETH_ADDR_LEN);
         memcpy(network_interface->gateway6_mac, network_config->gateway_mac, ETH_ADDR_LEN);
+        network_interface->gateway_mac_static = memcmp(network_config->gateway_mac, "\x00\x00\x00\x00\x00\x00", ETH_ADDR_LEN) != 0;
 
         /* Init IPv4 */
         network_interface->ip.address = network_config->ip.address;
@@ -395,13 +396,23 @@ bbl_network_icmpv6_na(bbl_network_interface_s *interface,
                       bbl_ethernet_header_s *eth,
                       bbl_ipv6_s *ipv6,
                       bbl_icmpv6_s *icmpv6) {
+    static uint8_t all_nodes_mac[ETH_ADDR_LEN];
     bbl_network_update_eth(interface, eth);
-    ipv6->dst = ipv6->src;
+    if(!ipv6_addr_not_zero((ipv6addr_t*)ipv6->src)) {
+        /* Reply to DAD is sent to all nodes without the
+         * solicited flag (RFC 4861 section 7.2.4). */
+        ipv6_multicast_mac(ipv6_multicast_all_nodes, all_nodes_mac);
+        eth->dst = all_nodes_mac;
+        ipv6->dst = (void*)ipv6_multicast_all_nodes;
+        icmpv6->flags = IPV6_ICMPV6_NA_FLAG_OVERRIDE;
+    } else {
+        ipv6->dst = ipv6->src;
+        icmpv6->flags = 0;
+    }
     ipv6->src = icmpv6->prefix.address;
     ipv6->ttl = 255;
     icmpv6->type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
     icmpv6->mac = interface->mac;
-    icmpv6->flags = 0;
     icmpv6->data = NULL;
     icmpv6->data_len = 0;
     icmpv6->dns1 = NULL;
@@ -409,15 +420,46 @@ bbl_network_icmpv6_na(bbl_network_interface_s *interface,
     return bbl_txq_to_buffer(interface->txq, eth);
 }
 
+/* Local unicast address for a reply to the destination (NULL if not local). */
+static uint8_t *
+bbl_network_ipv6_local(bbl_network_interface_s *interface, uint8_t *dst)
+{
+    bbl_secondary_ip6_s *secondary_ip6;
+
+    if(dst[0] == 0xff) {
+        /* Multicast: reply from a unicast address (RFC 4443 section 4.2). */
+        if(ipv6_addr_not_zero(&interface->ip6.address)) {
+            return interface->ip6.address;
+        }
+        return interface->ip6_ll;
+    }
+    if(memcmp(dst, interface->ip6.address, IPV6_ADDR_LEN) == 0 ||
+       memcmp(dst, interface->ip6_ll, IPV6_ADDR_LEN) == 0) {
+        return dst;
+    }
+    secondary_ip6 = interface->secondary_ip6_addresses;
+    while(secondary_ip6) {
+        if(memcmp(dst, secondary_ip6->ip, IPV6_ADDR_LEN) == 0) {
+            return dst;
+        }
+        secondary_ip6 = secondary_ip6->next;
+    }
+    return NULL;
+}
+
 static bbl_txq_result_t
 bbl_network_icmpv6_echo_reply(bbl_network_interface_s *interface,
                               bbl_ethernet_header_s *eth,
                               bbl_ipv6_s *ipv6,
                               bbl_icmpv6_s *icmpv6) {
-    uint8_t *dst = ipv6->dst;
+    uint8_t *src = bbl_network_ipv6_local(interface, ipv6->dst);
+    if(!src || (memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0 && !(eth->dst[0] & 0x01))) {
+        /* Not addressed to this interface. */
+        return BBL_TXQ_OK;
+    }
     bbl_network_update_eth(interface, eth);
     ipv6->dst = ipv6->src;
-    ipv6->src = dst;
+    ipv6->src = src;
     ipv6->ttl = 255;
     icmpv6->type = IPV6_ICMPV6_ECHO_REPLY;
     return bbl_txq_to_buffer(interface->txq, eth);
@@ -430,11 +472,18 @@ bbl_network_rx_arp(bbl_network_interface_s *interface, bbl_ethernet_header_s *et
     bbl_arp_s *arp = (bbl_arp_s*)eth->next;
     if(arp->sender_ip == interface->gateway) {
         interface->arp_resolved = true;
-        if(memcmp(interface->gateway_mac, "\x00\x00\x00\x00\x00\x00", ETH_ADDR_LEN) == 0) {
+        if(!interface->gateway_mac_static &&
+           memcmp(interface->gateway_mac, arp->sender, ETH_ADDR_LEN) != 0) {
+            /* Learned gateway MAC (new or changed). */
+            if(memcmp(interface->gateway_mac, "\x00\x00\x00\x00\x00\x00", ETH_ADDR_LEN) != 0) {
+                LOG(INFO, "Network interface %s gateway MAC changed to %s\n",
+                    interface->name, format_mac_address(arp->sender));
+            }
             memcpy(interface->gateway_mac, arp->sender, ETH_ADDR_LEN);
             if(!ipv6_addr_not_zero(&interface->gateway6)) {
                 memcpy(interface->gateway6_mac, interface->gateway_mac, ETH_ADDR_LEN);
             }
+            interface->version++;
         }
     }
     if(arp->code == ARP_REQUEST) {
@@ -464,17 +513,25 @@ bbl_network_rx_icmpv6(bbl_network_interface_s *interface,
     ipv6 = (bbl_ipv6_s*)eth->next;
     icmpv6 = (bbl_icmpv6_s*)ipv6->next;
 
+    if((icmpv6->type == IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT ||
+        icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) && ipv6->ttl != 255) {
+        /* RFC 4861 sections 7.1.1 and 7.1.2 */
+        return;
+    }
 
     if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT) {
         if(memcmp(icmpv6->prefix.address, interface->gateway6, IPV6_ADDR_LEN) == 0) {
             interface->icmpv6_nd_resolved = true;
-            if(memcmp(interface->gateway6_mac, "\x00\x00\x00\x00\x00\x00", ETH_ADDR_LEN) == 0) {
-                if(icmpv6->mac == NULL) {
-                    gw_mac = eth->src;
-                } else {
-                    gw_mac = icmpv6->mac;
+            gw_mac = icmpv6->mac ? icmpv6->mac : eth->src;
+            if(!interface->gateway_mac_static &&
+               memcmp(interface->gateway6_mac, gw_mac, ETH_ADDR_LEN) != 0) {
+                /* Learned gateway MAC (new or changed). */
+                if(memcmp(interface->gateway6_mac, "\x00\x00\x00\x00\x00\x00", ETH_ADDR_LEN) != 0) {
+                    LOG(INFO, "Network interface %s IPv6 gateway MAC changed to %s\n",
+                        interface->name, format_mac_address(gw_mac));
                 }
                 memcpy(interface->gateway6_mac, gw_mac, ETH_ADDR_LEN);
+                interface->version++;
             }
         }
     } else if(icmpv6->type == IPV6_ICMPV6_NEIGHBOR_SOLICITATION) {

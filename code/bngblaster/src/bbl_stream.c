@@ -2025,6 +2025,15 @@ bbl_stream_io_send(bbl_stream_s *stream)
         }
         stream->session_version = session->version;
     }
+    if(stream->tx_network_interface &&
+       unlikely(stream->tx_network_interface->version != stream->network_version)) {
+        /* Gateway MAC changed. */
+        if(stream->tx_buf) {
+            free(stream->tx_buf);
+            stream->tx_buf = NULL;
+        }
+        stream->network_version = stream->tx_network_interface->version;
+    }
 
     if(!stream->tx_buf) {
         if(unlikely(stream->tx_flags & (STREAM_FLAG_LDP|STREAM_FLAG_EVPN))) {

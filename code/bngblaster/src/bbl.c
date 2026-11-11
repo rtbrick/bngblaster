@@ -1028,6 +1028,9 @@ CLEANUP:
         exit_status = 1;
     }
 #endif
+#ifdef BNGBLASTER_DPDK
+    io_dpdk_cleanup();
+#endif
     bbl_interface_unlock_all();
     io_thread_unlock_cpus();
     if(g_ctx->ctrl_socket_path) {

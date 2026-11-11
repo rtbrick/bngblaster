@@ -8,6 +8,9 @@
  */
 #include "bbl.h"
 
+#define LACP_NTT_STATE_MASK (LACP_STATE_FLAG_ACTIVE|LACP_STATE_FLAG_SHORT_TIMEOUT|\
+                             LACP_STATE_FLAG_AGGREGATION|LACP_STATE_FLAG_IN_SYNC)
+
 extern volatile bool g_teardown;
 extern volatile bool g_monkey;
 
@@ -158,13 +161,17 @@ bbl_lag_select(bbl_lag_s *lag)
     uint8_t selected_count = 0;
     uint8_t actor_state;
     uint8_t key;
+    bbl_lag_member_s *selected = NULL;
 
     CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
         io = member->interface->io.tx;
         io_stream_clear(io);
 
         member->primary = false;
-        if(member->interface->state != INTERFACE_DISABLED) {
+        if(member->interface->state != INTERFACE_DISABLED && member->interface->link_down) {
+            /* Physical link down (DPDK link state). */
+            bbl_lag_member_update_state(member, INTERFACE_DOWN);
+        } else if(member->interface->state != INTERFACE_DISABLED) {
             actor_state = member->actor_state;
             /* As in IEEE 802.1AX, the members with current partner information
              * are selected in order of their port priority, up to the maximum
@@ -189,11 +196,16 @@ bbl_lag_select(bbl_lag_s *lag)
                 bbl_lag_member_update_state(member, INTERFACE_DOWN);
                 member->actor_state &= ~(LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
             } else if(selected_count >= LAG_MEMBER_ACTIVE_MAX ||
-                      selected_count >= lag->config->lacp_max_active_links) {
+                      selected_count >= lag->config->lacp_max_active_links ||
+                      (selected && (memcmp(selected->partner_system_id, member->partner_system_id, ETH_ADDR_LEN) != 0 ||
+                                    selected->partner_key != member->partner_key))) {
+                /* Only members connected to the same partner system and
+                 * key aggregate with the first selected member. */
                 bbl_lag_member_update_state(member, INTERFACE_STANDBY);
                 member->actor_state &= ~(LACP_STATE_FLAG_IN_SYNC|LACP_STATE_FLAG_COLLECTING|LACP_STATE_FLAG_DISTRIBUTING);
             } else {
                 selected_count++;
+                if(!selected) selected = member;
                 member->actor_state |= LACP_STATE_FLAG_IN_SYNC;
                 if(!(member->partner_state & LACP_STATE_FLAG_IN_SYNC)) {
                     bbl_lag_member_update_state(member, INTERFACE_DOWN);
@@ -438,6 +450,27 @@ bbl_lag_member_enable(bbl_interface_s *interface)
 }
 
 /**
+ * bbl_lag_member_link
+ *
+ * @brief Physical link state of a member changed. On link down,
+ * the LACP partner information is no longer current.
+ */
+void
+bbl_lag_member_link(bbl_interface_s *interface)
+{
+    bbl_lag_member_s *member = interface->lag_member;
+
+    if(!member) {
+        return;
+    }
+    if(interface->link_down && member->lacp_state) {
+        bbl_lag_member_lacp_reset(interface);
+    } else {
+        bbl_lag_select(member->lag);
+    }
+}
+
+/**
  * bbl_lag_member_disable
  *
  * @brief Disable a LAG member interface, which
@@ -511,10 +544,15 @@ bbl_lag_rx_lacp(bbl_interface_s *interface, bbl_ethernet_header_s *eth)
         member->timeout = 0;
         member->actor_state &= ~(LACP_STATE_FLAG_DEFAULTED|LACP_STATE_FLAG_EXPIRED);
         member->stats.lacp_rx++;
+        /* IEEE 802.1AX-2014 6.4.9 update_Selected: any change of the
+         * partner port, priority, system or key selects again. */
         if(member->lacp_state != LACP_CURRENT ||
            member->partner_state != lacp->actor_state ||
+           memcmp(member->partner_system_id, lacp->actor_system_id, ETH_ADDR_LEN) != 0 ||
            member->partner_system_priority != lacp->actor_system_priority ||
-           member->partner_port_priority != lacp->actor_port_priority) {
+           member->partner_key != lacp->actor_key ||
+           member->partner_port_priority != lacp->actor_port_priority ||
+           member->partner_port_id != lacp->actor_port_id) {
             /* Update partner informations and trigger member selection */
             member->lacp_state = LACP_CURRENT;
             memcpy(member->partner_system_id, lacp->actor_system_id, ETH_ADDR_LEN);
@@ -525,8 +563,31 @@ bbl_lag_rx_lacp(bbl_interface_s *interface, bbl_ethernet_header_s *eth)
             member->partner_state = lacp->actor_state;
             bbl_lag_select(member->lag);
         }
-        
+        /* update_NTT: send a PDU if the partner has stale information
+         * about this port (activity, timeout, sync and aggregation). */
+        if(!lacp->partner_system_id ||
+           memcmp(lacp->partner_system_id, member->actor_system_id, ETH_ADDR_LEN) != 0 ||
+           lacp->partner_system_priority != member->actor_system_priority ||
+           lacp->partner_key != member->actor_key ||
+           lacp->partner_port_priority != member->actor_port_priority ||
+           lacp->partner_port_id != member->actor_port_id ||
+           (lacp->partner_state & LACP_NTT_STATE_MASK) != (member->actor_state & LACP_NTT_STATE_MASK)) {
+            bbl_lag_lacp_send(member);
+        }
     }
+}
+
+/* Sum over all RX handles (RX threads). */
+static uint64_t
+bbl_lag_member_rx_packets(bbl_lag_member_s *member)
+{
+    io_handle_s *io = member->interface->io.rx;
+    uint64_t packets = 0;
+    while(io) {
+        packets += io->stats.packets;
+        io = io->next;
+    }
+    return packets;
 }
 
 static json_t *
@@ -563,7 +624,7 @@ bbl_lag_json(bbl_lag_s *lag)
             "interface", member->interface->name,
             "state", interface_state_string(member->interface->state),
             "state-transitions", member->interface->state_transitions,
-            "packets-rx", (json_int_t)member->interface->io.rx->stats.packets,
+            "packets-rx", (json_int_t)bbl_lag_member_rx_packets(member),
             "packets-tx", (json_int_t)member->interface->io.tx->stats.packets,
             "stream-count", member->interface->io.tx->stream_count,
             "stream-pps", bbl_round(member->interface->io.tx->stream_pps, 100),
