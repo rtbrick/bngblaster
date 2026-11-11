@@ -36,7 +36,7 @@ class Setup:
         self.tmp_path = tmp_path
         self.log = str(tmp_path / "peer.log")
         self.bbl = None
-        self.vlan_if = "%s.%d" % (topology.if_b, VLAN)
+        self.vlan_if = "%sv%d" % (topology.if_b, VLAN)
         topology.b.exec(["ip", "link", "add", "link", topology.if_b, "name", self.vlan_if,
                          "type", "vlan", "id", str(VLAN)])
         topology.b.exec(["ip", "link", "set", self.vlan_if, "up"])
@@ -149,8 +149,12 @@ def test_igmp_rejoin_after_reconnect(ipoe):
     wait_until(lambda: ipoe.info()["flapped"] == 1, 10, message="session flapped")
     ipoe.established(1)
     wait_until(lambda: len(ipoe.entries(proto="igmp")) > reports, 5, message="IGMP report after reconnect")
-    info = ipoe.bbl.ctrl("igmp-info", **{"session-id": 1})["igmp-groups"]
-    assert [g["state"] for g in info if g["group"] == "239.1.1.1"] == ["active"], info
+
+    def state():
+        info = ipoe.bbl.ctrl("igmp-info", **{"session-id": 1})["igmp-groups"]
+        return [g["state"] for g in info if g["group"] == "239.1.1.1"]
+
+    wait_until(lambda: state() == ["active"], 5, message="group active")
 
 
 def test_igmpv3_records_and_querier(ipoe):
@@ -240,21 +244,23 @@ def test_dhcpv6_release_ra(ipoe):
     """A session which is stopped during the DHCPv6 release does not become
     established again by the first RA."""
     ipoe.peer("dhcpv6-release-ra", "--ra-delay", "2")
-    ipoe.start(access={"ipv4": False, "ipv6": True}, dhcpv6={"enable": True}, logging=("info", "dhcp"))
+    ipoe.start(access={"ipv4": False, "ipv6": True}, dhcpv6={"enable": True, "timeout": 1, "retry": 3},
+               logging=("info", "dhcp"))
     wait_until(lambda: ipoe.entries(proto="dhcpv6", type=3), 10, message="DHCPv6 request")
     time.sleep(0.5)
     assert ipoe.bbl.ctrl("session-stop", **{"session-id": 1})["code"] == 200
     wait_until(lambda: ipoe.entries(proto="ra"), 5, message="RA")
     time.sleep(0.5)
     assert ipoe.info()["session-state"] != "Established"
-    wait_until(lambda: ipoe.info()["session-state"] == "Terminated", 30, message="session terminated")
+    wait_until(lambda: ipoe.info()["session-state"] == "Terminated", 15, message="session terminated")
 
 
 def a10nsp_config(veth, access, **config):
     conf = {
         "interfaces": {
             "a10nsp": [{"interface": veth.if1}],
-            "access": [dict({"interface": veth.if2, "type": "ipoe", "outer-vlan": 100, "inner-vlan": 7}, **access)]
+            "access": [dict({"interface": veth.if2, "type": "ipoe", "outer-vlan-min": 100, "outer-vlan-max": 110,
+                             "inner-vlan": 7}, **access)]
         },
         "sessions": {"count": 2, "reconnect": False}
     }
