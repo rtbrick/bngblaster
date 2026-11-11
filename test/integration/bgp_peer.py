@@ -178,6 +178,11 @@ def mode_connect(args):
         return {"connect": "timeout"}
     conn = Connection(sock)
     conn.wait_message(MSG_OPEN, 5)
+    steps = json.loads(args.steps)
+    if steps:
+        conn.messages = []
+        conn.run(steps)
+        conn.poll(args.wait)
     return {"connect": "established", **conn.result()}
 
 

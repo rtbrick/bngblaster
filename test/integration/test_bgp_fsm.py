@@ -238,3 +238,31 @@ def test_send_mss(setup, tmp_path, ipv6, mtu, mss):
     assert max_tcp_payload(out, BBL_ADDRESS6 if ipv6 else BBL_ADDRESS) == mss, out[-2000:]
     # Non-first IPv4 fragments
     assert "ip-proto-6" not in out, out[-2000:]
+
+
+def test_send_mss_syn_retransmit(setup, tmp_path):
+    """A SYN retransmitted by the peer while the connection accepted by the
+    BNG Blaster is in SYN_RCVD (SYN-ACK lost) does not replace the send MSS
+    limited by the MTU with the MSS option of the peer (IPv4 fragments)."""
+    update = str(tmp_path / "update.bgp")
+    bgpupdate(["-f", update, "-a", str(AS), "-n", BBL_ADDRESS, "-p", "10.1.0.0/28", "-P", "3000"])
+    # Drop the SYN-ACK of the BNG Blaster until the peer has retransmitted its SYN (after 1s).
+    rule = ["INPUT", "-p", "tcp", "--sport", "179", "--tcp-flags", "SYN,ACK", "SYN,ACK", "-j", "DROP"]
+    setup.topology.b.exec(["iptables", "-A"] + rule)
+    capture = subprocess.Popen(setup.topology.b.cmd(
+        ["timeout", "30", "tcpdump", "-nn", "-q", "-l", "-i", setup.topology.if_b,
+         "(tcp port 179) or (ip[6:2] & 0x3fff != 0)"]),
+        stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    time.sleep(1)
+    setup.start_bbl(mtu=1280, reconnect=True, **{"raw-update-file": update})
+    peer = setup.peer_start("connect", ESTABLISH, wait=8)
+    time.sleep(2.5)
+    setup.topology.b.exec(["iptables", "-D"] + rule)
+    wait_until(lambda: setup.session()["raw-update-state"] == "done", 30, message="raw update done")
+    result = json.loads(peer.communicate(timeout=60)[0])
+    assert result["connect"] == "established", result
+    capture.terminate()
+    out = capture.communicate(timeout=10)[0]
+    assert max_tcp_payload(out, BBL_ADDRESS) == 1240, out[-2000:]
+    assert "ip-proto-6" not in out, out[-2000:]
+

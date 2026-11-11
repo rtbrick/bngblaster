@@ -857,6 +857,14 @@ tcp_process(struct tcp_pcb *pcb)
 
   tcp_parseopt(pcb);
 
+#if TCP_CALCULATE_EFF_SEND_MSS
+  /* BNG Blaster: a retransmitted SYN in SYN_RCVD replaced the effective
+   * send MSS with the raw MSS option, limit it to the path MTU again. */
+  if ((flags & TCP_SYN) && (pcb->state == SYN_RCVD)) {
+    pcb->mss = tcp_eff_send_mss_pcb(pcb->mss, pcb);
+  }
+#endif /* TCP_CALCULATE_EFF_SEND_MSS */
+
   if (flags & TCP_SYN) {
     /* accept SYN only in 2 states: */
     if ((pcb->state != SYN_SENT) && (pcb->state != SYN_RCVD)) {
