@@ -153,11 +153,13 @@ def test_ipcp_rejected_ipv4_only(pppd):
     pppd.wait_state("Terminated")
 
 
-def test_session_traffic_ipcp_reopen(pppd):
+@pytest.mark.parametrize("stop_verified", [False, True], ids=["default", "stop-verified"])
+def test_session_traffic_ipcp_reopen(pppd, stop_verified):
     """Session traffic is routed by pppd between the session and a network
     interface (VLAN 100) on the same link. ipcp-close and ipcp-open reset the IPv4
     session traffic, the flows are verified again without counting them
-    twice, so the session is not pending afterwards (IP6CP keeps the link)."""
+    twice, so the session is not pending afterwards (IP6CP keeps the link).
+    With stop-verified, the stopped flows start again to be verified."""
     topology = pppd.topology
     vlan = topology.if_b + ".100"
     topology.b.exec(["ip", "link", "add", "link", topology.if_b, "name", vlan, "type", "vlan", "id", "100"])
@@ -170,6 +172,7 @@ def test_session_traffic_ipcp_reopen(pppd):
                     "gateway": "192.168.1.2"},
         "access": [{"interface": topology.if_a, "type": "pppoe", "outer-vlan": 0, "inner-vlan": 0,
                     "vlan-mode": "N:1", "username": USERNAME, "password": PASSWORD}]},
+        traffic={"stop-verified": stop_verified},
         **{"session-traffic": {"autostart": True, "ipv4-pps": 10}})
     pppd.wait_state("Established")
 

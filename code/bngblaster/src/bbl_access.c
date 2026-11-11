@@ -1865,8 +1865,8 @@ bbl_access_lcp_restart(bbl_session_s *session, bool peer)
         session->dns1 = 0;
         session->dns2 = 0;
         ENABLE_ENDPOINT(session->endpoint.ipv4);
-        bbl_stream_reset(session->session_traffic.ipv4_up);
-        bbl_stream_reset(session->session_traffic.ipv4_down);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv4_up);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv4_down);
     }
     
     if (session->ip6cp_state > BBL_PPP_DISABLED) {
@@ -1894,17 +1894,11 @@ bbl_access_lcp_restart(bbl_session_s *session, bool peer)
         }
         ENABLE_ENDPOINT(session->endpoint.ipv6);
         ENABLE_ENDPOINT(session->endpoint.ipv6pd);
-        bbl_stream_reset(session->session_traffic.ipv6_up);
-        bbl_stream_reset(session->session_traffic.ipv6_down);
-        bbl_stream_reset(session->session_traffic.ipv6pd_up);
-        bbl_stream_reset(session->session_traffic.ipv6pd_down);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv6_up);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv6_down);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv6pd_up);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv6pd_down);
     }
-
-    /* Session traffic */
-    if(g_ctx->stats.session_traffic_flows_verified >= session->session_traffic.flows_verified) {
-        g_ctx->stats.session_traffic_flows_verified -= session->session_traffic.flows_verified;
-    }
-    session->session_traffic.flows_verified = 0;
 
     bbl_session_update_state(session, BBL_PPP_LINK);
     session->send_requests = BBL_SEND_LCP_REQUEST;

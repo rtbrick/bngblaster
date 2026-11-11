@@ -113,9 +113,17 @@ bbl_session_tx_qnode_remove(bbl_session_s *session)
     CIRCLEQ_PREV(session, session_tx_qnode) = NULL;
 }
 
-/* Reset a session traffic stream of one address family, the
- * stream is verified again and counted again by bbl_stream_ctrl. */
-static void
+/**
+ * bbl_session_traffic_reset
+ *
+ * Reset a session traffic stream of one address family (NCP or LCP
+ * down), the stream is verified and counted again by bbl_stream_ctrl.
+ * With stop-verified, a stream stopped once verified starts again.
+ *
+ * @param session session
+ * @param stream session traffic stream (can be NULL)
+ */
+void
 bbl_session_traffic_reset(bbl_session_s *session, bbl_stream_s *stream)
 {
     bool verified;
@@ -129,6 +137,9 @@ bbl_session_traffic_reset(bbl_session_s *session, bbl_stream_s *stream)
         }
         if(g_ctx->stats.session_traffic_flows_verified) {
             g_ctx->stats.session_traffic_flows_verified--;
+        }
+        if(g_ctx->config.traffic_stop_verified) {
+            stream->enabled = session->access_config->session_traffic_autostart;
         }
     }
 }

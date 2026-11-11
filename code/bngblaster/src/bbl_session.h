@@ -401,6 +401,9 @@ void
 bbl_session_ncp_down(bbl_session_s *session, bool ipcp);
 
 void
+bbl_session_traffic_reset(bbl_session_s *session, bbl_stream_s *stream);
+
+void
 bbl_session_ncp_open(bbl_session_s *session, bool ipcp);
 
 void
