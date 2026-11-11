@@ -284,11 +284,31 @@ ospf_ctrl_load_mrt(int fd, uint32_t session_id __attribute__((unused)), json_t *
     return bbl_ctrl_status(fd, "ok", 200, NULL);
 }
 
+/*
+ * Response of LSA updates with the number of LSAs
+ * skipped as self originated or not newer.
+ */
+static int
+ospf_ctrl_update_status(int fd, uint32_t skipped)
+{
+    int result = 0;
+    json_t *root = json_pack("{ss si si}",
+                             "status", "ok",
+                             "code", 200,
+                             "lsa-skipped", skipped);
+    if(root) {
+        result = json_dumpfd(root, fd, BBL_JSON_REAL_PRECISION);
+        json_decref(root);
+    }
+    return result;
+}
+
 int
 ospf_ctrl_lsa_update(int fd, uint32_t session_id __attribute__((unused)), json_t *arguments)
 {
     json_t *value;
     size_t lsa_count;
+    uint32_t skipped = 0;
 
     const char *lsa_string;
     int len;
@@ -313,14 +333,14 @@ ospf_ctrl_lsa_update(int fd, uint32_t session_id __attribute__((unused)), json_t
             if(len < OSPF_LSA_HDR_LEN) {
                 return bbl_ctrl_status(fd, "error", 400, "invalid OSPF LSA hex string");
             }
-            if(!ospf_lsa_load_external(ospf_instance, 1, (uint8_t*)g_pdu_buf, len)) {
+            if(!ospf_lsa_load_external(ospf_instance, 1, (uint8_t*)g_pdu_buf, len, &skipped)) {
                 return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF LSA");
             }
         }
     } else {
         return bbl_ctrl_status(fd, "error", 400, "missing OSPF LSA list");
     }
-    return bbl_ctrl_status(fd, "ok", 200, NULL);
+    return ospf_ctrl_update_status(fd, skipped);
 }
 
 int
@@ -333,6 +353,7 @@ ospf_ctrl_pdu_update(int fd, uint32_t session_id __attribute__((unused)), json_t
     ospf_pdu_s pdu = {0};
     const char *lsa_string;
     int len;
+    uint32_t skipped = 0;
 
     ospf_instance_s *ospf_instance = NULL;
     int instance_id = 0;
@@ -376,14 +397,14 @@ ospf_ctrl_pdu_update(int fd, uint32_t session_id __attribute__((unused)), json_t
                 lsa_count = be32toh(*(uint32_t*)OSPF_PDU_OFFSET(&pdu, OSPFV3_OFFSET_LS_UPDATE_COUNT));
                 OSPF_PDU_CURSOR_SET(&pdu, OSPFV3_OFFSET_LS_UPDATE_LSA);
             }
-            if(!ospf_lsa_load_external(ospf_instance, lsa_count, OSPF_PDU_CURSOR(&pdu), OSPF_PDU_CURSOR_LEN(&pdu))) {
+            if(!ospf_lsa_load_external(ospf_instance, lsa_count, OSPF_PDU_CURSOR(&pdu), OSPF_PDU_CURSOR_LEN(&pdu), &skipped)) {
                 return bbl_ctrl_status(fd, "error", 500, "failed to load OSPF PDU (LSA load error)");
             }
         }
     } else {
         return bbl_ctrl_status(fd, "error", 400, "missing OSPF PDU list");
     }
-    return bbl_ctrl_status(fd, "ok", 200, NULL);
+    return ospf_ctrl_update_status(fd, skipped);
 }
 
 int

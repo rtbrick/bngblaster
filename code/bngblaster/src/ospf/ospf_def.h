@@ -42,8 +42,10 @@
 
 #define OSPF_PDU_LEN_MIN                    16
 #define OSPF_PDU_LEN_MAX                    UINT16_MAX
-/* LSAs must fit into an LS Update PDU (OSPFv2 header and LSA count). */
-#define OSPF_LSA_LEN_MAX                    (OSPF_PDU_LEN_MAX - 24 - 4)
+/* LSAs must fit into an LS Update PDU within an IPv4 datagram
+ * (IPv4 header, OSPFv2 header and LSA count), with MD5 
+ * authentication the digest must also fit. */
+#define OSPF_LSA_LEN_MAX                    (OSPF_PDU_LEN_MAX - 20 - 24 - 4)
 
 #define OSPFV2_HELLO_LEN_MIN                44
 #define OSPFV3_HELLO_LEN_MIN                36

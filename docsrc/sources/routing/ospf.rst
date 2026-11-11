@@ -212,6 +212,14 @@ request PDU including OSPF common header  (``| Version | Type |``).
         }
     }
 
+LSAs which are self originated or not newer than the stored instance
+are skipped, the response of both commands reports their number as
+``lsa-skipped``. With external ``auto-refresh``, the BNG Blaster
+increases the sequence number of external LSAs, so an LSA which
+differs from the stored one is accepted with the next sequence number
+even if its own sequence number is not newer. LSAs loaded with MaxAge
+(purge) are not refreshed.
+
 LSA Update via Scapy
 ~~~~~~~~~~~~~~~~~~~~
 

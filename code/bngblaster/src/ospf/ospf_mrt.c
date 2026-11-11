@@ -18,6 +18,7 @@ ospf_mrt_load(ospf_instance_s *instance, char *file_path, bool startup)
 
     ospf_pdu_s pdu = {0};
     uint32_t lsa_count = 0;
+    uint32_t skipped = 0;
 
     LOG(OSPF, "Load OSPF MRT file %s\n", file_path);
 
@@ -95,11 +96,15 @@ ospf_mrt_load(ospf_instance_s *instance, char *file_path, bool startup)
             fclose(mrt_file);
             return false;
         }
-        if(!ospf_lsa_load_external(instance, lsa_count, OSPF_PDU_CURSOR(&pdu), OSPF_PDU_CURSOR_LEN(&pdu))) {
+        if(!ospf_lsa_load_external(instance, lsa_count, OSPF_PDU_CURSOR(&pdu), OSPF_PDU_CURSOR_LEN(&pdu), &skipped)) {
             LOG(ERROR, "Invalid MRT file %s (LSA load error)\n", file_path);
             fclose(mrt_file);
             return false;
         }
+    }
+
+    if(skipped) {
+        LOG(INFO, "Skipped %u LSAs of MRT file %s (self originated or not newer)\n", skipped, file_path);
     }
 
     if(startup) {

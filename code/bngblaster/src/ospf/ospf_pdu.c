@@ -10,7 +10,24 @@
 #include <openssl/evp.h>
 #include <openssl/hmac.h>
 
-uint32_t g_crypt_seq = 0;
+/* The MD5 cryptographic sequence number must not decrease
+ * across restarts, otherwise neighbors drop all packets
+ * until the dead interval expires (RFC 2328 appendix D.3).
+ * Therefore it follows the time in seconds, as long as 
+ * not more than one packet per second is sent. */
+static uint32_t g_crypt_seq = 0;
+
+static uint32_t
+ospf_pdu_crypt_seq_next()
+{
+    uint32_t now = (uint32_t)time(NULL);
+    if(now > g_crypt_seq) {
+        g_crypt_seq = now;
+    } else {
+        g_crypt_seq++;
+    }
+    return g_crypt_seq;
+}
 
 static protocol_error_t
 ospf_pdu_load_v2(ospf_pdu_s *pdu)
@@ -188,7 +205,9 @@ ospf_pdu_update_auth_v2(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
             }
             break;
         case OSPF_AUTH_MD5:
-            if(pdu->pdu_len + OSPF_MD5_DIGEST_LEN > pdu->pdu_buf_len) {
+            /* The digest must fit into the buffer and the IPv4 datagram. */
+            if(pdu->pdu_len + OSPF_MD5_DIGEST_LEN > pdu->pdu_buf_len ||
+               pdu->pdu_len + OSPF_MD5_DIGEST_LEN + 20 > UINT16_MAX) {
                 return false;
             }
             *(uint16_t*)OSPF_PDU_OFFSET(pdu, OSPF_OFFSET_CHECKSUM) = 0;
@@ -196,7 +215,7 @@ ospf_pdu_update_auth_v2(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
             auth_hdr->reserved = 0;
             auth_hdr->key_id = 1;
             auth_hdr->auth_data_len = OSPF_MD5_DIGEST_LEN;
-            auth_hdr->crypt_seq = htobe32(++g_crypt_seq);
+            auth_hdr->crypt_seq = htobe32(ospf_pdu_crypt_seq_next());
 
             if(key) {
                 strncpy((char*)padded_key, key, OSPF_MD5_DIGEST_LEN);
@@ -224,15 +243,15 @@ ospf_pdu_update_auth_v3(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
     UNUSED(key);
 }
 
-void
+bool
 ospf_pdu_update_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key)
 {
     pdu->auth_type = auth;
     if(pdu->pdu_version == OSPF_VERSION_2) {
-        ospf_pdu_update_auth_v2(pdu, auth, key);
-    } else {
-        ospf_pdu_update_auth_v3(pdu, auth, key);
+        return ospf_pdu_update_auth_v2(pdu, auth, key);
     }
+    ospf_pdu_update_auth_v3(pdu, auth, key);
+    return true;
 }
 
 bool

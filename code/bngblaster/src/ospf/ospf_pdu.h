@@ -34,7 +34,7 @@ ospf_pdu_update_checksum(ospf_pdu_s *pdu);
 bool
 ospf_pdu_validate_checksum(ospf_pdu_s *pdu);
 
-void
+bool
 ospf_pdu_update_auth(ospf_pdu_s *pdu, ospf_auth_type auth, char *key);
 
 bool

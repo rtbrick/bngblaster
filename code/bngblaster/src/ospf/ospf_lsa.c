@@ -1486,7 +1486,11 @@ ospf_lsa_update_pdu_tx(ospf_pdu_s *pdu, uint16_t lsa_count,
 
     /* Update length, auth, checksum and send... */
     ospf_pdu_update_len(pdu);
-    ospf_pdu_update_auth(pdu, config->auth_type, config->auth_key);
+    if(!ospf_pdu_update_auth(pdu, config->auth_type, config->auth_key)) {
+        LOG(ERROR, "OSPF LS update of %u bytes too large for authentication on interface %s\n",
+            pdu->pdu_len, ospf_interface->interface->name);
+        return ENCODE_ERROR;
+    }
     ospf_pdu_update_checksum(pdu);
     if(ospf_pdu_tx(pdu, ospf_interface, ospf_neighbor) == PROTOCOL_SUCCESS) {
         ospf_interface->stats.ls_upd_tx++;
@@ -2241,8 +2245,32 @@ ospf_lsa_ack_handler_rx(ospf_interface_s *ospf_interface,
     }
 }
 
+/*
+ * Returns true if an external LSA differs from the stored
+ * one in other fields than age, sequence and checksum.
+ */
+static bool
+ospf_lsa_external_changed(ospf_lsa_s *lsa, ospf_lsa_header_s *hdr, uint16_t lsa_len)
+{
+    bool max_age = be16toh(hdr->age) >= OSPF_LSA_MAX_AGE;
+    if(lsa_len != lsa->lsa_len || max_age != (lsa->age >= OSPF_LSA_MAX_AGE)) {
+        return true;
+    }
+    return memcmp((uint8_t*)hdr+OSPF_LSA_HDR_LEN, lsa->lsa+OSPF_LSA_HDR_LEN, lsa_len-OSPF_LSA_HDR_LEN) != 0;
+}
+
+/**
+ * ospf_lsa_load_external
+ *
+ * @param ospf_instance OSPF instance
+ * @param lsa_count number of LSAs in buf
+ * @param buf LSAs
+ * @param len length of buf
+ * @param skipped optional counter of LSAs skipped as self originated or not newer
+ * @return false on decode errors
+ */
 bool
-ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8_t *buf, uint16_t len)
+ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8_t *buf, uint16_t len, uint32_t *skipped)
 {
     ospf_lsa_header_s *hdr;
     ospf_lsa_key_s *key;
@@ -2252,6 +2280,14 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8
     dict_insert_result result;
     uint16_t lsa_len;
     uint8_t  lsa_type;
+    uint32_t seq;
+    bool     auto_refresh = ospf_instance->config->external_auto_refresh;
+    bool     resequence;
+    uint16_t lsa_len_max = OSPF_LSA_LEN_MAX;
+
+    if(ospf_instance->config->auth_type == OSPF_AUTH_MD5) {
+        lsa_len_max -= OSPF_MD5_DIGEST_LEN;
+    }
 
     struct timespec now;
     clock_gettime(CLOCK_MONOTONIC, &now);
@@ -2266,7 +2302,7 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8
             return false;
         }
         lsa_len = be16toh(hdr->length);
-        if(lsa_len > len || lsa_len > OSPF_LSA_LEN_MAX) {
+        if(lsa_len > len || lsa_len > lsa_len_max) {
             LOG(ERROR, "Failed to decode external OSPF LSA %s (invalid LSA len %u)\n", ospf_lsa_hdr_string(hdr), lsa_len);
             return false;
         }
@@ -2280,6 +2316,8 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8
             return false;
         }
 
+        seq = be32toh(hdr->seq);
+        resequence = false;
         search = hb_tree_search(ospf_instance->lsdb[lsa_type], key);
         if(search) {
             lsa = *search;
@@ -2287,12 +2325,27 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8
              * must be newer than the stored instance (signed sequence). */
             if(lsa->source.type == OSPF_SOURCE_SELF) {
                 LOG(OSPF, "Skip external OSPF LSA %s (self originated)\n", ospf_lsa_hdr_string(hdr));
+                if(skipped) (*skipped)++;
                 continue;
             }
-            if(lsa->lsa_len && (int32_t)lsa->seq >= (int32_t)be32toh(hdr->seq)) {
-                LOG(OSPF, "Skip external OSPF LSA %s (not newer than stored seq %08x)\n",
-                    ospf_lsa_hdr_string(hdr), lsa->seq);
-                continue;
+            if(lsa->lsa_len && (int32_t)lsa->seq >= (int32_t)seq) {
+                /* With auto-refresh, the sequence number of external LSAs is
+                 * increased by the BNG Blaster, so a changed LSA (e.g. from 
+                 * lspgen) continues with the next sequence number. */
+                ospf_lsa_update_age(lsa, &now);
+                if(auto_refresh && lsa->source.type == OSPF_SOURCE_EXTERNAL &&
+                   lsa->seq != OSPF_LSA_SEQ_MAX && 
+                   ospf_lsa_external_changed(lsa, hdr, lsa_len)) {
+                    LOG(OSPF, "Update external OSPF LSA %s with stored seq %08x + 1\n",
+                        ospf_lsa_hdr_string(hdr), lsa->seq);
+                    seq = lsa->seq + 1;
+                    resequence = true;
+                } else {
+                    LOG(OSPF, "Skip external OSPF LSA %s (not newer than stored seq %08x)\n",
+                        ospf_lsa_hdr_string(hdr), lsa->seq);
+                    if(skipped) (*skipped)++;
+                    continue;
+                }
             }
         } else {
             /* NEW LSA */
@@ -2316,7 +2369,7 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8
         lsa->lsa_len = lsa_len;
         lsa->source.type = OSPF_SOURCE_EXTERNAL;
         lsa->source.router_id = 0;
-        lsa->seq = be32toh(hdr->seq);
+        lsa->seq = seq;
         lsa->age = be16toh(hdr->age);
         lsa->timestamp.tv_sec = now.tv_sec;
         lsa->timestamp.tv_nsec = now.tv_nsec;
@@ -2325,10 +2378,14 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8
         lsa->wrap = false;
         lsa->ll_scope = NULL;
         ospf_lsa_update_age(lsa, &now);
+        if(resequence) {
+            ospf_lsa_update_hdr(lsa);
+        }
         ospf_lsa_flood(lsa);
 
-        if(ospf_instance->config->external_auto_refresh) {
-            /* The lifetime of a previous instance (e.g. learned
+        if(auto_refresh && !lsa->expired) {
+            /* LSAs loaded with MaxAge (purge) are not refreshed.
+             * The lifetime of a previous instance (e.g. learned
              * from neighbors) would stop the refresh. */
             timer_del(lsa->timer_lifetime);
             timer_add_periodic(&g_ctx->timer_root, &lsa->timer_refresh, 

@@ -34,11 +34,11 @@ def bbl_config(ifname, address, gateway, router_id, hostname):
     }
 
 
-def ri_lsa(router_id, seq, hostname):
+def ri_lsa(router_id, seq, hostname, age=0):
     """Return a router information LSA (RFC 7770) with hostname TLV."""
     name = hostname.encode()
     body = struct.pack(">HH", OSPF_RI_TLV_HOSTNAME, len(name)) + name + b"\x00" * (-len(name) % 4)
-    data = bytearray(struct.pack(">HBB4s4sIHH", 0, 0, OSPF_LSA_TYPE_OPAQUE_AREA,
+    data = bytearray(struct.pack(">HBB4s4sIHH", age, 0, OSPF_LSA_TYPE_OPAQUE_AREA,
                                  socket.inet_aton(OSPF_RI_LSA_ID), socket.inet_aton(router_id),
                                  seq, 0, 20 + len(body)) + body)
     # The checksum excludes the age.
@@ -54,10 +54,10 @@ def ri(instance, router_id):
     return {}
 
 
-@pytest.fixture
-def instances(topology, processes, tmp_path):
-    a = BngBlaster(topology.a, tmp_path, name="a").start(
-        bbl_config(topology.if_a, "10.0.0.1", "10.0.0.2", ROUTER_ID_A, "A"), logging=("info", "ospf"))
+def start_instances(topology, processes, tmp_path, ospf_a=None):
+    config_a = bbl_config(topology.if_a, "10.0.0.1", "10.0.0.2", ROUTER_ID_A, "A")
+    config_a["ospf"][0].update(ospf_a or {})
+    a = BngBlaster(topology.a, tmp_path, name="a").start(config_a, logging=("info", "ospf"))
     processes.append(a)
     b = BngBlaster(topology.b, tmp_path, name="b").start(
         bbl_config(topology.if_b, "10.0.0.2", "10.0.0.1", ROUTER_ID_B, "B"), logging=("info", "ospf"))
@@ -68,6 +68,17 @@ def instances(topology, processes, tmp_path):
         return len(neighbors) == 1 and neighbors[0]["state"] == "Full"
     wait_until(lambda: full(a) and full(b), 15, message="OSPF neighbors full")
     return a, b
+
+
+@pytest.fixture
+def instances(topology, processes, tmp_path):
+    return start_instances(topology, processes, tmp_path)
+
+
+@pytest.fixture
+def instances_auto_refresh(topology, processes, tmp_path):
+    """Instance A with external auto-refresh."""
+    return start_instances(topology, processes, tmp_path, {"external": {"auto-refresh": True}})
 
 
 @pytest.mark.slow
@@ -112,29 +123,77 @@ def test_lsa_update_self_and_older(instances):
     a, _ = instances
     wait_until(lambda: ri(a, ROUTER_ID_A) and ri(a, ROUTER_ID_B), 10, message="router information LSAs")
     own_seq = ri(a, ROUTER_ID_A)["seq"]
-    a.ctrl("ospf-lsa-update", instance=1, lsa=[ri_lsa(ROUTER_ID_A, 0x80000100, "X")])
+
+    def update(lsa):
+        result = a.ctrl("ospf-lsa-update", instance=1, lsa=[lsa])
+        assert result["code"] == 200, result
+        return result["lsa-skipped"]
+    # Skipped LSAs are reported (it returned 200 only).
+    assert update(ri_lsa(ROUTER_ID_A, 0x80000100, "X")) == 1
     # A router which is not simulated, B would originate its own LSA again.
-    a.ctrl("ospf-lsa-update", instance=1, lsa=[ri_lsa("10.10.0.99", 0x80000100, "C")])
-    a.ctrl("ospf-lsa-update", instance=1, lsa=[ri_lsa("10.10.0.99", 0x80000050, "C")])
+    assert update(ri_lsa("10.10.0.99", 0x80000100, "C")) == 0
+    assert update(ri_lsa("10.10.0.99", 0x80000050, "D")) == 1
     assert ri(a, ROUTER_ID_A)["seq"] == own_seq
     assert ri(a, "10.10.0.99")["seq"] == "0x80000100"
     assert a.alive()
 
 
 def test_lsa_update_size_limit(instances):
-    """An LSA which does not fit into an LS Update PDU (65535 bytes with
-    header) is rejected, it overflowed the PDU buffer when flooded. The
-    largest LSA which fits is accepted."""
-    a, _ = instances
+    """An LSA which does not fit into an LS Update PDU in an IPv4 datagram
+    (65535 bytes with headers) is rejected, it overflowed the PDU buffer
+    when flooded. The largest LSA which fits is accepted and flooded."""
+    a, b = instances
 
     def lsa(size):
         body = struct.pack(">HH", 7, size - 24) + b"x" * (size - 24)
         data = bytearray(struct.pack(">HBB4s4sIHH", 0, 0, OSPF_LSA_TYPE_OPAQUE_AREA,
-                                     socket.inet_aton("4.0.0.0"), socket.inet_aton(ROUTER_ID_B),
+                                     socket.inet_aton("4.0.0.0"), socket.inet_aton("10.10.0.98"),
                                      0x80000001, 0, size) + body)
         data[16:18] = fletcher(data[2:], 14)
         return data.hex()
 
+    # IPv4 header (20), OSPFv2 header (24) and LSA count (4).
     assert a.ctrl("ospf-lsa-update", instance=1, lsa=[lsa(65535)])["code"] != 200
-    assert a.ctrl("ospf-lsa-update", instance=1, lsa=[lsa(65507)])["code"] == 200
+    assert a.ctrl("ospf-lsa-update", instance=1, lsa=[lsa(65488)])["code"] != 200
+    assert a.ctrl("ospf-lsa-update", instance=1, lsa=[lsa(65487)])["code"] == 200
+    # It was accepted up to 65507 bytes, but never delivered.
+    wait_until(lambda: ri(b, "10.10.0.98"), 10, message="largest LSA flooded to B")
     assert a.alive()
+
+
+def test_auto_refresh_update_older(instances_auto_refresh):
+    """With external auto-refresh, the BNG Blaster increases the sequence
+    number of external LSAs, a changed LSA with a lower sequence number
+    (e.g. from lspgen) continues with the next sequence number, an
+    unchanged one is skipped (it was dropped silently)."""
+    a, b = instances_auto_refresh
+
+    def update(lsa):
+        result = a.ctrl("ospf-lsa-update", instance=1, lsa=[lsa])
+        assert result["code"] == 200, result
+        return result["lsa-skipped"]
+    assert update(ri_lsa("10.10.0.99", 0x80000005, "C")) == 0
+    assert update(ri_lsa("10.10.0.99", 0x80000001, "C")) == 1
+    assert ri(a, "10.10.0.99")["seq"] == "0x80000005"
+    assert update(ri_lsa("10.10.0.99", 0x80000001, "D")) == 0
+    assert ri(a, "10.10.0.99")["seq"] == "0x80000006"
+    wait_until(lambda: ri(b, "10.10.0.99").get("seq") == "0x80000006", 10,
+               message="changed LSA flooded to B")
+    # The checksum was updated with the new sequence number.
+    assert ri(b, "10.10.0.99")["checksum"] == ri(a, "10.10.0.99")["checksum"]
+
+
+@pytest.mark.slow
+def test_auto_refresh_purge(instances_auto_refresh):
+    """An external LSA loaded with MaxAge (purge) is not refreshed with
+    external auto-refresh, but removed after the purge timer (it was
+    re-originated with age 0 after LSRefreshTime)."""
+    a, b = instances_auto_refresh
+    assert a.ctrl("ospf-lsa-update", instance=1, lsa=[ri_lsa("10.10.0.99", 0x80000001, "C")])["code"] == 200
+    wait_until(lambda: ri(b, "10.10.0.99"), 10, message="LSA flooded to B")
+    result = a.ctrl("ospf-lsa-update", instance=1, lsa=[ri_lsa("10.10.0.99", 0x80000002, "C", OSPF_MAX_AGE)])
+    assert result["code"] == 200 and result["lsa-skipped"] == 0
+    wait_until(lambda: ri(b, "10.10.0.99").get("age", OSPF_MAX_AGE) == OSPF_MAX_AGE, 10,
+               message="purge flooded to B")
+    # A refreshed LSA would stay in the database of A until LSRefreshTime.
+    wait_until(lambda: not ri(a, "10.10.0.99"), 100, interval=2, message="purged LSA removed")

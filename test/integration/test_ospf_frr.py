@@ -5,12 +5,15 @@ Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
 import ipaddress
+import socket
+import struct
 import time
 
 import pytest
 
-from helpers import wait_until
+from helpers import Frr, wait_until
 from igp_common import BBL_ADDRESS, BBL_ROUTER_ID, FRR_PREFIX, FRR_ROUTER_ID, OspfSetup
+from isis_peer import fletcher
 
 NODES = 50
 FRR_PREFIXES = 8
@@ -329,4 +332,61 @@ def test_database_load_rate(ospf):
     ospf.start_bbl()
     ospf.wait_established(timeout=10)
     assert len(bbl_lsas(ospf, OSPF_LSA_TYPE_EXTERNAL, FRR_ROUTER_ID)) >= count
+    ospf.teardown()
+
+
+def opaque_lsa(router, size):
+    """Return an opaque area LSA (router information) of the given size."""
+    body = struct.pack(">HH", 32000, size - 24) + b"x" * (size - 24)
+    data = bytearray(struct.pack(">HBB4s4sIHH", 0, 0x42, OSPF_LSA_TYPE_OPAQUE_AREA,
+                                 socket.inet_aton("4.0.0.0"), socket.inet_aton(router),
+                                 0x80000001, 0, size) + body)
+    data[16:18] = fletcher(data[2:], 14)
+    return data.hex()
+
+
+def frr_has_opaque(ospf, router):
+    database = ospf.frr.vtysh("show ip ospf database opaque-area adv-router %s" % router)
+    return bool(database.get("areaLocalOpaqueLsa", {}).get("areas", {}).get("0.0.0.0", []))
+
+
+@pytest.mark.parametrize("auth", [None, "md5"])
+def test_lsa_size_limit(ospf, auth):
+    """The largest LSA accepted by ospf-lsa-update fits into an IPv4
+    datagram with IPv4 and OSPFv2 header, LSA count and MD5 digest and
+    is delivered to FRR. Larger LSAs were accepted, but never delivered
+    (retransmitted forever) and sent without digest."""
+    key = "BBLmd5"
+    bbl = {"auth-type": "md5", "auth-key": key} if auth else {}
+    ospf.start(frr={"auth": ("md5", key) if auth else None}, bbl={"ospf": bbl})
+    ospf.wait_established()
+    size = 65535 - 20 - 24 - 4 - (16 if auth else 0)
+    # FRR accepts only LSAs with a length of a multiple of 4 (TLV padding).
+    result = ospf.bbl.ctrl("ospf-lsa-update", instance=1, lsa=[opaque_lsa("10.10.0.98", (size + 4) & ~3)])
+    assert result["code"] != 200
+    result = ospf.bbl.ctrl("ospf-lsa-update", instance=1, lsa=[opaque_lsa("10.10.0.99", size & ~3)])
+    assert result["code"] == 200
+    wait_until(lambda: frr_has_opaque(ospf, "10.10.0.99"), 20, message="largest LSA in FRR")
+    ospf.teardown()
+
+
+def test_md5_restart(ospf):
+    """The MD5 cryptographic sequence number does not restart at zero
+    (RFC 2328 appendix D.3), otherwise FRR ignores the restarted BNG
+    Blaster until the new sequence number exceeds the last one of the
+    previous run (one hello per second) or the dead interval expires."""
+    key = "BBLmd5"
+    ospf.frr = Frr(ospf.topology.b, ospf.tmp_path, (ospf.daemon,)).start(
+        ospf.frr_config(auth=("md5", key)).replace("dead-interval 4", "dead-interval 120"))
+    ospf.processes.append(ospf.frr)
+    bbl = {"ospf": {"auth-type": "md5", "auth-key": key, "dead-interval": 120}}
+    ospf.start_bbl(bbl)
+    ospf.wait_established()
+    time.sleep(30)
+    ospf.bbl.kill()
+    # The sequence number follows the time in seconds, it may be ahead by
+    # the packets sent faster than one per second (database exchange), so
+    # the restarted instance is accepted after a few seconds.
+    ospf.start_bbl(bbl)
+    ospf.wait_established(timeout=20)
     ospf.teardown()
