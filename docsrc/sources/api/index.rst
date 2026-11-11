@@ -101,6 +101,21 @@ per session added. For example, if the username is configured as
             }
         }
 
+The command ``commands`` lists the commands of the running instance
+with their arguments and argument types (without the aliases below).
+
+.. code-block:: json
+
+    {
+        "command": "commands"
+    }
+
+The following aliases are supported for compatibility:
+``session-traffic-enabled`` and ``session-traffic-disabled`` for
+**session-traffic-start** and **session-traffic-stop**,
+``stream-traffic-enabled`` and ``stream-traffic-start`` for **stream-start**,
+``stream-traffic-disabled`` and ``stream-traffic-stop`` for **stream-stop**.
+
 BNG Blaster CLI
 ---------------
 

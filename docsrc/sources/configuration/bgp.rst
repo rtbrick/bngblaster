@@ -18,10 +18,24 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 | **local-address**                 | | BGP local IPv4/6 address (source address).                         |
 |                                   | | Default: `network interface address`                               |
 +-----------------------------------+----------------------------------------------------------------------+
+| **local-ipv4-address**            | | BGP local IPv4 address (source address).                           |
+|                                   | | Alternative to **local-address**, which takes precedence.          |
++-----------------------------------+----------------------------------------------------------------------+
+| **local-ipv6-address**            | | BGP local IPv6 address (source address).                           |
+|                                   | | Alternative to **local-address** and **local-ipv4-address**,       |
+|                                   | | which take precedence.                                             |
++-----------------------------------+----------------------------------------------------------------------+
 | **local-as**                      | | BGP local AS.                                                      |
 |                                   | | Default: 65000 Range: 0 - 4294967295                               |
 +-----------------------------------+----------------------------------------------------------------------+
-| **peer-address**                  | | Mandatory BGP peer IPv4/6 address.                                 |
+| **peer-address**                  | | Mandatory BGP peer IPv4/6 address (or **peer-ipv4/ipv6-address**). |
++-----------------------------------+----------------------------------------------------------------------+
+| **peer-ipv4-address**             | | BGP peer IPv4 address.                                             |
+|                                   | | Alternative to **peer-address**, which takes precedence.           |
++-----------------------------------+----------------------------------------------------------------------+
+| **peer-ipv6-address**             | | BGP peer IPv6 address.                                             |
+|                                   | | Alternative to **peer-address** and **peer-ipv4-address**,         |
+|                                   | | which take precedence.                                             |
 +-----------------------------------+----------------------------------------------------------------------+
 | **peer-as**                       | | BGP peer AS. If set, the session is rejected with Bad Peer AS      |
 |                                   | | if the AS in the OPEN of the peer differs.                         |

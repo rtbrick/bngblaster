@@ -8,5 +8,8 @@
 | **purge**        | | Automatically purge all external LSA during teardown.          |
 |                  | | Default: true                                                  |
 +------------------+------------------------------------------------------------------+
+| **auto-refresh** | | Automatically refresh all external LSA.                        |
+|                  | | Default: false                                                 |
++------------------+------------------------------------------------------------------+
 | **mrt-file**     | | OSPF MRT file.                                                 |
 +------------------+------------------------------------------------------------------+
