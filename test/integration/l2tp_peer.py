@@ -7,6 +7,7 @@ lac scenarios (against the BNG Blaster LNS):
   private-group-id  ICCN with a 6 byte Private Group ID
   sequencing        ICCN with Sequencing Required
   no-session-id     ICRQ without Assigned Session ID
+  no-iccn           ICRQ answered with ICRP, but no ICCN
   lcp               LCP configure-request, echo-request with own magic,
                     terminate-request (echo reply magic, terminate-ack, CDN)
   binary-strings    host name, called number and ARI with invalid UTF-8
@@ -124,6 +125,16 @@ def scenario_lac(args):
     if args.scenario == "no-session-id":
         peer.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, ICRQ) + avp32(AVP_CALL_SERIAL_NUMBER, 1))
         result["control"], _ = peer.collect(args.duration)
+        return result
+    if args.scenario == "no-iccn":
+        peer.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, ICRQ) + avp16(AVP_ASSIGNED_SESSION_ID, LOCAL_SESSION_ID) +
+                       avp32(AVP_CALL_SERIAL_NUMBER, 1))
+        peer.wait_ctrl(ICRP)
+        # Acknowledge the ICRP with a ZLB, which does not consume an Ns.
+        peer.sock.sendto(struct.pack("!HHHHHH", 0xc802, 12, peer.peer_tunnel_id, 0, peer.ns, peer.nr),
+                         peer.server)
+        result["control"], _ = peer.collect(args.duration)
+        result["control"].insert(0, {"type": ICRP, "result-code": None, "session-id": 0})
         return result
     if args.scenario == "private-group-id":
         peer.call(avp(AVP_PRIVATE_GROUP_ID, b"group6"))

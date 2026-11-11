@@ -120,6 +120,21 @@ def test_icrq_without_session_id(l2tp):
     assert l2tp.sessions() == []
 
 
+def test_lns_iccn_timeout(l2tp):
+    """A call answered with ICRP is cleared with CDN if no ICCN follows
+    within 30 seconds, sessions waiting for ICCN kept their session ID
+    forever, which could exhaust all session IDs of a tunnel."""
+    l2tp.start_lns()
+    peer = l2tp.peer_start("lac", "no-iccn", duration=36)
+    wait_until(lambda: [s for s in l2tp.sessions() if s["state"] == "Wait-Control-Connection"], 10,
+               message="LNS session waiting for ICCN")
+    result = json.loads(peer.communicate(timeout=60)[0])
+    assert ICRP in types(result), result
+    cdn = [m for m in result["control"] if m["type"] == CDN]
+    assert cdn and cdn[0]["result-code"] == 2, result
+    assert l2tp.sessions() == []
+
+
 def test_lns_lcp(l2tp):
     """The LNS answers LCP echo-request with its own Magic-Number (RFC 1661
     section 5.8), acknowledges LCP terminate-request (section 5.5) and clears

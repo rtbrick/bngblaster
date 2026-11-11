@@ -190,6 +190,36 @@ bbl_l2tp_force_stop(bbl_l2tp_tunnel_s *l2tp_tunnel)
     bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
 }
 
+/* Assign the next free tunnel ID (not 0) to the tunnel session, fails
+ * after one wrap of the 16 bit ID space if all tunnel IDs are used. */
+static bool
+bbl_l2tp_tunnel_id_assign(bbl_l2tp_session_s *l2tp_session)
+{
+    for(uint32_t i = 0; i <= UINT16_MAX; i++) {
+        l2tp_session->key.tunnel_id = g_ctx->next_tunnel_id++;
+        if(l2tp_session->key.tunnel_id &&
+           !dict_search(g_ctx->l2tp_session_dict, &l2tp_session->key)) {
+            return true;
+        }
+    }
+    return false;
+}
+
+/* Assign the next free session ID (not 0) of the tunnel, fails after
+ * one wrap of the 16 bit ID space if all session IDs are used. */
+static bool
+bbl_l2tp_session_id_assign(bbl_l2tp_session_s *l2tp_session)
+{
+    for(uint32_t i = 0; i <= UINT16_MAX; i++) {
+        l2tp_session->key.session_id = l2tp_session->tunnel->next_session_id++;
+        if(l2tp_session->key.session_id &&
+           !dict_search(g_ctx->l2tp_session_dict, &l2tp_session->key)) {
+            return true;
+        }
+    }
+    return false;
+}
+
 /**
  * Free the memory of an L2TP session.
  */
@@ -243,6 +273,7 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
         }
         /* Delete timer */
         timer_del(l2tp_session->timer_lcp_echo);
+        timer_del(l2tp_session->timer_iccn);
 
         /* Remove session from tunnel object */
         if(CIRCLEQ_NEXT(l2tp_session, session_qnode) != NULL) {
@@ -803,7 +834,6 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
     bbl_l2tp_session_s *l2tp_session;
 
     dict_insert_result result;
-    void **search = NULL;
 
     uint8_t l2tp_type;
 
@@ -891,17 +921,12 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
             l2tp_session->tunnel = l2tp_tunnel;
             l2tp_session->key.session_id = 0;
 
-            /* Assign tunnel id ... */
-            while(true) {
-                l2tp_session->key.tunnel_id = g_ctx->next_tunnel_id++;
-                if(l2tp_session->key.tunnel_id == 0) continue; /* skip tunnel 0 */
-                search = dict_search(g_ctx->l2tp_session_dict, &l2tp_session->key);
-                if(search) {
-                    /* Used, try next ... */
-                    continue;
-                } else {
-                    break;
-                }
+            if(!bbl_l2tp_tunnel_id_assign(l2tp_session)) {
+                LOG(ERROR, "L2TP Error (%s) No free tunnel ID\n",
+                    l2tp_tunnel_hostname(l2tp_tunnel));
+                free(l2tp_session);
+                bbl_l2tp_tunnel_delete(l2tp_tunnel);
+                return;
             }
             l2tp_tunnel->tunnel_id = l2tp_session->key.tunnel_id;
             result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);
@@ -1055,13 +1080,36 @@ bbl_l2tp_csun_rx(bbl_network_interface_s *interface,
     bbl_l2tp_avp_decode_csun(l2tp, l2tp_tunnel);
 }
 
+/**
+ * bbl_l2tp_iccn_timeout
+ *
+ * The call of the LNS session is not connected (ICCN) in time, which
+ * would keep the session ID used forever.
+ */
+static void
+bbl_l2tp_iccn_timeout(timer_s *timer)
+{
+    bbl_l2tp_session_s *l2tp_session = timer->data;
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
+
+    if(l2tp_session->state != BBL_L2TP_SESSION_WAIT_CONN) {
+        return;
+    }
+    LOG(L2TP, "L2TP Info (%s) Tunnel (%u) session (%u) ICCN timeout\n",
+        l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id, l2tp_session->key.session_id);
+    l2tp_session->result_code = 2; /* see error code */
+    l2tp_session->error_code = 6; /* generic error */
+    l2tp_session->error_message = "ICCN timeout";
+    bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
+    bbl_l2tp_session_delete(l2tp_session);
+}
+
 static void
 bbl_l2tp_icrq_rx(bbl_network_interface_s *interface, 
                  bbl_l2tp_tunnel_s *l2tp_tunnel, 
                  bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp)
 {
     dict_insert_result result;
-    void **search;
 
     UNUSED(interface);
     UNUSED(eth);
@@ -1111,17 +1159,15 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
 
     l2tp_session->key.tunnel_id = l2tp_tunnel->tunnel_id;
 
-    /* Assign session id ... */
-    while(true) {
-        l2tp_session->key.session_id = l2tp_tunnel->next_session_id++;
-        if(l2tp_session->key.session_id == 0) continue; /* skip tunnel 0 */
-        search = dict_search(g_ctx->l2tp_session_dict, &l2tp_session->key);
-        if(search) {
-            /* Used, try next ... */
-            continue;
-        } else {
-            break;
-        }
+    if(!bbl_l2tp_session_id_assign(l2tp_session)) {
+        /* The call is rejected with a CDN without own session ID. */
+        LOG(ERROR, "L2TP Error (%s) No free session ID\n",
+            l2tp_tunnel_hostname(l2tp_tunnel));
+        l2tp_session->key.session_id = 0;
+        l2tp_session->result_code = 4; /* temporary lack of resources */
+        bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
+        bbl_l2tp_session_free(l2tp_session);
+        return;
     }
     result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);
     if(!result.inserted) {
@@ -1138,6 +1184,8 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
         g_ctx->l2tp_sessions_max = g_ctx->l2tp_sessions;
     }
     bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_ICRP);
+    timer_add(&g_ctx->timer_root, &l2tp_session->timer_iccn, "L2TP ICCN",
+              L2TP_ICCN_TIMEOUT, 0, l2tp_session, &bbl_l2tp_iccn_timeout);
 }
 
 /**
@@ -1702,7 +1750,6 @@ bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *s
 {
     bbl_l2tp_session_s *l2tp_session;
     dict_insert_result result;
-    void **search;
 
     if(l2tp_tunnel->state != BBL_L2TP_TUNNEL_ESTABLISHED) {
         /* Queue session to pending list */
@@ -1720,17 +1767,11 @@ bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *s
 
     l2tp_session->key.tunnel_id = l2tp_tunnel->tunnel_id;
 
-    /* Assign session id ... */
-    while(true) {
-        l2tp_session->key.session_id = l2tp_tunnel->next_session_id++;
-        if(l2tp_session->key.session_id == 0) continue; /* skip session 0 */
-        search = dict_search(g_ctx->l2tp_session_dict, &l2tp_session->key);
-        if(search) {
-            /* Used, try next ... */
-            continue;
-        } else {
-            break;
-        }
+    if(!bbl_l2tp_session_id_assign(l2tp_session)) {
+        LOG(ERROR, "L2TP Error (%s) No free session ID\n",
+            l2tp_tunnel_hostname(l2tp_tunnel));
+        bbl_l2tp_session_free(l2tp_session);
+        return;
     }
     result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);
     if(!result.inserted) {
@@ -1927,7 +1968,6 @@ bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client)
     bbl_l2tp_tunnel_s *l2tp_tunnel;
     bbl_l2tp_session_s *l2tp_session;
     dict_insert_result result;
-    void **search;
 
     /* Find the network interface */
     network_interface = bbl_network_interface_get(l2tp_client->network_interface);
@@ -1980,16 +2020,12 @@ bbl_l2tp_client_connect(bbl_l2tp_client_s *l2tp_client)
     l2tp_session->tunnel = l2tp_tunnel;
     l2tp_session->key.session_id = 0;
 
-    /* Assign tunnel id ... */
-    while(true) {
-        l2tp_session->key.tunnel_id = g_ctx->next_tunnel_id++;
-        if(l2tp_session->key.tunnel_id == 0) continue; /* skip tunnel 0 */
-        search = dict_search(g_ctx->l2tp_session_dict, &l2tp_session->key);
-        if(search) {
-            continue;
-        } else {
-            break;
-        }
+    if(!bbl_l2tp_tunnel_id_assign(l2tp_session)) {
+        LOG(ERROR, "L2TP Error (%s) No free tunnel ID\n", l2tp_client->name);
+        free(l2tp_session);
+        free(l2tp_tunnel);
+        if(g_ctx->l2tp_tunnels) g_ctx->l2tp_tunnels--;
+        return NULL;
     }
     l2tp_tunnel->tunnel_id = l2tp_session->key.tunnel_id;
     result = dict_insert(g_ctx->l2tp_session_dict, &l2tp_session->key);

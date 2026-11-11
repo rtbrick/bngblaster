@@ -18,6 +18,7 @@
 #define L2TP_CSURQ_MAX_SESSIONS     50 /* Connect Speed Update AVPs fitting into L2TP_MAX_AVP_SIZE */
 
 #define L2TP_TX_WAIT_MS             10
+#define L2TP_ICCN_TIMEOUT           30 /* seconds an LNS session waits for ICCN */
 
 #define L2TP_PROXY_AUTH_TYPE_CHAP   2
 #define L2TP_PROXY_AUTH_TYPE_PAP    3
@@ -317,6 +318,7 @@ typedef struct bbl_l2tp_session_
     uint8_t ip6cp_state;
 
     struct timer_ *timer_lcp_echo;
+    struct timer_ *timer_iccn; /* LNS waiting for ICCN */
     struct timer_ *timer_free; /* deferred free, see bbl_l2tp_session_delete() */
     uint8_t lcp_identifier;
     uint8_t lcp_retries;
