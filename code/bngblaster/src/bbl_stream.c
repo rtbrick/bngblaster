@@ -244,6 +244,10 @@ bbl_stream_encode_a10nsp_mpls(bbl_a10nsp_interface_s *interface,
 
     eth_mpls.dst = interface->network_interface->gateway6_mac;
     eth_mpls.src = interface->mac;
+    eth_mpls.vlan_outer = interface->network_interface->vlan;
+    eth_mpls.vlan_outer_priority = stream->config->vlan_priority;
+    eth_mpls.vlan_inner = interface->network_interface->inner_vlan;
+    eth_mpls.qinq = interface->network_interface->qinq;
     eth_mpls.type = ETH_TYPE_ETH;
     eth_mpls.next = eth;
     mpls_service.label = a10nsp_session->label;

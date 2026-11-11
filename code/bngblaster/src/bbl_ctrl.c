@@ -6,6 +6,9 @@
  * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#ifndef _GNU_SOURCE
+#define _GNU_SOURCE
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <sys/types.h>
@@ -17,6 +20,8 @@
 #include <signal.h>
 #include <errno.h>
 #include <sys/stat.h>
+#include <sys/mman.h>
+#include <sys/time.h>
 
 #include "bbl.h"
 #include "bbl_ctrl.h"
@@ -64,6 +69,9 @@ const schema_arg_s schema_session_id_debug[] = {
 };
 const schema_arg_s schema_session_group_id[] = {
     ARG_NUM("session-id"), ARG_NUM("session-group-id"), ARG_END
+};
+const schema_arg_s schema_terminate[] = {
+    ARG_NUM("session-id"), ARG_NUM("reconnect-delay"), ARG_END
 };
 const schema_arg_s schema_session_terminate[] = {
     ARG_NUM("session-id"), ARG_NUM("session-group-id"), ARG_NUM("reconnect-delay"), ARG_END
@@ -181,6 +189,17 @@ bbl_ctrl_schema(json_t *arguments, const schema_arg_s schema[])
     return true;
 }
 
+/* Terminate without session selector stops the whole test. */
+static bool
+bbl_ctrl_terminate_all(json_t *arguments)
+{
+    return !(json_object_get(arguments, "session-id") ||
+             json_object_get(arguments, "ifindex") ||
+             json_object_get(arguments, "interface") ||
+             json_object_get(arguments, "outer-vlan") ||
+             json_object_get(arguments, "inner-vlan"));
+}
+
 int
 bbl_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments)
 {
@@ -204,6 +223,11 @@ bbl_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments)
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");
         }
+    } else if(!bbl_ctrl_terminate_all(arguments)) {
+        if(json_object_get(arguments, "session-id")) {
+            return bbl_ctrl_status(fd, "error", 400, "invalid session-id");
+        }
+        return bbl_ctrl_status(fd, "warning", 404, "session not found");
     } else {
         /* Terminate all sessions and teardown test ... */
         teardown_request();
@@ -369,7 +393,7 @@ static const struct action actions[] = {
     {"test-info", bbl_ctrl_test_info, schema_no_args, true},
     {"threads", io_thread_ctrl_threads, schema_no_args, true},
     {"test-stop", bbl_ctrl_test_stop, schema_no_args, true},
-    {"terminate", bbl_ctrl_terminate, schema_session_terminate, false},
+    {"terminate", bbl_ctrl_terminate, schema_terminate, false},
     {"traffic-start", bbl_ctrl_traffic_start, schema_no_args, false},
     {"traffic-stop", bbl_ctrl_traffic_stop, schema_no_args, false},
     {"stream-start", bbl_stream_ctrl_start, schema_stream_args, true},
@@ -438,7 +462,7 @@ static const struct action actions[] = {
     {"ospf-lsa-update", ospf_ctrl_lsa_update, schema_ospf, false},
     {"ospf-pdu-update", ospf_ctrl_pdu_update, schema_ospf, false},
     {"ospf-teardown", ospf_ctrl_teardown, schema_ospf, false},
-    {"bgp-sessions", bgp_ctrl_sessions, schema_bgp, true},
+    {"bgp-sessions", bgp_ctrl_sessions, schema_bgp, false},
     {"bgp-disconnect", bgp_ctrl_disconnect, schema_bgp, false},
     {"bgp-teardown", bgp_ctrl_teardown, schema_bgp, false},
     {"bgp-raw-update-list", bgp_ctrl_raw_update_list, schema_bgp, true},
@@ -623,6 +647,38 @@ bbl_ctrl_number(json_t *value, uint32_t max, uint32_t *number)
     return true;
 }
 
+/* Limit the time a client may stall a request or response. */
+static void
+bbl_ctrl_socket_timeout(int fd)
+{
+    struct timeval tv = { .tv_sec = BBL_CTRL_SOCKET_TIMEOUT, .tv_usec = 0 };
+    setsockopt(fd, SOL_SOCKET, SO_RCVTIMEO, &tv, sizeof(tv));
+    setsockopt(fd, SOL_SOCKET, SO_SNDTIMEO, &tv, sizeof(tv));
+}
+
+/* Copy a response buffered by the main thread to the client. */
+static void
+bbl_ctrl_socket_flush(int buffer, int fd)
+{
+    char data[65536];
+    off_t offset = 0;
+    ssize_t len, pos, sent;
+    while((len = pread(buffer, data, sizeof(data), offset)) > 0) {
+        offset += len;
+        pos = 0;
+        while(pos < len) {
+            sent = write(fd, data + pos, len - pos);
+            if(sent < 0 && errno == EINTR) {
+                continue;
+            }
+            if(sent <= 0) {
+                return;
+            }
+            pos += sent;
+        }
+    }
+}
+
 void *
 bbl_ctrl_socket_thread(void *thread_data)
 {
@@ -637,6 +693,7 @@ bbl_ctrl_socket_thread(void *thread_data)
     const char *command = NULL;
     uint32_t session_id = 0;
     uint32_t number;
+    int buffer;
 
     struct pollfd pfd;
 
@@ -661,6 +718,7 @@ bbl_ctrl_socket_thread(void *thread_data)
         fd = accept(ctrl->socket, 0, 0);
         if(fd > 0) {
             /* New connection. */
+            bbl_ctrl_socket_timeout(fd);
             root = json_loadfd(fd, flags, &error);
             if(!root) {
                 LOG(ERROR, "Invalid json via ctrl socket: line %d: %s\n", error.line, error.text);
@@ -757,7 +815,8 @@ bbl_ctrl_socket_thread(void *thread_data)
                                 bbl_ctrl_status(fd, "error", 400, "invalid argument");
                                 break;
                             }
-                            if(actions[i].fn == bbl_ctrl_terminate && !session_id && !test_main_loop()) {
+                            if(actions[i].fn == bbl_ctrl_terminate && !session_id && !test_main_loop() &&
+                               bbl_ctrl_terminate_all(arguments)) {
                                 /* Terminate is executed by the main loop, which
                                  * is not running during startup and shutdown. */
                                 bbl_ctrl_test_stop(fd, session_id, arguments);
@@ -771,8 +830,16 @@ bbl_ctrl_socket_thread(void *thread_data)
                             if(actions[i].thread_safe) {
                                 actions[i].fn(fd, session_id, arguments);
                             } else {
+                                /* The main thread writes the response to a memory
+                                 * buffer, so a client which does not read can not
+                                 * block the main loop. */
+                                buffer = memfd_create("bbl-ctrl", MFD_CLOEXEC);
+                                if(buffer < 0) {
+                                    bbl_ctrl_status(fd, "error", 500, "internal error");
+                                    break;
+                                }
                                 pthread_mutex_lock(&ctrl->mutex);
-                                ctrl->main.fd = fd;
+                                ctrl->main.fd = buffer;
                                 ctrl->main.action = i;
                                 ctrl->main.session_id = session_id;
                                 ctrl->main.arguments = (void*)arguments;
@@ -780,6 +847,8 @@ bbl_ctrl_socket_thread(void *thread_data)
                                     pthread_cond_wait(&ctrl->cond, &ctrl->mutex);
                                 }
                                 pthread_mutex_unlock(&ctrl->mutex);
+                                bbl_ctrl_socket_flush(buffer, fd);
+                                close(buffer);
                             }
                             break;
                         }

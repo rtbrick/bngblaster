@@ -172,6 +172,9 @@ bbl_a10nsp_tx_mpls(bbl_a10nsp_interface_s *interface,
 
     eth_mpls.dst = interface->network_interface->gateway6_mac;
     eth_mpls.src = interface->mac;
+    eth_mpls.vlan_outer = interface->network_interface->vlan;
+    eth_mpls.vlan_inner = interface->network_interface->inner_vlan;
+    eth_mpls.qinq = interface->network_interface->qinq;
     eth_mpls.type = ETH_TYPE_ETH;
     eth_mpls.next = eth;
     mpls_service.label = a10nsp_session->label;
@@ -444,6 +447,7 @@ bbl_a10nsp_pppoe_dhcpv6_handler(bbl_a10nsp_interface_s *interface,
             break;
         case DHCPV6_MESSAGE_REQUEST:
         case DHCPV6_MESSAGE_RENEW:
+        case DHCPV6_MESSAGE_REBIND:
         case DHCPV6_MESSAGE_RELEASE:
             dhcpv6->type = DHCPV6_MESSAGE_REPLY;
             break;
@@ -648,8 +652,8 @@ bbl_a10nsp_dhcpv6_handler(bbl_a10nsp_interface_s *interface,
             }
             break;
         case DHCPV6_MESSAGE_REQUEST:
-            dhcpv6->type = DHCPV6_MESSAGE_REPLY;
-            break;
+        case DHCPV6_MESSAGE_RENEW:
+        case DHCPV6_MESSAGE_REBIND:
         case DHCPV6_MESSAGE_RELEASE:
             dhcpv6->type = DHCPV6_MESSAGE_REPLY;
             break;

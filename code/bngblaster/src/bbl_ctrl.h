@@ -14,6 +14,8 @@
  * of 85.620000000000005). */
 #define BBL_JSON_REAL_PRECISION JSON_REAL_PRECISION(15)
 
+#define BBL_CTRL_SOCKET_TIMEOUT 10 /* seconds without progress */
+
 typedef struct bbl_ctrl_thread_ {
     int socket;
 

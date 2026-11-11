@@ -33,19 +33,26 @@ bbl_http_client_close(bbl_http_client_s *client)
     }
 }
 
+/* Clear the result of the previous request. */
+static void
+bbl_http_client_reset(bbl_http_client_s *client)
+{
+    client->error_string = NULL;
+    client->response_idx = 0;
+    client->http.num_headers = 0;
+    client->http.minor_version = 0;
+    client->http.status = 0;
+    client->http.msg = NULL;
+    client->http.msg_len = 0;
+    memset(client->response, 0x0, HTTP_CLIENT_RESPONSE_LIMIT);
+}
+
 static void
 bbl_http_client_start(bbl_http_client_s *client)
 {
     if(client->state == HTTP_CLIENT_CLOSED) {
         client->state = HTTP_CLIENT_IDLE;
-        client->error_string = NULL;
-        client->response_idx = 0;
-        client->http.num_headers = 0;
-        client->http.minor_version = 0;
-        client->http.status = 0;
-        client->http.msg = NULL;
-        client->http.msg_len = 0;
-        memset(client->response, 0x0, HTTP_CLIENT_RESPONSE_LIMIT);
+        bbl_http_client_reset(client);
     }
 }
 
@@ -138,6 +145,10 @@ bbl_http_client_connect(bbl_http_client_s *client)
 {
     bbl_http_client_config_s *config = client->config;
     bbl_session_s *session = client->session;
+
+    /* Each connection starts with an empty response, also
+     * after retries and session reconnects. */
+    bbl_http_client_reset(client);
 
     /* Connect TCP session */
     if(config->ipv4_destination_address) {

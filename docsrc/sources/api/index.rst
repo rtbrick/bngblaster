@@ -21,6 +21,10 @@ the control socket file with the argument ``-S`` (``bngblaster -S run.sock``).
 Each request must contain at least the ``command`` element which carries
 the actual command with optional arguments.
 
+The control socket handles one connection at a time. A client which does
+not send its request or read the response for 10 seconds is disconnected,
+so that it can not block other clients.
+
 .. code-block:: json
 
     {
@@ -169,8 +173,9 @@ Test
 +-----------------------------------+----------------------------------------------------------------------+
 | **terminate**                     | | Deprecated. Terminate the given ``session-id``, or                 |
 |                                   | | stop/teardown the whole test if no ``session-id`` is               |
-|                                   | | given. Use ``session-start``/``session-stop`` instead              |
-|                                   | | for terminating single sessions.                                   |
+|                                   | | given. A ``session-id`` which matches no session                   |
+|                                   | | is rejected. Use ``session-start``/``session-stop``                |
+|                                   | | instead for terminating single sessions.                           |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |

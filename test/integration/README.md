@@ -97,8 +97,16 @@ Functional tests over veth pairs between network namespaces:
 * Gratuitous ARP and unsolicited NA of primary and secondary addresses
   overriding stale neighbor entries of the Linux peer, periodic
   announcements and `network-announce` (`test_network_announce.py`)
-* Control socket session arguments out of range and commands executed
-  by the main loop (`test_ctrl_socket.py`)
+* Control socket session arguments out of range, commands executed
+  by the main loop, idle clients and clients not reading the response
+  of a main loop command, terminate with session selectors
+  (`test_ctrl_socket.py`)
+* HTTP server tested with curl (IPv4 and IPv6) and connections reset
+  by the client, HTTP client response after a session reconnect
+  (`test_http.py`)
+* A10NSP over a network interface with VLAN through a scripted access
+  node pseudowire, and DHCPv6 renew of IPoE sessions (slow)
+  (`test_a10nsp.py`, `a10nsp_relay.py`)
 * BGP control command IPv4/IPv6 address filters with sessions of both
   address families (`test_bgp_ctrl_filter.py`)
 * ICMP client on a network interface pinging the Linux peer with small

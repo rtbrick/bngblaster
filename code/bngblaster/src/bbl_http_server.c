@@ -41,7 +41,7 @@ bbl_http_server_receive_cb(void *arg, uint8_t *buf, uint16_t len)
             }
         }
     }
-    bbl_tcp_send(tcpc, (uint8_t*)HTTP_SERVER_RESPONSE_STRING, sizeof(HTTP_SERVER_RESPONSE_STRING));
+    bbl_tcp_send(tcpc, (uint8_t*)HTTP_SERVER_RESPONSE_STRING, sizeof(HTTP_SERVER_RESPONSE_STRING)-1);
 }
 
 /**
@@ -87,12 +87,13 @@ bbl_http_server_job(timer_s *timer)
         connection_next = connection->next;
 
         tcpc = connection->tcpc;
-        if(tcpc && tcpc->pcb && (tcpc->pcb->state == CLOSE_WAIT || tcpc->pcb->state == CLOSED)) {
-            if(tcpc->af == AF_INET) {
+        /* Without pcb the connection was reset or aborted by lwIP. */
+        if(!tcpc || !tcpc->pcb || tcpc->pcb->state == CLOSE_WAIT || tcpc->pcb->state == CLOSED) {
+            if(tcpc && tcpc->af == AF_INET) {
                 LOG(HTTP, "HTTP-Server (Name: %s) delete connection from %s\n",
                     server->config->name, 
                     format_ipv4_address(&tcpc->remote_addr.u_addr.ip4.addr));
-            } else {
+            } else if(tcpc) {
                 LOG(HTTP, "HTTP-Server (Name: %s) delete connection from %s\n",
                     server->config->name, 
                     format_ipv6_address((ipv6addr_t*)&tcpc->remote_addr.u_addr.ip6.addr));
