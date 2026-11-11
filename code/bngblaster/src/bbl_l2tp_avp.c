@@ -501,6 +501,17 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
     return true;
 }
 
+/* Copy a peer name for logging and output, control characters
+ * (newlines, terminal escape sequences) are replaced by '?'. */
+static void
+bbl_l2tp_avp_copy_name(char *name, const uint8_t *value, uint16_t len)
+{
+    for(uint16_t i = 0; i < len; i++) {
+        name[i] = (value[i] < 0x20 || value[i] == 0x7f) ? '?' : (char)value[i];
+    }
+    name[len] = 0;
+}
+
 /**
  * bbl_l2tp_avp_host_name
  *
@@ -525,8 +536,7 @@ bbl_l2tp_avp_host_name(bbl_l2tp_s *l2tp, char *name, uint16_t name_size)
             if(avp.h || avp.len == 0 || avp.len >= name_size) {
                 return false;
             }
-            memcpy(name, avp.value, avp.len);
-            name[avp.len] = 0;
+            bbl_l2tp_avp_copy_name(name, avp.value, avp.len);
             return true;
         }
     }
@@ -601,15 +611,13 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                     case L2TP_AVP_HOST_NAME:
                         if(!l2tp_tunnel->peer_name && avp.len) {
                             l2tp_tunnel->peer_name = malloc(avp.len + 1);
-                            memcpy(l2tp_tunnel->peer_name, avp.value, avp.len);
-                            *(l2tp_tunnel->peer_name + avp.len) = '\0';
+                            bbl_l2tp_avp_copy_name(l2tp_tunnel->peer_name, avp.value, avp.len);
                         }
                         break;
                     case L2TP_AVP_VENDOR_NAME:
                         if(!l2tp_tunnel->peer_vendor && avp.len) {
                             l2tp_tunnel->peer_vendor = malloc(avp.len + 1);
-                            memcpy(l2tp_tunnel->peer_vendor, avp.value, avp.len);
-                            *(l2tp_tunnel->peer_vendor + avp.len) = '\0';
+                            bbl_l2tp_avp_copy_name(l2tp_tunnel->peer_vendor, avp.value, avp.len);
                         }
                         break;
                     case L2TP_AVP_ASSIGNED_TUNNEL_ID:
@@ -630,7 +638,14 @@ bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
                                       format_ipv4_address(&l2tp_tunnel->peer_ip));
                             return false;
                         }
+                        /* The window must be below half of the sequence
+                         * number space and at least one message. */
                         l2tp_tunnel->peer_receive_window = be16toh(*(uint16_t*)avp.value);
+                        if(l2tp_tunnel->peer_receive_window > L2TP_MAX_RECEIVE_WINDOW) {
+                            l2tp_tunnel->peer_receive_window = L2TP_MAX_RECEIVE_WINDOW;
+                        } else if(l2tp_tunnel->peer_receive_window == 0) {
+                            l2tp_tunnel->peer_receive_window = 1;
+                        }
                         l2tp_tunnel->ssthresh = l2tp_tunnel->peer_receive_window;
                         break;
                     case L2TP_AVP_CHALLENGE:

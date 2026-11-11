@@ -49,7 +49,7 @@ class Setup:
         self.bbl = BngBlaster(self.topology.a, self.tmp_path, "lns").start(config, logging=("info", "l2tp"))
         self.processes.append(self.bbl)
 
-    def start_lac(self):
+    def start_lac(self, **client_options):
         config = {
             "interfaces": {
                 "network": self.network(),
@@ -58,7 +58,7 @@ class Setup:
             },
             "sessions": {"count": 1, "reconnect": False},
             "l2tp-client": [{"group-id": 1, "name": "LAC", "network-interface": self.topology.if_a,
-                             "server-address": PEER_ADDRESS, "max-retry": 2}]
+                             "server-address": PEER_ADDRESS, "max-retry": 2, **client_options}]
         }
         self.bbl = BngBlaster(self.topology.a, self.tmp_path, "lac").start(config, logging=("info", "l2tp"))
         self.processes.append(self.bbl)
@@ -211,3 +211,73 @@ def test_lac_missing_assigned_id(l2tp, scenario, expected):
         assert SCCCN not in received, result
     else:
         assert ICCN not in received, result
+
+
+def test_lns_bogus_nr(l2tp):
+    """An Nr beyond the own Ns is ignored, it acknowledged messages before
+    they were sent, so the ICRP of the next call was never sent."""
+    l2tp.start_lns()
+    result = l2tp.peer("lac", "bogus-nr")
+    assert ICRP in types(result), result
+
+
+def test_lns_control_host_name(l2tp):
+    """Control characters of the peer Host Name are replaced in the log
+    and output, a newline in the log faked log lines."""
+    l2tp.start_lns()
+    peer = l2tp.peer_start("lac", "control-host-name", duration=2)
+    wait_until(lambda: l2tp.tunnels(), 10, message="tunnel")
+    assert l2tp.tunnels()[0]["peer-name"] == "LAC?FAKE LOG LINE?[2J"
+    peer.communicate(timeout=30)
+    log = open(l2tp.bbl.path("log")).read()
+    assert "LAC?FAKE LOG LINE?[2J" in log
+    assert "\nFAKE" not in log and "\x1b" not in log
+
+
+@pytest.mark.parametrize("scenario", ["rws0", "rws65535"])
+def test_lac_peer_receive_window(l2tp, scenario):
+    """A peer Receive Window Size of 0 or above half of the sequence number
+    space stalled the tunnel with congestion-mode aggressive, the SCCCN
+    and ICRQ were never sent."""
+    peer = l2tp.peer_start("lns", scenario, duration=5)
+    l2tp.start_lac(**{"congestion-mode": "aggressive"})
+    result = json.loads(peer.communicate(timeout=30)[0])
+    assert ICCN in types(result), result
+
+
+def test_lac_icrp_timeout(l2tp):
+    """A LAC session whose ICRQ is acknowledged but never answered with
+    ICRP is cleared with CDN after 30 seconds instead of waiting forever."""
+    peer = l2tp.peer_start("lns", "no-icrp", duration=36)
+    l2tp.start_lac()
+    wait_until(lambda: l2tp.sessions(), 10, message="LAC session waiting for ICRP")
+    result = json.loads(peer.communicate(timeout=60)[0])
+    cdn = [m for m in result["control"] if m["type"] == CDN]
+    assert cdn and cdn[0]["result-code"] == 2, result
+    assert l2tp.sessions() == []
+    counters = l2tp.bbl.ctrl("session-counters")["session-counters"]
+    assert counters["sessions-terminated"] == 1, counters
+
+
+def test_lac_max_retry_stopccn(l2tp):
+    """With max retry the StopCCN is sent behind the unacknowledged
+    message, the window was reset to one after queuing the StopCCN."""
+    peer = l2tp.peer_start("lns", "silent", duration=12)
+    l2tp.start_lac()
+    result = json.loads(peer.communicate(timeout=30)[0])
+    stopccn = [m for m in result["control"] if m["type"] == STOPCCN]
+    assert stopccn and stopccn[0]["result-code"] == 2, result
+
+
+@pytest.mark.slow
+def test_lac_retransmission_backoff_cap(l2tp):
+    """Control messages of an established tunnel are retransmitted with
+    backoff capped at 8 seconds, so max-retry 6 is reached after about 39
+    seconds and the StopCCN follows."""
+    peer = l2tp.peer_start("lns", "silent", duration=50)
+    l2tp.start_lac(**{"max-retry": 6})
+    result = json.loads(peer.communicate(timeout=80)[0])
+    scccn = [m for m in result["control"] if m["type"] == SCCCN]
+    stopccn = [m for m in result["control"] if m["type"] == STOPCCN]
+    assert stopccn, result
+    assert 35 < stopccn[0]["time"] - scccn[0]["time"] < 45, result

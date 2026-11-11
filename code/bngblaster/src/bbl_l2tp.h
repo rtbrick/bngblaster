@@ -21,7 +21,8 @@
 #define L2TP_CSURQ_MAX_SESSIONS     50 /* Connect Speed Update AVPs fitting into L2TP_MAX_AVP_SIZE */
 
 #define L2TP_TX_WAIT_MS             10
-#define L2TP_ICCN_TIMEOUT           30 /* seconds an LNS session waits for ICCN */
+#define L2TP_ICCN_TIMEOUT           30 /* seconds an LNS session waits for ICCN, a LAC session for ICRP */
+#define L2TP_MAX_RECEIVE_WINDOW     32767 /* below half of the 16 bit sequence number space */
 
 #define L2TP_PROXY_AUTH_TYPE_CHAP   2
 #define L2TP_PROXY_AUTH_TYPE_PAP    3
@@ -142,6 +143,8 @@ typedef struct bbl_l2tp_client_
 
     void *next; /* Pointer to next L2TP client configuration */
 
+    uint32_t next_tunnel; /* Round robin tunnel selection of the group (first entry of group) */
+
     /* List of L2TP tunnel instances for the corresponding client */
     CIRCLEQ_HEAD(client_tunnel_, bbl_l2tp_tunnel_) tunnel_qhead;
 } bbl_l2tp_client_s;
@@ -213,6 +216,7 @@ typedef struct bbl_l2tp_tunnel_
     uint16_t tunnel_id;
     uint16_t peer_tunnel_id;
     uint16_t next_session_id;
+    uint32_t lac_sessions; /* LAC: PPP sessions pending or connected over this tunnel */
 
     uint16_t ns;
     uint16_t nr;
@@ -297,6 +301,7 @@ typedef struct bbl_l2tp_session_
     } stats;
 
     uint16_t peer_session_id;
+    uint16_t icrq_ns; /* LAC: Ns. of the ICRQ */
 
     bool data_sequencing;
     bool connect_speed_update_enabled;
@@ -322,7 +327,7 @@ typedef struct bbl_l2tp_session_
     uint8_t ip6cp_state;
 
     struct timer_ *timer_lcp_echo;
-    struct timer_ *timer_iccn; /* LNS waiting for ICCN */
+    struct timer_ *timer_iccn; /* LNS waiting for ICCN, LAC waiting for ICRP */
     struct timer_ *timer_free; /* deferred free, see bbl_l2tp_session_delete() */
     uint8_t lcp_identifier;
     uint8_t lcp_retries;

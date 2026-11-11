@@ -719,6 +719,7 @@ bbl_session_pppol2tp_release(bbl_session_s *session)
     } else if(session->l2tp_tunnel) {
         CIRCLEQ_REMOVE(&session->l2tp_tunnel->pending_session_qhead,
                        session, session_l2tp_qnode);
+        if(session->l2tp_tunnel->lac_sessions) session->l2tp_tunnel->lac_sessions--;
         session->l2tp_tunnel = NULL;
     }
 }

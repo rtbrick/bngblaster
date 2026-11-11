@@ -1289,7 +1289,7 @@
                         "description": "Control messages receive window size",
                         "default": 16,
                         "minimum": 1,
-                        "maximum": 65535
+                        "maximum": 32767
                     },
                     "max-retry": {
                         "type": "integer",
@@ -1432,7 +1432,7 @@
                         "description": "Control messages receive window size",
                         "default": 16,
                         "minimum": 1,
-                        "maximum": 65535
+                        "maximum": 32767
                     },
                     "max-retry": {
                         "type": "integer",

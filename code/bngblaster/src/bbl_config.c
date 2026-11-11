@@ -4374,8 +4374,8 @@ json_parse_l2tp_tunnel_config(json_t *sub, const char *scope, bbl_l2tp_tunnel_co
     }
     value = json_object_get(sub, "receive-window-size");
     if(value) {
-        if(!(json_is_number(value) && json_number_value(value) >= 1 && json_number_value(value) <= 65535)) {
-            fprintf(stderr, "JSON config error: Invalid value for %s->receive-window-size (1 - 65535)\n", scope);
+        if(!(json_is_number(value) && json_number_value(value) >= 1 && json_number_value(value) <= L2TP_MAX_RECEIVE_WINDOW)) {
+            fprintf(stderr, "JSON config error: Invalid value for %s->receive-window-size (1 - %u)\n", scope, L2TP_MAX_RECEIVE_WINDOW);
             return false;
         }
         config->receive_window = json_number_value(value);

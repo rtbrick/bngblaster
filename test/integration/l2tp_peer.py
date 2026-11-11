@@ -13,10 +13,16 @@ lac scenarios (against the BNG Blaster LNS):
                     terminate-request (echo reply magic, terminate-ack, CDN)
   binary-strings    host name, called number and ARI with invalid UTF-8
   sccrq-retry       the SCCRQ is retransmitted before the SCCRP is acknowledged
+  bogus-nr          ZLB acknowledging messages never sent (Nr far ahead), then ICRQ
+  control-host-name host name with newline and terminal escape sequence
 
 lns scenarios (against the BNG Blaster LAC):
   no-tunnel-id      SCCRP without Assigned Tunnel ID
   no-session-id     ICRP without Assigned Session ID
+  rws0              SCCRP with Receive Window Size 0
+  rws65535          SCCRP with Receive Window Size 65535
+  no-icrp           ICRQ acknowledged with ZLB, but no ICRP
+  silent            SCCRP, then no further message (no acknowledgement)
 
 The result is printed as JSON.
 
@@ -42,7 +48,9 @@ AVP_CHALLENGE = 11
 AVP_RANDOM_VECTOR = 36
 AVP_CALLED_NUMBER = 21
 AVP_PRIVATE_GROUP_ID = 37
+AVP_RECEIVE_WINDOW_SIZE = 10
 AVP_SEQUENCING_REQUIRED = 39
+CONTROL_HOST_NAME = b"LAC\nFAKE LOG LINE\x1b[2J"
 LCP = 0xc021
 CONF_REQ, CONF_ACK, TERM_REQ, TERM_ACK, ECHO_REQ, ECHO_REP = 1, 2, 5, 6, 9, 10
 MAGIC = 0x11223344
@@ -68,6 +76,11 @@ def result_code(avps):
 
 
 class Peer(Lac):
+
+    def zlb(self, nr=None):
+        header = struct.pack("!HHHHHH", 0xc802, 12, self.peer_tunnel_id, 0, self.ns,
+                             self.nr if nr is None else nr)
+        self.sock.sendto(header, self.server)
 
     def send_ppp(self, protocol, code, identifier, data=b""):
         payload = b"\xff\x03" + struct.pack("!HBBH", protocol, code, identifier, 4 + len(data)) + data
@@ -134,6 +147,10 @@ def scenario_lac(args):
                     hidden_avp(AVP_VENDOR_NAME, b"hidden-vendor", args.secret.encode(), random_vector))
         result["control"] = [{"type": SCCRP, "result-code": None, "session-id": 0}]
         return result
+    if args.scenario == "control-host-name":
+        peer.tunnel(host_name=CONTROL_HOST_NAME)
+        result["control"], _ = peer.collect(args.duration)
+        return result
     if args.scenario == "binary-strings":
         peer.tunnel(host_name=b"LAC-\xff\xfe")
         peer.call(avp(AVP_CALLED_NUMBER, b"\xc3\x28") +
@@ -142,6 +159,12 @@ def scenario_lac(args):
         return result
     peer.tunnel(retry=args.scenario == "sccrq-retry")
     if args.scenario == "sccrq-retry":
+        result["control"], _ = peer.collect(args.duration)
+        return result
+    if args.scenario == "bogus-nr":
+        peer.zlb(nr=1000)
+        peer.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, ICRQ) + avp16(AVP_ASSIGNED_SESSION_ID, LOCAL_SESSION_ID) +
+                       avp32(AVP_CALL_SERIAL_NUMBER, 1))
         result["control"], _ = peer.collect(args.duration)
         return result
     if args.scenario == "no-session-id":
@@ -186,8 +209,15 @@ class Lns:
         self.lac.nr = 0
         self.lac.peer_tunnel_id = 0
 
+    def zlb(self):
+        header = struct.pack("!HHHHHH", 0xc802, 12, self.lac.peer_tunnel_id, 0,
+                             self.lac.ns, self.lac.nr)
+        self.sock.sendto(header, self.lac.server)
+
     def run(self, scenario, duration):
         received = []
+        silent = False
+        start = time.time()
         deadline = time.time() + duration
         while time.time() < deadline:
             self.sock.settimeout(max(0.01, deadline - time.time()))
@@ -205,14 +235,24 @@ class Lns:
                 continue
             self.lac.nr = (ns + 1) & 0xffff
             mtype = message_type(avps)
-            received.append({"type": mtype, "result-code": result_code(avps)})
+            received.append({"type": mtype, "result-code": result_code(avps),
+                             "time": round(time.time() - start, 3)})
+            if silent:
+                continue
             if mtype == SCCRQ:
                 self.lac.peer_tunnel_id = struct.unpack("!H", avps[AVP_ASSIGNED_TUNNEL_ID])[0]
                 reply = avp16(AVP_MESSAGE_TYPE, SCCRP) + avp16(AVP_PROTOCOL_VERSION, 0x0100) + \
                     avp(AVP_HOST_NAME, b"SCRIPT-LNS") + avp32(AVP_FRAMING_CAPABILITIES, 3)
                 if scenario != "no-tunnel-id":
                     reply += avp16(AVP_ASSIGNED_TUNNEL_ID, LOCAL_TUNNEL_ID)
+                if scenario == "rws0":
+                    reply += avp16(AVP_RECEIVE_WINDOW_SIZE, 0)
+                elif scenario == "rws65535":
+                    reply += avp16(AVP_RECEIVE_WINDOW_SIZE, 65535)
                 self.lac.send_ctrl(0, reply)
+                silent = scenario == "silent"
+            elif mtype == ICRQ and scenario == "no-icrp":
+                self.zlb()
             elif mtype == ICRQ:
                 reply = avp16(AVP_MESSAGE_TYPE, ICRP)
                 if scenario != "no-session-id":
@@ -221,9 +261,7 @@ class Lns:
                 self.lac.send_ctrl(session_id, reply)
             elif mtype in (STOPCCN, CDN):
                 # Acknowledge with ZLB.
-                header = struct.pack("!HHHHHH", 0xc802, 12, self.lac.peer_tunnel_id, 0,
-                                     self.lac.ns, self.lac.nr)
-                self.sock.sendto(header, peer)
+                self.zlb()
         return {"control": received}
 
 

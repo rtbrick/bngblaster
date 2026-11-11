@@ -452,7 +452,8 @@ Each access interface section with ``"type": "pppol2tp"`` creates PPP sessions
 that are tunnelled through the L2TP clients specified in the ``"l2tp-client"``
 list. The L2TP sessions are spread across multiple tunnels (the ones whose
 ``"group-id"`` field match the ``"l2tp-client-group-id"`` field of the access
-interface).
+interface) in round robin. An ``"l2tp-client"`` opens another tunnel if all
+65535 session IDs of its tunnel are used.
 
 Configuration
 ~~~~~~~~~~~~~

@@ -396,6 +396,16 @@ def test_connect_speed_invalid(topology, tmp_path, option, value):
         assert "Invalid value for l2tp-client->%s" % option in f.read()
 
 
+@pytest.mark.parametrize("value", [0, 32768, 65535])
+def test_receive_window_size_invalid(topology, tmp_path, value):
+    """The receive window must be below half of the sequence number space."""
+    lac = BngBlaster(topology.a, tmp_path, "lac")
+    with pytest.raises(RuntimeError, match="exited on start"):
+        lac.start(lac_config(topology.if_a, sessions=1, client_options={1: {"receive-window-size": value}}))
+    with open(lac.path("stdout")) as f:
+        assert "Invalid value for l2tp-client->receive-window-size (1 - 32767)" in f.read()
+
+
 def test_invalid_icrq(topology, processes, tmp_path):
     """An invalid ICRQ is rejected with a CDN to the session ID of the
     LAC (RFC 2661) and is not counted as session, a valid ICRQ with the
@@ -618,14 +628,56 @@ def test_lac_without_tunnel(local_veth, processes, tmp_path, group_id):
 
 @pytest.mark.slow
 def test_retransmission_backoff(topology, processes, tmp_path):
-    """Control messages to a dead LNS are retransmitted with backoff capped
-    at 8 seconds, so max-retry 6 is reached after about 39 seconds."""
+    """Control messages to a dead LNS are retransmitted with exponential
+    backoff (1, 2, 4, 8, 8 seconds), so max-retry 4 is reached after about
+    23 seconds, before the 30 seconds timeout of the SCCRQ (the 8 seconds
+    cap is tested by test_l2tp_protocol.py test_lac_retransmission_backoff_cap)."""
     # Gateway resolved, but no LNS listening.
     helpers.kernel_address(topology.b, topology.if_b, LNS_ADDRESS + "/24")
-    config = lac_config(topology.if_a, sessions=1, client_options={1: {"max-retry": 6}, 2: {"max-retry": 6}})
+    config = lac_config(topology.if_a, sessions=1, client_options={1: {"max-retry": 4}, 2: {"max-retry": 4}})
     lac = BngBlaster(topology.a, tmp_path, "lac").start(config, logging=("info", "l2tp"))
     processes.append(lac)
     start = time.monotonic()
-    wait_until(lambda: "max retry" in open(lac.path("log")).read(), 60, interval=1, message="max retry")
-    assert time.monotonic() - start < 50
-    assert lac.terminate(EXIT_TIMEOUT) == 0
+    wait_until(lambda: "max retry" in open(lac.path("log")).read(), 40, interval=1, message="max retry")
+    assert 20 < time.monotonic() - start < 28
+    # The tunnel sending StopCCN to the dead LNS terminates after 30 seconds.
+    assert lac.terminate(EXIT_TIMEOUT + 15) == 0
+
+
+def test_tunnel_round_robin_per_group(topology, processes, tmp_path):
+    """Sessions are spread over the tunnels of their group. With two PPPoL2TP
+    access interfaces, the global session ID selected the tunnel and all
+    sessions of a group used one of its two tunnels."""
+    def update(config):
+        access = dict(config["interfaces"]["access"][0], **{"l2tp-client-group-id": 2, "inner-vlan": 7})
+        config["interfaces"]["access"].append(access)
+        config["l2tp-client"].append(dict(config["l2tp-client"][0], **{"group-id": 2, "name": "LAC3",
+                                                                       "client-address": "10.0.0.13"}))
+    lac, lns = start_pair(topology, processes, tmp_path, sessions=8, update=update)
+    sessions = {t["client-name"]: t["sessions"] for t in lac.ctrl("l2tp-tunnels")["l2tp-tunnels"]}
+    assert sessions == {"LAC1": 2, "LAC2": 2, "LAC3": 4}, sessions
+    assert_clean_exit(lac, lns)
+
+
+@pytest.mark.slow
+def test_sessions_beyond_tunnel_session_ids(topology, processes, tmp_path):
+    """More sessions than session IDs of a tunnel open another tunnel, the
+    sessions without a free session ID stayed in L2TP Wait forever."""
+    sessions = 65600
+    config = lns_config(topology.if_b)
+    config["l2tp-server"][0]["receive-window-size"] = 512
+    lns = BngBlaster(topology.b, tmp_path, "lns").start(config, logging=("info",))
+    processes.append(lns)
+    config = lac_config(topology.if_a, sessions=sessions)
+    config["interfaces"]["access"][0].update({"inner-vlan-min": 1, "inner-vlan-max": 4000})
+    config["sessions"].update({"start-rate": 3000, "stop-rate": 3000, "max-outstanding": 3000})
+    config["l2tp-client"] = config["l2tp-client"][:1]
+    config["l2tp-client"][0]["receive-window-size"] = 512
+    lac = BngBlaster(topology.a, tmp_path, "lac").start(config, logging=("info",))
+    processes.append(lac)
+    wait_until(lambda: lac_counters(lac)["sessions-established"] == sessions, 900, interval=2,
+               message="LAC sessions established")
+    tunnels = sorted(t["sessions"] for t in lac.ctrl("l2tp-tunnels")["l2tp-tunnels"])
+    assert tunnels == [sessions - 65535, 65535], tunnels
+    assert lac.terminate(300) == 0
+    assert lns.terminate(120) == 0
