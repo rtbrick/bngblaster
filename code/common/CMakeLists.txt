@@ -1,5 +1,7 @@
-configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/src/config.h.in"
-                "${CMAKE_CURRENT_SOURCE_DIR}/src/config.h")
+# Generated into the build directory, so that build directories of one
+# source tree with different versions do not overwrite each other.
+configure_file ("${CMAKE_CURRENT_SOURCE_DIR}/src/build_config.h.in"
+                "${CMAKE_CURRENT_BINARY_DIR}/src/build_config.h")
 
 FILE(GLOB COMMON_SOURCES src/*.c)
 

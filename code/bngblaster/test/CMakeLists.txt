@@ -54,3 +54,5 @@ if(BNGBLASTER_AF_XDP)
     target_link_options(test-af-xdp PRIVATE -Wl,--gc-sections)
     add_test(NAME "TestAfXdp" COMMAND test-af-xdp)
 endif()
+
+bbl_reproducible_build_directory()

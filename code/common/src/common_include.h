@@ -11,7 +11,7 @@
 #define __COMMON_INCLUDE_H__
 
 #include "common.h"
-#include "config.h"
+#include "build_config.h"
 #include "utils.h"
 #include "logging.h"
 #include "timer.h"

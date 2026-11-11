@@ -1,5 +1,5 @@
-#ifndef __CONFIG_H__
-#define __CONFIG_H__
+#ifndef __BUILD_CONFIG_H__
+#define __BUILD_CONFIG_H__
 
 /* CMake Project Details */
 #define PROJECT_NAME "@PROJECT_NAME@"

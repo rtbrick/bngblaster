@@ -72,6 +72,7 @@ config
 
 # Misc
 code/common/src/config.h
+code/common/src/build_config.h
 tmp
 
 # Python

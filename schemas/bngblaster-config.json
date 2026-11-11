@@ -169,7 +169,11 @@
                         }
                     ]
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "sessions": {
             "type": "object",
@@ -230,7 +234,11 @@
                     "description": "Iterate on outer VLAN first",
                     "default": false
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "ipoe": {
             "type": "object",
@@ -267,12 +275,44 @@
                     "minimum": 0,
                     "maximum": 7
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "pppoe": {
             "type": "object",
             "description": "PPPoE configuration",
             "properties": {
+                "sessions": {
+                    "type": "integer",
+                    "description": "Deprecated, use sessions->count",
+                    "minimum": 0,
+                    "maximum": 10000000,
+                    "deprecated": true
+                },
+                "max-outstanding": {
+                    "type": "integer",
+                    "description": "Deprecated, use sessions->max-outstanding",
+                    "minimum": 1,
+                    "maximum": 10000000,
+                    "deprecated": true
+                },
+                "start-rate": {
+                    "type": "integer",
+                    "description": "Deprecated, use sessions->start-rate",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "deprecated": true
+                },
+                "stop-rate": {
+                    "type": "integer",
+                    "description": "Deprecated, use sessions->stop-rate",
+                    "minimum": 1,
+                    "maximum": 65535,
+                    "deprecated": true
+                },
                 "session-time": {
                     "type": "integer",
                     "description": "Max PPPoE session time in seconds (0 = infinity)",
@@ -312,7 +352,6 @@
                 "max-payload": {
                     "type": "integer",
                     "description": "PPP-Max-Payload (RFC4638)",
-                    "default": 0,
                     "minimum": 1,
                     "maximum": 65535
                 },
@@ -323,7 +362,11 @@
                     "minimum": 0,
                     "maximum": 7
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "ppp": {
             "type": "object",
@@ -373,7 +416,11 @@
                                 "CHAP"
                             ]
                         }
-                    }
+                    },
+                    "patternProperties": {
+                        "^_": {}
+                    },
+                    "additionalProperties": false
                 },
                 "lcp": {
                     "type": "object",
@@ -424,7 +471,11 @@
                             "description": "Accept LCP connection status messages",
                             "default": false
                         }
-                    }
+                    },
+                    "patternProperties": {
+                        "^_": {}
+                    },
+                    "additionalProperties": false
                 },
                 "ipcp": {
                     "type": "object",
@@ -469,7 +520,11 @@
                             "minimum": 0,
                             "maximum": 255
                         }
-                    }
+                    },
+                    "patternProperties": {
+                        "^_": {}
+                    },
+                    "additionalProperties": false
                 },
                 "ip6cp": {
                     "type": "object",
@@ -494,9 +549,17 @@
                             "minimum": 0,
                             "maximum": 255
                         }
-                    }
+                    },
+                    "patternProperties": {
+                        "^_": {}
+                    },
+                    "additionalProperties": false
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "dhcp": {
             "type": "object",
@@ -568,7 +631,11 @@
                     "type": "string",
                     "description": "Add DHCP vendor class id/option 60"
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "dhcpv6": {
             "type": "object",
@@ -630,7 +697,11 @@
                     "description": "Enable LDRA (Lightweight DHCPv6 Relay Agent)",
                     "default": false
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "igmp": {
             "type": "object",
@@ -691,7 +762,6 @@
                 "zapping-interval": {
                     "type": "integer",
                     "description": "IGMP channel zapping interval in seconds (0 = disabled)",
-                    "default": 0,
                     "minimum": 1,
                     "maximum": 65535
                 },
@@ -741,7 +811,6 @@
                 "multicast-traffic-length": {
                     "type": "integer",
                     "description": "Multicast traffic IP length",
-                    "default": 0,
                     "minimum": 128,
                     "maximum": 1500
                 },
@@ -763,7 +832,11 @@
                     "type": "string",
                     "description": "Multicast traffic source interface"
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "access-line": {
             "type": "object",
@@ -802,7 +875,11 @@
                     "minimum": 0,
                     "maximum": 4294967295
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "access-line-profiles": {
             "type": "array",
@@ -1045,7 +1122,11 @@
                         ],
                         "default": "DRAFT-LIHAWI-04"
                     }
-                }
+                },
+                "patternProperties": {
+                    "^_": {}
+                },
+                "additionalProperties": false
             }
         },
         "session-traffic": {
@@ -1102,7 +1183,11 @@
                     "minimum": 0,
                     "maximum": 65535
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "traffic": {
             "type": "object",
@@ -1162,7 +1247,11 @@
                     "minimum": 0,
                     "maximum": 65535
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "streams": {
             "type": "array",
@@ -1260,7 +1349,7 @@
                         "description": "Add fixed padding to LCP packets from LNS",
                         "default": 0,
                         "minimum": 0,
-                        "maximum": 65535
+                        "maximum": 1400
                     },
                     "lcp-keepalive-interval": {
                         "type": "integer",
@@ -1290,7 +1379,11 @@
                         "type": "string",
                         "description": "Optional check for client-auth-id"
                     }
-                }
+                },
+                "patternProperties": {
+                    "^_": {}
+                },
+                "additionalProperties": false
             }
         },
         "l2tp-client": {
@@ -1399,7 +1492,7 @@
                         "description": "Add fixed padding to LCP packets",
                         "default": 0,
                         "minimum": 0,
-                        "maximum": 65535
+                        "maximum": 1400
                     },
                     "lcp-start": {
                         "type": "string",
@@ -1433,7 +1526,11 @@
                         "minimum": 1,
                         "maximum": 4294967295
                     }
-                }
+                },
+                "patternProperties": {
+                    "^_": {}
+                },
+                "additionalProperties": false
             }
         },
         "isis": {
@@ -1559,6 +1656,10 @@
             ]
         }
     },
+    "patternProperties": {
+        "^_": {}
+    },
+    "additionalProperties": false,
     "definitions": {
         "networkInterface": {
             "type": "object",
@@ -1851,7 +1952,11 @@
                     "minimum": 0,
                     "maximum": 1048575
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "accessInterface": {
             "type": "object",
@@ -2260,7 +2365,11 @@
                     "description": "Create dedicated TUN interface for each session",
                     "default": false
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "a10nspInterface": {
             "type": "object",
@@ -2282,7 +2391,11 @@
                     "description": "Overwrite the A10NSP MAC address",
                     "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "lagInterface": {
             "type": "object",
@@ -2347,7 +2460,11 @@
                     "description": "Flap (disable/enable) one random member interface every 30 seconds",
                     "default": false
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "link": {
             "type": "object",
@@ -2501,7 +2618,11 @@
                     "minimum": 0,
                     "maximum": 255
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "stream": {
             "type": "object",
@@ -2637,51 +2758,52 @@
                     "type": "number",
                     "description": "Stream traffic rate in packets per second",
                     "default": 1,
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "bps": {
                     "type": "number",
-                    "description": "Stream traffic rate in bits per second (layer 3)"
+                    "description": "Stream traffic rate in bits per second (layer 3)",
+                    "exclusiveMinimum": 0
                 },
                 "Kbps": {
                     "type": "number",
                     "description": "Stream rate in Kbps",
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "Mbps": {
                     "type": "number",
                     "description": "Stream rate in Mbps",
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "Gbps": {
                     "type": "number",
                     "description": "Stream rate in Gbps",
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "pps-upstream": {
                     "type": "number",
                     "description": "Overwrite PPS in upstream for bidirectional streams",
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "bps-upstream": {
                     "type": "number",
                     "description": "Overwrite bps in upstream for bidirectional streams",
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "Kbps-upstream": {
                     "type": "number",
                     "description": "Overwrite Kbps in upstream for bidirectional streams",
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "Mbps-upstream": {
                     "type": "number",
                     "description": "Overwrite Mbps in upstream for bidirectional streams",
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "Gbps-upstream": {
                     "type": "number",
                     "description": "Overwrite Gbps in upstream for bidirectional streams",
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "setup-interval": {
                     "type": "integer",
@@ -2913,7 +3035,11 @@
                     "description": "Send RAW TCP traffic",
                     "default": false
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "isisConfig": {
             "type": "object",
@@ -3149,6 +3275,10 @@
                                 "maximum": 1048575
                             }
                         },
+                        "patternProperties": {
+                            "^_": {}
+                        },
+                        "additionalProperties": false,
                         "required": [
                             "index"
                         ]
@@ -3215,6 +3345,10 @@
                                 "maximum": 4294967295
                             }
                         },
+                        "patternProperties": {
+                            "^_": {}
+                        },
+                        "additionalProperties": false,
                         "required": [
                             "algo"
                         ]
@@ -3268,7 +3402,7 @@
                                     "system-id": {
                                         "type": "string",
                                         "description": "ISIS system identifier",
-                                        "pattern": "^[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}$"
+                                        "pattern": "^[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}\\.[0-9a-fA-F]{4}(\\.[0-9a-fA-F]{2})?$"
                                     },
                                     "l1-metric": {
                                         "type": "integer",
@@ -3303,12 +3437,30 @@
                                         "minimum": 0,
                                         "maximum": 4294967295
                                     }
-                                }
+                                },
+                                "patternProperties": {
+                                    "^_": {}
+                                },
+                                "additionalProperties": false
                             }
                         }
-                    }
+                    },
+                    "patternProperties": {
+                        "^_": {}
+                    },
+                    "additionalProperties": false
+                },
+                "external-auto-refresh": {
+                    "type": "boolean",
+                    "description": "Deprecated, use external->auto-refresh",
+                    "default": false,
+                    "deprecated": true
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "ospfConfig": {
             "type": "object",
@@ -3432,6 +3584,11 @@
                             "type": "boolean",
                             "default": true
                         },
+                        "auto-refresh": {
+                            "type": "boolean",
+                            "description": "Automatically refresh all external LSA",
+                            "default": false
+                        },
                         "mrt-file": {
                             "type": "string",
                             "description": "OSPF MRT file"
@@ -3469,12 +3626,24 @@
                                         "minimum": 0,
                                         "maximum": 4294967295
                                     }
-                                }
+                                },
+                                "patternProperties": {
+                                    "^_": {}
+                                },
+                                "additionalProperties": false
                             }
                         }
-                    }
+                    },
+                    "patternProperties": {
+                        "^_": {}
+                    },
+                    "additionalProperties": false
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "ldpConfig": {
             "type": "object",
@@ -3570,7 +3739,11 @@
                                 "type": "string",
                                 "description": "Network interface used to send targeted hellos and the session (default: first network interface)"
                             }
-                        }
+                        },
+                        "patternProperties": {
+                            "^_": {}
+                        },
+                        "additionalProperties": false
                     }
                 },
                 "targeted-hold-time": {
@@ -3585,7 +3758,11 @@
                     "description": "Accept targeted hellos sent to the transport address from neighbors which are not configured",
                     "default": false
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "bgpConfig": {
             "type": "object",
@@ -3761,7 +3938,11 @@
                         ]
                     }
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "httpClient": {
             "type": "object",
@@ -3812,7 +3993,11 @@
                     "type": "string",
                     "format": "ipv6"
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "httpServer": {
             "type": "object",
@@ -3844,7 +4029,11 @@
                     "type": "string",
                     "format": "ipv6"
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "icmpClient": {
             "type": "object",
@@ -3883,7 +4072,7 @@
                     "type": "number",
                     "description": "Send interval in seconds",
                     "default": 1.0,
-                    "minimum": 0
+                    "exclusiveMinimum": 0
                 },
                 "count": {
                     "type": "integer",
@@ -3930,7 +4119,11 @@
                     "minimum": 0,
                     "maximum": 65535
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         },
         "arpClient": {
             "type": "object",
@@ -3964,7 +4157,11 @@
                     "minimum": 0,
                     "maximum": 7
                 }
-            }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
         }
     }
 }

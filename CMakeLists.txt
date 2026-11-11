@@ -46,6 +46,39 @@ endif()
 # libdict will be statically linked
 find_library(libdict NAMES libdict.a REQUIRED)
 
+# With -pedantic, clang also reports the GNU extensions and style used
+# throughout the code (', ## __VA_ARGS__', 'f()' declarations, missing
+# newline at the end of a file), which GCC does not report.
+if (CMAKE_C_COMPILER_ID MATCHES "Clang")
+    add_compile_options(-Wno-gnu-zero-variadic-macro-arguments -Wno-strict-prototypes -Wno-newline-eof)
+endif()
+
+# Reproducible builds: map the source and build directory in debug information
+# and macros, also on the link line for the LTO units compiled at link time.
+if ((CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 8.0) OR
+    (CMAKE_C_COMPILER_ID MATCHES "Clang" AND CMAKE_C_COMPILER_VERSION VERSION_GREATER_EQUAL 10.0))
+    set(BBL_FILE_PREFIX_MAP "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=." "-ffile-prefix-map=${CMAKE_BINARY_DIR}=.")
+endif()
+
+function(bbl_reproducible_build)
+    foreach(_target ${ARGN})
+        target_compile_options(${_target} PRIVATE ${BBL_FILE_PREFIX_MAP})
+        foreach(_map ${BBL_FILE_PREFIX_MAP})
+            set_property(TARGET ${_target} APPEND_STRING PROPERTY LINK_FLAGS " ${_map}")
+        endforeach()
+    endforeach()
+endfunction()
+
+# All targets of the calling directory, also the unit tests, with a
+# deterministic random seed per target for those without one per source.
+function(bbl_reproducible_build_directory)
+    get_property(_targets DIRECTORY PROPERTY BUILDSYSTEM_TARGETS)
+    foreach(_target ${_targets})
+        bbl_reproducible_build(${_target})
+        target_compile_options(${_target} PRIVATE "-frandom-seed=${_target}")
+    endforeach()
+endfunction()
+
 if(BNGBLASTER_TESTS OR BNGBLASTER_INTEGRATION_TESTS)
     include(CTest)
 endif()
@@ -73,6 +106,8 @@ elseif (BNGBLASTER_OS STREQUAL "ubuntu-20.04")
 else()
     set(CPACK_DEBIAN_PACKAGE_DEPENDS "libssl3, libncurses6, libjansson4")
 endif()
+# bngblaster-cli, bgpupdate and ldpupdate
+string(APPEND CPACK_DEBIAN_PACKAGE_DEPENDS ", python3")
 
 set(CPACK_DEBIAN_LIB_PACKAGE_NAME "bngblaster")
 set(CPACK_DEBIAN_FILE_NAME "DEB-DEFAULT")

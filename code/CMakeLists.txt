@@ -1,4 +1,4 @@
-include_directories("common/src/")
+include_directories("common/src/" "${CMAKE_CURRENT_BINARY_DIR}/common/src/")
 
 add_subdirectory(common)
 add_subdirectory(lwip)

@@ -89,11 +89,7 @@ if(BNGBLASTER_AF_XDP)
     endif()
 endif()
 
-if(CMAKE_C_COMPILER_VERSION VERSION_GREATER 8.0)
-    target_compile_options(bngblaster PUBLIC "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
-    target_compile_options(lwipcore PRIVATE "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
-    target_compile_options(lwipcontribportunix PRIVATE "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=.")
-endif()
+bbl_reproducible_build(bngblaster lwipcore lwipcontribportunix)
 
 if(BNGBLASTER_CPU_NATIVE)
     target_compile_options(bngblaster PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations -pedantic -march=native -mtune=native)

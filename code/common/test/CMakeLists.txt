@@ -14,3 +14,5 @@ add_executable(test-timer timer.c ../src/timer.c ../src/logging.c)
 target_link_libraries(test-timer ${LINK_LIBS})
 target_compile_options(test-timer PRIVATE -Werror -Wall -Wextra -DBNGBLASTER_TIMER_LOGGING)
 add_test(NAME "TestTimer" COMMAND test-timer)
+
+bbl_reproducible_build_directory()
