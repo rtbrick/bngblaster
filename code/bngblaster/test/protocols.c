@@ -1140,6 +1140,52 @@ test_protocols_pppoe_relay_session_id(void **unused) {
     free(sp);
 }
 
+static void
+test_protocols_ospf_fragment_reencode(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[256] = {0};
+    uint8_t reencoded[256] = {0};
+    uint16_t reencoded_len = 0;
+    uint16_t payload_len = 64;
+    uint16_t ip_len = sizeof(struct iphdr) + payload_len;
+    uint16_t i;
+
+    struct ether_header *eth_hdr = (struct ether_header*)buf;
+    struct iphdr *ip_hdr = (struct iphdr*)(buf + ETH_HDR_LEN);
+    uint8_t *payload = (uint8_t*)ip_hdr + sizeof(struct iphdr);
+
+    bbl_ethernet_header_s *eth;
+    bbl_ipv4_s *ipv4;
+
+    eth_hdr->ether_type = htobe16(ETH_TYPE_IPV4);
+    ip_hdr->version = 4;
+    ip_hdr->ihl = sizeof(struct iphdr) / 4;
+    ip_hdr->tot_len = htobe16(ip_len);
+    ip_hdr->id = htobe16(0x1234);
+    ip_hdr->frag_off = htobe16(0x2000); /* first fragment (MF) */
+    ip_hdr->ttl = 1;
+    ip_hdr->protocol = PROTOCOL_IPV4_OSPF;
+    ip_hdr->saddr = htobe32(0x0a000001);
+    ip_hdr->daddr = htobe32(0xe0000005);
+    for(i = 0; i < payload_len; i++) {
+        payload[i] = i;
+    }
+    ip_hdr->check = bbl_checksum((uint8_t*)ip_hdr, sizeof(struct iphdr));
+
+    assert_int_equal(decode_ethernet(buf, ETH_HDR_LEN + ip_len, sp, SCRATCHPAD_LEN, &eth), PROTOCOL_SUCCESS);
+    ipv4 = (bbl_ipv4_s*)eth->next;
+    assert_int_equal(ipv4->protocol, PROTOCOL_IPV4_OSPF);
+    assert_null(ipv4->next);
+
+    /* Re-encoding the fragment dereferenced the missing OSPF PDU. */
+    assert_int_equal(encode_ethernet(reencoded, &reencoded_len, eth), PROTOCOL_SUCCESS);
+    assert_int_equal(reencoded_len, ETH_HDR_LEN + ip_len);
+    assert_memory_equal(reencoded + ETH_HDR_LEN, buf + ETH_HDR_LEN, ip_len);
+    free(sp);
+}
+
 int main() {
     const struct CMUnitTest tests[] = {
         cmocka_unit_test(test_protocols_decode_pppoe_ipcp_conf_request),
@@ -1164,6 +1210,7 @@ int main() {
         cmocka_unit_test(test_protocols_udp_checksum_zero),
         cmocka_unit_test(test_protocols_dhcpv6_duid),
         cmocka_unit_test(test_protocols_pppoe_relay_session_id),
+        cmocka_unit_test(test_protocols_ospf_fragment_reencode),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

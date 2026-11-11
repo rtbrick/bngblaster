@@ -1297,7 +1297,16 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
             result = encode_raw_tcp(buf, len, (bbl_udp_s*)ipv4->next);
             break;
         case PROTOCOL_IPV4_OSPF:
-            result = encode_ospf(buf, len, (bbl_ospf_s*)ipv4->next);
+            if(ipv4->next) {
+                result = encode_ospf(buf, len, (bbl_ospf_s*)ipv4->next);
+            } else {
+                /* Decoded OSPF fragment (not reassembled) */
+                if(ipv4->payload && ipv4->payload_len) {
+                    memcpy(buf, ipv4->payload, ipv4->payload_len);
+                    BUMP_WRITE_BUFFER(buf, len, ipv4->payload_len);
+                }
+                result = PROTOCOL_SUCCESS;
+            }
             break;
         default:
             result = PROTOCOL_SUCCESS;
