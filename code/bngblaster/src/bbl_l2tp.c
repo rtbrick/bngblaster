@@ -1377,6 +1377,7 @@ bbl_l2tp_iccn_rx(bbl_network_interface_s *interface,
     }
     if(l2tp_session->state == BBL_L2TP_SESSION_WAIT_CONN) {
         l2tp_session->state = BBL_L2TP_SESSION_ESTABLISHED;
+        timer_del(l2tp_session->timer_iccn);
         LOG(L2TP, "L2TP Info (%s) Tunnel (%u) from %s (%s) session (%u) established\n",
             l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
             l2tp_tunnel->peer_name,
