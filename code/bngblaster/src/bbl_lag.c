@@ -343,6 +343,7 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
 {
     bbl_lag_s *lag;
     bbl_lag_member_s *member;
+    uint8_t members = 0;
 
     if(link_config->lag_interface) {
         lag = bbl_lag_get_by_name(link_config->lag_interface);
@@ -356,7 +357,10 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
                 link_config->interface, link_config->lag_interface);
             return false;
         }
-        if(!lag->config->lacp_enable && lag->active_count >= LAG_MEMBER_ACTIVE_MAX) {
+        CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
+            members++;
+        }
+        if(!lag->config->lacp_enable && members >= LAG_MEMBER_ACTIVE_MAX) {
             LOG(ERROR, "Failed to add link %s to lag-interface %s (max %u links without LACP)\n", 
                 link_config->interface, link_config->lag_interface, LAG_MEMBER_ACTIVE_MAX);
             return false;
@@ -391,10 +395,16 @@ bbl_lag_interface_add(bbl_interface_s *interface, bbl_link_config_s *link_config
             bbl_lag_lacp_send(member);
         } else {
             member->lacp_state = LACP_DISABLED;
-            lag->interface->state = INTERFACE_UP;
-            lag->active_list[lag->active_count++] = member;
-            if(CIRCLEQ_EMPTY(&lag->lag_member_qhead)) {
-                member->primary = true;
+            if(interface->link_down) {
+                /* The link state is known before the member is added (DPDK),
+                 * the member is selected once the link is up. */
+                interface->state = INTERFACE_DOWN;
+            } else {
+                lag->interface->state = INTERFACE_UP;
+                if(lag->active_count == 0) {
+                    member->primary = true;
+                }
+                lag->active_list[lag->active_count++] = member;
             }
         }
 

@@ -2282,7 +2282,6 @@ static void
 bbl_stream_select_io_lag(bbl_stream_s *stream)
 {
     bbl_lag_s *lag = stream->tx_interface->lag;
-    bbl_lag_member_s *member;
     io_handle_s *io;
     io_handle_s *io_iter;
 
@@ -2297,16 +2296,20 @@ bbl_stream_select_io_lag(bbl_stream_s *stream)
         return;
     }
 
-    /* Without LACP enabled, select member interface with lowest PPS. */
-    member = CIRCLEQ_FIRST(&lag->lag_member_qhead);
-    if(!member) {
+    if(CIRCLEQ_EMPTY(&lag->lag_member_qhead)) {
         LOG(ERROR, "Failed to add stream %s to LAG %s (no member interfaces)\n", 
             stream->config->name, lag->interface->name);
         return;
     }
-    io = member->interface->io.tx;
-    CIRCLEQ_FOREACH(member, &lag->lag_member_qhead, lag_member_qnode) {
-        io_iter = member->interface->io.tx;
+    /* Without LACP enabled, select the active member interface with
+     * lowest PPS. Without active members, the stream is distributed by
+     * bbl_lag_select once a member link is up. */
+    if(!lag->active_count) {
+        return;
+    }
+    io = lag->active_list[0]->interface->io.tx;
+    for(uint8_t i = 1; i < lag->active_count; i++) {
+        io_iter = lag->active_list[i]->interface->io.tx;
         if(io_iter->stream_pps < io->stream_pps) {
             io = io_iter;
         }
