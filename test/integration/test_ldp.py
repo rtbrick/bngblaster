@@ -13,10 +13,12 @@ import ipaddress
 import socket
 import struct
 import sys
+import threading
 import time
 
 import pytest
 
+import helpers
 from helpers import BngBlaster, ldpupdate, wait_until
 
 LSR_ID_1, LSR_ID_2 = "10.2.3.1", "10.2.3.2"
@@ -441,3 +443,47 @@ def test_ldp_hello_source_port(topology, processes, tmp_path):
     topology.b.exec([sys.executable, "-c", HELLO_SCRIPT, topology.if_b])
     wait_until(lambda: instance.ctrl("ldp-adjacencies")["ldp-adjacencies"][0]["state"] == "up", 5,
                message="LDP adjacency up")
+
+
+TARGETED_HELLO_SCRIPT = """
+import socket, struct, sys, time
+from scapy.all import Ether, IP, UDP, Raw, sendp
+iface, mac, rounds, count = sys.argv[1], sys.argv[2], int(sys.argv[3]), int(sys.argv[4])
+# Targeted hello with hold time 1 s from many sources.
+tlvs = struct.pack(">HHHH", 0x0400, 4, 1, 0xC000) + struct.pack(">HH", 0x0401, 4) + socket.inet_aton("10.0.0.2")
+msg = struct.pack(">HHI", 0x0100, 4 + len(tlvs), 1) + tlvs
+body = socket.inet_aton("10.10.0.2") + b"\\x00\\x00" + msg
+pdu = struct.pack(">HH", 1, len(body)) + body
+pkts = [Ether(dst=mac) / IP(src="10.1.%d.%d" % (i // 250, 1 + i % 250), dst="10.0.0.1", ttl=255) /
+        UDP(sport=646, dport=646) / Raw(pdu) for i in range(count)]
+for _ in range(rounds):
+    sendp(pkts, iface=iface, verbose=False)
+    time.sleep(2.2)
+"""
+
+
+def test_ldp_adjacencies_while_expiring(topology, processes, tmp_path):
+    """ldp-adjacencies is answered while accepted targeted adjacencies
+    expire and are freed (use after free in the control thread)."""
+    helpers.kernel_address(topology.b, topology.if_b, "10.0.0.2/24")
+    instance = BngBlaster(topology.a, tmp_path).start({
+        "interfaces": {"network": {"interface": topology.if_a, "address": "10.0.0.1/24", "gateway": "10.0.0.2"}},
+        "ldp": [{"instance-id": 1, "lsr-id": "10.10.0.1", "ipv4-transport-address": "10.0.0.1",
+                 "targeted-hello-accept": True,
+                 "targeted-neighbors": [{"address": "10.0.0.2", "network-interface": topology.if_a}]}]})
+    processes.append(instance)
+    mac = helpers.run(topology.a.cmd(["cat", "/sys/class/net/%s/address" % topology.if_a])).strip()
+    sender = threading.Thread(target=topology.b.exec,
+                              args=([sys.executable, "-c", TARGETED_HELLO_SCRIPT, topology.if_b, mac, "6", "1500"],))
+    sender.start()
+    polls = adjacencies = 0
+    while sender.is_alive() and instance.alive():
+        try:
+            adjacencies = max(adjacencies, len(instance.ctrl("ldp-adjacencies")["ldp-adjacencies"]))
+            polls += 1
+        except (OSError, ValueError):
+            break
+    sender.join()
+    assert instance.alive(), "BNG Blaster exited after %d polls" % polls
+    assert adjacencies > 100
+    assert instance.terminate(30) == 0
