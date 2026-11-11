@@ -207,6 +207,14 @@ bbl_stats_rx_first_seq(bbl_stream_s *stream)
     return stream->rx_first_seq - stream->tx_first_seq + 1;
 }
 
+/* Percentage of violations of the flows of one direction. */
+static float
+bbl_stats_percent(uint64_t violations, uint32_t flows)
+{
+    if(!flows) return 0;
+    return (float)violations / (float)flows * 100.0;
+}
+
 static void
 bbl_stats_session_traffic(bbl_stream_s *stream, uint32_t pps, uint32_t *sessions,
                           uint64_t *sum, uint64_t *min, uint64_t *max,
@@ -680,37 +688,37 @@ bbl_stats_stdout(bbl_stats_s *stats) {
         printf("  Violations:               >1s             >1s-2s   >2s-3s      >3s\n");
 
         violations = stats->violations_down_ipv4_1s+stats->violations_down_ipv4_2s+stats->violations_down_ipv4_3s;
-        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        percent = bbl_stats_percent(violations, stats->sessions_down_ipv4_rx);
         printf("    Downstream IPv4:   %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
             violations, percent, \
             stats->violations_down_ipv4_1s, stats->violations_down_ipv4_2s, stats->violations_down_ipv4_3s);
 
         violations = stats->violations_down_ipv6_1s+stats->violations_down_ipv6_2s+stats->violations_down_ipv6_3s;
-        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        percent = bbl_stats_percent(violations, stats->sessions_down_ipv6_rx);
         printf("    Downstream IPv6:   %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
             violations, percent, \
             stats->violations_down_ipv6_1s, stats->violations_down_ipv6_2s, stats->violations_down_ipv6_3s);
 
         violations = stats->violations_down_ipv6pd_1s+stats->violations_down_ipv6pd_2s+stats->violations_down_ipv6pd_3s;
-        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        percent = bbl_stats_percent(violations, stats->sessions_down_ipv6pd_rx);
         printf("    Downstream IPv6PD: %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
             violations, percent, \
             stats->violations_down_ipv6pd_1s, stats->violations_down_ipv6pd_2s, stats->violations_down_ipv6pd_3s);
 
         violations = stats->violations_up_ipv4_1s+stats->violations_up_ipv4_2s+stats->violations_up_ipv4_3s;
-        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        percent = bbl_stats_percent(violations, stats->sessions_up_ipv4_rx);
         printf("    Upstream IPv4:     %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
             violations, percent, \
             stats->violations_up_ipv4_1s, stats->violations_up_ipv4_2s, stats->violations_up_ipv4_3s);
 
         violations = stats->violations_up_ipv6_1s+stats->violations_up_ipv6_2s+stats->violations_up_ipv6_3s;
-        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        percent = bbl_stats_percent(violations, stats->sessions_up_ipv6_rx);
         printf("    Upstream IPv6:     %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
             violations, percent, \
             stats->violations_up_ipv6_1s, stats->violations_up_ipv6_2s, stats->violations_up_ipv6_3s);
 
         violations = stats->violations_up_ipv6pd_1s+stats->violations_up_ipv6pd_2s+stats->violations_up_ipv6pd_3s;
-        percent = (float)((float)violations/(float)g_ctx->stats.session_traffic_flows) * 100.0;
+        percent = bbl_stats_percent(violations, stats->sessions_up_ipv6pd_rx);
         printf("    Upstream IPv6PD:   %8lu (%6.2f%%) %8lu %8lu %8lu\n", \
             violations, percent, \
             stats->violations_up_ipv6pd_1s, stats->violations_up_ipv6pd_2s, stats->violations_up_ipv6pd_3s);

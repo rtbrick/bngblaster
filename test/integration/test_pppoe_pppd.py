@@ -225,3 +225,33 @@ def test_session_traffic_wrong_session(pppd):
     time.sleep(1)
     assert traffic(1)["downstream-ipv4-rx-packets"] == received
     assert traffic(2)["downstream-ipv4-wrong-session"] == 0
+
+
+def test_session_traffic_violation_report(pppd):
+    """Downstream session traffic is blackholed by the server for the first
+    seconds, the only downstream IPv4 flow violates and the stdout report
+    shows 100% for this direction (was divided by all flows)."""
+    topology = pppd.topology
+    vlan = topology.if_b + ".100"
+    topology.b.exec(["ip", "link", "add", "link", topology.if_b, "name", vlan, "type", "vlan", "id", "100"])
+    topology.b.exec(["ip", "link", "set", vlan, "up"])
+    helpers.kernel_address(topology.b, vlan, "192.168.1.2/24")
+    topology.b.exec(["sysctl", "-qw", "net.ipv4.ip_forward=1"])
+    pppd.start_pppd("require-pap")
+    topology.b.exec(["ip", "route", "add", "blackhole", "10.0.0.100/32", "table", "100"])
+    topology.b.exec(["ip", "rule", "add", "iif", vlan, "lookup", "100", "priority", "100"])
+    pppd.start_bbl(interfaces={
+        "network": {"interface": topology.if_a, "vlan": 100, "address": "192.168.1.1/24",
+                    "gateway": "192.168.1.2"},
+        "access": [{"interface": topology.if_a, "type": "pppoe", "outer-vlan": 0, "inner-vlan": 0,
+                    "vlan-mode": "N:1", "username": USERNAME, "password": PASSWORD}]},
+        **{"session-traffic": {"autostart": True, "ipv4-pps": 10}})
+    pppd.wait_state("Established")
+    time.sleep(2.5)
+    topology.b.exec(["ip", "rule", "del", "priority", "100"])
+    wait_until(lambda: pppd.bbl.ctrl("session-counters")["session-counters"]["session-traffic-flows-verified"] == 2,
+               10, message="session traffic verified")
+    assert pppd.bbl.terminate(30) == 0
+    report = open(pppd.bbl.path("stdout")).read()
+    line = [l for l in report.splitlines() if l.strip().startswith("Downstream IPv4:") and "%" in l][0]
+    assert "(100.00%)" in line, line
