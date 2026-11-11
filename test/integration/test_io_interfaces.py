@@ -350,3 +350,99 @@ def test_lacp_different_partner_systems(topology, processes, tmp_path):
     states = sorted(m["state"] for m in lag_members(instance).values())
     assert states == ["Standby", "Up"], lag_members(instance)
     assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def two_ends(local_veth, link, length=200, vlan=None, mtu=None, qinq=False):
+    """One instance on both ends of a local veth pair with a stream in
+    each direction."""
+    network = []
+    streams = []
+    for i, (ifname, peer) in enumerate(((local_veth.if1, 2), (local_veth.if2, 1))):
+        n = {"interface": ifname, "address": "10.0.0.%d/24" % (i + 1), "gateway": "10.0.0.%d" % peer}
+        if vlan:
+            n["vlan"] = vlan
+        if qinq:
+            n.update({"qinq": True, "inner-vlan": 20})
+        if mtu:
+            n["mtu"] = mtu
+        network.append(n)
+        streams.append({"name": "S%d" % (i + 1), "type": "ipv4", "direction": "downstream", "pps": 200,
+                        "length": length, "network-interface": ifname + (":%d" % vlan if vlan else ""),
+                        "destination-ipv4-address": "10.0.0.%d" % peer})
+    return {"interfaces": {"links": [dict({"interface": i}, **link) for i in (local_veth.if1, local_veth.if2)],
+                           "network": network},
+            "traffic": {"autostart": True},
+            "streams": streams}
+
+
+def stream_info(instance, flow_id):
+    return instance.ctrl("stream-info", **{"flow-id": flow_id})["stream-info"]
+
+
+def report_interfaces(instance):
+    return {i["name"]: i for i in instance.report()["report"]["interfaces"]}
+
+
+@pytest.mark.parametrize("io_mode", ["raw", "packet_mmap"])
+def test_rx_threads_ignore_outgoing(local_veth, processes, tmp_path, io_mode):
+    """RX threads (fanout group) do not receive the packets sent by the
+    instance itself on this interface with qdisc-bypass false."""
+    instance = BngBlaster(local_veth.ns, tmp_path).start(
+        two_ends(local_veth, {"io-mode": io_mode, "rx-threads": 1, "qdisc-bypass": False}))
+    processes.append(instance)
+    wait_until(lambda: all(stream_info(instance, f)["rx-packets"] >= 400 for f in (1, 2)), 20,
+               message="stream packets received")
+    for f in (1, 2):
+        info = stream_info(instance, f)
+        assert info["rx-packets"] <= info["tx-packets"], info
+        assert info["rx-wrong-order"] == 0, info
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+@pytest.mark.parametrize("tx_threads", [0, 1])
+@pytest.mark.parametrize("length, vlan, qinq, sent", [
+    (1500, None, False, True),   # 1514 byte = MTU + 14
+    (1501, None, False, False),  # 1515 byte
+    (1500, 10, False, True),     # 1518 byte = MTU + 18 with 0x8100 tag
+    (1501, 10, False, False),    # 1519 byte
+    (1492, 10, True, True),      # 1514 byte with 0x88a8 and 0x8100 tag
+    (1493, 10, True, False),     # 1515 byte
+], ids=["untagged-max", "untagged-long", "vlan-max", "vlan-long", "qinq-max", "qinq-long"])
+def test_packet_mmap_tx_max_len(local_veth, processes, tmp_path, tx_threads, length, vlan, qinq, sent):
+    """packet_mmap sends frames up to the length accepted by the kernel
+    (MTU + 14, plus 4 only for 802.1Q outer tag), longer frames are
+    counted as to long instead of being counted as sent and dropped."""
+    link = {"io-mode": "packet_mmap"}
+    if tx_threads:
+        link["tx-threads"] = tx_threads
+    instance = BngBlaster(local_veth.ns, tmp_path).start(two_ends(local_veth, link, length, vlan, mtu=4000, qinq=qinq))
+    processes.append(instance)
+    time.sleep(3)
+    info = stream_info(instance, 1)
+    if sent:
+        assert info["tx-packets"] > 200 and info["rx-packets"] > 200, info
+    else:
+        assert info["tx-packets"] == 0 and info["rx-packets"] == 0, info
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+    interface = report_interfaces(instance)[local_veth.if1]
+    assert (interface["tx-to-long"] == 0) == sent, interface
+
+
+def test_packet_mmap_tx_mtu_change(local_veth, processes, tmp_path):
+    """packet_mmap follows MTU changes of the interface after start."""
+    instance = BngBlaster(local_veth.ns, tmp_path).start(two_ends(local_veth, {"io-mode": "packet_mmap"}, 1400))
+    processes.append(instance)
+    wait_until(lambda: stream_info(instance, 1)["rx-packets"] >= 200, 10, message="stream packets received")
+    local_veth.ns.exec(["ip", "link", "set", local_veth.if1, "mtu", "1300"])
+    time.sleep(2)
+    before = stream_info(instance, 1)
+    time.sleep(1)
+    after = stream_info(instance, 1)
+    # Not sent (and therefore not lost) while the MTU is too small.
+    assert after["tx-packets"] == before["tx-packets"], (before, after)
+    local_veth.ns.exec(["ip", "link", "set", local_veth.if1, "mtu", "1500"])
+    wait_until(lambda: stream_info(instance, 1)["rx-packets"] >= after["rx-packets"] + 200, 10,
+               message="stream packets received after MTU increase")
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+    interface = report_interfaces(instance)[local_veth.if1]
+    assert interface["tx-to-long"] > 0, interface

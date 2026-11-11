@@ -33,29 +33,48 @@ set_qdisc_bypass(io_handle_s *io)
     return true;
 }
 
+#ifndef PACKET_FANOUT_FLAG_IGNORE_OUTGOING
+#define PACKET_FANOUT_FLAG_IGNORE_OUTGOING 0x4000
+#endif
+
 /* Set fanout group. The group ID is 16 bit, a group of another
  * interface with the same ID is rejected with EINVAL by the kernel,
  * in which case the next ID is tried. The RX threads of an interface
- * walk the same sequence and therefore join the same group. */
+ * walk the same sequence and therefore join the same group.
+ *
+ * The kernel ignores PACKET_IGNORE_OUTGOING of a socket in a fanout
+ * group, the group must be created with PACKET_FANOUT_FLAG_IGNORE_OUTGOING
+ * (since Linux 4.20) instead. A group with different flags is also
+ * rejected with EINVAL, therefore each ID is tried without this flag
+ * before the next one, which joins a group created by a kernel without
+ * support for this flag. */
 static bool
 set_fanout(io_handle_s *io)
 {
+    const int fanout_flags[] = {PACKET_FANOUT_FLAG_IGNORE_OUTGOING, 0};
     uint16_t fanout_id = io->fanout_id & 0xffff;
     int fanout_arg;
-    int i;
+    int i, f;
 
     if(io->fanout_id && io->direction == IO_INGRESS) {
         for(i = 0; i < 64; i++) {
             if(!fanout_id) fanout_id++;
-            fanout_arg = (fanout_id | (io->fanout_type << 16));
-            if(setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == 0) {
-                return true;
-            }
-            if(errno != EINVAL) {
-                break;
+            for(f = 0; f < 2; f++) {
+                fanout_arg = (fanout_id | ((io->fanout_type | fanout_flags[f]) << 16));
+                if(setsockopt(io->fd, SOL_PACKET, PACKET_FANOUT, &fanout_arg, sizeof(fanout_arg)) == 0) {
+                    if(!fanout_flags[f]) {
+                        LOG(ERROR, "Warning: Failed to set PACKET_FANOUT_FLAG_IGNORE_OUTGOING for interface %s RX socket."
+                            " TX packets might be seen on RX.\n", io->interface->name);
+                    }
+                    return true;
+                }
+                if(errno != EINVAL) {
+                    goto ERROR;
+                }
             }
             fanout_id++;
         }
+ERROR:
         LOG(ERROR, "Failed to set fanout group for interface %s - %s (%d)\n",
             io->interface->name, strerror(errno), errno);
         return false;

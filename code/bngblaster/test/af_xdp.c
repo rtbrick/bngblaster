@@ -50,6 +50,8 @@ static int test_xdp_detach(int ifindex);
 #define xdp_program__id(prog) test_xdp_prog_id((int)(intptr_t)(prog))
 #define xdp_multiprog__close(mp) ((void)(mp))
 #define xdp_multiprog__detach(mp) test_xdp_detach((int)(intptr_t)(mp))
+/* State file in the working directory instead of /run/lock. */
+#define AF_XDP_STATE_FILE "bngblaster_%s.af_xdp"
 #include "../src/io/io_af_xdp.c"
 #undef socket
 #undef close
@@ -66,6 +68,9 @@ static struct {
     uint32_t channels;
     uint32_t indir[NIC_INDIR_SIZE];
     bool indir_configured; /* table written by the user (IFF_RXFH_CONFIGURED) */
+    bool lut_user_mode; /* driver keeps written tables as user table (i40e) */
+    bool lut_user; /* user table kept by the driver */
+    uint32_t lut[NIC_INDIR_SIZE];
     uint32_t rx_ring;
     uint32_t rx_ring_max;
     uint32_t flags;
@@ -171,8 +176,14 @@ test_ioctl(int fd, unsigned long request, ...)
                     return nic_error(EINVAL);
                 }
             }
+            if(ch->combined_count < nic.channels) {
+                /* i40e discards the user table if channels are decreased. */
+                nic.lut_user = false;
+            }
             nic.channels = ch->combined_count;
-            if(!nic.indir_configured) {
+            if(nic.lut_user) {
+                memcpy(nic.indir, nic.lut, sizeof(nic.indir));
+            } else if(!nic.indir_configured) {
                 nic_indir_default();
             }
             return 0;
@@ -198,6 +209,10 @@ test_ioctl(int fd, unsigned long request, ...)
             nic.writes++;
             if(!rxfh->indir_size) {
                 nic_indir_default();
+                if(nic.lut_user_mode) {
+                    memcpy(nic.lut, nic.indir, sizeof(nic.lut));
+                    nic.lut_user = true;
+                }
                 return 0;
             }
             assert_int_equal(rxfh->indir_size, NIC_INDIR_SIZE);
@@ -209,6 +224,10 @@ test_ioctl(int fd, unsigned long request, ...)
             }
             memcpy(nic.indir, rxfh->rss_config, sizeof(nic.indir));
             nic.indir_configured = true;
+            if(nic.lut_user_mode) {
+                memcpy(nic.lut, nic.indir, sizeof(nic.lut));
+                nic.lut_user = true;
+            }
             return 0;
         }
         case ETHTOOL_GRINGPARAM: {
@@ -249,6 +268,7 @@ test_ioctl(int fd, unsigned long request, ...)
 
 static bbl_link_config_s test_config;
 static bbl_interface_s test_interface;
+static char test_name[IFNAMSIZ];
 
 static int
 test_setup(void **unused)
@@ -265,8 +285,11 @@ test_setup(void **unused)
     memset(&test_config, 0x0, sizeof(test_config));
     test_config.io_slots_rx = 4096;
     memset(&test_interface, 0x0, sizeof(test_interface));
-    test_interface.name = "test0";
+    /* Unique name for the state file of parallel test runs. */
+    snprintf(test_name, sizeof(test_name), "t%d", getpid());
+    test_interface.name = test_name;
     test_interface.kernel_index = TEST_KERNEL_INDEX;
+    test_interface.lock_fd = -1; /* no state file */
     test_interface.config = &test_config;
     return 0;
 }
@@ -288,7 +311,9 @@ static void
 test_init(uint16_t rx_queues, uint16_t tx_queues)
 {
     assert_true(io_af_xdp_save_state(&test_interface));
+    io_af_xdp_state_file_load(&test_interface);
     io_af_xdp_check_xdp_program(&test_interface);
+    io_af_xdp_state_file_write(&test_interface);
     assert_true(io_af_xdp_disable_rxvlan_offload(&test_interface));
     assert_true(io_af_xdp_set_channels(&test_interface, rx_queues + tx_queues));
     io_af_xdp_prepare_rx_ring(&test_interface);
@@ -386,17 +411,38 @@ test_af_xdp_restore_failed(void **unused)
     (void)unused;
     uint32_t writes;
 
-    /* The RSS table is not restored if the channels can't be restored,
-     * as it might reference queues that do not exist. */
+    /* A default RSS table is reset to the default for the current
+     * channels also if the channels can't be restored. */
     test_init(2, 2);
     nic.reject_channels = true;
     writes = nic.writes;
     assert_false(io_af_xdp_restore_state(&test_interface));
     assert_null(test_interface.io.af_xdp_state);
     assert_int_equal(nic.channels, 4);
-    assert_true(nic.indir_configured);
+    assert_false(nic.indir_configured);
+    for(uint32_t i = 0; i < NIC_INDIR_SIZE; i++) {
+        assert_int_equal(nic.indir[i], i % 4);
+    }
     assert_int_equal(nic.rx_ring, 512);
     assert_true(nic.flags & ETH_FLAG_RXVLAN);
+    /* RSS reset, failed channel change, RX ring and flags. */
+    assert_int_equal(nic.writes, writes + 4);
+
+    /* A configured RSS table is not restored if the channels can't be
+     * restored, as it might reference queues that do not exist. */
+    test_setup(NULL);
+    for(uint32_t i = 0; i < NIC_INDIR_SIZE; i++) {
+        nic.indir[i] = 1;
+    }
+    nic.indir_configured = true;
+    test_init(2, 2);
+    nic.reject_channels = true;
+    writes = nic.writes;
+    assert_false(io_af_xdp_restore_state(&test_interface));
+    assert_int_equal(nic.channels, 4);
+    for(uint32_t i = 0; i < NIC_INDIR_SIZE; i++) {
+        assert_int_equal(nic.indir[i], i % 2);
+    }
     /* Failed channel change, RX ring and flags. */
     assert_int_equal(nic.writes, writes + 3);
 
@@ -488,6 +534,105 @@ test_af_xdp_xdp_program(void **unused)
     assert_int_equal(nic.xdp_prog, 7);
 }
 
+/* User changes the channels after BNG Blaster exited. */
+static void
+nic_set_channels(uint32_t channels)
+{
+    struct ethtool_channels ch = {.cmd = ETHTOOL_SCHANNELS, .combined_count = channels};
+    struct ifreq ifr = {.ifr_data = (void*)&ch};
+    assert_int_equal(test_ioctl(TEST_FD, SIOCETHTOOL, &ifr), 0);
+}
+
+static void
+test_af_xdp_restore_default_user_table(void **unused)
+{
+    (void)unused;
+    uint32_t channels[] = {2, 4};
+
+    /* A driver keeping written tables as user table (i40e) spreads RSS
+     * over all channels again if the channels are increased after the
+     * restore, with the same (2) or more (4 -> 2 -> 4) channels before. */
+    for(uint32_t c = 0; c < 2; c++) {
+        test_setup(NULL);
+        nic.lut_user_mode = true;
+        nic.channels = channels[c];
+        nic_indir_default();
+        test_init(1, 1);
+        assert_int_equal(nic.channels, 2);
+        assert_true(nic.lut_user);
+        assert_true(io_af_xdp_restore_state(&test_interface));
+        assert_int_equal(nic.channels, channels[c]);
+        assert_false(nic.indir_configured);
+        assert_false(nic.lut_user);
+        for(uint32_t i = 0; i < NIC_INDIR_SIZE; i++) {
+            assert_int_equal(nic.indir[i], i % channels[c]);
+        }
+        nic_set_channels(8);
+        for(uint32_t i = 0; i < NIC_INDIR_SIZE; i++) {
+            assert_int_equal(nic.indir[i], i % 8);
+        }
+        assert_int_equal(nic.invalid, 0);
+    }
+}
+
+static void
+test_af_xdp_state_file(void **unused)
+{
+    (void)unused;
+    char path[FILE_PATH_LEN];
+    FILE *file;
+
+    test_interface.lock_fd = 1;
+    io_af_xdp_state_file_path(&test_interface, path, sizeof(path));
+    unlink(path);
+
+    /* An instance is killed after changing the NIC configuration. */
+    nic.channels = 4;
+    nic_indir_default();
+    test_init(1, 1);
+    nic.xdp_prog = 42;
+    assert_int_equal(access(path, F_OK), 0);
+    test_teardown(NULL);
+    assert_int_equal(nic.channels, 2);
+
+    /* The next instance restores the configuration of the state file
+     * and removes the XDP program and the state file. */
+    test_init(1, 1);
+    assert_true(test_interface.io.af_xdp_state->loaded);
+    assert_false(test_interface.io.af_xdp_state->xdp_program);
+    assert_true(io_af_xdp_restore_state(&test_interface));
+    assert_int_equal(nic.channels, 4);
+    assert_false(nic.indir_configured);
+    for(uint32_t i = 0; i < NIC_INDIR_SIZE; i++) {
+        assert_int_equal(nic.indir[i], i % 4);
+    }
+    assert_int_equal(nic.rx_ring, 512);
+    assert_int_equal(nic.flags, ETH_FLAG_RXVLAN | ETH_FLAG_RXHASH);
+    assert_int_equal(nic.xdp_prog, 0);
+    assert_int_not_equal(access(path, F_OK), 0);
+
+    /* A state file of a recreated interface is ignored and replaced. */
+    file = fopen(path, "w");
+    assert_non_null(file);
+    fprintf(file, "ifindex %u\nchannels 8 0 0 0\nxdp 0\nend\n", TEST_KERNEL_INDEX + 1);
+    fclose(file);
+    nic.channels = 3;
+    nic_indir_default();
+    test_init(1, 1);
+    assert_false(test_interface.io.af_xdp_state->loaded);
+    assert_true(io_af_xdp_restore_state(&test_interface));
+    assert_int_equal(nic.channels, 3);
+    assert_int_not_equal(access(path, F_OK), 0);
+
+    /* A state file is kept if the restore failed. */
+    test_init(1, 1);
+    nic.reject_channels = true;
+    assert_false(io_af_xdp_restore_state(&test_interface));
+    assert_int_equal(access(path, F_OK), 0);
+    unlink(path);
+    assert_int_equal(nic.invalid, 0);
+}
+
 int
 main()
 {
@@ -498,6 +643,8 @@ main()
         cmocka_unit_test_setup_teardown(test_af_xdp_restore_failed, test_setup, test_teardown),
         cmocka_unit_test_setup_teardown(test_af_xdp_rx_ring, test_setup, test_teardown),
         cmocka_unit_test_setup_teardown(test_af_xdp_xdp_program, test_setup, test_teardown),
+        cmocka_unit_test_setup_teardown(test_af_xdp_restore_default_user_table, test_setup, test_teardown),
+        cmocka_unit_test_setup_teardown(test_af_xdp_state_file, test_setup, test_teardown),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

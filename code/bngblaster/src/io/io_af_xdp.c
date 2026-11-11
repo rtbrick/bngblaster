@@ -25,6 +25,8 @@
  * (and vice versa) - showing up as RX drops unrelated to actual RX
  * capacity. Each queue gets its own independent UMEM (no XDP_SHARED_UMEM
  * is needed for this) and its own RX-only or TX-only io_af_xdp_queue_s.
+ * Only interfaces without RSS indirection table (e.g. veth) bind the TX
+ * queues for RX as well (combined), as traffic can't be kept off them.
  *
  * Christian Giese, September 2026
  *
@@ -86,6 +88,7 @@ typedef struct io_af_xdp_queue_ {
 
     int fd;
     uint32_t queue_id;
+    io_af_xdp_qmode_t qmode;
     bool copy_mode; /* copy (not zero-copy) mode, TX requires sendto() kick */
 
     uint32_t tx_kick_pending; /* TX descriptors submitted since last kick */
@@ -106,7 +109,17 @@ typedef struct io_af_xdp_state_ {
     bool ring_changed;
     uint32_t rx_frames; /* RX frames per queue, see io_af_xdp_prepare_rx_ring() */
     bool xdp_program; /* XDP program attached before the initialization */
+    bool loaded; /* loaded from the state file of a previous instance */
 } io_af_xdp_state_s;
+
+/* The saved NIC configuration is also written to this file next to the
+ * interface lock (see bbl_interface_lock()) and removed after it is
+ * restored. If an instance is killed or crashes, the next instance
+ * restores the configuration found by the killed instance instead of
+ * the configuration it left behind. */
+#ifndef AF_XDP_STATE_FILE
+#define AF_XDP_STATE_FILE "/run/lock/bngblaster_%s.af_xdp"
+#endif
 
 /* NIC RX ring size configured if the ring is smaller and supported by the
  * NIC, see io_af_xdp_prepare_rx_ring(). */
@@ -246,6 +259,164 @@ io_af_xdp_save_state(bbl_interface_s *interface)
     return true;
 }
 
+static void
+io_af_xdp_state_file_path(bbl_interface_s *interface, char *path, size_t len)
+{
+    snprintf(path, len, AF_XDP_STATE_FILE, interface->name);
+}
+
+/**
+ * Write the saved NIC configuration to the state file, which is
+ * removed by io_af_xdp_restore_state() after the configuration
+ * was restored.
+ */
+static void
+io_af_xdp_state_file_write(bbl_interface_s *interface)
+{
+    io_af_xdp_state_s *state = interface->io.af_xdp_state;
+    char path[FILE_PATH_LEN];
+    char tmp_path[FILE_PATH_LEN+4];
+    FILE *file;
+    uint32_t i;
+    bool success;
+
+    if(interface->lock_fd < 0 || state->loaded) {
+        /* Interface lock forced or state file already present. */
+        return;
+    }
+    io_af_xdp_state_file_path(interface, path, sizeof(path));
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path);
+    file = fopen(tmp_path, "w");
+    if(!file) {
+        LOG(INFO, "Warning: AF_XDP failed to write NIC configuration of interface %s to %s (%s)\n",
+            interface->name, tmp_path, strerror(errno));
+        return;
+    }
+    fprintf(file, "ifindex %u\n", interface->kernel_index);
+    if(state->channels.cmd) {
+        fprintf(file, "channels %u %u %u %u\n", state->channels.combined_count, state->channels.rx_count,
+                state->channels.tx_count, state->channels.other_count);
+    }
+    if(state->ring.cmd) {
+        fprintf(file, "ring %u\n", state->ring.rx_pending);
+    }
+    if(state->flags.cmd) {
+        fprintf(file, "flags %u\n", state->flags.data);
+    }
+    fprintf(file, "xdp %u\n", state->xdp_program);
+    if(state->rss_indir) {
+        fprintf(file, "rss %u %u", state->rss_default, state->rss_indir_size);
+        for(i = 0; i < state->rss_indir_size; i++) {
+            fprintf(file, " %u", state->rss_indir[i]);
+        }
+        fprintf(file, "\n");
+    }
+    fprintf(file, "end\n");
+    success = fflush(file) == 0;
+    if(fclose(file) != 0 || !success || rename(tmp_path, path) != 0) {
+        LOG(INFO, "Warning: AF_XDP failed to write NIC configuration of interface %s to %s (%s)\n",
+            interface->name, path, strerror(errno));
+        unlink(tmp_path);
+    }
+}
+
+/**
+ * Load the NIC configuration from the state file left behind by an
+ * instance which was killed or crashed, replacing the configuration
+ * just read from the NIC.
+ */
+static void
+io_af_xdp_state_file_load(bbl_interface_s *interface)
+{
+    io_af_xdp_state_s *state = interface->io.af_xdp_state;
+    io_af_xdp_state_s saved = *state;
+    char path[FILE_PATH_LEN];
+    char key[16];
+    uint32_t *rss_indir = NULL;
+    uint32_t v[4];
+    uint32_t i;
+    FILE *file;
+    bool ifindex = false;
+    bool valid = false;
+
+    if(interface->lock_fd < 0) {
+        return;
+    }
+    io_af_xdp_state_file_path(interface, path, sizeof(path));
+    file = fopen(path, "r");
+    if(!file) {
+        return;
+    }
+    saved.rss_indir = NULL;
+    while(fscanf(file, "%15s", key) == 1) {
+        if(strcmp(key, "ifindex") == 0) {
+            if(fscanf(file, "%u", &v[0]) != 1 || v[0] != interface->kernel_index) break;
+            ifindex = true;
+        } else if(strcmp(key, "channels") == 0) {
+            if(fscanf(file, "%u %u %u %u", &v[0], &v[1], &v[2], &v[3]) != 4) break;
+            saved.channels.combined_count = v[0];
+            saved.channels.rx_count = v[1];
+            saved.channels.tx_count = v[2];
+            saved.channels.other_count = v[3];
+        } else if(strcmp(key, "ring") == 0) {
+            if(fscanf(file, "%u", &v[0]) != 1) break;
+            saved.ring.rx_pending = v[0];
+        } else if(strcmp(key, "flags") == 0) {
+            if(fscanf(file, "%u", &v[0]) != 1) break;
+            saved.flags.data = v[0];
+        } else if(strcmp(key, "xdp") == 0) {
+            if(fscanf(file, "%u", &v[0]) != 1) break;
+            saved.xdp_program = v[0];
+        } else if(strcmp(key, "rss") == 0) {
+            if(fscanf(file, "%u %u", &v[0], &v[1]) != 2 || v[1] != state->rss_indir_size || !v[1] || rss_indir) break;
+            rss_indir = malloc(v[1] * sizeof(uint32_t));
+            if(!rss_indir) break;
+            for(i = 0; i < v[1]; i++) {
+                if(fscanf(file, "%u", &rss_indir[i]) != 1) break;
+            }
+            if(i < v[1]) break;
+            saved.rss_default = v[0];
+        } else if(strcmp(key, "end") == 0) {
+            valid = ifindex;
+            break;
+        } else {
+            break;
+        }
+    }
+    fclose(file);
+    if(!valid) {
+        LOG(INFO, "Warning: AF_XDP ignores invalid or outdated NIC configuration of interface %s in %s\n",
+            interface->name, path);
+        free(rss_indir);
+        return;
+    }
+    if(rss_indir) {
+        free(state->rss_indir);
+        saved.rss_indir = rss_indir;
+    } else {
+        saved.rss_indir = state->rss_indir;
+    }
+    *state = saved;
+    /* Unknown which settings the previous instance changed. */
+    state->rss_changed = state->rss_indir != NULL;
+    state->ring_changed = state->ring.cmd != 0;
+    state->loaded = true;
+    LOG(INFO, "Warning: AF_XDP interface %s was not restored by a previous BNG Blaster (killed or crashed), "
+        "the NIC configuration saved in %s is restored on exit\n", interface->name, path);
+}
+
+static void
+io_af_xdp_state_file_remove(bbl_interface_s *interface)
+{
+    char path[FILE_PATH_LEN];
+
+    if(interface->lock_fd < 0) {
+        return;
+    }
+    io_af_xdp_state_file_path(interface, path, sizeof(path));
+    unlink(path);
+}
+
 static uint32_t
 io_af_xdp_program_id(bbl_interface_s *interface)
 {
@@ -281,6 +452,11 @@ io_af_xdp_check_xdp_program(bbl_interface_s *interface)
     uint32_t prog_id = io_af_xdp_program_id(interface);
 
     if(prog_id) {
+        if(interface->io.af_xdp_state->loaded && !interface->io.af_xdp_state->xdp_program) {
+            LOG(INFO, "Warning: AF_XDP interface %s has XDP program %u attached by the previous "
+                "BNG Blaster, which is removed on exit\n", interface->name, prog_id);
+            return;
+        }
         interface->io.af_xdp_state->xdp_program = true;
         LOG(INFO, "Warning: AF_XDP interface %s has XDP program %u already attached "
             "(e.g. left behind by a killed BNG Blaster), please remove it if not used "
@@ -732,6 +908,30 @@ io_af_xdp_set_channels(bbl_interface_s *interface, uint32_t queues)
 }
 
 /**
+ * Without RSS indirection table (e.g. veth, which receives on the TX
+ * queue index of the peer), RX traffic can't be kept off the TX queues.
+ */
+static bool
+io_af_xdp_has_rss_table(bbl_interface_s *interface)
+{
+    struct ifreq ifr = {0};
+    struct ethtool_rxfh size_probe = {0};
+    int fd;
+    int ret;
+
+    fd = socket(PF_INET, SOCK_DGRAM, IPPROTO_IP);
+    if(fd == -1) {
+        return true;
+    }
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+    size_probe.cmd = ETHTOOL_GRSSH;
+    ifr.ifr_data = (void*)&size_probe;
+    ret = ioctl(fd, SIOCETHTOOL, &ifr);
+    close(fd);
+    return ret == 0 && size_probe.indir_size;
+}
+
+/**
  * ethtool -L (channel count) only controls how many hardware queues exist;
  * it does not stop RSS from distributing incoming traffic across ALL of
  * them, including the TX-only queues bngblaster deliberately does not bind
@@ -830,18 +1030,40 @@ io_af_xdp_queue_destroy(io_af_xdp_queue_s *q)
 }
 
 /**
+ * The kernel refuses to remove queues with an AF_XDP socket bound
+ * (EINVAL), which it releases asynchronously after the socket is
+ * deleted.
+ */
+static int
+io_af_xdp_restore_set_channels(int fd, struct ifreq *ifr, struct ethtool_channels *ch)
+{
+    struct timespec retry_delay = {.tv_sec = 0, .tv_nsec = AF_XDP_ETHTOOL_RETRY_NS};
+    uint32_t retries = 0;
+
+    ch->cmd = ETHTOOL_SCHANNELS;
+    ifr->ifr_data = (void*)ch;
+    while(io_af_xdp_ethtool_set(fd, ifr) == -1) {
+        if(errno != EINVAL || retries++ >= AF_XDP_ETHTOOL_RETRIES) {
+            return -1;
+        }
+        nanosleep(&retry_delay, NULL);
+    }
+    return 0;
+}
+
+/**
  * Restore the channels before the RSS indirection table, which might
  * reference queues that do not exist before. A table referencing queues
  * beyond the restored channel count is clamped before (see
- * io_af_xdp_clamp_rss_indir()).
+ * io_af_xdp_clamp_rss_indir()), unless the table is not configured
+ * (clamp false, see io_af_xdp_restore_rss_default()).
  */
 static bool
-io_af_xdp_restore_channels(bbl_interface_s *interface, io_af_xdp_state_s *state, int fd, struct ifreq *ifr)
+io_af_xdp_restore_channels(bbl_interface_s *interface, io_af_xdp_state_s *state, int fd, struct ifreq *ifr,
+                           bool clamp)
 {
     struct ethtool_channels ch = {0};
-    struct timespec retry_delay = {.tv_sec = 0, .tv_nsec = AF_XDP_ETHTOOL_RETRY_NS};
     uint32_t rx_channels = io_af_xdp_rx_channels(&state->channels);
-    uint32_t retries = 0;
     bool rss_changed;
 
     ch.cmd = ETHTOOL_GCHANNELS;
@@ -856,24 +1078,16 @@ io_af_xdp_restore_channels(bbl_interface_s *interface, io_af_xdp_state_s *state,
        ch.tx_count == state->channels.tx_count) {
         return true;
     }
-    if(rx_channels && rx_channels < io_af_xdp_rx_channels(&ch)) {
+    if(clamp && rx_channels && rx_channels < io_af_xdp_rx_channels(&ch)) {
         if(!io_af_xdp_clamp_rss_indir(interface, rx_channels, false, &rss_changed)) {
             return false;
         }
     }
-    /* The kernel refuses to remove queues with an AF_XDP socket bound
-     * (EINVAL), which it releases asynchronously after the socket is
-     * deleted. */
-    state->channels.cmd = ETHTOOL_SCHANNELS;
-    ifr->ifr_data = (void*)&state->channels;
-    while(io_af_xdp_ethtool_set(fd, ifr) == -1) {
-        if(errno != EINVAL || retries++ >= AF_XDP_ETHTOOL_RETRIES) {
-            LOG(ERROR, "AF_XDP: failed to restore channels of interface %s (%s), please restore "
-                "them manually (e.g. 'ethtool -L %s combined %u')\n",
-                interface->name, strerror(errno), interface->name, rx_channels);
-            return false;
-        }
-        nanosleep(&retry_delay, NULL);
+    if(io_af_xdp_restore_set_channels(fd, ifr, &state->channels) == -1) {
+        LOG(ERROR, "AF_XDP: failed to restore channels of interface %s (%s), please restore "
+            "them manually (e.g. 'ethtool -L %s combined %u')\n",
+            interface->name, strerror(errno), interface->name, rx_channels);
+        return false;
     }
     LOG(AFXDP, "AF_XDP: interface %s channels restored (%u combined, %u RX, %u TX)\n",
         interface->name, state->channels.combined_count, state->channels.rx_count,
@@ -911,6 +1125,99 @@ io_af_xdp_restore_rss(bbl_interface_s *interface, io_af_xdp_state_s *state, int 
     LOG(AFXDP, "AF_XDP: interface %s RSS indirection table restored%s\n",
         interface->name, state->rss_default ? " to default" : "");
     free(rxfh);
+    return true;
+}
+
+/**
+ * Check if the RSS indirection table is the driver default
+ * (entry i -> i % RX queues) for the current channels.
+ */
+static bool
+io_af_xdp_rss_is_default(int fd, struct ifreq *ifr)
+{
+    struct ethtool_channels ch = {0};
+    struct ethtool_rxfh size_probe = {0};
+    struct ethtool_rxfh *rxfh;
+    uint32_t rx_channels;
+    uint32_t i;
+    bool is_default = false;
+
+    ch.cmd = ETHTOOL_GCHANNELS;
+    ifr->ifr_data = (void*)&ch;
+    if(ioctl(fd, SIOCETHTOOL, ifr) == -1 || !(rx_channels = io_af_xdp_rx_channels(&ch))) {
+        return false;
+    }
+    size_probe.cmd = ETHTOOL_GRSSH;
+    ifr->ifr_data = (void*)&size_probe;
+    if(ioctl(fd, SIOCETHTOOL, ifr) == -1 || !size_probe.indir_size) {
+        return false;
+    }
+    rxfh = calloc(1, sizeof(struct ethtool_rxfh) + size_probe.indir_size * sizeof(uint32_t));
+    if(!rxfh) {
+        return false;
+    }
+    rxfh->cmd = ETHTOOL_GRSSH;
+    rxfh->indir_size = size_probe.indir_size;
+    ifr->ifr_data = (void*)rxfh;
+    if(ioctl(fd, SIOCETHTOOL, ifr) == 0) {
+        is_default = true;
+        for(i = 0; i < rxfh->indir_size; i++) {
+            if(rxfh->rss_config[i] != i % rx_channels) {
+                is_default = false;
+                break;
+            }
+        }
+    }
+    free(rxfh);
+    return is_default;
+}
+
+/**
+ * Reset an RSS indirection table, which was the driver default before,
+ * to the default before the channels are restored. This clears the
+ * "configured" state of the table in the kernel, so the following
+ * channel restore lets the driver rebuild the default table for the
+ * restored channels.
+ *
+ * Some drivers (e.g. i40e) keep every written table, also the reset
+ * one, as user table and apply it again if the channels are increased
+ * later, instead of spreading RSS over all channels. i40e discards the
+ * user table only if the channels are decreased. Therefore the channels
+ * are decreased by one here, if restoring them does not decrease them
+ * anyway.
+ *
+ * @return false if the table could not be reset
+ */
+static bool
+io_af_xdp_restore_rss_default(bbl_interface_s *interface, io_af_xdp_state_s *state, int fd, struct ifreq *ifr)
+{
+    struct ethtool_channels ch = {0};
+
+    if(!io_af_xdp_restore_rss(interface, state, fd, ifr)) {
+        return false;
+    }
+    if(!state->channels.cmd) {
+        return true;
+    }
+    ch.cmd = ETHTOOL_GCHANNELS;
+    ifr->ifr_data = (void*)&ch;
+    if(ioctl(fd, SIOCETHTOOL, ifr) == -1) {
+        return true;
+    }
+    if(io_af_xdp_rx_channels(&state->channels) < io_af_xdp_rx_channels(&ch)) {
+        return true;
+    }
+    if(ch.combined_count > 1) {
+        ch.combined_count--;
+    } else if(!ch.combined_count && ch.rx_count > 1) {
+        ch.rx_count--;
+    } else {
+        return true;
+    }
+    if(io_af_xdp_restore_set_channels(fd, ifr, &ch) == -1) {
+        LOG(AFXDP, "AF_XDP: interface %s failed to decrease channels to discard the RSS user table (%s)\n",
+            interface->name, strerror(errno));
+    }
     return true;
 }
 
@@ -986,6 +1293,7 @@ io_af_xdp_restore_state(bbl_interface_s *interface)
     io_af_xdp_state_s *state = interface->io.af_xdp_state;
     struct ifreq ifr = {0};
     bool success = true;
+    bool rss_reset = false;
     int fd;
 
     if(!state) {
@@ -994,6 +1302,7 @@ io_af_xdp_restore_state(bbl_interface_s *interface)
     if(if_nametoindex(interface->name) != interface->kernel_index) {
         LOG(ERROR, "AF_XDP: interface %s was removed or recreated, NIC configuration not restored\n",
             interface->name);
+        io_af_xdp_state_file_remove(interface);
         success = false;
         goto FREE;
     }
@@ -1009,8 +1318,16 @@ io_af_xdp_restore_state(bbl_interface_s *interface)
     if(!state->xdp_program && !io_af_xdp_detach_xdp_program(interface)) {
         success = false;
     }
-    if(state->channels.cmd && !io_af_xdp_restore_channels(interface, state, fd, &ifr)) {
+    if(state->rss_changed && state->rss_indir && state->rss_default) {
+        rss_reset = io_af_xdp_restore_rss_default(interface, state, fd, &ifr);
+        if(!rss_reset) {
+            success = false;
+        }
+        state->rss_changed = false;
+    }
+    if(state->channels.cmd && !io_af_xdp_restore_channels(interface, state, fd, &ifr, !rss_reset)) {
         success = false;
+        rss_reset = false;
         if(state->rss_changed) {
             LOG(ERROR, "AF_XDP: RSS indirection table of interface %s not restored "
                 "because restoring the channels failed\n", interface->name);
@@ -1020,6 +1337,11 @@ io_af_xdp_restore_state(bbl_interface_s *interface)
     if(state->rss_changed && state->rss_indir && !io_af_xdp_restore_rss(interface, state, fd, &ifr)) {
         success = false;
     }
+    /* Last resort for a driver which does not rebuild the default
+     * table after the channels are changed. */
+    if(rss_reset && !io_af_xdp_rss_is_default(fd, &ifr) && !io_af_xdp_restore_rss(interface, state, fd, &ifr)) {
+        success = false;
+    }
     if(state->ring_changed && !io_af_xdp_restore_ring(interface, state, fd, &ifr)) {
         success = false;
     }
@@ -1027,6 +1349,9 @@ io_af_xdp_restore_state(bbl_interface_s *interface)
         success = false;
     }
     close(fd);
+    if(success) {
+        io_af_xdp_state_file_remove(interface);
+    }
 FREE:
     interface->io.af_xdp_state = NULL;
     free(state->rss_indir);
@@ -1053,10 +1378,16 @@ io_af_xdp_cleanup()
     io_handle_s *io;
     bool success = true;
 
+    /* Delete the sockets of all interfaces before restoring any of
+     * them, a NIC might refuse changes while its peer (e.g. veth) still
+     * has sockets bound. */
     CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         for(io = interface->io.rx; io; io = io->next) {
             if(io->mode == IO_MODE_AF_XDP && io->af_xdp_queue) {
-                io_af_xdp_queue_destroy(io->af_xdp_queue);
+                /* A combined queue is deleted with its TX handle. */
+                if(io->af_xdp_queue->qmode != AF_XDP_Q_COMBINED) {
+                    io_af_xdp_queue_destroy(io->af_xdp_queue);
+                }
                 io->af_xdp_queue = NULL;
                 io->fd = -1;
             }
@@ -1068,6 +1399,8 @@ io_af_xdp_cleanup()
                 io->fd = -1;
             }
         }
+    }
+    CIRCLEQ_FOREACH(interface, &g_ctx->interface_qhead, interface_qnode) {
         if(!io_af_xdp_restore_state(interface)) {
             success = false;
         }
@@ -1132,6 +1465,7 @@ io_af_xdp_queue_create(bbl_interface_s *interface, uint32_t queue_id, io_af_xdp_
     q->rx_frames = want_rx ? interface->io.af_xdp_state->rx_frames : 2;
     q->tx_frames = want_tx ? next_pow2(config->io_slots_tx) : 2;
     q->queue_id = queue_id;
+    q->qmode = qmode;
 
     q->umem_size = (uint64_t)(q->rx_frames + q->tx_frames) * q->frame_size;
     if(posix_memalign(&q->umem_area, page_size, q->umem_size) != 0 || !q->umem_area) {
@@ -1719,6 +2053,43 @@ io_af_xdp_thread_tx_run_fn(io_thread_s *thread)
     }
 }
 
+/**
+ * Add an RX handle for a queue, polled by an RX thread or by
+ * the main loop (job).
+ */
+static bool
+io_af_xdp_rx_io_add(bbl_interface_s *interface, io_af_xdp_queue_s *q, int id, timer_s **job)
+{
+    bbl_link_config_s *config = interface->config;
+    io_handle_s *rx_io;
+
+    rx_io = calloc(1, sizeof(io_handle_s));
+    if(!rx_io) return false;
+    rx_io->id = id;
+    rx_io->mode = IO_MODE_AF_XDP;
+    rx_io->direction = IO_INGRESS;
+    rx_io->interface = interface;
+    rx_io->fd = q->fd;
+    rx_io->af_xdp_queue = q;
+    rx_io->af_xdp_queue_id = q->queue_id;
+    rx_io->next = interface->io.rx;
+    interface->io.rx = rx_io;
+
+    if(config->rx_threads) {
+        if(!io_thread_init(rx_io)) {
+            return false;
+        }
+        rx_io->thread->run_fn = io_af_xdp_thread_rx_run_fn;
+    } else {
+        if(!job) {
+            job = &rx_io->af_xdp_rx_job;
+        }
+        timer_add_periodic(&g_ctx->timer_root, job, "RX", 0,
+                           config->rx_interval, rx_io, &io_af_xdp_rx_job);
+    }
+    return true;
+}
+
 bool
 io_af_xdp_interface_init(bbl_interface_s *interface)
 {
@@ -1740,9 +2111,9 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
     uint16_t queue;
     uint32_t nic_queue_id;
     uint32_t xdp_flags = config->af_xdp_mode == AF_XDP_MODE_GENERIC ? XDP_FLAGS_SKB_MODE : XDP_FLAGS_DRV_MODE;
+    io_af_xdp_qmode_t tx_qmode = AF_XDP_Q_TX_ONLY;
 
     io_af_xdp_queue_s *q;
-    io_handle_s *rx_io;
     io_handle_s *tx_io;
 
     if(g_ctx->config.jumbo_frames) {
@@ -1755,7 +2126,9 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
         LOG(ERROR, "AF_XDP: failed to save the NIC configuration of interface %s\n", interface->name);
         return false;
     }
+    io_af_xdp_state_file_load(interface);
     io_af_xdp_check_xdp_program(interface);
+    io_af_xdp_state_file_write(interface);
     io_af_xdp_check_mtu(interface);
 
     if(!io_af_xdp_disable_rxvlan_offload(interface)) {
@@ -1768,41 +2141,30 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
 
     io_af_xdp_prepare_rx_ring(interface);
 
-    if(!io_af_xdp_constrain_rss(interface, rx_queues, total_queues)) {
-        return false;
+    if(io_af_xdp_has_rss_table(interface)) {
+        if(!io_af_xdp_constrain_rss(interface, rx_queues, total_queues)) {
+            return false;
+        }
+    } else {
+        /* Frames arriving on a TX queue would be passed to the kernel,
+         * therefore the TX queues are bound and polled for RX as well. */
+        tx_qmode = AF_XDP_Q_COMBINED;
+        LOG(AFXDP, "AF_XDP: interface %s has no RSS indirection table, "
+            "TX queues are also used for RX\n", interface->name);
     }
 
     for(queue = 0; queue < rx_queues; queue++) {
         if(!io_af_xdp_queue_create(interface, queue, AF_XDP_Q_RX_ONLY, queue == 0, &xdp_flags, &q)) {
             return false;
         }
-
-        rx_io = calloc(1, sizeof(io_handle_s));
-        if(!rx_io) return false;
-        rx_io->id = queue;
-        rx_io->mode = IO_MODE_AF_XDP;
-        rx_io->direction = IO_INGRESS;
-        rx_io->interface = interface;
-        rx_io->fd = q->fd;
-        rx_io->af_xdp_queue = q;
-        rx_io->af_xdp_queue_id = queue;
-        rx_io->next = interface->io.rx;
-        interface->io.rx = rx_io;
-
-        if(rx_threads) {
-            if(!io_thread_init(rx_io)) {
-                return false;
-            }
-            rx_io->thread->run_fn = io_af_xdp_thread_rx_run_fn;
-        } else {
-            timer_add_periodic(&g_ctx->timer_root, &interface->io.rx_job, "RX", 0,
-                               config->rx_interval, rx_io, &io_af_xdp_rx_job);
+        if(!io_af_xdp_rx_io_add(interface, q, queue, &interface->io.rx_job)) {
+            return false;
         }
     }
 
     for(queue = 0; queue < tx_queues; queue++) {
         nic_queue_id = rx_queues + queue;
-        if(!io_af_xdp_queue_create(interface, nic_queue_id, AF_XDP_Q_TX_ONLY, false, &xdp_flags, &q)) {
+        if(!io_af_xdp_queue_create(interface, nic_queue_id, tx_qmode, false, &xdp_flags, &q)) {
             return false;
         }
 
@@ -1826,6 +2188,9 @@ io_af_xdp_interface_init(bbl_interface_s *interface)
         } else {
             timer_add_periodic(&g_ctx->timer_root, &interface->io.tx_job, "TX", 0,
                                config->tx_interval, tx_io, &io_af_xdp_tx_job);
+        }
+        if(tx_qmode == AF_XDP_Q_COMBINED && !io_af_xdp_rx_io_add(interface, q, nic_queue_id, NULL)) {
+            return false;
         }
     }
     return true;

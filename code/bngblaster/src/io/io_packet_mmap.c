@@ -26,16 +26,41 @@
 extern bool g_init_phase;
 extern bool g_traffic;
 
-/* Frames longer than accepted by the kernel are dropped and counted,
- * the first one is logged (as with io-mode raw). */
+/* The interface MTU is read again in this interval to follow changes. */
+#define IO_PACKET_MMAP_MTU_REFRESH_NS 1000000000ULL
+
+/* The kernel discards frames longer than the interface MTU plus ethernet
+ * header, plus 4 byte only if the frame is 802.1Q tagged (tpacket_snd,
+ * packet_extra_vlan_len_allowed), silently with PACKET_LOSS. */
 static void
-io_packet_mmap_tx_to_long(io_handle_s *io, uint16_t len)
+io_packet_mmap_tx_max_len(io_handle_s *io, uint64_t now)
 {
+    struct ifreq ifr = {0};
+
+    io->tx_max_len_refresh = now + IO_PACKET_MMAP_MTU_REFRESH_NS;
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", io->interface->name);
+    if(ioctl(io->fd, SIOCGIFMTU, &ifr) == 0 && ifr.ifr_mtu > 0 && ifr.ifr_mtu < UINT16_MAX - 18) {
+        io->tx_max_len = ifr.ifr_mtu + 14;
+    } else {
+        io->tx_max_len = UINT16_MAX - 4;
+    }
+}
+
+/* Called for frames longer than tx_max_len. Frames longer than accepted
+ * by the kernel are dropped (return true) and counted, the first one is
+ * logged (as with io-mode raw). */
+static bool
+io_packet_mmap_tx_to_long(io_handle_s *io, uint8_t *frame, uint16_t len)
+{
+    if(len <= io->tx_max_len + 4 && frame[12] == (ETH_TYPE_VLAN >> 8) && frame[13] == (ETH_TYPE_VLAN & 0xff)) {
+        return false;
+    }
     if(io->stats.to_long == 0) {
-        LOG(ERROR, "PACKET_MMAP frame on interface %s to long (%u byte, max %u), please check MTU settings!\n",
-            io->interface->name, len, io->tx_max_len);
+        LOG(ERROR, "PACKET_MMAP frame on interface %s to long (%u byte, max %u or %u with VLAN), please check MTU settings!\n",
+            io->interface->name, len, io->tx_max_len, io->tx_max_len + 4);
     }
     io->stats.to_long++;
+    return true;
 }
 
 static void
@@ -185,6 +210,9 @@ io_packet_mmap_tx_job(timer_s *timer)
         io->timestamp.tv_sec = timer->timestamp->tv_sec;
         io->timestamp.tv_nsec = timer->timestamp->tv_nsec;
         now = timespec_to_nsec(timer->timestamp);
+        if(unlikely(now >= io->tx_max_len_refresh)) {
+            io_packet_mmap_tx_max_len(io, now);
+        }
         while(burst) {
             /* Check if this slot available for writing. */
             if(TP_STATUS_LOAD(tphdr) != TP_STATUS_AVAILABLE) {
@@ -199,8 +227,8 @@ io_packet_mmap_tx_job(timer_s *timer)
                     ctrl = false;
                     continue;
                 }
-                if(unlikely(io->buf_len > io->tx_max_len)) {
-                    io_packet_mmap_tx_to_long(io, io->buf_len);
+                if(unlikely(io->buf_len > io->tx_max_len) &&
+                   io_packet_mmap_tx_to_long(io, io->buf, io->buf_len)) {
                     continue;
                 }
             } else {
@@ -212,8 +240,8 @@ io_packet_mmap_tx_job(timer_s *timer)
                 if(unlikely(stream == NULL)) {
                     break;
                 }
-                if(unlikely(stream->tx_len > io->tx_max_len)) {
-                    io_packet_mmap_tx_to_long(io, stream->tx_len);
+                if(unlikely(stream->tx_len > io->tx_max_len) &&
+                   io_packet_mmap_tx_to_long(io, stream->tx_buf, stream->tx_len)) {
                     continue;
                 }
                 memcpy(io->buf, stream->tx_buf, stream->tx_len);
@@ -391,6 +419,9 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
         burst = io_burst;
         ctrl = true;
         now = timespec_to_nsec(&io->timestamp);
+        if(unlikely(now >= io->tx_max_len_refresh)) {
+            io_packet_mmap_tx_max_len(io, now);
+        }
         while(burst) {
             if(TP_STATUS_LOAD(tphdr) != TP_STATUS_AVAILABLE) {
                 io->stats.no_buffer++;
@@ -403,8 +434,8 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
                 /* First send all control traffic which has higher priority. */
                 slot = bbl_txq_read_slot(txq);
                 if(slot) {
-                    if(unlikely(slot->packet_len > io->tx_max_len)) {
-                        io_packet_mmap_tx_to_long(io, slot->packet_len);
+                    if(unlikely(slot->packet_len > io->tx_max_len) &&
+                       io_packet_mmap_tx_to_long(io, slot->packet, slot->packet_len)) {
                         bbl_txq_read_next(txq);
                         continue;
                     }
@@ -425,8 +456,8 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
                 if(unlikely(stream == NULL)) {
                     break;
                 }
-                if(unlikely(stream->tx_len > io->tx_max_len)) {
-                    io_packet_mmap_tx_to_long(io, stream->tx_len);
+                if(unlikely(stream->tx_len > io->tx_max_len) &&
+                   io_packet_mmap_tx_to_long(io, stream->tx_buf, stream->tx_len)) {
                     continue;
                 }
                 memcpy(io->buf, stream->tx_buf, stream->tx_len);
@@ -473,20 +504,6 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
     }
 }
 
-/* The kernel discards frames longer than the interface MTU with ethernet
- * header and one VLAN tag (tpacket_snd), silently with PACKET_LOSS. */
-static void
-io_packet_mmap_tx_max_len(io_handle_s *io)
-{
-    struct ifreq ifr = {0};
-
-    io->tx_max_len = UINT16_MAX;
-    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", io->interface->name);
-    if(ioctl(io->fd, SIOCGIFMTU, &ifr) == 0 && ifr.ifr_mtu > 0 && ifr.ifr_mtu < UINT16_MAX - 18) {
-        io->tx_max_len = ifr.ifr_mtu + 14 + 4;
-    }
-}
-
 bool
 io_packet_mmap_init(io_handle_s *io)
 {
@@ -499,7 +516,7 @@ io_packet_mmap_init(io_handle_s *io)
         return false;
     }
     if(io->direction == IO_EGRESS) {
-        io_packet_mmap_tx_max_len(io);
+        io_packet_mmap_tx_max_len(io, 0);
     }
 
     if(thread) {

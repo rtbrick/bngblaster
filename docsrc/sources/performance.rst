@@ -968,6 +968,16 @@ queue's own RX servicing (they would otherwise share one NAPI/IRQ context).
 TX threads to spread out RX-side protocol processing without paying for
 extra TX threads.
 
+Interfaces without RSS indirection table (e.g. ``veth``, which receives on
+the TX queue index of the peer) can't keep received traffic off the TX
+queues. For those, the TX queues are bound for RX as well and polled by an
+additional RX thread (or job in the main loop) per TX queue, which is
+logged with ``-l af_xdp``:
+
+.. code-block:: none
+
+    AF_XDP: interface veth1 has no RSS indirection table, TX queues are also used for RX
+
 .. code-block:: json
 
     {
@@ -1085,12 +1095,24 @@ RX ring and the RX VLAN offload of the interface. This configuration is saved
 before and restored on exit, also if the initialization failed. The queues are
 restored before the RSS indirection table, which might reference queues that
 do not exist before. An RSS indirection table that was the driver default is
-reset to the default (``ethtool -X <interface> default``), so that the driver
-still adjusts it to later changes of the number of queues. If the
-configuration can't be restored completely, this is logged as error and BNG
-Blaster exits with a non-zero exit status. The configuration is not restored
-if BNG Blaster is killed (e.g. ``SIGKILL``) or crashes, in which case the next
-test restores the configuration it found at startup.
+reset to the default (``ethtool -X <interface> default``) before the queues are
+restored, so that the driver still adjusts it to later changes of the number of
+queues. Some drivers (e.g. i40e) keep also the reset table and apply it again
+if the number of queues is increased later, until the number of queues is
+decreased. Therefore the number of queues is decreased by one before it is
+restored, if restoring does not decrease it anyway. If the configuration can't
+be restored completely, this is logged as error and BNG Blaster exits with a
+non-zero exit status.
+
+The saved configuration is also written to ``/run/lock/bngblaster_<interface>.af_xdp``
+(next to the interface lock) and this file is removed after the configuration
+was restored. If BNG Blaster is killed (e.g. ``SIGKILL``) or crashes, the next
+test on this interface restores the configuration found by the killed instance
+from this file instead of the configuration left behind:
+
+.. code-block:: none
+
+    Warning: AF_XDP interface eth1 was not restored by a previous BNG Blaster (killed or crashed), the NIC configuration saved in /run/lock/bngblaster_eth1.af_xdp is restored on exit
 
 BNG Blaster removes its AF_XDP sockets on exit, which also detaches the XDP
 program from the interface. An XDP program which is still attached after
@@ -1100,9 +1122,12 @@ version 1.0 instead of a BPF link). If BNG Blaster built with libxdp is killed o
 crashes, the XDP program stays attached, as libxdp attaches it via netlink
 and not via a BPF link that is released with the process. Such a program
 does not prevent further tests, but keeps the interface in XDP mode (e.g.
-the MTU can't be increased beyond the driver limit) and is not removed by
-later tests, as it might also be used by another application. A warning is
-logged at startup if an XDP program is already attached:
+the MTU can't be increased beyond the driver limit). It is removed on exit
+by the next test, if the saved configuration of the killed instance (see
+above) shows that the interface had no XDP program attached before.
+Otherwise, it is not removed by later tests, as it might also be used by
+another application. A warning is logged at startup if an XDP program is
+already attached:
 
 .. code-block:: none
 

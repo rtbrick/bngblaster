@@ -83,6 +83,7 @@ typedef struct io_handle_ {
      * AF_XDP binds RX and TX rings to a single combined socket. */
     struct io_af_xdp_queue_ *af_xdp_queue;
     uint16_t af_xdp_queue_id;
+    struct timer_ *af_xdp_rx_job; /* RX job of a combined queue */
 #endif
 
     /* Loopback rings, exactly one for TX and
@@ -93,7 +94,8 @@ typedef struct io_handle_ {
     uint8_t *ring; /* ring buffer */
     unsigned int cursor; /* ring buffer cursor */
     unsigned int queued;
-    uint16_t tx_max_len; /* max frame length accepted by the kernel (packet_mmap) */
+    uint16_t tx_max_len; /* max untagged frame length accepted by the kernel (packet_mmap) */
+    uint64_t tx_max_len_refresh; /* next MTU read (nsec) */
 
     io_thread_s *thread;
 
