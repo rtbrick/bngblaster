@@ -419,6 +419,9 @@ void
 bbl_session_update_state(bbl_session_s *session, session_state_t state);
 
 void
+bbl_session_idle_queue_remove(bbl_session_s *session);
+
+void
 bbl_session_clear(bbl_session_s *session);
 
 bool

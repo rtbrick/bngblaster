@@ -503,10 +503,9 @@ bbl_ctrl_job(timer_s *timer)
                             break;
                     }
                     bbl_session_tx_qnode_insert(session);
-                    /* Remove from idle queue */
-                    CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
-                    CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
-                    CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
+                    /* Remove from idle queue, a session terminated
+                     * on start (e.g. no L2TP tunnel) is already removed. */
+                    bbl_session_idle_queue_remove(session);
                 } else {
                     break;
                 }

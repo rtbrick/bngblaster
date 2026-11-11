@@ -640,7 +640,7 @@ bbl_session_reset(bbl_session_s *session) {
     session->stats.icmpv6_tx = 0;
 }
 
-static void
+void
 bbl_session_idle_queue_remove(bbl_session_s *session)
 {
     if(CIRCLEQ_PREV(session, session_idle_qnode)) {

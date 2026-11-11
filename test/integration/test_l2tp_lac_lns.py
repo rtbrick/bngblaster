@@ -597,6 +597,25 @@ def test_stream_a10nsp_config_error(local_veth, processes, tmp_path):
     assert "requires a network interface" in open(bbl.path("log")).read()
 
 
+@pytest.mark.parametrize("group_id", [2, None], ids=["unknown-group", "no-group"])
+def test_lac_without_tunnel(local_veth, processes, tmp_path, group_id):
+    """PPPoL2TP sessions without a matching l2tp-client group are
+    terminated on start instead of crashing BNG Blaster."""
+    config = lac_config(local_veth.if1, sessions=2)
+    if group_id is None:
+        del config["interfaces"]["access"][0]["l2tp-client-group-id"]
+    else:
+        config["interfaces"]["access"][0]["l2tp-client-group-id"] = group_id
+    # The kernel answers ARP for the gateway, sessions start once it is resolved.
+    helpers.kernel_address(local_veth.ns, local_veth.if2, ipv4=LNS_ADDRESS + "/24")
+    bbl = BngBlaster(local_veth.ns, tmp_path, "lac").start(config, logging=("info", "l2tp"))
+    processes.append(bbl)
+    wait_until(lambda: lac_counters(bbl)["sessions-terminated"] == 2, 10,
+               message="sessions terminated")
+    assert bbl.alive()
+    assert bbl.terminate(EXIT_TIMEOUT) == 0
+
+
 @pytest.mark.slow
 def test_retransmission_backoff(topology, processes, tmp_path):
     """Control messages to a dead LNS are retransmitted with backoff capped
