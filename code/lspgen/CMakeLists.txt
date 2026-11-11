@@ -25,7 +25,7 @@ endif()
 # Optional IPO. Do not use IPO if it's not supported by compiler.
 check_ipo_supported(RESULT result OUTPUT output)
 if(result)
-  set_property(TARGET bngblaster PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
+  set_property(TARGET lspgen PROPERTY INTERPROCEDURAL_OPTIMIZATION TRUE)
 else()
   message(WARNING "IPO is not supported: ${output}")
 endif()
