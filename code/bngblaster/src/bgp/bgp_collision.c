@@ -220,6 +220,12 @@ bgp_collision_receive_cb(void *arg, uint8_t *buf, uint16_t len)
          * callback racing ahead of this one. */
         return;
     }
+    if(session->state == BGP_CLOSING || session->state == BGP_CLOSED) {
+        /* The session is closed, as bgp_receive_cb() the collision
+         * connection is not processed (and must not be promoted). */
+        bgp_session_collision_free(session);
+        return;
+    }
     buffer = &collision->read_buf;
 
     if(buf) {

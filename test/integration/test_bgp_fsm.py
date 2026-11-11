@@ -181,6 +181,21 @@ def test_collision_cease(setup, lose):
     assert "openconfirm -> established" in setup.log()
 
 
+def test_collision_closing(setup):
+    """An OPEN received on the collision connection while the session is
+    closing (invalid OPEN on the primary connection) is not processed: the
+    collision connection is not promoted and the session is not established
+    (was promoted and closed later by the pending close timer)."""
+    peer = setup.peer_start("collision-closing", [peer_open(**{"as": 65002}), peer_open(id="10.0.0.9")],
+                            wait=4)
+    setup.start_bbl(reconnect=True)
+    result = json.loads(peer.communicate(timeout=90)[0])
+    assert "error" not in result, result
+    assert notifications(result["primary"]) == [(2, 2)], result
+    assert 4 not in [m["type"] for m in result["collision"]["messages"]], result
+    assert "openconfirm -> established" not in setup.log()
+
+
 def max_tcp_payload(capture, source):
     sizes = [int(m) for m in re.findall(r"%s\.\d+ > \S+: tcp (\d+)" % re.escape(source), capture)]
     return max(sizes) if sizes else 0

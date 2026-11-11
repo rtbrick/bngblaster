@@ -204,9 +204,35 @@ def mode_collision(args):
     return {"lose": lose.result(), "win": win.result()}
 
 
+def mode_collision_closing(args):
+    # As collision, but the primary connection is closed by an invalid
+    # OPEN (first step) before the OPEN of the collision connection
+    # (second step, which would win) is sent, while the session closes.
+    server = listen(args.local)
+    server.settimeout(args.timeout)
+    passive = Connection(server.accept()[0])
+    if not passive.wait_message(MSG_OPEN, 10):
+        return {"error": "no OPEN from BNG Blaster"}
+    active = Connection(connect(args.local, args.peer, 5))
+    if not active.wait_message(MSG_OPEN, 10):
+        return {"error": "no OPEN from BNG Blaster"}
+    active.messages = []
+    passive.messages = []
+    steps = json.loads(args.steps)
+    passive.send(open_message(**steps[0]["open"]))
+    passive.poll(0.5)
+    try:
+        active.send(open_message(**steps[1]["open"]))
+        active.send(message(MSG_KEEPALIVE))
+    except OSError:
+        pass
+    active.poll(args.wait)
+    return {"collision": active.result(), "primary": passive.result()}
+
+
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("mode", choices=["accept", "connect", "collision"])
+    parser.add_argument("mode", choices=["accept", "connect", "collision", "collision-closing"])
     parser.add_argument("--local", required=True)
     parser.add_argument("--peer", required=True)
     parser.add_argument("--steps", default="[]")
@@ -214,7 +240,8 @@ def main():
     parser.add_argument("--wait", type=float, default=5, help="receive time after the steps")
     parser.add_argument("--lose", choices=["active", "passive"], default="passive")
     args = parser.parse_args()
-    result = {"accept": mode_accept, "connect": mode_connect, "collision": mode_collision}[args.mode](args)
+    result = {"accept": mode_accept, "connect": mode_connect, "collision": mode_collision,
+              "collision-closing": mode_collision_closing}[args.mode](args)
     print(json.dumps(result))
 
 
