@@ -266,3 +266,21 @@ def test_send_mss_syn_retransmit(setup, tmp_path):
     assert max_tcp_payload(out, BBL_ADDRESS) == 1240, out[-2000:]
     assert "ip-proto-6" not in out, out[-2000:]
 
+
+def test_raw_update_file_too_large(setup, tmp_path):
+    """A RAW update file of 4 GiB or more is rejected on start instead of
+    being loaded truncated to its size modulo 2^32 (here the valid first
+    UPDATE, followed by a sparse 4 GiB hole)."""
+    update = str(tmp_path / "update.bgp")
+    bgpupdate(["-f", update, "-a", str(AS), "-n", BBL_ADDRESS, "-p", "10.1.0.0/28", "-P", "1"])
+    os.truncate(update, (1 << 32) + os.path.getsize(update))
+    config = {"interfaces": {"network": {"interface": setup.topology.if_a, "address": BBL_ADDRESS + "/24",
+                                         "gateway": PEER_ADDRESS}},
+              "bgp": [{"local-address": BBL_ADDRESS, "peer-address": PEER_ADDRESS, "local-as": AS,
+                       "raw-update-file": update}]}
+    instance = BngBlaster(setup.topology.a, tmp_path)
+    setup.processes.append(instance)
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start(config)
+    with open(instance.path("stdout")) as f:
+        assert "too large" in f.read()

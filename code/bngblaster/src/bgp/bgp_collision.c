@@ -424,6 +424,9 @@ bgp_session_collision_promote(bgp_session_s *session, bool trigger_is_primary)
      * even though our own state machine (which does not check whether
      * the send actually succeeded) proceeds straight to Established. */
     session->tcpc->state = BBL_TCP_STATE_IDLE;
+    /* Later messages reference the session write buffer as on the primary
+     * connection, copying each of them into lwIP is not needed. */
+    session->tcpc->tx.flags = 0;
     session->tcpc->tx.buf = NULL;
     session->tcpc->tx.len = 0;
     session->tcpc->tx.offset = 0;

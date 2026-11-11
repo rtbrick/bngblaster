@@ -161,3 +161,36 @@ def test_l2vpn_stats_reset(local_veth, bbl, tmp_path):
     wait_until(lambda: stats()[0] == "established", 30, message="session established again")
     wait_until(lambda: stats()[1] == 1, 10, message="L2VPN route received again")
     assert stats() == ("established", 1)
+
+
+def test_l2vpn_label_block_beyond_20_bit(local_veth, bbl, tmp_path):
+    """A label block which exceeds the 20 bit label space is ignored
+    (RFC 7606) instead of being learned and resolving truncated labels."""
+    update_a, update_b = str(tmp_path / "a.bgp"), str(tmp_path / "b.bgp")
+    l2vpn_update(update_a, PE_A, RD_A, LABEL_A, CE_A)
+    # Label block 1048560 - 1048575 of CE B (offset 1, size 16) ...
+    l2vpn_update(update_b, PE_B, RD_B, 1048560, CE_B, "--label-block-size", "16")
+    with open(update_b, "rb") as f:
+        data = f.read()
+    # ... changed to size 17 (offset, size and label field of the NLRI).
+    block = b"\x00\x01\x00\x10\xff\xff\x01"
+    assert data.count(block) == 1
+    with open(update_b, "wb") as f:
+        f.write(data.replace(block, b"\x00\x01\x00\x11\xff\xff\x01"))
+    instance = bbl({
+        "interfaces": {"network": [
+            {"interface": local_veth.if1, "address": PE_A + "/24", "gateway": PE_B},
+            {"interface": local_veth.if2, "address": PE_B + "/24", "gateway": PE_A}]},
+        "bgp": [session(PE_A, PE_B, update_a), session(PE_B, PE_A, update_b)]
+    })
+
+    def routes(local):
+        for s in instance.ctrl("bgp-l2vpn-routes")["bgp-l2vpn-routes"]:
+            if s["local-address"] == local:
+                return s["routes"]
+        return []
+
+    wait_until(lambda: routes(PE_B), 30, message="L2VPN route of PE A learned")
+    wait_until(lambda: "ignore invalid L2VPN route" in open(instance.path("log")).read(), 10,
+               message="L2VPN route of PE B ignored")
+    assert routes(PE_A) == []

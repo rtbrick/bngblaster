@@ -13,6 +13,7 @@
 
 /* RD (8), CE ID (2), label block offset (2), size (2), label base (3) */
 #define BGP_L2VPN_NLRI_MIN_LEN 17
+#define BGP_L2VPN_LABEL_LIMIT  0x100000 /* first label beyond 20 bit */
 
 static int
 bgp_l2vpn_compare(void *key1, void *key2)
@@ -184,6 +185,7 @@ bgp_l2vpn_nlri(bgp_session_s *session, uint8_t *buf, uint16_t len, bgp_l2vpn_ent
 {
     bgp_l2vpn_entry_s entry;
     uint16_t nlri_len;
+    bool valid;
 
     while(len) {
         if(len < 2) {
@@ -199,9 +201,23 @@ bgp_l2vpn_nlri(bgp_session_s *session, uint8_t *buf, uint16_t len, bgp_l2vpn_ent
         } else {
             memset(&entry, 0x0, sizeof(entry));
         }
-        if(nlri_len < BGP_L2VPN_NLRI_MIN_LEN ||
-           !bgp_l2vpn_decode_tlvs(buf+BGP_L2VPN_NLRI_MIN_LEN,
-                                  nlri_len-BGP_L2VPN_NLRI_MIN_LEN, &entry)) {
+        valid = nlri_len >= BGP_L2VPN_NLRI_MIN_LEN &&
+                bgp_l2vpn_decode_tlvs(buf+BGP_L2VPN_NLRI_MIN_LEN,
+                                      nlri_len-BGP_L2VPN_NLRI_MIN_LEN, &entry);
+        if(valid) {
+            memset(&entry.key, 0x0, sizeof(entry.key));
+            memcpy(entry.key.rd, buf, BGP_RD_LEN);
+            entry.key.ce_id = read_be_uint(buf+8, 2);
+            entry.key.offset = read_be_uint(buf+10, 2);
+            entry.size = read_be_uint(buf+12, 2);
+            /* 20 bit MPLS label in the high-order bits. */
+            entry.label_base = read_be_uint(buf+14, 3) >> 4;
+            /* All labels of an advertised block must be 20 bit labels. */
+            if(attr && entry.label_base + entry.size > BGP_L2VPN_LABEL_LIMIT) {
+                valid = false;
+            }
+        }
+        if(!valid) {
             /* The route boundaries are known, so only this route is
              * ignored instead of resetting the session (RFC 7606). */
             LOG(BGP, "BGP (%s %s - %s) ignore invalid L2VPN route (length %u)\n",
@@ -210,13 +226,6 @@ bgp_l2vpn_nlri(bgp_session_s *session, uint8_t *buf, uint16_t len, bgp_l2vpn_ent
                 session->peer_address_str,
                 nlri_len);
         } else {
-            memset(&entry.key, 0x0, sizeof(entry.key));
-            memcpy(entry.key.rd, buf, BGP_RD_LEN);
-            entry.key.ce_id = read_be_uint(buf+8, 2);
-            entry.key.offset = read_be_uint(buf+10, 2);
-            entry.size = read_be_uint(buf+12, 2);
-            /* 20 bit MPLS label in the high-order bits. */
-            entry.label_base = read_be_uint(buf+14, 3) >> 4;
             if(attr) {
                 session->stats.l2vpn_reach_rx++;
                 bgp_l2vpn_db_add(session, &entry);
