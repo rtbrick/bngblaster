@@ -156,6 +156,26 @@ def test_p2p_two_way(setup):
     assert peer.wait(5, lambda p: is_p2p_hello(p) and p2p_state(p)[0] == ip.P2P_UP)
 
 
+def test_self_lsp_buffer_size(setup, topology, tmp_path):
+    """With the minimum lsp-buffer-size of 512, a long hostname and a long
+    authentication key, the TLVs which do not fit into fragment zero are
+    moved to the next fragment (overflowed the LSP buffer). If even area
+    addresses, protocols, hostname and authentication do not fit, the
+    configuration is rejected."""
+    isis = {"lsp-buffer-size": 512, "hostname": "h" * 250,
+            "level2-auth-key": "k" * 200, "level2-auth-type": "simple"}
+    bbl, _ = setup(isis=isis)
+    lsps = sorted(e for e in database(bbl) if e.startswith(BBL_SYSTEM_ID))
+    assert lsps == [BBL_SYSTEM_ID + ".00-00", BBL_SYSTEM_ID + ".00-01"], lsps
+    assert bbl.alive()
+
+    other = BngBlaster(topology.a, tmp_path, name="buffer")
+    isis["level2-auth-key"] = "k" * 254
+    isis["area"] = ["49.0001.0000.0000.0001/104", "49.0002.0000.0000.0001/104"]
+    with pytest.raises(RuntimeError):
+        other.start(bbl_config(topology.if_a, isis=isis))
+
+
 def test_level_mismatch(setup, topology, tmp_path):
     """An interface with the default isis-level 3 on a level 2 instance
     has only a level 2 adjacency. Level 1 LSPs, also via control socket,

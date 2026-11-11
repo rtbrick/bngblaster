@@ -2538,6 +2538,35 @@ json_parse_isis_config(json_t *isis, isis_config_s *isis_config)
     else {
         isis_config->lsp_buffer_size = isis_config->max_pdu_size;
     }
+
+    /* LSP fragment zero holds the LSP header, authentication, area
+     * addresses, protocols and hostname, further TLVs are moved to
+     * the next fragment if they do not fit. */
+    uint32_t required = 27; /* LSP header */
+    uint32_t auth_len = 0;
+    isis_auth_type auth_types[2] = {isis_config->level1_auth, isis_config->level2_auth};
+    char *auth_keys[2] = {isis_config->level1_key, isis_config->level2_key};
+    for(i = 0; i < 2; i++) {
+        if(auth_types[i] == ISIS_AUTH_CLEARTEXT && auth_keys[i]) {
+            if(3 + strnlen(auth_keys[i], UINT8_MAX-1) > auth_len) auth_len = 3 + strnlen(auth_keys[i], UINT8_MAX-1);
+        } else if(auth_types[i] == ISIS_AUTH_HMAC_MD5) {
+            if(3 + ISIS_MD5_DIGEST_LEN > auth_len) auth_len = 3 + ISIS_MD5_DIGEST_LEN;
+        }
+    }
+    required += auth_len;
+    required += 2;
+    for(i = 0; i < isis_config->area_count; i++) {
+        required += 1 + isis_config->area[i].len;
+    }
+    required += 2 + isis_config->protocol_ipv4 + isis_config->protocol_ipv6;
+    if(isis_config->hostname) {
+        required += 2 + strnlen(isis_config->hostname, UINT8_MAX);
+    }
+    if(required > isis_config->lsp_buffer_size || required > isis_config->max_pdu_size) {
+        fprintf(stderr, "JSON config error: Invalid value for isis->lsp-buffer-size "
+                "(hostname, areas and authentication require %u bytes)\n", required);
+        return false;
+    }
     return true;
 }
 

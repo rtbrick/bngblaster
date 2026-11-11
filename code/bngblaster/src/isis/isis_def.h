@@ -45,6 +45,7 @@
 #define ISIS_OFFSET_LSP_SEQ             20
 #define ISIS_OFFSET_LSP_CHECKSUM        24
 
+#define ISIS_TLV_MAX_LEN                (2 + UINT8_MAX) /* TLV header and value */
 #define ISIS_MAX_AREA_LEN               13
 #define ISIS_MAX_AREA_LEN_WITHOUT_AFI   12
 #define ISIS_MAX_AREA_LEN_WITHOUT_AFI2B 6

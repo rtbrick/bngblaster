@@ -791,6 +791,18 @@ isis_lsp_self_dis(isis_adjacency_s *adjacency)
  * @param level ISIS level
  * @return true (success) / false (error)
  */
+/* Continue in the next self originated LSP fragment if a TLV of the
+ * maximum size does not fit into the current one anymore. */
+#define ISIS_LSP_SELF_SPACE(_needed) \
+    if(ISIS_PDU_REMAINING(pdu) < (int)(_needed)) { \
+        isis_lsp_final(lsp); \
+        isis_lsp_flood(lsp); \
+        if(fragment == UINT8_MAX) return false; \
+        lsp = isis_lsp_fragment(instance, level, ++fragment, false); \
+        if(!lsp) return false; \
+        pdu = &lsp->pdu; \
+    }
+
 bool
 isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
 {
@@ -810,13 +822,16 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
     if(!lsp) return false;
     pdu = &lsp->pdu;
 
-    /* TLV section */
+    /* TLV section, area addresses, protocols and hostname fit into
+     * fragment zero (checked with the configuration). */
     isis_pdu_add_tlv_area(pdu, config->area, config->area_count);
     isis_pdu_add_tlv_protocols(pdu, config->protocol_ipv4, config->protocol_ipv6);
     isis_pdu_add_tlv_hostname(pdu, (char*)config->hostname);
+    ISIS_LSP_SELF_SPACE(3 * (sizeof(isis_tlv_s) + sizeof(uint32_t)));
     isis_pdu_add_tlv_ipv4_int_address(pdu, config->router_id);
     isis_pdu_add_tlv_te_router_id(pdu, config->router_id);
     isis_pdu_add_tlv_lsp_buffer_size(pdu, config->lsp_buffer_size);
+    ISIS_LSP_SELF_SPACE(ISIS_TLV_MAX_LEN);
 
     loopback_prefix.address = config->router_id;
     loopback_prefix.len = 32;
@@ -839,12 +854,14 @@ isis_lsp_self_update(isis_instance_s *instance, uint8_t level)
     }
 
     if(config->sr_base && config->sr_range) {
+        ISIS_LSP_SELF_SPACE(ISIS_TLV_MAX_LEN);
         isis_pdu_add_tlv_router_cap(pdu, config->router_id, 
             config->protocol_ipv4, config->protocol_ipv6, 
             config->sr_base, config->sr_range, config->sr_algo_count, config->sr_algo,
             config->node_msd);
     }
     for(int i = 0; i < config->flex_algo_count; i++) {
+        ISIS_LSP_SELF_SPACE(ISIS_TLV_MAX_LEN);
         isis_pdu_add_tlv_router_cap_fad(pdu, config->router_id, &config->flex_algo[i]);
     }
 
