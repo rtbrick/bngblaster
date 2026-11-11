@@ -577,6 +577,11 @@ bbl_session_reset(bbl_session_s *session) {
     bbl_stream_reset(session->session_traffic.ipv6_down);
     bbl_stream_reset(session->session_traffic.ipv6pd_up);
     bbl_stream_reset(session->session_traffic.ipv6pd_down);
+    if(g_ctx->config.traffic_stop_verified) {
+        /* Session traffic stopped once verified starts again
+         * after reconnect, to be verified again. */
+        bbl_session_traffic_enable(session->access_config->session_traffic_autostart, session, BBL_DIRECTION_BOTH);
+    }
 
     /* Reset session stats */
     session->stats.igmp_rx_wrong_state = 0;

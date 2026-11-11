@@ -402,7 +402,9 @@ bbl_stream_rx_interface_set(bbl_stream_s *stream, uint16_t type, void *interface
         __atomic_store_n(&stream->rx_flags, flags|type, __ATOMIC_RELEASE);
     } else if(flags & type) {
         /* RX interface has changed! */
-        stream->rx_interface_changes++;
+        if(stream->rx_interface_changes < UINT8_MAX) {
+            stream->rx_interface_changes++;
+        }
         stream->rx_interface_changed_epoch = now;
         __atomic_store_n(&stream->rx_interface, interface, __ATOMIC_RELEASE);
     }

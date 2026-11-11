@@ -157,6 +157,13 @@ io_stream_update_pps(io_handle_s *io)
     bbl_stream_s *stream_next;
     bbl_stream_s *stream_prev;
     bbl_stream_s *update_head = NULL;
+    io_bucket_s *bucket_prev;
+    io_bucket_s *bucket_next;
+
+    /* Clear the request before the walk, so that a request for a
+     * stream already passed is handled with the next call. */
+    __atomic_store_n(&io->update_streams, false, __ATOMIC_RELAXED);
+    __atomic_thread_fence(__ATOMIC_ACQUIRE);
 
     /* Unlink all updated streams first and add them back after
      * the walk, as adding a stream to the bucket being walked
@@ -167,7 +174,10 @@ io_stream_update_pps(io_handle_s *io)
         while(stream_next) {
             stream = stream_next;
             stream_next = stream->io_next;
-            if(stream->update_pps) {
+            if(__atomic_load_n(&stream->update_pps, __ATOMIC_ACQUIRE)) {
+                /* Clear before reading the new pps, a newer
+                 * request sets the flag again. */
+                __atomic_store_n(&stream->update_pps, false, __ATOMIC_RELAXED);
                 /* Remove stream from bucket. */
                 if(stream_prev) {
                     stream_prev->io_next = stream_next;
@@ -212,8 +222,27 @@ io_stream_update_pps(io_handle_s *io)
             if(stream->rate_packets_rx) stream->rate_packets_rx->avg = 0;
             if(stream->rate_packets_tx) stream->rate_packets_tx->avg = 0;
         }
-        stream->update_pps = false;
+    }
+
+    /* Remove empty buckets (owning thread), keeping bucket_cur valid. */
+    bucket_prev = NULL;
+    io_bucket = io->bucket_head;
+    while(io_bucket) {
+        bucket_next = io_bucket->next;
+        if(io_bucket->stream_count == 0 && !io_bucket->stream_head) {
+            if(bucket_prev) {
+                bucket_prev->next = bucket_next;
+            } else {
+                io->bucket_head = bucket_next;
+            }
+            if(io->bucket_cur == io_bucket) {
+                io->bucket_cur = io->bucket_head;
+            }
+            free(io_bucket);
+        } else {
+            bucket_prev = io_bucket;
+        }
+        io_bucket = bucket_next;
     }
     io_stream_smear(io);
-    io->update_streams = false;
 }

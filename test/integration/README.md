@@ -114,6 +114,11 @@ Functional tests over veth pairs between network namespaces:
   with duplicated fragments (`test_fragments.py`)
 * PCAP capture to a FIFO with a new section header for the next
   listener (`test_pcap.py`)
+* Stream statistics and control: report loss and first sequence after
+  stream-reset and reconnect, total-pps after stream-update, pending
+  multicast streams, rx-wrong-order reset, expected labels, session
+  traffic L3 rate and stop-verified reconnect, session-group-id filter
+  with RAW streams (`test_streams.py`)
 * HTTP server tested with curl (IPv4 and IPv6) and connections reset
   by the client, HTTP client response after a session reconnect
   (`test_http.py`)
