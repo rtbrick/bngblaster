@@ -4040,7 +4040,7 @@ bbl_stream_ctrl_update(int fd, uint32_t session_id __attribute__((unused)), json
     jobj = json_object_get(arguments, "pps");
     if(jobj) {
         pps = json_number_value(jobj);
-        if(!json_is_number(jobj) || pps < 0) {
+        if(!json_is_number(jobj) || pps < 0 || pps > BBL_STREAM_PPS_MAX || (pps > 0 && pps < BBL_STREAM_PPS_MIN)) {
             return bbl_ctrl_status(fd, "error", 400, "invalid pps");
         }
     }

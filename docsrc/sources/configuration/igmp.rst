@@ -76,7 +76,7 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **multicast-traffic-pps**         | | Multicast traffic PPS (packets-per-second) per group.              |
 |                                   | | Only applicable with **send-multicast-traffic** enabled!           |
-|                                   | | Default: 1000                                                      |
+|                                   | | Default: 1000 Range: 1 - 65535                                     |
 +-----------------------------------+----------------------------------------------------------------------+
 | **network-interface**             | | Multicast traffic source interface.                                |
 |                                   | | Only applicable with **send-multicast-traffic** enabled!           |

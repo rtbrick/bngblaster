@@ -109,3 +109,130 @@ def test_mtu_requires_jumbo_frames(topology, tmp_path):
         instance.start(bbl_config)
     with open(instance.path("stdout")) as f:
         assert "mtu 4001 requires interfaces jumbo-frames" in f.read()
+
+
+def _stream(ifname, **rate):
+    return {"streams": [dict({"name": "s1", "type": "ipv4", "direction": "downstream",
+                              "network-interface": ifname,
+                              "destination-ipv4-address": "192.0.2.1"}, **rate)]}
+
+
+def _bgp(ifname, **bgp):
+    return {"bgp": [dict({"network-interface": ifname, "local-ipv4-address": "192.0.2.10",
+                          "peer-ipv4-address": "192.0.2.1"}, **bgp)]}
+
+
+@pytest.mark.parametrize("update,message", [
+    # String options of another JSON type (R3-029).
+    (lambda i: _bgp(i, **{"tcp-ao-algorithm": 1, "tcp-ao-key": "secret"}),
+     "Invalid value for bgp->tcp-ao-algorithm (string expected)"),
+    (lambda i: _bgp(i, **{"tcp-ao-algorithm": "md5", "tcp-ao-key": 12345}),
+     "Invalid value for bgp->tcp-ao-key (string expected)"),
+    (lambda i: _bgp(i, **{"local-ipv4-address": 1}),
+     "Invalid value for bgp->local-ipv4-address (string expected)"),
+    (lambda i: {"isis": [{"instance-id": 1, "level1-auth-key": 12345}]},
+     "Invalid value for isis->level1-auth-key (string expected)"),
+    (lambda i: {"ospf": [{"instance-id": 1, "auth-type": "simple", "auth-key": 12345}]},
+     "Invalid value for ospf->auth-key (string expected)"),
+    (lambda i: {"ppp": {"authentication": {"username": 1}}},
+     "Invalid value for ppp->authentication->username (string expected)"),
+    (lambda i: {"l2tp-server": [{"name": "LNS", "address": "192.0.2.20", "secret": 1}]},
+     "Invalid value for l2tp-server->secret (string expected)"),
+    # Sections of another JSON type (R3-029).
+    (lambda i: {"sessions": 5}, "Invalid value for sessions (object expected)"),
+    (lambda i: {"ppp": {"lcp": []}}, "Invalid value for lcp (object expected)"),
+    (lambda i: {"isis": 5}, "Invalid value for isis (object expected)"),
+    (lambda i: {"isis": [5]}, "Invalid value for isis (object expected)"),
+    (lambda i: {"streams": ["s1"]}, "Invalid value for streams (object expected)"),
+    (lambda i: {"l2tp-server": "lns"}, "Invalid value for l2tp-server (list expected)"),
+    (lambda i: {"access-line-profiles": {}}, "Invalid value for access-line-profiles (list expected)"),
+    (lambda i: {"bgp-raw-update-files": [1]}, "Invalid value for bgp-raw-update-files"),
+    (lambda i: {"isis": [{"instance-id": 1, "area": 5}]}, "Invalid value for isis->area"),
+    (lambda i: {"isis": [{"instance-id": 1, "external": {"connections": {}}}]},
+     "Invalid value for isis->external->connections (list expected)"),
+    # Rates which overflow the timers (R3-027, R3-028).
+    (lambda i: {"igmp": {"multicast-traffic-pps": 0}},
+     "Invalid value for igmp->multicast-traffic-pps (1 - 65535)"),
+    (lambda i: _stream(i, pps=1e-30), "Invalid value for stream->pps (0.0001 - 1000000000"),
+    (lambda i: _stream(i, pps=1e15), "Invalid value for stream->pps (0.0001 - 1000000000"),
+    (lambda i: _stream(i, bps=1e-300), "Invalid value for stream->pps (0.0001 - 1000000000"),
+    (lambda i: _stream(i, **{"pps": 1, "pps-upstream": 1e-30}),
+     "Invalid value for stream->pps-upstream (0.0001 - 1000000000"),
+    (lambda i: {"icmp-client": [{"network-interface": i, "destination-address": "192.0.2.1",
+                                 "interval": 1e-10}]},
+     "Invalid value for icmp-client->interval (0.001 - 86400)"),
+    (lambda i: {"icmp-client": [{"network-interface": i, "destination-address": "192.0.2.1",
+                                 "interval": 1e30}]},
+     "Invalid value for icmp-client->interval (0.001 - 86400)"),
+    # Counts which wrap 8-bit TLV lengths and counters (R3-030).
+    (lambda i: {"isis": [{"instance-id": 1, "area": ["49.0001/24"] * 257}]},
+     "Invalid value for isis->area (1 - 3 areas)"),
+    (lambda i: {"isis": [{"instance-id": 1, "sr-algo": [0] * 234}]},
+     "Invalid value for isis->sr-algo (0 - 233 algorithms)"),
+    # Duplicate instances (R3-031).
+    (lambda i: {"isis": [{"instance-id": 1}, {"instance-id": 1}]},
+     "Duplicate isis->instance-id 1"),
+    (lambda i: {"ospf": [{"instance-id": 2}, {"instance-id": 2}]},
+     "Duplicate ospf->instance-id 2"),
+    (lambda i: {"ldp": [{"instance-id": 3, "lsr-id": "10.0.0.1"},
+                        {"instance-id": 3, "lsr-id": "10.0.0.2"}]},
+     "Duplicate ldp->instance-id 3"),
+    # TCP MD5/AO key length (R3-046).
+    (lambda i: _bgp(i, **{"tcp-ao-algorithm": "md5", "tcp-ao-key": ""}),
+     "Invalid value for bgp->tcp-ao-key (1 - 80 characters)"),
+    (lambda i: _bgp(i, **{"tcp-ao-algorithm": "hmac-sha-256-128", "tcp-ao-key-id": 1,
+                          "tcp-ao-key": "k" * 81}),
+     "Invalid value for bgp->tcp-ao-key (1 - 80 characters)"),
+], ids=["tcp-ao-algorithm", "tcp-ao-key-type", "bgp-local-address", "isis-auth-key",
+        "ospf-auth-key", "ppp-username", "l2tp-secret", "sessions", "ppp-lcp", "isis-number",
+        "isis-element", "stream-element", "l2tp-server", "access-line-profiles",
+        "raw-update-files", "isis-area-type", "isis-connections", "multicast-traffic-pps",
+        "pps-tiny", "pps-huge", "bps-tiny", "pps-upstream", "icmp-interval-tiny",
+        "icmp-interval-huge", "isis-area-count", "sr-algo-count", "isis-duplicate",
+        "ospf-duplicate", "ldp-duplicate", "tcp-ao-key-empty", "tcp-ao-key-long"])
+def test_config_invalid_type(topology, tmp_path, update, message):
+    """Options of the wrong JSON type or out of range are rejected instead
+    of being ignored (e.g. sessions without authentication)."""
+    bbl = config(topology.if_a)
+    bbl.update(update(topology.if_a))
+    instance = BngBlaster(topology.a, tmp_path, "bbl")
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start(bbl)
+    with open(instance.path("stdout")) as f:
+        assert message in f.read()
+
+
+@pytest.mark.parametrize("network", ["lag", "member"])
+def test_config_network_on_lag_member(topology, tmp_path, network):
+    """A network interface on a LAG member link would never receive (R3-032),
+    on the LAG interface itself it is accepted."""
+    bbl = config(topology.if_a)
+    bbl["interfaces"]["lag"] = [{"interface": "lag0"}]
+    bbl["interfaces"]["links"] = [{"interface": topology.if_a, "lag-interface": "lag0"}]
+    bbl["interfaces"]["network"][0]["interface"] = "lag0" if network == "lag" else topology.if_a
+    bbl["interfaces"]["network"][0]["gateway-resolve-wait"] = False
+    instance = BngBlaster(topology.a, tmp_path, "bbl")
+    if network == "lag":
+        instance.start(bbl)
+        assert instance.terminate() == 0
+        return
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start(bbl)
+    with open(instance.path("stdout")) as f:
+        assert "Interface %s is a member of lag-interface lag0" % topology.if_a in f.read()
+
+
+@pytest.mark.parametrize("args,message", [
+    (["-g", "239.0.0.300"], "invalid IGMP group: 239.0.0.300"),
+    (["-s", "foo"], "invalid IGMP source: foo"),
+    (["-r", "70000"], "invalid IGMP group count: 70000"),
+    (["-z", "abc"], "invalid IGMP zapping interval: abc"),
+    (["-c", "10x"], "invalid session count: 10x"),
+], ids=["igmp-group", "igmp-source", "igmp-group-count", "igmp-zap-interval", "sessions"])
+def test_config_invalid_command_line(topology, tmp_path, args, message):
+    """Command line overrides are validated (R3-033)."""
+    instance = BngBlaster(topology.a, tmp_path, "bbl")
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start(config(topology.if_a), args=args)
+    with open(instance.path("stdout")) as f:
+        assert message in f.read()

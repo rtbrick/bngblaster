@@ -88,6 +88,9 @@
 #define ISIS_LSP_REQUEST_LIFETIME       60
 /* Default maximumAreaAddresses (ISO 10589). */
 #define ISIS_MAX_AREAS                  3
+/* SR-Algorithm sub-TLV of the router capability TLV (RFC 8667 3.2),
+ * limited by the 8-bit TLV length with SR capability and MSD sub-TLVs. */
+#define ISIS_MAX_SR_ALGO                233
 /* Minimum originatingLSPBufferSize (ISO 10589). */
 #define ISIS_MIN_LSP_BUFFER_SIZE        512
 /* Size of the extended P2P three-way adjacency TLV (RFC 5303). */

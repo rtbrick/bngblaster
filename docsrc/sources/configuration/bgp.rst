@@ -60,6 +60,7 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | (32 characters for hmac-sha-256-128, 20 for hmac-sha-1-96, 16 for  |
 |                                   | | aes-128-cmac-96, none for md5) but is not enforced, so shorter     |
 |                                   | | keys can be used to test interop with peers that accept them.      |
+|                                   | | Length: 1 - 80 characters                                          |
 +-----------------------------------+----------------------------------------------------------------------+
 | **tcp-ao-algorithm**              | | TCP authentication algorithm. **tcp-ao-key** is ignored unless     |
 |                                   | | this is also set to a value other than none, so TCP                |

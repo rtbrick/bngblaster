@@ -104,6 +104,11 @@ typedef struct bbl_stream_config_
 
 #define BBL_STREAM_GROUP_MAX 256
 
+/* Stream rate limits keeping the TX interval (1/pps) within
+ * the nanosecond resolution and range of the timers. */
+#define BBL_STREAM_PPS_MIN 0.0001
+#define BBL_STREAM_PPS_MAX 1000000000.0
+
 typedef struct bbl_stream_group_
 {
     double pps;

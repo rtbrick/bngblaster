@@ -39,6 +39,10 @@ typedef enum bbl_tcp_ao_algo_ {
     TCP_AO_ALGO_MD5,
 } bbl_tcp_ao_algo_t;
 
+/* Maximum key length of RFC 2385 (TCP MD5), also used for
+ * TCP-AO master keys (Linux TCP_MD5SIG_MAXKEYLEN, TCP_AO_MAXKEYLEN). */
+#define BBL_TCP_AO_KEY_MAX_LEN 80
+
 /*
  * TCP-AO/MD5 key material for a single static key (no key rollover /
  * multiple MKTs). key_id/rnext_key_id are ignored for TCP_AO_ALGO_MD5

@@ -825,7 +825,7 @@
                     "type": "integer",
                     "description": "Multicast traffic PPS per group",
                     "default": 1000,
-                    "minimum": 0,
+                    "minimum": 1,
                     "maximum": 65535
                 },
                 "network-interface": {
@@ -2758,7 +2758,8 @@
                     "type": "number",
                     "description": "Stream traffic rate in packets per second",
                     "default": 1,
-                    "exclusiveMinimum": 0
+                    "minimum": 0.0001,
+                    "maximum": 1000000000
                 },
                 "bps": {
                     "type": "number",
@@ -2783,7 +2784,8 @@
                 "pps-upstream": {
                     "type": "number",
                     "description": "Overwrite PPS in upstream for bidirectional streams",
-                    "exclusiveMinimum": 0
+                    "minimum": 0.0001,
+                    "maximum": 1000000000
                 },
                 "bps-upstream": {
                     "type": "number",
@@ -3227,6 +3229,7 @@
                 "sr-algo": {
                     "type": "array",
                     "description": "ISIS SR algorithm(s)",
+                    "maxItems": 233,
                     "items": {
                         "type": "integer",
                         "minimum": 0,
@@ -3847,7 +3850,9 @@
                 },
                 "tcp-ao-key": {
                     "type": "string",
-                    "description": "TCP authentication key (TCP-AO master key, or legacy TCP MD5 secret if tcp-ao-algorithm is md5). A recommended minimum length applies per tcp-ao-algorithm, but is not enforced, so interop with peers that accept shorter keys can be tested."
+                    "description": "TCP authentication key (TCP-AO master key, or legacy TCP MD5 secret if tcp-ao-algorithm is md5). A recommended minimum length applies per tcp-ao-algorithm, but is not enforced, so interop with peers that accept shorter keys can be tested.",
+                    "minLength": 1,
+                    "maxLength": 80
                 },
                 "tcp-ao-algorithm": {
                     "type": "string",
@@ -4072,7 +4077,8 @@
                     "type": "number",
                     "description": "Send interval in seconds",
                     "default": 1.0,
-                    "exclusiveMinimum": 0
+                    "minimum": 0.001,
+                    "maximum": 86400
                 },
                 "count": {
                     "type": "integer",

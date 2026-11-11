@@ -635,11 +635,29 @@ bbl_startup_aborted()
     return false;
 }
 
+/* Parse a decimal command line argument, rejecting
+ * trailing characters and values out of range. */
+static bool
+bbl_parse_number_arg(const char *arg, long min, long max, long *value)
+{
+    char *end;
+    long v;
+
+    errno = 0;
+    v = strtol(arg, &end, 10);
+    if(errno || end == arg || *end || v < min || v > max) {
+        return false;
+    }
+    *value = v;
+    return true;
+}
+
 int
 main(int argc, char *argv[])
 {
     int long_index = 0;
     int ch = 0;
+    long number;
     uint32_t ipv4;
     bbl_stats_s stats = {0};
     int exit_status = 1;
@@ -795,24 +813,41 @@ main(int argc, char *argv[])
     if(username) g_ctx->config.username = username;
     if(password) g_ctx->config.password = password;
     if(sessions) {
-        ch = atoi(sessions);
-        if(ch < 0 || ch > 100000000) {
+        if(!bbl_parse_number_arg(sessions, 0, 100000000, &number)) {
             fprintf(stderr, "Error: invalid session count: %s\n", sessions);
             goto CLEANUP;
         }
-        g_ctx->config.sessions = ch;
+        g_ctx->config.sessions = number;
     }
 
     if(igmp_group) {
-        inet_pton(AF_INET, igmp_group, &ipv4);
+        if(inet_pton(AF_INET, igmp_group, &ipv4) != 1) {
+            fprintf(stderr, "Error: invalid IGMP group: %s\n", igmp_group);
+            goto CLEANUP;
+        }
         g_ctx->config.igmp_group = ipv4;
     }
     if(igmp_source) {
-        inet_pton(AF_INET, igmp_source, &ipv4);
+        if(inet_pton(AF_INET, igmp_source, &ipv4) != 1) {
+            fprintf(stderr, "Error: invalid IGMP source: %s\n", igmp_source);
+            goto CLEANUP;
+        }
         g_ctx->config.igmp_source = ipv4;
     }
-    if(igmp_group_count) g_ctx->config.igmp_group_count = atoi(igmp_group_count);
-    if(igmp_zap_interval) g_ctx->config.igmp_zap_interval = atoi(igmp_zap_interval);
+    if(igmp_group_count) {
+        if(!bbl_parse_number_arg(igmp_group_count, 0, 65535, &number)) {
+            fprintf(stderr, "Error: invalid IGMP group count: %s\n", igmp_group_count);
+            goto CLEANUP;
+        }
+        g_ctx->config.igmp_group_count = number;
+    }
+    if(igmp_zap_interval) {
+        if(!bbl_parse_number_arg(igmp_zap_interval, 1, 65535, &number)) {
+            fprintf(stderr, "Error: invalid IGMP zapping interval: %s\n", igmp_zap_interval);
+            goto CLEANUP;
+        }
+        g_ctx->config.igmp_zap_interval = number;
+    }
 
     bbl_fragment_init();
 
