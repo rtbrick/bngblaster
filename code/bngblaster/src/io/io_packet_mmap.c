@@ -84,7 +84,9 @@ io_packet_mmap_rx_job(timer_s *timer)
         if(decode_result == PROTOCOL_SUCCESS) {
             if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
                 vlan = tphdr->tp_vlan_tci & BBL_ETH_VLAN_ID_MAX;
-                /* Restore stripped outer VLAN tag */
+                /* Restore stripped outer VLAN tag, which is
+                 * also part of the received frame length. */
+                eth->length += 4;
                 eth->vlan_inner = eth->vlan_outer;
                 eth->vlan_inner_priority = eth->vlan_outer_priority;
                 eth->vlan_outer = vlan;

@@ -104,9 +104,11 @@ rx_handler(io_thread_s *thread, io_handle_s *io)
         /** Process */
         decode_result = decode_ethernet(io->buf, io->buf_len, thread->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
-            if(io->vlan_tci) {
+            if(io->vlan_tpid) {
                 vlan = io->vlan_tci & BBL_ETH_VLAN_ID_MAX;
-                /* Restore outer VLAN */
+                /* Restore stripped outer VLAN tag (also VLAN 0), which
+                 * is also part of the received frame length. */
+                eth->length += 4;
                 eth->vlan_inner = eth->vlan_outer;
                 eth->vlan_inner_priority = eth->vlan_outer_priority;
                 eth->vlan_outer = vlan;
@@ -271,9 +273,11 @@ io_thread_main_rx_job(timer_s *timer)
             while((slot = bbl_txq_read_slot(thread->txq))) {
                 decode_result = decode_ethernet(slot->packet, slot->packet_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
                 if(decode_result == PROTOCOL_SUCCESS) {
-                    if(slot->vlan_tci) {
+                    if(slot->vlan_tpid) {
                         vlan = slot->vlan_tci & BBL_ETH_VLAN_ID_MAX;
-                        /* Restore outer VLAN */
+                        /* Restore stripped outer VLAN tag (also VLAN 0), which
+                         * is also part of the received frame length. */
+                        eth->length += 4;
                         eth->vlan_inner = eth->vlan_outer;
                         eth->vlan_inner_priority = eth->vlan_outer_priority;
                         eth->vlan_outer = vlan;

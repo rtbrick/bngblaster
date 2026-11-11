@@ -100,7 +100,9 @@ io_raw_rx_job(timer_s *timer)
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             if(io->vlan_tpid) {
-                /* Restore stripped outer VLAN tag */
+                /* Restore stripped outer VLAN tag, which is
+                 * also part of the received frame length. */
+                eth->length += 4;
                 eth->vlan_inner = eth->vlan_outer;
                 eth->vlan_inner_priority = eth->vlan_outer_priority;
                 eth->vlan_outer = io->vlan_tci & BBL_ETH_VLAN_ID_MAX;
