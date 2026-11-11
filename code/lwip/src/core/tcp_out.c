@@ -80,6 +80,15 @@
 
 #include <string.h>
 
+/* BNG Blaster: send a computed TCP checksum of 0 as 0xffff (equal in
+ * one's complement). Linux takes a checksum of 0 as an outbound segment
+ * when verifying the TCP-AO MAC (wrong pseudo-header) and drops it. */
+static inline u16_t
+TCP_CHKSUM_NONZERO(u16_t chksum)
+{
+  return chksum ? chksum : 0xffff;
+}
+
 #ifdef LWIP_HOOK_FILENAME
 #include LWIP_HOOK_FILENAME
 #endif
@@ -1609,7 +1618,7 @@ tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb, struct netif *netif
       seg->chksum_swapped = 0;
     }
     acc = (u16_t)~acc + seg->chksum;
-    seg->tcphdr->chksum = (u16_t)~FOLD_U32T(acc);
+    seg->tcphdr->chksum = TCP_CHKSUM_NONZERO((u16_t)~FOLD_U32T(acc));
 #if TCP_CHECKSUM_ON_COPY_SANITY_CHECK
     if (chksum_slow != seg->tcphdr->chksum) {
       TCP_CHECKSUM_ON_COPY_SANITY_CHECK_FAIL(
@@ -1619,8 +1628,8 @@ tcp_output_segment(struct tcp_seg *seg, struct tcp_pcb *pcb, struct netif *netif
     }
 #endif /* TCP_CHECKSUM_ON_COPY_SANITY_CHECK */
 #else /* TCP_CHECKSUM_ON_COPY */
-    seg->tcphdr->chksum = ip_chksum_pseudo(seg->p, IP_PROTO_TCP,
-                                           seg->p->tot_len, &pcb->local_ip, &pcb->remote_ip);
+    seg->tcphdr->chksum = TCP_CHKSUM_NONZERO(ip_chksum_pseudo(seg->p, IP_PROTO_TCP,
+                                           seg->p->tot_len, &pcb->local_ip, &pcb->remote_ip));
 #endif /* TCP_CHECKSUM_ON_COPY */
   }
 #endif /* CHECKSUM_GEN_TCP */
@@ -1974,8 +1983,8 @@ tcp_output_control_segment_netif(const struct tcp_pcb *pcb, struct pbuf *p,
 #if CHECKSUM_GEN_TCP
   IF__NETIF_CHECKSUM_ENABLED(netif, NETIF_CHECKSUM_GEN_TCP) {
     struct tcp_hdr *tcphdr = (struct tcp_hdr *)p->payload;
-    tcphdr->chksum = ip_chksum_pseudo(p, IP_PROTO_TCP, p->tot_len,
-                                      src, dst);
+    tcphdr->chksum = TCP_CHKSUM_NONZERO(ip_chksum_pseudo(p, IP_PROTO_TCP, p->tot_len,
+                                      src, dst));
   }
 #endif
   if (pcb != NULL) {
