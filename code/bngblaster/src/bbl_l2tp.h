@@ -228,6 +228,7 @@ typedef struct bbl_l2tp_tunnel_
     bool timer_tx_active;
     struct timer_ *timer_tx;
     struct timer_ *timer_ctrl;
+    struct timer_ *timer_free; /* deferred free, see bbl_l2tp_tunnel_delete() */
 
     uint16_t retry;
     uint16_t cwnd;

@@ -340,6 +340,16 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
     }
 }
 
+static void
+bbl_l2tp_tunnel_free_job(timer_s *timer)
+{
+    bbl_l2tp_tunnel_s *l2tp_tunnel = timer->data;
+    /* Detach the timer first, the timer walk clears its reference
+     * after this callback returns. */
+    timer_del(l2tp_tunnel->timer_free);
+    free(l2tp_tunnel);
+}
+
 /**
  * bbl_l2tp_tunnel_delete
  *
@@ -407,7 +417,12 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_s *l2tp_tunnel)
         if(l2tp_tunnel->peer_challenge_response) free(l2tp_tunnel->peer_challenge_response);
         if(l2tp_tunnel->peer_name) free(l2tp_tunnel->peer_name);
         if(l2tp_tunnel->peer_vendor) free(l2tp_tunnel->peer_vendor);
-        free(l2tp_tunnel);
+        l2tp_tunnel->peer_name = NULL;
+        l2tp_tunnel->peer_vendor = NULL;
+        /* Free deferred like linked sessions, TX threads may still build
+         * a stream packet with a session of this tunnel. */
+        timer_add(&g_ctx->timer_root, &l2tp_tunnel->timer_free, "L2TP FREE",
+                  1, 0, l2tp_tunnel, &bbl_l2tp_tunnel_free_job);
     }
 }
 
