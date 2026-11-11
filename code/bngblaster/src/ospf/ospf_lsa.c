@@ -2283,6 +2283,17 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8
         search = hb_tree_search(ospf_instance->lsdb[lsa_type], key);
         if(search) {
             lsa = *search;
+            /* As with IS-IS, own LSAs are not replaced and an external LSA
+             * must be newer than the stored instance (signed sequence). */
+            if(lsa->source.type == OSPF_SOURCE_SELF) {
+                LOG(OSPF, "Skip external OSPF LSA %s (self originated)\n", ospf_lsa_hdr_string(hdr));
+                continue;
+            }
+            if(lsa->lsa_len && (int32_t)lsa->seq >= (int32_t)be32toh(hdr->seq)) {
+                LOG(OSPF, "Skip external OSPF LSA %s (not newer than stored seq %08x)\n",
+                    ospf_lsa_hdr_string(hdr), lsa->seq);
+                continue;
+            }
         } else {
             /* NEW LSA */
             lsa = ospf_lsa_new(lsa_type, key, ospf_instance);

@@ -105,6 +105,22 @@ def test_lsa_update_invalid(instances, lsa, error):
     assert (result["code"], result.get("message")) == (400, error)
 
 
+def test_lsa_update_self_and_older(instances):
+    """External LSAs do not replace self originated LSAs and must be newer
+    than the stored instance (as with IS-IS), the own router information
+    LSA was replaced and an older instance accepted."""
+    a, _ = instances
+    wait_until(lambda: ri(a, ROUTER_ID_A) and ri(a, ROUTER_ID_B), 10, message="router information LSAs")
+    own_seq = ri(a, ROUTER_ID_A)["seq"]
+    a.ctrl("ospf-lsa-update", instance=1, lsa=[ri_lsa(ROUTER_ID_A, 0x80000100, "X")])
+    # A router which is not simulated, B would originate its own LSA again.
+    a.ctrl("ospf-lsa-update", instance=1, lsa=[ri_lsa("10.10.0.99", 0x80000100, "C")])
+    a.ctrl("ospf-lsa-update", instance=1, lsa=[ri_lsa("10.10.0.99", 0x80000050, "C")])
+    assert ri(a, ROUTER_ID_A)["seq"] == own_seq
+    assert ri(a, "10.10.0.99")["seq"] == "0x80000100"
+    assert a.alive()
+
+
 def test_lsa_update_size_limit(instances):
     """An LSA which does not fit into an LS Update PDU (65535 bytes with
     header) is rejected, it overflowed the PDU buffer when flooded. The
