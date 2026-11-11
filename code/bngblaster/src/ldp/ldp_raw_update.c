@@ -29,16 +29,35 @@ ldp_raw_update_load_file(const char *file, bool decode_file)
     } 
 
     /* Get file size */
-    fseek(f, 0, SEEK_END);
-    fsize = ftell(f);
+    if(fseek(f, 0, SEEK_END) != 0 || (fsize = ftell(f)) < 0 ||
+       fseek(f, 0, SEEK_SET) != 0) {
+        fclose(f);
+        LOG(ERROR, "Failed to read LDP RAW update file %s\n", file);
+        return NULL;
+    }
+    if((unsigned long)fsize > UINT32_MAX) {
+        fclose(f);
+        LOG(ERROR, "LDP RAW update file %s too large (%ld bytes, max %u)\n",
+            file, fsize, UINT32_MAX);
+        return NULL;
+    }
     fsize_kb = fsize/1024.0;
-    fseek(f, 0, SEEK_SET);
 
     /* Load file into memory */
     raw_update = calloc(1, sizeof(ldp_raw_update_s));
+    if(!raw_update) {
+        fclose(f);
+        LOG(ERROR, "Failed to load LDP RAW update file %s (out of memory)\n", file);
+        return NULL;
+    }
     raw_update->file = strdup(file);
     raw_update->buf = malloc(fsize);
     raw_update->len = fsize;
+    if(!raw_update->file || (fsize && !raw_update->buf)) {
+        fclose(f);
+        LOG(ERROR, "Failed to load LDP RAW update file %s (out of memory)\n", file);
+        goto ERROR;
+    }
     if(fread(raw_update->buf, fsize, 1, f) != 1) {
         fclose(f);
         LOG(ERROR, "Failed to read LDP RAW update file %s\n", file);
@@ -89,9 +108,8 @@ DECODE_ERROR:
     LOG(ERROR, "Failed to decode LDP RAW update file %s\n", file);
 ERROR:
     if(raw_update) {
-        if(raw_update->buf) {
-            free(raw_update->buf);
-        }
+        free(raw_update->buf);
+        free((char*)raw_update->file);
         free(raw_update);
     }
     return NULL;

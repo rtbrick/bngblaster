@@ -10,6 +10,7 @@ Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
 import ipaddress
+import os
 import socket
 import struct
 import sys
@@ -487,3 +488,98 @@ def test_ldp_adjacencies_while_expiring(topology, processes, tmp_path):
     assert instance.alive(), "BNG Blaster exited after %d polls" % polls
     assert adjacencies > 100
     assert instance.terminate(30) == 0
+
+
+FAMILY_HELLO_SCRIPT = """
+import socket, struct, sys
+from scapy.all import Ether, IP, IPv6, UDP, Raw, sendp
+iface, family, count, inter, hold = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), float(sys.argv[4]), int(sys.argv[5])
+# Link hello of LSR 10.10.0.2 without dual-stack capability TLV.
+tlvs = struct.pack(">HHHBB", 0x0400, 4, hold, 0, 0)
+if family == 4:
+    tlvs += struct.pack(">HH", 0x0401, 4) + socket.inet_aton("10.0.0.2")
+else:
+    tlvs += struct.pack(">HH", 0x0403, 16) + socket.inet_pton(socket.AF_INET6, "fd00::2")
+msg = struct.pack(">HHI", 0x0100, 4 + len(tlvs), 1) + tlvs
+body = socket.inet_aton("10.10.0.2") + b"\\x00\\x00" + msg
+pdu = struct.pack(">HH", 1, len(body)) + body
+if family == 4:
+    p = Ether(dst="01:00:5e:00:00:02")/IP(src="10.0.0.2", dst="224.0.0.2", ttl=1)/UDP(sport=646, dport=646)/Raw(pdu)
+else:
+    p = Ether(dst="33:33:00:00:00:02")/IPv6(src="fe80::2", dst="ff02::2", hlim=255)/UDP(sport=646, dport=646)/Raw(pdu)
+sendp(p, iface=iface, count=count, inter=inter, verbose=False)
+"""
+
+
+def start_dual_stack(topology, processes, tmp_path):
+    """Dual-stack instance, active for IPv6 (fd00::9 > fd00::2) and
+    passive for IPv4 (10.0.0.1 < 10.0.0.2) sessions with LSR 10.10.0.2."""
+    helpers.kernel_address(topology.b, topology.if_b, "10.0.0.2/24", "fd00::2/64")
+    instance = BngBlaster(topology.a, tmp_path).start({
+        "interfaces": {"network": {"interface": topology.if_a, "address": "10.0.0.1/24", "gateway": "10.0.0.2",
+                                   "address-ipv6": "fd00::9/64", "gateway-ipv6": "fd00::2",
+                                   "ldp-instance-id": 1}},
+        "ldp": [{"instance-id": 1, "lsr-id": "10.10.0.1", "ipv4-transport-address": "10.0.0.1",
+                 "ipv6-transport-address": "fd00::9"}]}, logging=("info", "ldp"))
+    processes.append(instance)
+    return instance
+
+
+def family_hello(topology, family, count, inter=1, hold=4):
+    topology.b.exec([sys.executable, "-c", FAMILY_HELLO_SCRIPT, topology.if_b,
+                     str(family), str(count), str(inter), str(hold)])
+
+
+def test_ldp_session_reuse_other_family(topology, processes, tmp_path):
+    """A closed IPv6 session reused by an IPv4 hello of the same peer
+    takes the IPv4 transport and role (passive). It kept the IPv6 family
+    and computed the role with the unset IPv4 transport address."""
+    instance = start_dual_stack(topology, processes, tmp_path)
+
+    def session():
+        return instance.ctrl("ldp-sessions")["ldp-sessions"][0]
+    family_hello(topology, 6, 3)
+    wait_until(lambda: instance.ctrl("ldp-sessions")["ldp-sessions"], 5, message="LDP session")
+    assert session()["local-address"] == "fd00::9" and session()["state"] in ("idle", "connect")
+    wait_until(lambda: session()["state"] == "closed", 15, message="session closed after hello loss")
+    family_hello(topology, 4, 1, hold=15)
+    wait_until(lambda: session()["state"] != "closed", 5, message="session reused")
+    assert session()["local-address"] == "10.0.0.1"
+    assert session()["peer-address"] == "10.0.0.2"
+    states = set()
+    for _ in range(6):
+        time.sleep(0.5)
+        states.add(session()["state"])
+    assert states == {"listen"}
+
+
+def test_ldp_raw_update_not_operational(topology, processes, tmp_path):
+    """ldp-raw-update skips sessions which are not operational, the file
+    would be replaced by the raw-update-file when the session becomes
+    operational (it was reported as started, but never sent)."""
+    instance = start_dual_stack(topology, processes, tmp_path)
+    family_hello(topology, 4, 2)
+    wait_until(lambda: instance.ctrl("ldp-sessions")["ldp-sessions"], 5, message="LDP session")
+    update = str(tmp_path / "update.ldp")
+    ldpupdate(["-l", "10.10.0.1", "-p", "13.0.0.0/24", "-P", "3", "-f", update])
+    result = instance.ctrl("ldp-raw-update", file=update)
+    assert result["code"] == 200
+    assert result["ldp-raw-update"] == {"started": 0, "skipped": 1, "filtered": 0}
+
+
+def test_ldp_raw_update_file_too_large(topology, processes, tmp_path):
+    """A RAW update file of 4 GiB or more is rejected on start instead of
+    being loaded truncated to its size modulo 2^32 (here a valid update,
+    followed by a sparse 4 GiB hole)."""
+    update = str(tmp_path / "update.ldp")
+    ldpupdate(["-l", "10.10.0.1", "-p", "13.0.0.0/24", "-P", "3", "-f", update])
+    os.truncate(update, (1 << 32) + os.path.getsize(update))
+    instance = BngBlaster(topology.a, tmp_path)
+    processes.append(instance)
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start({
+            "interfaces": {"network": {"interface": topology.if_a, "address": "10.0.0.1/24",
+                                       "gateway": "10.0.0.2", "ldp-instance-id": 1}},
+            "ldp": [{"instance-id": 1, "lsr-id": "10.10.0.1", "raw-update-file": update}]})
+    with open(instance.path("stdout")) as f:
+        assert "too large" in f.read()

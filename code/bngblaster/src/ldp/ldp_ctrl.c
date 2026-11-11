@@ -327,7 +327,9 @@ ldp_ctrl_raw_update(int fd, uint32_t session_id __attribute__((unused)), json_t 
                 filtered++;
                 continue;
             }
-            if(ldp_session->raw_update_sending) {
+            if(ldp_session->state != LDP_OPERATIONAL || ldp_session->raw_update_sending) {
+                /* The update would be replaced by the raw-update-file
+                 * when the session becomes operational. */
                 ldp_session = ldp_session->next;
                 skipped++;
                 continue;

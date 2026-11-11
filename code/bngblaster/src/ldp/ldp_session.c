@@ -651,7 +651,6 @@ ldp_session_ipv4_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     if(!session) {
         session = calloc(1, sizeof(ldp_session_s));
         session->instance = instance;
-        session->local.ipv4_address = config->ipv4_transport_address;
         session->local.lsr_id = config->lsr_id;
         session->local.label_space_id = 0;
         session->local.keepalive_time = config->keepalive_time;
@@ -662,6 +661,11 @@ ldp_session_ipv4_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
         session->next = instance->sessions;
         instance->sessions = session;
     }
+    /* A closed session may be reused by a hello of the other family. */
+    session->ipv6 = false;
+    session->local.ipv4_address = config->ipv4_transport_address;
+    memset(&session->local.ipv6_address, 0x0, sizeof(ipv6addr_t));
+    memset(&session->peer.ipv6_address, 0x0, sizeof(ipv6addr_t));
     session->interface = adjacency->interface;
     session->max_pdu_len = session->local.max_pdu_len;
     session->keepalive_time = session->local.keepalive_time;
@@ -717,8 +721,6 @@ ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
     if(!session) {
         session = calloc(1, sizeof(ldp_session_s));
         session->instance = instance;
-        session->ipv6 = true;
-        memcpy(&session->local.ipv6_address, &config->ipv6_transport_address, sizeof(ipv6addr_t));
         session->local.lsr_id = config->lsr_id;
         session->local.label_space_id = 0;
         session->local.keepalive_time = config->keepalive_time;
@@ -729,6 +731,11 @@ ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
         session->next = instance->sessions;
         instance->sessions = session;
     }
+    /* A closed session may be reused by a hello of the other family. */
+    session->ipv6 = true;
+    memcpy(&session->local.ipv6_address, &config->ipv6_transport_address, sizeof(ipv6addr_t));
+    session->local.ipv4_address = 0;
+    session->peer.ipv4_address = 0;
     session->interface = adjacency->interface;
     session->max_pdu_len = session->local.max_pdu_len;
     session->keepalive_time = session->local.keepalive_time;

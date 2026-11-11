@@ -328,7 +328,8 @@ during BNG Blaster startup phase and sent as soon as the session is
 established.
 
 The ``ldp-raw-update`` :ref:`command <api>` allows sending further updates during
-the session lifetime.
+the session lifetime. Sessions which are not operational or still sending
+an update are skipped (reported as ``skipped`` in the response).
 
 ``$ sudo bngblaster-cli run.sock ldp-raw-update file update1.ldp``
 
