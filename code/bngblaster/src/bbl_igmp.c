@@ -17,6 +17,106 @@ struct keyval_ igmp_msg_names[] = {
     { 0, NULL}
 };
 
+/* Query interval (RFC 3376 section 8.2) for the older version querier timeout. */
+#define IGMP_QUERY_INTERVAL 125
+
+static bool
+bbl_igmp_session_up(bbl_session_s *session)
+{
+    if(session->session_state != BBL_ESTABLISHED) {
+        return false;
+    }
+    if(session->access_type == ACCESS_TYPE_PPPOE &&
+       session->ipcp_state != BBL_PPP_OPENED) {
+        return false;
+    }
+    return true;
+}
+
+/**
+ * bbl_igmp_version
+ *
+ * Version used for reports, which is the configured version
+ * or the version of an older querier (RFC 3376 section 7.2.1).
+ */
+uint8_t
+bbl_igmp_version(bbl_session_s *session)
+{
+    struct timespec now;
+    if(session->igmp_querier_version && session->igmp_querier_version < session->igmp_version) {
+        clock_gettime(CLOCK_MONOTONIC, &now);
+        if(now.tv_sec < session->igmp_querier_expire) {
+            return session->igmp_querier_version;
+        }
+        session->igmp_querier_version = 0;
+    }
+    return session->igmp_version;
+}
+
+/**
+ * bbl_igmp_reset
+ *
+ * Reset IGMP on session reset. Groups joined via control
+ * socket are joined again once the session is established,
+ * zapping groups are restarted by the initial join.
+ */
+void
+bbl_igmp_reset(bbl_session_s *session)
+{
+    bbl_igmp_group_s *group;
+    int i;
+
+    session->igmp_robustness = 2;
+    for(i=0; i < IGMP_MAX_GROUPS; i++) {
+        group = &session->igmp_groups[i];
+        if(!group->zapping && (group->state == IGMP_GROUP_JOINING || group->state == IGMP_GROUP_ACTIVE)) {
+            group->state = IGMP_GROUP_JOINING;
+            group->robustness_count = session->igmp_robustness;
+            group->send = true;
+            group->packets = 0;
+            group->loss = 0;
+            memset(&group->join_tx_time, 0x0, sizeof(struct timespec));
+            memset(&group->first_mc_rx_time, 0x0, sizeof(struct timespec));
+            memset(&group->leave_tx_time, 0x0, sizeof(struct timespec));
+            memset(&group->last_mc_rx_time, 0x0, sizeof(struct timespec));
+        } else {
+            memset(group, 0x0, sizeof(bbl_igmp_group_s));
+        }
+    }
+    session->igmp_querier_version = 0;
+    session->igmp_querier_expire = 0;
+}
+
+/**
+ * bbl_igmp_established
+ *
+ * Send joins of groups joined before the session
+ * was established or before a reconnect.
+ */
+void
+bbl_igmp_established(bbl_session_s *session)
+{
+    int i;
+    for(i=0; i < IGMP_MAX_GROUPS; i++) {
+        if(session->igmp_groups[i].state == IGMP_GROUP_JOINING &&
+           session->igmp_groups[i].send) {
+            session->send_requests |= BBL_SEND_IGMP;
+            bbl_session_tx_qnode_insert(session);
+            return;
+        }
+    }
+}
+
+static void
+bbl_igmp_query_response_job(timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+    if(bbl_igmp_session_up(session)) {
+        session->send_requests |= BBL_SEND_IGMP;
+        bbl_session_tx_qnode_insert(session);
+    }
+}
+
 void
 bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4)
 {
@@ -24,6 +124,9 @@ bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4)
     bbl_igmp_group_s *group = NULL;
     int i;
     bool send = false;
+    uint32_t max_resp_time;
+    uint32_t delay;
+    struct timespec now;
 
 #if 0
     LOG(IGMP, "IGMPv%d (ID: %u) type %s received\n",
@@ -48,6 +151,18 @@ bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4)
             session->igmp_robustness = igmp->robustness;
         }
 
+        max_resp_time = igmp->max_resp_time;
+        if(igmp->version == IGMP_VERSION_1) {
+            max_resp_time = 100; /* 10 seconds (RFC 2236 section 4) */
+        }
+        if(igmp->version < session->igmp_version) {
+            /* Older version querier present (RFC 3376 section 7.2.1). */
+            clock_gettime(CLOCK_MONOTONIC, &now);
+            session->igmp_querier_version = igmp->version;
+            session->igmp_querier_expire = now.tv_sec + (session->igmp_robustness * IGMP_QUERY_INTERVAL) +
+                                           (max_resp_time / 10);
+        }
+
         if(igmp->group) {
             /* Group Specific Query */
             for(i=0; i < IGMP_MAX_GROUPS; i++) {
@@ -69,9 +184,12 @@ bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4)
             }
         }
 
-        if(send) {
-            session->send_requests |= BBL_SEND_IGMP;
-            bbl_session_tx_qnode_insert(session);
+        if(send && !session->timer_igmp_query) {
+            /* Respond after a random delay up to max resp time (RFC 3376 section 5.2),
+             * so that not all sessions respond at once. A pending response is kept. */
+            delay = max_resp_time ? (rand() % max_resp_time) : 0;
+            timer_add(&g_ctx->timer_root, &session->timer_igmp_query, "IGMP Query Response",
+                      delay / 10, (delay % 10) * 100 * MSEC, session, &bbl_igmp_query_response_job);
         }
     }
 }
@@ -240,6 +358,7 @@ bbl_igmp_ctrl_join_iter(int fd, uint32_t session_id __attribute__((unused)), jso
                     LOG(IGMP, "IGMP (ID: %u) join %s\n",
                         session->session_id, format_ipv4_address(&group->group));
                     session->send_requests |= BBL_SEND_IGMP;
+                    bbl_session_tx_qnode_insert(session);
 
                     join_count++;
                     if(--group_count == 0) {

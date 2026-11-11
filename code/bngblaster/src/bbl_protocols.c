@@ -2733,7 +2733,11 @@ decode_igmp(uint8_t *buf, uint16_t len,
     igmp->type = *buf;
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
 
-    /* Skip max resp time */
+    /* Max resp time (RFC 2236 section 2.2, RFC 3376 section 4.1.1) */
+    igmp->max_resp_time = *buf;
+    if(igmp->version == IGMP_VERSION_3 && igmp->max_resp_time >= 128) {
+        igmp->max_resp_time = ((igmp->max_resp_time & 0x0f) | 0x10) << (((igmp->max_resp_time >> 4) & 0x07) + 3);
+    }
     BUMP_BUFFER(buf, len, sizeof(uint8_t));
 
     /* Skip checksum */
@@ -2741,6 +2745,9 @@ decode_igmp(uint8_t *buf, uint16_t len,
 
     switch(igmp->type) {
         case IGMP_TYPE_QUERY:
+            if(igmp->version == IGMP_VERSION_1 && igmp->max_resp_time) {
+                igmp->version = IGMP_VERSION_2;
+            }
             igmp->group = *(uint32_t*)buf;
             BUMP_BUFFER(buf, len, sizeof(uint32_t));
             if(igmp->version == IGMP_VERSION_3) {
@@ -3170,10 +3177,12 @@ decode_dhcp(uint8_t *buf, uint16_t len,
             case DHCP_OPTION_HOST_NAME:
                 dhcp->host_name = (char*)buf;
                 dhcp->host_name_len = option_len;
+                dhcp->option_host_name = true;
                 break;
             case DHCP_OPTION_DOMAIN_NAME:
                 dhcp->domain_name = (char*)buf;
                 dhcp->domain_name_len = option_len;
+                dhcp->option_domain_name = true;
                 break;
             case DHCP_OPTION_INTERFACE_MTU:
                 if(option_len != 2) {

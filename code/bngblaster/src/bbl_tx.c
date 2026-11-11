@@ -189,6 +189,7 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
 
     bool is_join = false;
     bool is_leave = false;
+    uint8_t version = bbl_igmp_version(session);
 
     bbl_igmp_group_s *group = NULL;
 
@@ -240,7 +241,7 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
             if(group->robustness_count) {
                 group->robustness_count--;
             }
-            if(session->igmp_version == IGMP_VERSION_3) {
+            if(version == IGMP_VERSION_3) {
                 igmp.version = IGMP_VERSION_3;
                 igmp.type = IGMP_TYPE_REPORT_V3;
                 gr = &igmp.group_record[igmp.group_records++];
@@ -279,7 +280,13 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
                             group->leave_tx_time.tv_nsec = timestamp.tv_nsec;
                         }
                     } else {
-                        gr->type = IGMP_EXCLUDE;
+                        /* State change record for a join, current
+                         * state record for a query response. */
+                        if(group->state == IGMP_GROUP_ACTIVE) {
+                            gr->type = IGMP_EXCLUDE;
+                        } else {
+                            gr->type = IGMP_CHANGE_TO_EXCLUDE;
+                        }
                         if(!group->join_tx_time.tv_sec) {
                             group->join_tx_time.tv_sec = timestamp.tv_sec;
                             group->join_tx_time.tv_nsec = timestamp.tv_nsec;
@@ -289,9 +296,11 @@ bbl_tx_encode_packet_igmp(bbl_session_s *session)
             } else {
                 ipv4.dst = group->group;
                 igmp.group = group->group;
-                if(session->igmp_version == IGMP_VERSION_2) {
+                if(version == IGMP_VERSION_2) {
                     igmp.version = IGMP_VERSION_2;
                     if(group->state == IGMP_GROUP_LEAVING) {
+                        /* Leave Group is sent to all routers (RFC 2236 section 3). */
+                        ipv4.dst = IPV4_MC_ALL_ROUTERS;
                         igmp.type = IGMP_TYPE_LEAVE;
                         if(!group->leave_tx_time.tv_sec) {
                             group->leave_tx_time.tv_sec = timestamp.tv_sec;
@@ -511,7 +520,10 @@ bbl_tx_dhcpv6_timeout(timer_s *timer)
     if(!(session->dhcpv6_state == BBL_DHCP_BOUND ||
          session->dhcpv6_state == BBL_DHCP_INIT)) {
         session->access_interface->stats.dhcpv6_timeout++;
-        if(session->dhcpv6_retry < g_ctx->config.dhcpv6_retry) {
+        if(session->dhcpv6_retry < g_ctx->config.dhcpv6_retry ||
+           session->dhcpv6_state == BBL_DHCP_RENEWING ||
+           session->dhcpv6_state == BBL_DHCP_REBINDING) {
+            /* Renew and rebind are retried until T2 or lease expiry. */
             session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
             bbl_session_tx_qnode_insert(session);
         } else {
@@ -638,6 +650,13 @@ bbl_tx_encode_packet_dhcpv6_request(bbl_session_s *session)
             dhcpv6.type = DHCPV6_MESSAGE_RENEW;
             session->stats.dhcpv6_tx_renew++;
             LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Renew send\n", session->session_id);
+            break;
+        case BBL_DHCP_REBINDING:
+            /* Rebind is sent to any server (RFC 8415 section 18.2.5). */
+            dhcpv6.type = DHCPV6_MESSAGE_REBIND;
+            dhcpv6.server_duid_len = 0;
+            session->stats.dhcpv6_tx_renew++;
+            LOG(DHCP, "DHCPv6 (ID: %u) DHCPv6-Rebind send\n", session->session_id);
             break;
         case BBL_DHCP_RELEASE:
             dhcpv6.type = DHCPV6_MESSAGE_RELEASE;
@@ -1072,7 +1091,10 @@ bbl_dhcp_timeout(timer_s *timer)
             return;
         }
         session->access_interface->stats.dhcp_timeout++;
-        if(session->dhcp_retry < g_ctx->config.dhcp_retry) {
+        if(session->dhcp_retry < g_ctx->config.dhcp_retry ||
+           session->dhcp_state == BBL_DHCP_RENEWING ||
+           session->dhcp_state == BBL_DHCP_REBINDING) {
+            /* Renew and rebind are retried until T2 or lease expiry. */
             session->send_requests |= BBL_SEND_DHCP_REQUEST;
             bbl_session_tx_qnode_insert(session);
         } else if(session->dhcp_state == BBL_DHCP_RELEASE) {
@@ -1208,6 +1230,14 @@ bbl_tx_encode_packet_dhcp(bbl_session_s *session)
             LOG(DHCP, "DHCP (ID: %u) DHCP-Request (renewing) send\n", session->session_id);
             dst_mac = session->dhcp_server_mac;
             ipv4.dst = session->dhcp_server_identifier;
+            header.ciaddr = session->ip_address;
+            break;
+        case BBL_DHCP_REBINDING:
+            dhcp.type = DHCP_MESSAGE_REQUEST;
+            session->stats.dhcp_tx_request++;
+            LOG(DHCP, "DHCP (ID: %u) DHCP-Request (rebinding) send\n", session->session_id);
+            dst_mac = (uint8_t*)broadcast_mac;
+            ipv4.dst = IPV4_BROADCAST;
             header.ciaddr = session->ip_address;
             break;
         case BBL_DHCP_RELEASE:

@@ -878,6 +878,7 @@ typedef struct bbl_igmp_ {
     uint8_t     version;
     uint8_t     type;
     uint8_t     robustness;
+    uint16_t    max_resp_time; /* query max response time in 1/10 seconds */
     uint32_t    group;
     uint32_t    source;
     uint8_t     group_records;

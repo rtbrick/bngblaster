@@ -88,6 +88,7 @@ dhcp_state_string(uint32_t state)
         case BBL_DHCP_REQUESTING_IA_PD: return "Requesting (IA_PD)";
         case BBL_DHCP_BOUND: return "Bound";
         case BBL_DHCP_RENEWING: return "Renewing";
+        case BBL_DHCP_REBINDING: return "Rebinding";
         case BBL_DHCP_RELEASE: return "Releasing";
         default: return "N/A";
     }
@@ -277,6 +278,7 @@ bbl_session_monkey_ipoe(bbl_session_s *session) {
                 case BBL_DHCP_REQUESTING:
                 case BBL_DHCP_BOUND:
                 case BBL_DHCP_RENEWING:
+                case BBL_DHCP_REBINDING:
                     session->dhcp_release_restart = true;
                     bbl_dhcp_release(session);
                     break;
@@ -292,6 +294,7 @@ bbl_session_monkey_ipoe(bbl_session_s *session) {
                 case BBL_DHCP_REQUESTING_IA_PD:
                 case BBL_DHCP_BOUND:
                 case BBL_DHCP_RENEWING:
+                case BBL_DHCP_REBINDING:
                     session->dhcpv6_state = BBL_DHCP_RELEASE;
                     session->dhcpv6_release_restart = true;
                     session->dhcpv6_xid = rand() & 0xffffff;
@@ -525,6 +528,11 @@ bbl_session_reset(bbl_session_s *session) {
     session->zapping_count = 0;
     session->zapping_view_start_time.tv_sec = 0;
     session->zapping_view_start_time.tv_nsec = 0;
+    session->zapping_join_delay_sum = 0;
+    session->zapping_join_count = 0;
+    session->zapping_leave_delay_sum = 0;
+    session->zapping_leave_count = 0;
+    bbl_igmp_reset(session);
 
     if(session->reply_message) {
         free(session->reply_message);
@@ -567,6 +575,12 @@ bbl_session_reset(bbl_session_s *session) {
     session->stats.min_join_delay = 0;
     session->stats.avg_join_delay = 0;
     session->stats.max_join_delay = 0;
+    session->stats.join_delay_violations = 0;
+    session->stats.join_delay_violations_125ms = 0;
+    session->stats.join_delay_violations_250ms = 0;
+    session->stats.join_delay_violations_500ms = 0;
+    session->stats.join_delay_violations_1s = 0;
+    session->stats.join_delay_violations_2s = 0;
     session->stats.min_leave_delay = 0;
     session->stats.avg_leave_delay = 0;
     session->stats.max_leave_delay = 0;
@@ -764,10 +778,14 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
             timer_del(session->timer_dhcp_retry);
             timer_del(session->timer_dhcp_t1);
             timer_del(session->timer_dhcp_t2);
+            timer_del(session->timer_dhcp_lease);
             timer_del(session->timer_dhcpv6);
             timer_del(session->timer_dhcpv6_t1);
             timer_del(session->timer_dhcpv6_t2);
+            timer_del(session->timer_dhcpv6_lease);
             timer_del(session->timer_igmp);
+            timer_del(session->timer_igmp_join);
+            timer_del(session->timer_igmp_query);
             timer_del(session->timer_zapping);
             timer_del(session->timer_icmpv6);
             timer_del(session->timer_session);
@@ -906,6 +924,7 @@ bbl_session_clear(bbl_session_s *session)
             case BBL_DHCP_REQUESTING:
             case BBL_DHCP_BOUND:
             case BBL_DHCP_RENEWING:
+            case BBL_DHCP_REBINDING:
                 session->dhcp_request_timestamp.tv_sec = 0;
                 session->dhcp_request_timestamp.tv_nsec = 0;
                 if(!g_ctx->config.dhcp_release_retry) {
@@ -936,6 +955,7 @@ bbl_session_clear(bbl_session_s *session)
             case BBL_DHCP_REQUESTING_IA_PD:
             case BBL_DHCP_BOUND:
             case BBL_DHCP_RENEWING:
+            case BBL_DHCP_REBINDING:
                 new_state = BBL_TERMINATING;
                 session->dhcpv6_state = BBL_DHCP_RELEASE;
                 session->dhcpv6_xid = rand() & 0xffffff;
@@ -1265,6 +1285,11 @@ bbl_sessions_init()
         }
         session->access_interface = access_config->access_interface;
         session->network_interface = bbl_network_interface_get(access_config->network_interface);
+        if(session->access_type == ACCESS_TYPE_IPOE &&
+           !bbl_access_interface_add_session(session->access_interface, session)) {
+            LOG_NOARG(ERROR, "Failed to allocate access interface session list\n");
+            return false;
+        }
         
         if(g_ctx->config.sessions_autostart) {
             session->session_state = BBL_IDLE;
@@ -1708,6 +1733,12 @@ bbl_session_json(bbl_session_s *session, bool debug)
             "rx-icmpv6", session->stats.icmpv6_rx,
             "session-traffic", session_traffic,
             "a10nsp", a10nsp_session);
+        if(root && session->dhcp_host_name) {
+            json_object_set_new(root, "dhcp-host-name", bbl_json_cstring(session->dhcp_host_name));
+        }
+        if(root && session->dhcp_domain_name) {
+            json_object_set_new(root, "dhcp-domain-name", bbl_json_cstring(session->dhcp_domain_name));
+        }
     }
     if(root && debug) {
         /* Add debug informations. */

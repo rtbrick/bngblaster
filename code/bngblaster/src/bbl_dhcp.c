@@ -42,17 +42,21 @@ bbl_dhcp_stop(bbl_session_s *session, bool keep_address)
 
     /* Stop multicast ... */
     timer_del(session->timer_igmp);
+    timer_del(session->timer_igmp_join);
+    timer_del(session->timer_igmp_query);
     timer_del(session->timer_zapping);
     session->zapping_joined_group = NULL;
     session->zapping_leaved_group = NULL;
     session->zapping_count = 0;
     session->zapping_view_start_time.tv_sec = 0;
     session->zapping_view_start_time.tv_nsec = 0;
+    bbl_igmp_reset(session);
 
     /* Reset DHCP */
     timer_del(session->timer_dhcp_retry);
     timer_del(session->timer_dhcp_t1);
     timer_del(session->timer_dhcp_t2);
+    timer_del(session->timer_dhcp_lease);
     if(!keep_address) {
         session->dhcp_address = 0;
     }
@@ -102,6 +106,7 @@ bbl_dhcp_release(bbl_session_s *session)
         case BBL_DHCP_REQUESTING:
         case BBL_DHCP_BOUND:
         case BBL_DHCP_RENEWING:
+        case BBL_DHCP_REBINDING:
             session->dhcp_request_timestamp.tv_sec = 0;
             session->dhcp_request_timestamp.tv_nsec = 0;
             if(!g_ctx->config.dhcp_release_retry) {
@@ -207,8 +212,25 @@ bbl_dhcp_s1(timer_s *timer)
     }
 }
 
+/* T2: rebind with any server until the lease expires (RFC 2131 section 4.4.5). */
 void
 bbl_dhcp_s2(timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+    if(session->dhcp_state == BBL_DHCP_BOUND || session->dhcp_state == BBL_DHCP_RENEWING) {
+        LOG(DHCP, "DHCP (ID: %u) Rebind\n", session->session_id);
+        session->dhcp_xid = rand();
+        session->dhcp_request_timestamp.tv_sec = 0;
+        session->dhcp_request_timestamp.tv_nsec = 0;
+        session->dhcp_state = BBL_DHCP_REBINDING;
+        session->dhcp_retry = 0;
+        session->send_requests |= BBL_SEND_DHCP_REQUEST;
+        bbl_session_tx_qnode_insert(session);
+    }
+}
+
+static void
+bbl_dhcp_lease_expired(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     if(session->dhcp_state > BBL_DHCP_INIT && session->dhcp_state < BBL_DHCP_RELEASE) {
@@ -236,6 +258,9 @@ bbl_dhcp_timer(bbl_session_s *session, bbl_dhcp_s *dhcp)
 
     timer_add(&g_ctx->timer_root, &session->timer_dhcp_t1, "DHCP T1", session->dhcp_t1, 0, session, &bbl_dhcp_s1);
     timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_t2, 0, session, &bbl_dhcp_s2);
+    timer_add(&g_ctx->timer_root, &session->timer_dhcp_lease, "DHCP Lease",
+              session->dhcp_lease_time > session->dhcp_t2 ? session->dhcp_lease_time : session->dhcp_t2,
+              0, session, &bbl_dhcp_lease_expired);
 }
 
 /**
@@ -299,7 +324,7 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                     bbl_dhcp_restart(session);
                     return;
                 }
-                timer_add(&g_ctx->timer_root, &session->timer_dhcp_t2, "DHCP T2", session->dhcp_lease_time, 0, session, &bbl_dhcp_s2);
+                timer_add(&g_ctx->timer_root, &session->timer_dhcp_lease, "DHCP Lease", session->dhcp_lease_time, 0, session, &bbl_dhcp_lease_expired);
                 session->dhcp_request_timestamp.tv_sec = 0;
                 session->dhcp_request_timestamp.tv_nsec = 0;
                 session->dhcp_retry = 0;
@@ -382,11 +407,16 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
             }
             break;
         case BBL_DHCP_RENEWING:
+        case BBL_DHCP_REBINDING:
             if(dhcp->type == DHCP_MESSAGE_ACK) {
                 session->dhcp_state = BBL_DHCP_BOUND;
                 session->dhcp_address = dhcp->header->yiaddr;
                 session->dhcp_server = dhcp->header->siaddr;
                 session->dhcp_server_identifier = dhcp->server_identifier;
+                if(eth) {
+                    /* The server may change with rebinding. */
+                    memcpy(session->dhcp_server_mac, eth->src, ETH_ADDR_LEN);
+                }
                 session->dhcp_lease_time = dhcp->lease_time;
                 if(eth) {
                     session->dhcp_lease_timestamp.tv_sec = eth->timestamp.tv_sec;
@@ -399,6 +429,13 @@ bbl_dhcp_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcp_s *dhcp
                     LOG(ERROR, "DHCP (ID: %u) Invalid DHCP-ACK!\n", session->session_id);
                     bbl_dhcp_restart(session);
                     return;
+                }
+                if(session->dhcp_address != session->ip_address) {
+                    session->ip_address = session->dhcp_address;
+                    session->arp_resolved = false;
+                    session->version++;
+                    LOG(IP, "IPv4 (ID: %u) address %s\n", session->session_id,
+                        format_ipv4_address(&session->dhcp_address));
                 }
                 bbl_dhcp_timer(session, dhcp);
                 session->send_requests |= BBL_SEND_ARP_REQUEST;
@@ -421,6 +458,12 @@ bbl_dhcp_action(bbl_session_s *session, dhcp_ctrl_action action, bool keep_addre
 {
     if(session->access_type != ACCESS_TYPE_IPOE || 
        session->dhcp_state == BBL_DHCP_DISABLED) {
+        return false;
+    }
+    /* Terminated, idle or terminating sessions are handled by
+     * the session start and stop logic only. */
+    if(session->session_state != BBL_IPOE_SETUP &&
+       session->session_state != BBL_ESTABLISHED) {
         return false;
     }
     switch(action) {
@@ -470,7 +513,9 @@ bbl_dhcp_ctrl_action(int fd, uint32_t session_id, json_t *arguments, dhcp_ctrl_a
             if(session->dhcp_state == BBL_DHCP_DISABLED) {
                 return bbl_ctrl_status(fd, "warning", 400, "matching session is DHCP disabled");
             }
-            bbl_dhcp_action(session, action, keep_address);
+            if(!bbl_dhcp_action(session, action, keep_address)) {
+                return bbl_ctrl_status(fd, "error", 405, "wrong session state");
+            }
             return bbl_ctrl_status(fd, "ok", 200, NULL);
         } else {
             return bbl_ctrl_status(fd, "warning", 404, "session not found");

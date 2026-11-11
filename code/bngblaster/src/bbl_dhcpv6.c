@@ -65,6 +65,7 @@ bbl_dhcpv6_stop(bbl_session_s *session)
     timer_del(session->timer_dhcpv6);
     timer_del(session->timer_dhcpv6_t1);
     timer_del(session->timer_dhcpv6_t2);
+    timer_del(session->timer_dhcpv6_lease);
     session->version++;
     session->dhcpv6_state = BBL_DHCP_INIT;
     session->dhcpv6_release_restart = false;
@@ -78,7 +79,7 @@ bbl_dhcpv6_stop(bbl_session_s *session)
     session->dhcpv6_ia_pd_valid_lifetime = 0;
     memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
     memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
-    memset(session->dhcpv6_server_duid, 0x0, DHCPV6_BUFFER);
+    memset(session->dhcpv6_server_duid, 0x0, sizeof(session->dhcpv6_server_duid));
     session->dhcpv6_server_duid_len = 0;
     session->dhcpv6_lease_time = 0;
     session->dhcpv6_lease_timestamp.tv_sec = 0;
@@ -191,8 +192,25 @@ bbl_dhcpv6_s1(timer_s *timer)
     }
 }
 
+/* T2: rebind with any server until the lease expires (RFC 8415 section 18.2.5). */
 void
 bbl_dhcpv6_s2(timer_s *timer)
+{
+    bbl_session_s *session = timer->data;
+    if(session->dhcpv6_state == BBL_DHCP_BOUND || session->dhcpv6_state == BBL_DHCP_RENEWING) {
+        LOG(DHCP, "DHCPv6 (ID: %u) Rebind\n", session->session_id);
+        session->dhcpv6_xid = rand() & 0xffffff;
+        session->dhcpv6_request_timestamp.tv_sec = 0;
+        session->dhcpv6_request_timestamp.tv_nsec = 0;
+        session->dhcpv6_state = BBL_DHCP_REBINDING;
+        session->dhcpv6_retry = 0;
+        session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
+        bbl_session_tx_qnode_insert(session);
+    }
+}
+
+static void
+bbl_dhcpv6_lease_expired(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     if(session->dhcpv6_state > BBL_DHCP_INIT && session->dhcpv6_state < BBL_DHCP_RELEASE) {
@@ -224,6 +242,7 @@ bbl_dhcpv6_validate_ia(bbl_session_s *session, bbl_dhcpv6_s *dhcpv6)
         case BBL_DHCP_SELECTING:
         case BBL_DHCP_REQUESTING:
         case BBL_DHCP_RENEWING:
+        case BBL_DHCP_REBINDING:
             ia_na = true;
             ia_pd = true;
             break;
@@ -310,7 +329,7 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
         return;
     }
 
-    if(dhcpv6->server_duid_len && dhcpv6->server_duid_len < DHCPV6_BUFFER) {
+    if(dhcpv6->server_duid_len && dhcpv6->server_duid_len <= sizeof(session->dhcpv6_server_duid)) {
         memcpy(session->dhcpv6_server_duid, dhcpv6->server_duid, dhcpv6->server_duid_len);
         session->dhcpv6_server_duid_len = dhcpv6->server_duid_len;
     }
@@ -406,7 +425,14 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
 
         if(session->dhcpv6_state == BBL_DHCP_SELECTING_IA_NA || 
            session->dhcpv6_state == BBL_DHCP_REQUESTING_IA_NA) {
+            /* IA-separate: solicit IA_PD with a new transaction. */
             session->dhcpv6_state = BBL_DHCP_SELECTING_IA_PD;
+            session->dhcpv6_xid = rand() & 0xffffff;
+            session->dhcpv6_request_timestamp.tv_sec = 0;
+            session->dhcpv6_request_timestamp.tv_nsec = 0;
+            session->dhcpv6_retry = 0;
+            session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
+            bbl_session_tx_qnode_insert(session);
         } else {
             session->dhcpv6_state = BBL_DHCP_BOUND;
         }
@@ -417,6 +443,9 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
         if(!t2) t2 = 300;
         timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_t2, "DHCPv6 T2", 
                   t2, 0, session, &bbl_dhcpv6_s2);
+        timer_add(&g_ctx->timer_root, &session->timer_dhcpv6_lease, "DHCPv6 Lease",
+                  session->dhcpv6_lease_time > t2 ? session->dhcpv6_lease_time : t2,
+                  0, session, &bbl_dhcpv6_lease_expired);
 
         if(session->access_type == ACCESS_TYPE_IPOE) {
             bbl_access_rx_established_ipoe(interface, session, eth);
@@ -447,6 +476,10 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
             session->dhcpv6_state = BBL_DHCP_REQUESTING;
         }
 
+        /* Each exchange has its own transaction ID (RFC 8415 section 16.1). */
+        session->dhcpv6_xid = rand() & 0xffffff;
+        session->dhcpv6_request_timestamp.tv_sec = 0;
+        session->dhcpv6_request_timestamp.tv_nsec = 0;
         session->dhcpv6_retry = 0;
         session->send_requests |= BBL_SEND_DHCPV6_REQUEST;
         bbl_session_tx_qnode_insert(session);

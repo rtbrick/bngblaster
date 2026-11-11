@@ -246,7 +246,8 @@ typedef enum {
     BBL_DHCP_REQUESTING_IA_PD   = 7,
     BBL_DHCP_BOUND              = 8,
     BBL_DHCP_RENEWING           = 9,
-    BBL_DHCP_RELEASE            = 10,
+    BBL_DHCP_REBINDING          = 10,
+    BBL_DHCP_RELEASE            = 11,
     BBL_DHCP_MAX
 } __attribute__ ((__packed__)) dhcp_state_t;
 

@@ -27,6 +27,15 @@ typedef struct bbl_igmp_group_
     struct timespec last_mc_rx_time;
 } bbl_igmp_group_s;
 
+uint8_t
+bbl_igmp_version(bbl_session_s *session);
+
+void
+bbl_igmp_reset(bbl_session_s *session);
+
+void
+bbl_igmp_established(bbl_session_s *session);
+
 void
 bbl_igmp_rx(bbl_session_s *session, bbl_ipv4_s *ipv4);
 

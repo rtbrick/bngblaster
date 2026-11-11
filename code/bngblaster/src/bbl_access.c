@@ -118,13 +118,41 @@ bbl_access_interface_get(char *interface_name)
     return NULL;
 }
 
+/**
+ * bbl_access_interface_add_session
+ *
+ * Add IPoE session to the session list of the access interface.
+ *
+ * @param interface access interface
+ * @param session session
+ * @return false on memory allocation failure
+ */
+bool
+bbl_access_interface_add_session(bbl_access_interface_s *interface, bbl_session_s *session)
+{
+    bbl_session_s **sessions;
+    uint32_t size;
+
+    if(interface->ipoe_session_count == interface->ipoe_session_size) {
+        size = interface->ipoe_session_size ? interface->ipoe_session_size * 2 : 64;
+        sessions = realloc(interface->ipoe_sessions, size * sizeof(bbl_session_s*));
+        if(!sessions) {
+            return false;
+        }
+        interface->ipoe_sessions = sessions;
+        interface->ipoe_session_size = size;
+    }
+    interface->ipoe_sessions[interface->ipoe_session_count++] = session;
+    return true;
+}
+
+/* Replies are built from copies of the received headers, as multicast and
+ * broadcast packets are passed to all sessions of an N:1 interface. */
 static void
 bbl_access_update_eth(bbl_session_s *session,
                       bbl_ethernet_header_s *eth)
 {
-    uint8_t *dst = eth->dst;
     eth->dst = eth->src;
-    eth->src = dst;
     eth->mpls = NULL;
     eth->src = session->client_mac;
     eth->qinq = session->access_config->qinq;
@@ -139,13 +167,18 @@ bbl_access_icmp_reply(bbl_session_s *session,
                       bbl_ipv4_s *ipv4,
                       bbl_icmp_s *icmp)
 {
-    uint32_t dst = ipv4->dst;
-    bbl_access_update_eth(session, eth);
-    ipv4->dst = ipv4->src;
-    ipv4->src = dst;
-    ipv4->ttl = 64;
-    icmp->type = ICMP_TYPE_ECHO_REPLY;
-    return bbl_txq_to_buffer(session->access_interface->txq, eth);
+    bbl_ethernet_header_s eth_tx = *eth;
+    bbl_ipv4_s ipv4_tx = *ipv4;
+    bbl_icmp_s icmp_tx = *icmp;
+
+    bbl_access_update_eth(session, &eth_tx);
+    eth_tx.next = &ipv4_tx;
+    ipv4_tx.next = &icmp_tx;
+    ipv4_tx.dst = ipv4->src;
+    ipv4_tx.src = ipv4->dst;
+    ipv4_tx.ttl = 64;
+    icmp_tx.type = ICMP_TYPE_ECHO_REPLY;
+    return bbl_txq_to_buffer(session->access_interface->txq, &eth_tx);
 }
 
 static bbl_txq_result_t
@@ -154,18 +187,24 @@ bbl_access_icmpv6_na(bbl_session_s *session,
                      bbl_ipv6_s *ipv6,
                      bbl_icmpv6_s *icmpv6)
 {
-    bbl_access_update_eth(session, eth);
-    ipv6->dst = ipv6->src;
-    ipv6->src = icmpv6->prefix.address;
-    ipv6->ttl = 255;
-    icmpv6->type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
-    icmpv6->mac = session->client_mac;
-    icmpv6->flags = 0;
-    icmpv6->data = NULL;
-    icmpv6->data_len = 0;
-    icmpv6->dns1 = NULL;
-    icmpv6->dns2 = NULL;
-    return bbl_txq_to_buffer(session->access_interface->txq, eth);
+    bbl_ethernet_header_s eth_tx = *eth;
+    bbl_ipv6_s ipv6_tx = *ipv6;
+    bbl_icmpv6_s icmpv6_tx = *icmpv6;
+
+    bbl_access_update_eth(session, &eth_tx);
+    eth_tx.next = &ipv6_tx;
+    ipv6_tx.next = &icmpv6_tx;
+    ipv6_tx.dst = ipv6->src;
+    ipv6_tx.src = icmpv6_tx.prefix.address;
+    ipv6_tx.ttl = 255;
+    icmpv6_tx.type = IPV6_ICMPV6_NEIGHBOR_ADVERTISEMENT;
+    icmpv6_tx.mac = session->client_mac;
+    icmpv6_tx.flags = 0;
+    icmpv6_tx.data = NULL;
+    icmpv6_tx.data_len = 0;
+    icmpv6_tx.dns1 = NULL;
+    icmpv6_tx.dns2 = NULL;
+    return bbl_txq_to_buffer(session->access_interface->txq, &eth_tx);
 }
 
 static bbl_txq_result_t
@@ -174,25 +213,31 @@ bbl_access_icmpv6_ns(bbl_session_s *session,
                      bbl_ipv6_s *ipv6,
                      bbl_icmpv6_s *icmpv6)
 {
+    bbl_ethernet_header_s eth_tx = *eth;
+    bbl_ipv6_s ipv6_tx = *ipv6;
+    bbl_icmpv6_s icmpv6_tx = *icmpv6;
     ipv6addr_t ipv6_dst;
+
     memcpy(ipv6_dst, &ipv6_solicited_node_multicast, sizeof(ipv6addr_t));
     ((uint8_t*)ipv6_dst)[13] = ((uint8_t*)ipv6->src)[13];
     ((uint8_t*)ipv6_dst)[14] = ((uint8_t*)ipv6->src)[14];
     ((uint8_t*)ipv6_dst)[15] = ((uint8_t*)ipv6->src)[15];
 
-    bbl_access_update_eth(session, eth);
-    ipv6->ttl = 255;
-    icmpv6->type = IPV6_ICMPV6_NEIGHBOR_SOLICITATION;
-    icmpv6->mac = session->client_mac;
-    memcpy(icmpv6->prefix.address, ipv6->src, IPV6_ADDR_LEN);
-    icmpv6->flags = 0;
-    icmpv6->data = NULL;
-    icmpv6->data_len = 0;
-    icmpv6->dns1 = NULL;
-    icmpv6->dns2 = NULL;
-    ipv6->dst = ipv6_dst;
-    ipv6->src = session->link_local_ipv6_address;
-    return bbl_txq_to_buffer(session->access_interface->txq, eth);
+    bbl_access_update_eth(session, &eth_tx);
+    eth_tx.next = &ipv6_tx;
+    ipv6_tx.next = &icmpv6_tx;
+    ipv6_tx.ttl = 255;
+    icmpv6_tx.type = IPV6_ICMPV6_NEIGHBOR_SOLICITATION;
+    icmpv6_tx.mac = session->client_mac;
+    memcpy(icmpv6_tx.prefix.address, ipv6->src, IPV6_ADDR_LEN);
+    icmpv6_tx.flags = 0;
+    icmpv6_tx.data = NULL;
+    icmpv6_tx.data_len = 0;
+    icmpv6_tx.dns1 = NULL;
+    icmpv6_tx.dns2 = NULL;
+    ipv6_tx.dst = ipv6_dst;
+    ipv6_tx.src = session->link_local_ipv6_address;
+    return bbl_txq_to_buffer(session->access_interface->txq, &eth_tx);
 }
 
 static bbl_txq_result_t
@@ -201,13 +246,18 @@ bbl_access_icmpv6_echo_reply(bbl_session_s *session,
                              bbl_ipv6_s *ipv6,
                              bbl_icmpv6_s *icmpv6)
 {
-    uint8_t *dst = ipv6->dst;
-    bbl_access_update_eth(session, eth);
-    ipv6->dst = ipv6->src;
-    ipv6->src = dst;
-    ipv6->ttl = 255;
-    icmpv6->type = IPV6_ICMPV6_ECHO_REPLY;
-    return bbl_txq_to_buffer(session->access_interface->txq, eth);
+    bbl_ethernet_header_s eth_tx = *eth;
+    bbl_ipv6_s ipv6_tx = *ipv6;
+    bbl_icmpv6_s icmpv6_tx = *icmpv6;
+
+    bbl_access_update_eth(session, &eth_tx);
+    eth_tx.next = &ipv6_tx;
+    ipv6_tx.next = &icmpv6_tx;
+    ipv6_tx.dst = ipv6->src;
+    ipv6_tx.src = ipv6->dst;
+    ipv6_tx.ttl = 255;
+    icmpv6_tx.type = IPV6_ICMPV6_ECHO_REPLY;
+    return bbl_txq_to_buffer(session->access_interface->txq, &eth_tx);
 }
 
 void
@@ -294,7 +344,7 @@ bbl_access_igmp_zapping(timer_s *timer)
         if(g_ctx->config.igmp_zap_wait) {
             /* Wait until MC traffic is received ... */
             return;
-        } else {
+        } else if(!group->zapping_result) {
             group->zapping_result = true;
             session->stats.mc_not_received++;
             LOG(IGMP, "IGMP (ID: %u) ZAPPING join failed for group %s\n",
@@ -398,9 +448,11 @@ bbl_access_igmp_initial_join(timer_s *timer)
 {
     bbl_session_s *session = timer->data;
     uint32_t initial_group;
-    bbl_igmp_group_s *group;
+    bbl_igmp_group_s *group = NULL;
+    bbl_igmp_group_s *zapping_group = NULL;
 
     int group_start_index = 0;
+    int i;
 
     if(session->session_state != BBL_ESTABLISHED ||
        (session->access_type == ACCESS_TYPE_PPPOE && 
@@ -414,7 +466,21 @@ bbl_access_igmp_initial_join(timer_s *timer)
     }
     initial_group = htobe32(be32toh(g_ctx->config.igmp_group) + (group_start_index * be32toh(g_ctx->config.igmp_group_iter)));
 
-    group = &session->igmp_groups[0];
+    /* Use free slots, groups joined via control socket are kept. */
+    for(i=0; i < IGMP_MAX_GROUPS; i++) {
+        if(session->igmp_groups[i].state == IGMP_GROUP_IDLE) {
+            if(!group) {
+                group = &session->igmp_groups[i];
+            } else {
+                zapping_group = &session->igmp_groups[i];
+                break;
+            }
+        }
+    }
+    if(!group) {
+        LOG(IGMP, "IGMP (ID: %u) no group slot available for initial join\n", session->session_id);
+        return;
+    }
     memset(group, 0x0, sizeof(bbl_igmp_group_s));
     group->group = initial_group;
     group->source[0] = g_ctx->config.igmp_source;
@@ -428,11 +494,11 @@ bbl_access_igmp_initial_join(timer_s *timer)
     LOG(IGMP, "IGMP (ID: %u) initial join for group %s\n",
         session->session_id, format_ipv4_address(&group->group));
 
-    if(g_ctx->config.igmp_group_count > 1 && g_ctx->config.igmp_zap_interval > 0) {
+    if(g_ctx->config.igmp_group_count > 1 && g_ctx->config.igmp_zap_interval > 0 && zapping_group) {
         /* Start/Init Zapping Logic ... */
         group->zapping = true;
         session->zapping_joined_group = group;
-        group = &session->igmp_groups[1];
+        group = zapping_group;
         session->zapping_leaved_group = group;
         memset(group, 0x0, sizeof(bbl_igmp_group_s));
         group->zapping = true;
@@ -489,6 +555,11 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
 
     UNUSED(interface);
 
+    if(session->session_state >= BBL_PPP_TERMINATING) {
+        /* A stopped session must not become established again. */
+        return;
+    }
+
     if(session->access_config->ipv4_enable) {
         if(!session->arp_resolved || session->dhcp_state == BBL_DHCP_RELEASE ||
            (session->dhcp_state > BBL_DHCP_DISABLED && session->dhcp_state < BBL_DHCP_BOUND)) {
@@ -500,7 +571,7 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
         }
     }
     if(session->access_config->ipv6_enable) {
-        if(!session->icmpv6_ra_received || session->dhcp_state == BBL_DHCP_RELEASE ||
+        if(!session->icmpv6_ra_received || session->dhcpv6_state == BBL_DHCP_RELEASE ||
            (session->dhcpv6_state > BBL_DHCP_DISABLED && session->dhcpv6_state < BBL_DHCP_BOUND)) {
             ipv6 = false;
         } else {
@@ -521,10 +592,11 @@ bbl_access_rx_established_ipoe(bbl_access_interface_s *interface,
             }
             bbl_session_update_state(session, BBL_ESTABLISHED);
             if(session->access_config->ipv4_enable) {
-                if(g_ctx->config.igmp_group && g_ctx->config.igmp_autostart && g_ctx->config.igmp_start_delay) {
+                if(g_ctx->config.igmp_group && session->igmp_autostart && g_ctx->config.igmp_start_delay) {
                     /* Start IGMP */
-                    timer_add(&g_ctx->timer_root, &session->timer_igmp, "IGMP", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
+                    timer_add(&g_ctx->timer_root, &session->timer_igmp_join, "IGMP Join", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
                 }
+                bbl_igmp_established(session);
             }
         }
     }
@@ -1120,11 +1192,12 @@ bbl_access_rx_established_pppoe(bbl_access_interface_s *interface,
     if(session->ipcp_state == BBL_PPP_OPENED) {
         if(session->l2tp == false && !session->a10nsp_session &&
            g_ctx->config.igmp_group && 
-           g_ctx->config.igmp_autostart && 
+           session->igmp_autostart && 
            g_ctx->config.igmp_start_delay) {
             /* Start IGMP */
-            timer_add(&g_ctx->timer_root, &session->timer_igmp, "IGMP", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
+            timer_add(&g_ctx->timer_root, &session->timer_igmp_join, "IGMP Join", g_ctx->config.igmp_start_delay, 0, session, &bbl_access_igmp_initial_join);
         }
+        bbl_igmp_established(session);
     }
 }
 
@@ -2307,6 +2380,9 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
                   bbl_ethernet_header_s *eth)
 {
     bbl_arp_s *arp = (bbl_arp_s*)eth->next;
+    bbl_ethernet_header_s eth_tx;
+    bbl_arp_s arp_tx;
+
     if(arp->sender_ip == session->peer_ip_address) {
         if(arp->code == ARP_REQUEST) {
             if(arp->target_ip == session->ip_address) {
@@ -2327,18 +2403,16 @@ bbl_access_rx_arp(bbl_access_interface_s *interface,
         }
     } else if(arp->code == ARP_REQUEST && 
               arp->target_ip == session->ip_address) {
-        eth->dst = eth->src;
-        eth->src = session->client_mac;
-        eth->qinq = session->access_config->qinq;
-        eth->vlan_outer = session->vlan_key.outer_vlan_id;
-        eth->vlan_inner = session->vlan_key.inner_vlan_id;
-        eth->vlan_three = session->access_third_vlan;
-        arp->code = ARP_REPLY;
-        arp->target = arp->sender;
-        arp->target_ip = arp->sender_ip;
-        arp->sender = session->client_mac;
-        arp->sender_ip = session->ip_address;
-        if(bbl_txq_to_buffer(interface->txq, eth) == BBL_TXQ_OK) {
+        eth_tx = *eth;
+        arp_tx = *arp;
+        bbl_access_update_eth(session, &eth_tx);
+        eth_tx.next = &arp_tx;
+        arp_tx.code = ARP_REPLY;
+        arp_tx.target = arp->sender;
+        arp_tx.target_ip = arp->sender_ip;
+        arp_tx.sender = session->client_mac;
+        arp_tx.sender_ip = session->ip_address;
+        if(bbl_txq_to_buffer(interface->txq, &eth_tx) == BBL_TXQ_OK) {
             session->stats.arp_tx++;
             session->access_interface->stats.arp_tx++;
         }
@@ -2401,13 +2475,8 @@ bbl_access_rx_handler_multicast(bbl_access_interface_s *interface,
     bbl_session_s *session;
     uint32_t session_index;
 
-    for(session_index = 0; session_index < g_ctx->sessions; session_index++) {
-        session = &g_ctx->session_list[session_index];
-
-        if(session->access_interface != interface) {
-            continue;
-        }
-
+    for(session_index = 0; session_index < interface->ipoe_session_count; session_index++) {
+        session = interface->ipoe_sessions[session_index];
         if(session->access_type == ACCESS_TYPE_IPOE) {
             if(session->session_state != BBL_TERMINATED &&
                session->session_state != BBL_IDLE) {
@@ -2436,13 +2505,8 @@ bbl_access_rx_handler_broadcast(bbl_access_interface_s *interface,
     bbl_session_s *session;
     uint32_t session_index;
 
-    for(session_index = 0; session_index < g_ctx->sessions; session_index++) {
-        session = &g_ctx->session_list[session_index];
-
-        if(session->access_interface != interface) {
-            continue;
-        }
-
+    for(session_index = 0; session_index < interface->ipoe_session_count; session_index++) {
+        session = interface->ipoe_sessions[session_index];
         if(session->access_type == ACCESS_TYPE_IPOE) {
             if(session->session_state != BBL_TERMINATED &&
                session->session_state != BBL_IDLE) {

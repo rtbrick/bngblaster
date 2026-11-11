@@ -61,10 +61,14 @@ typedef struct bbl_session_
     struct timer_ *timer_dhcp_retry;
     struct timer_ *timer_dhcp_t1;
     struct timer_ *timer_dhcp_t2;
+    struct timer_ *timer_dhcp_lease;
     struct timer_ *timer_dhcpv6;
     struct timer_ *timer_dhcpv6_t1;
     struct timer_ *timer_dhcpv6_t2;
+    struct timer_ *timer_dhcpv6_lease;
     struct timer_ *timer_igmp;
+    struct timer_ *timer_igmp_join;
+    struct timer_ *timer_igmp_query;
     struct timer_ *timer_zapping;
     struct timer_ *timer_icmpv6;
     struct timer_ *timer_session;
@@ -247,7 +251,7 @@ typedef struct bbl_session_
     bool ipv6_address_ia_na; /* IPv6 address assigned via DHCPv6 IA_NA (PPP) */
     uint8_t dhcpv6_retry;
     uint8_t dhcpv6_duid[DUID_LEN];
-    uint8_t dhcpv6_server_duid[DHCPV6_BUFFER];
+    uint8_t dhcpv6_server_duid[DHCPV6_DUID_LEN_MAX];
     uint8_t dhcpv6_server_duid_len;
     ipv6addr_t dhcpv6_dns1;
     ipv6addr_t dhcpv6_dns2;
@@ -270,6 +274,8 @@ typedef struct bbl_session_
     bool     igmp_autostart;
     uint8_t  igmp_version;
     uint8_t  igmp_robustness;
+    uint8_t  igmp_querier_version; /* older version querier present */
+    time_t   igmp_querier_expire;
     bbl_igmp_group_s igmp_groups[IGMP_MAX_GROUPS];
 
     /* IGMP Zapping */
