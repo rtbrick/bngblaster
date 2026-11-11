@@ -173,6 +173,21 @@ def test_ipcp_close_in_network_phase(ppp):
     assert (session["ipcp-state"], session["ip6cp-state"]) == ("Closed", "Opened")
 
 
+def test_lcp_renegotiation_nak(ppp):
+    """LCP configure-request of the server in opened state with an MRU the
+    client naks: LCP returns to request sent, the configure-ack of the
+    server does not open LCP (RFC 1661 Opened + RCR-), which started
+    authentication without an acknowledged server request."""
+    ppp.start_server("--actions", "2:lcp-reneg-bad-mru")
+    ppp.start_bbl()
+    ppp.wait_state("Established")
+    wait_until(lambda: ppp.state() != "Established", 10, message="LCP renegotiation")
+    time.sleep(1.5)
+    session = ppp.session()
+    assert session["session-state"] == "PPP Link" and session["lcp-state"] != "Opened", session
+    assert ppp.received("lcp", CONF_NAK)
+
+
 def test_ipcp_close_retransmit(ppp):
     """ipcp-close on an established session with the first terminate-request
     lost: it is retransmitted, IPCP is closed and can be opened again."""

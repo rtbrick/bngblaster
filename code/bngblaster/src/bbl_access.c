@@ -1847,9 +1847,11 @@ bbl_access_lcp_restart(bbl_session_s *session, bool peer)
     timer_del(session->timer_ipcp);
     timer_del(session->timer_ip6cp);
 
-    /* Reset upper layer session states, the configure-request
-     * of the peer is acknowledged by the caller. */
-    session->lcp_state = peer ? BBL_PPP_PEER_ACK : BBL_PPP_INIT;
+    /* Reset upper layer session states. The configure-request of
+     * the peer (peer restart) is answered by the caller, which sets
+     * the peer acknowledged only with a configure-ack, a configure-nak
+     * returns to request sent (RFC 1661 Opened + RCR-). */
+    session->lcp_state = BBL_PPP_INIT;
     session->lcp_request_code = PPP_CODE_CONF_REQUEST;
     session->lcp_retries = 0;
     session->lcp_failures = 0;

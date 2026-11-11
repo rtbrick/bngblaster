@@ -96,6 +96,7 @@ class Server:
         self.ip6cp_acked = False
         self.ipcp_term_ignored = False
         self.ip6cp_delayed = False
+        self.lcp_bad_mru_until = 0
         self.ipcp_closed = False
         self.established_at = None
         self.lcp_hold_until = 0
@@ -186,6 +187,10 @@ class Server:
         self.record(**entry)
         if code == CONF_REQ:
             if time.monotonic() < self.lcp_hold_until:
+                return
+            if time.monotonic() < self.lcp_bad_mru_until:
+                # Only acknowledge the client, the own request was nak'ed.
+                self.send_ppp(LCP, control(CONF_ACK, identifier, data))
                 return
             rejected = [(k, v) for k, v in options(data) if
                         (k == LCP_MRU and "mru" in self.args.lcp_reject) or
@@ -353,6 +358,11 @@ class Server:
             self.send_ppp(IPCP, control(15, self.next_id(), b"\x01\x02"))
         elif action == "icmp-echo":
             self.send_ppp(PPP_IPV4, icmp_echo_request(SERVER_ADDRESS, CLIENT_ADDRESS, 0x1234, 1))
+        elif action == "lcp-reneg-bad-mru":
+            # Renegotiate LCP with an MRU the client naks (above 1492).
+            self.lcp_bad_mru_until = time.monotonic() + 3
+            self.send_ppp(LCP, control(CONF_REQ, self.next_id(), encode_options(
+                [(LCP_MRU, struct.pack("!H", 1500)), (LCP_MAGIC, b"\x11\x22\x33\x44")])))
         elif action == "lcp-hold":
             # Ignore configure-requests of the client for some time.
             self.lcp_hold_until = time.monotonic() + 3
