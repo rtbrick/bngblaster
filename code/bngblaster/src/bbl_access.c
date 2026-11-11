@@ -946,6 +946,12 @@ bbl_access_l2tp(bbl_session_s *session, char *reply_message, uint8_t reply_messa
     char *save = NULL;
     uint8_t len;
 
+    if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
+        /* PPPoL2TP (LAC) sessions are linked to their own L2TP session,
+         * the reply of a BNG Blaster LNS in the same instance names the
+         * LNS session of this tunnel, which must not replace it. */
+        return;
+    }
     if(!((reply_message_len > 23) && 
          (strncmp(reply_message, L2TP_REPLY_MESSAGE, 20) == 0))) {
         return;

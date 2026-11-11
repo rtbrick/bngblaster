@@ -515,6 +515,30 @@ def test_session_restart(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+def test_lac_lns_same_instance(local_veth, processes, tmp_path):
+    """LAC and LNS in one instance: the PAP reply of the LNS naming its own
+    session does not relink the LAC session to the LNS session, which sent
+    all upstream packets back into the LNS tunnel and terminated the
+    sessions by LCP echo timeout."""
+    config = lac_config(local_veth.if1, sessions=1, keepalive=1)
+    lns = lns_config(local_veth.if2)
+    config["interfaces"]["network"] = [config["interfaces"]["network"], lns["interfaces"]["network"]]
+    config["l2tp-server"] = lns["l2tp-server"]
+    config["l2tp-client"] = config["l2tp-client"][:1]
+    bbl = BngBlaster(local_veth.ns, tmp_path, "bbl").start(config, logging=("info", "l2tp"))
+    processes.append(bbl)
+    wait_until(lambda: lac_counters(bbl)["sessions-established"] == 1, 15, message="session established")
+    lac_tunnel = [t["tunnel-id"] for t in bbl.ctrl("l2tp-tunnels")["l2tp-tunnels"] if "client-name" in t]
+    assert len(lac_tunnel) == 1
+    lac_tunnel = lac_tunnel[0]
+    time.sleep(8)
+    info = bbl.ctrl("session-info", **{"session-id": 1})["session-info"]
+    assert info["session-state"] == "Established", info
+    assert info["l2tp"]["tunnel-id"] == lac_tunnel
+    assert "Tunnelled session with BNG Blaster LNS" not in open(bbl.path("log")).read()
+    assert bbl.terminate(EXIT_TIMEOUT) == 0
+
+
 def test_stream_a10nsp_config_error(local_veth, processes, tmp_path):
     """A PPPoL2TP upstream stream without network interface (A10NSP
     selected) is a configuration error instead of a crash."""
