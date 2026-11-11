@@ -335,6 +335,25 @@ Credentials are not verified, as with all PAP and CHAP requests
 received by the LNS. This behaviour can be disabled with the
 ``l2tp-server`` option ``proxy-auth``.
 
+Protocol Behavior
+~~~~~~~~~~~~~~~~~
+
+Control messages are retransmitted with exponential backoff capped at
+8 seconds (RFC 2661 section 5.8) until ``max-retry`` is reached. A SCCRQ
+retransmitted by the LAC is detected for the tunnels of all L2TP servers.
+SCCRP without Assigned Tunnel ID, ICRQ and ICRP without Assigned Session ID
+are rejected, the Private Group ID AVP may have any length.
+
+Calls with the Sequencing Required AVP are rejected with a CDN (result code 2,
+error code 6), as data messages are sent without sequence numbers. CDN
+messages sent by the LNS without an explicit result code carry result code 3
+(administrative reasons), after an LCP echo timeout result code 1 (loss of
+carrier).
+
+The LNS answers LCP echo requests with its own Magic-Number (zero if it does
+not send an LCP configure-request) and acknowledges an LCP terminate-request
+of the client before the call is cleared.
+
 L2TP Commands
 ~~~~~~~~~~~~~
 
@@ -499,6 +518,11 @@ Configuration
     }
 
 .. include:: ../configuration/lac.rst
+
+Traffic streams of PPPoL2TP sessions are sent upstream through the L2TP tunnel
+and downstream as plain IP packets from the network interface to the session
+address, which are routed by the LNS into the tunnel. The ICMP client and TUN
+interfaces of PPPoL2TP sessions are transported through the tunnel as well.
 
 LAC vs LNS Self-test
 ~~~~~~~~~~~~~~~~~~~~

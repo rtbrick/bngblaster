@@ -352,12 +352,13 @@ bbl_http_client_json(bbl_http_client_s *client)
             strncpy(header_value, client->http.headers[i].value, sizeof(header_value)-1);
         }
 
-        json_array_append_new(headers, json_pack("{ss* ss*}",
-            "name", header_name,
-            "value", header_value));
+        /* Received data may not be valid UTF-8. */
+        json_array_append_new(headers, json_pack("{so so}",
+            "name", bbl_json_cstring(header_name),
+            "value", bbl_json_cstring(header_value)));
     }
 
-    root = json_pack("{sI sI ss* ss* ss* sI ss* ss* s{sI, sI, ss* so*}}",
+    root = json_pack("{sI sI ss* ss* ss* sI ss* ss* s{sI, sI, so* so*}}",
         "session-id", (json_int_t)client->session->session_id,
         "http-client-group-id", (json_int_t)config->http_client_group_id,
         "name", config->name,
@@ -369,7 +370,7 @@ bbl_http_client_json(bbl_http_client_s *client)
         "response",
         "minor-version", (json_int_t)client->http.minor_version,
         "status", (json_int_t)client->http.status,
-        "msg", client->http.msg,
+        "msg", client->http.msg ? bbl_json_string(client->http.msg, client->http.msg_len) : NULL,
         "headers", headers);
 
     return root;

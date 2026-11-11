@@ -623,9 +623,27 @@ static bool
 bbl_access_rx_icmp(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_ipv4_s *ipv4)
 {
     bbl_icmp_s *icmp = (bbl_icmp_s*)ipv4->next;
+    bbl_ethernet_header_s eth_local = {0};
+    uint32_t dst;
 
     if(!eth) {
-        return false;
+        /* PPPoL2TP (LAC) traffic has no ethernet header. */
+        if(!(session->l2tp_session && session->ip_address && session->ip_address == ipv4->dst)) {
+            return false;
+        }
+        if(icmp->type == ICMP_TYPE_ECHO_REQUEST) {
+            dst = ipv4->dst;
+            ipv4->dst = ipv4->src;
+            ipv4->src = dst;
+            ipv4->ttl = 64;
+            icmp->type = ICMP_TYPE_ECHO_REPLY;
+            bbl_l2tp_send_data(session->l2tp_session, PROTOCOL_IPV4, ipv4);
+            session->stats.icmp_tx++;
+            session->access_interface->stats.icmp_tx++;
+            return true;
+        }
+        clock_gettime(CLOCK_MONOTONIC, &eth_local.timestamp);
+        return bbl_icmp_client_rx(session, NULL, &eth_local, ipv4, icmp);
     }
 
     if(session->ip_address && session->ip_address == ipv4->dst) {

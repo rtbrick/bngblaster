@@ -89,6 +89,14 @@ bbl_icmp_client_tx(bbl_icmp_client_s *client, bbl_icmp_s *icmp)
         ipv4.offset = IPV4_DF;
     }
 
+    if(session && session->access_type == ACCESS_TYPE_PPPOL2TP) {
+        /* Sent through the L2TP tunnel (LAC). */
+        if(!session->l2tp_session) {
+            return BBL_TXQ_ENCODE_ERROR;
+        }
+        bbl_l2tp_send_data(session->l2tp_session, PROTOCOL_IPV4, &ipv4);
+        return BBL_TXQ_OK;
+    }
     if(session) {
         return bbl_txq_to_buffer(session->access_interface->txq, &eth);
     } else {

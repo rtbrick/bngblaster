@@ -78,8 +78,10 @@ jobs:
     - name: Install pppd
       shell: bash
       run: |
-        # pppoe-server (rp-pppoe) with pppd as PPPoE server, started per test.
-        sudo apt install -y ppp pppoe
+        # pppoe-server (rp-pppoe) with pppd as PPPoE server and xl2tpd
+        # as L2TP LNS, started per test.
+        sudo apt install -y ppp pppoe xl2tpd
+        sudo systemctl stop xl2tpd || true
 
     - name: Install Python Dependencies
       shell: bash
@@ -97,6 +99,7 @@ jobs:
         BBL_REQUIRE_FRR: 1
         BBL_REQUIRE_BIRD: 1
         BBL_REQUIRE_PPPD: 1
+        BBL_REQUIRE_XL2TPD: 1
       run: |
         uname -r
         grep -E "CONFIG_TCP_(AO|MD5SIG)=" /boot/config-$(uname -r) || true

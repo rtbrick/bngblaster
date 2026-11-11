@@ -49,6 +49,7 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
 
     uint8_t  *bbl_start;
     bbl_bbl_s bbl;
+    bbl_ethernet_header_s eth_local;
 
     uint16_t offset;
     uint16_t length;
@@ -137,6 +138,16 @@ bbl_fragment_rx(bbl_access_interface_s *access_interface,
             bbl.timestamp.tv_sec = *(uint32_t*)(bbl_start+40);
             bbl.timestamp.tv_nsec = *(uint32_t*)(bbl_start+44);
 
+            if(!eth) {
+                /* PPPoL2TP (LAC) traffic has no ethernet header, the
+                 * stream is verified with the reassembled IPv4 packet. */
+                memset(&eth_local, 0x0, sizeof(eth_local));
+                eth_local.type = ETH_TYPE_IPV4;
+                eth_local.tos = ipv4->tos;
+                eth_local.ttl = ipv4->ttl;
+                clock_gettime(CLOCK_MONOTONIC, &eth_local.timestamp);
+                eth = &eth_local;
+            }
             if(eth) {
                 eth->bbl = &bbl;
                 eth->length = fragment->max_length;

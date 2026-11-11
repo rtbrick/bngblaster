@@ -432,6 +432,7 @@ bbl_session_reset(bbl_session_s *session) {
 
     session->reconnect_delay = 0;
     session->reconnect_disabled = false;
+    session->restart = false;
     timer_del(session->timer_reconnect);
 
     session->pppoe_retries = 0;
@@ -607,6 +608,20 @@ bbl_session_start(bbl_session_s *session)
         CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
     }
     return true;
+}
+
+/* Reconnect a terminated session (configured or forced by session-restart). */
+static bool
+bbl_session_reconnect_enabled(bbl_session_s *session)
+{
+    if(session->reconnect_disabled) {
+        return false;
+    }
+    if(session->restart) {
+        return true;
+    }
+    return (session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) ||
+           (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect);
 }
 
 void
@@ -799,9 +814,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
                     }
                 }
                 /* Reconnect */
-                if(!session->reconnect_disabled && 
-                   ((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
-                    (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect))) {
+                if(bbl_session_reconnect_enabled(session)) {
                     if(!session->reconnect_delay) {
                         session->reconnect_delay = 1;
                     }
@@ -1703,9 +1716,7 @@ bbl_session_json(bbl_session_s *session, bool debug)
         json_object_set_new(root, "debug-tx-access-queue", json_boolean(CIRCLEQ_PREV(session, session_tx_qnode)));
         json_object_set_new(root, "debug-tx-network-queue", json_boolean(CIRCLEQ_PREV(session, session_network_tx_qnode)));
         json_object_set_new(root, "debug-tx-a10nsp-queue", json_boolean(CIRCLEQ_PREV(session, session_a10nsp_tx_qnode)));
-        if(!session->reconnect_disabled && 
-            ((session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) || 
-            (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect))) {
+        if(bbl_session_reconnect_enabled(session)) {
             json_object_set_new(root, "debug-reconnect", json_boolean(true));
         } else {
             json_object_set_new(root, "debug-reconnect", json_boolean(false));
@@ -1941,6 +1952,7 @@ bbl_session_ctrl_stop_restart(int fd, uint32_t session_id, json_t *arguments, bo
                     bbl_session_start(session);
                 } else {
                     session->reconnect_disabled = false;
+                    session->restart = true;
                     session->reconnect_delay = reconnect_delay;
                     bbl_session_clear(session);
                 }
@@ -1968,6 +1980,7 @@ bbl_session_ctrl_stop_restart(int fd, uint32_t session_id, json_t *arguments, bo
                         bbl_session_start(session);
                     } else {
                         session->reconnect_disabled = false;
+                        session->restart = true;
                         session->reconnect_delay = reconnect_delay;
                         bbl_session_clear(session);
                     }

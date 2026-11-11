@@ -154,6 +154,32 @@ bbl_tun_pppoe_tx_job(timer_s *timer) {
 }
 
 void 
+bbl_tun_pppol2tp_tx_job(timer_s *timer) {
+    bbl_session_s *session = timer->data;
+
+    uint8_t buf[2048];
+    uint8_t version;
+    ssize_t len = 1;
+
+    while(true) {
+        len = read(session->tun_fd, buf, sizeof(buf));
+        if(len > 0) {
+            if(!session->l2tp_session) {
+                continue;
+            }
+            version = buf[0] >> 4;
+            if(version == 4) {
+                bbl_l2tp_send_data_raw(session->l2tp_session, PROTOCOL_IPV4, buf, len);
+            } else if(version == 6) {
+                bbl_l2tp_send_data_raw(session->l2tp_session, PROTOCOL_IPV6, buf, len);
+            }
+        } else {
+            break;
+        }
+    }
+}
+
+void 
 bbl_tun_ipoe_tx_job(timer_s *timer) {
     bbl_session_s *session = timer->data;
 
@@ -196,6 +222,9 @@ bbl_tun_session_up(bbl_session_s *session)
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         timer_add_periodic(&g_ctx->timer_root, &session->timer_tun, "TUN", 
                            0, 1 * MSEC, session, &bbl_tun_pppoe_tx_job);
+    } else if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
+        timer_add_periodic(&g_ctx->timer_root, &session->timer_tun, "TUN", 
+                           0, 1 * MSEC, session, &bbl_tun_pppol2tp_tx_job);
     } else {
         timer_add_periodic(&g_ctx->timer_root, &session->timer_tun, "TUN", 
             0, 1 * MSEC, session, &bbl_tun_ipoe_tx_job);

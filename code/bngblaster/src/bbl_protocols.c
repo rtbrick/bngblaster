@@ -1640,8 +1640,17 @@ encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_s *l2tp)
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint8_t));
         *(uint16_t*)buf = htobe16(l2tp->protocol);
         BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+        if(l2tp->payload && l2tp->payload_len) {
+            /* Raw PPP payload (e.g. IP packet from TUN interface) */
+            memcpy(buf, l2tp->payload, l2tp->payload_len);
+            BUMP_WRITE_BUFFER(buf, len, l2tp->payload_len);
+            l2tp->protocol = 0;
+        }
         /* Add protocol */
         switch(l2tp->protocol) {
+            case 0:
+                result = PROTOCOL_SUCCESS;
+                break;
             case PROTOCOL_LCP:
                 result = encode_ppp_lcp(buf, len, (bbl_lcp_s*)l2tp->next);
                 break;
@@ -4374,6 +4383,10 @@ decode_l2tp(uint8_t *buf, uint16_t len,
                 ret_val = decode_ppp_chap(buf, len, sp, sp_len, (bbl_chap_s**)&l2tp->next);
                 break;
             default:
+                /* Unsupported PPP protocol, passed as raw data to
+                 * the client to answer with LCP Protocol-Reject. */
+                l2tp->next = buf;
+                ret_val = PROTOCOL_SUCCESS;
                 break;
         }
     }

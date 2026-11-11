@@ -424,3 +424,123 @@ def test_invalid_icrq(topology, processes, tmp_path):
     # The rejected ICRQ is not counted (the maximum would be 2).
     assert lns.report()["report"]["l2tp"]["sessions"] == 1
 
+
+
+def start_pair(topology, processes, tmp_path, sessions=2, update=None):
+    """Start LNS and LAC, update modifies the LAC config."""
+    lns = BngBlaster(topology.b, tmp_path, "lns").start(
+        lns_config(topology.if_b), logging=("info", "l2tp"))
+    processes.append(lns)
+    config = lac_config(topology.if_a, sessions=sessions)
+    if update:
+        update(config)
+    lac = BngBlaster(topology.a, tmp_path, "lac").start(config, logging=("info", "l2tp", "pppoe"))
+    processes.append(lac)
+    wait_until(lambda: lac_counters(lac)["sessions-established"] == sessions,
+               30, message="LAC sessions established")
+    return lac, lns
+
+
+def test_session_traffic_both_directions(topology, processes, tmp_path):
+    """Downstream session traffic of PPPoL2TP sessions is sent as IP from
+    the network interface (routed by the LNS), upstream through the tunnel
+    is counted in the network interface and session statistics."""
+    lac, lns = start_pair(topology, processes, tmp_path)
+    lac.ctrl("session-traffic-start")
+
+    def streams(direction):
+        return [s for s in lac.ctrl("session-streams", **{"session-id": 1})["session-streams"]["streams"]
+                if s["direction"] == direction]
+
+    wait_until(lambda: streams("downstream") and all(s["tx-packets"] >= 10 for s in streams("downstream")),
+               10, message="downstream session traffic sent")
+    assert all(s["tx-packets"] >= 10 for s in streams("upstream"))
+    lac.ctrl("session-traffic-stop")
+    network = lac.ctrl("network-interfaces")["network-interfaces"][0]
+    assert network["tx-packets-streams"] > 0 and network["tx-packets-session-ipv4"] > 0, network
+    assert lac.ctrl("session-streams", **{"session-id": 1})["session-streams"]["tx-packets"] > 0
+    assert "Failed to build packet" not in open(lac.path("log")).read()
+    assert_clean_exit(lac, lns)
+
+
+def test_stream_ports(topology, processes, tmp_path):
+    """Upstream streams of PPPoL2TP sessions use the iterated ports of each
+    stream (captured inside the L2TP tunnel in the LNS namespace)."""
+    def update(config):
+        config["interfaces"]["access"][0]["stream-group-id"] = 1
+        config["streams"] = [{"name": "S1", "stream-group-id": 1, "type": "ipv4", "direction": "upstream",
+                              "pps": 10, "source-port": 10000, "source-port-step": 1,
+                              "source-port-max": 10010, "destination-port": 20000}]
+        config["traffic"] = {"autostart": False}
+
+    lac, lns = start_pair(topology, processes, tmp_path, sessions=3, update=update)
+    ports = set()
+    for session_id in (1, 2, 3):
+        for stream in lac.ctrl("session-streams", **{"session-id": session_id})["session-streams"]["streams"]:
+            if stream["name"] == "S1":
+                ports.add(stream["source-port"])
+    assert len(ports) == 3, ports
+    capture = subprocess.Popen(topology.b.cmd(["timeout", "8", "tcpdump", "-nn", "-l", "-i", topology.if_b,
+                                               "udp port 1701"]),
+                               stdout=subprocess.PIPE, stderr=subprocess.DEVNULL, text=True)
+    time.sleep(1)
+    lac.ctrl("traffic-start")
+    out = capture.communicate(timeout=15)[0]
+    lac.ctrl("traffic-stop")
+    seen = {int(p) for p in __import__("re").findall(r"\.(\d+) > [\d.]+\.20000:", out)}
+    assert seen == ports, (seen, ports)
+    assert_clean_exit(lac, lns)
+
+
+def test_icmp_client(topology, processes, tmp_path):
+    """The ICMP client of a PPPoL2TP session sends through the tunnel."""
+    def update(config):
+        config["interfaces"]["access"][0]["icmp-client-group-id"] = 1
+        config["icmp-client"] = [{"icmp-client-group-id": 1, "destination-address": "192.0.2.1",
+                                  "interval": 0.2}]
+
+    lac, lns = start_pair(topology, processes, tmp_path, sessions=1, update=update)
+    wait_until(lambda: lns_sessions(lns) and lns_sessions(lns)[0]["data-ipv4-packets-rx"] >= 3, 10,
+               message="ICMP requests received by the LNS")
+    assert_clean_exit(lac, lns)
+
+
+def test_session_restart(topology, processes, tmp_path):
+    """session-restart restarts a PPPoL2TP session without reconnect."""
+    lac, lns = start_pair(topology, processes, tmp_path)
+    assert lac.ctrl("session-restart", **{"session-id": 1})["code"] == 200
+    wait_until(lambda: lac.ctrl("session-info", **{"session-id": 1})["session-info"]["flapped"] == 1, 10,
+               message="session flapped")
+    wait_until(lambda: lac_counters(lac)["sessions-established"] == 2, 20, message="session established again")
+    assert_clean_exit(lac, lns)
+
+
+def test_stream_a10nsp_config_error(local_veth, processes, tmp_path):
+    """A PPPoL2TP upstream stream without network interface (A10NSP
+    selected) is a configuration error instead of a crash."""
+    config = lac_config(local_veth.if1, sessions=1)
+    config["interfaces"]["a10nsp"] = [{"interface": local_veth.if2}]
+    config["interfaces"]["access"][0]["stream-group-id"] = 1
+    config["streams"] = [{"name": "S1", "stream-group-id": 1, "type": "ipv4", "direction": "upstream",
+                          "pps": 1, "a10nsp-interface": local_veth.if2}]
+    bbl = BngBlaster(local_veth.ns, tmp_path, "lac")
+    processes.append(bbl)
+    with pytest.raises(RuntimeError) as error:
+        bbl.start(config)
+    assert bbl.proc.returncode > 0, str(error.value)
+    assert "requires a network interface" in open(bbl.path("log")).read()
+
+
+@pytest.mark.slow
+def test_retransmission_backoff(topology, processes, tmp_path):
+    """Control messages to a dead LNS are retransmitted with backoff capped
+    at 8 seconds, so max-retry 6 is reached after about 39 seconds."""
+    # Gateway resolved, but no LNS listening.
+    helpers.kernel_address(topology.b, topology.if_b, LNS_ADDRESS + "/24")
+    config = lac_config(topology.if_a, sessions=1, client_options={1: {"max-retry": 6}, 2: {"max-retry": 6}})
+    lac = BngBlaster(topology.a, tmp_path, "lac").start(config, logging=("info", "l2tp"))
+    processes.append(lac)
+    start = time.monotonic()
+    wait_until(lambda: "max retry" in open(lac.path("log")).read(), 60, interval=1, message="max retry")
+    assert time.monotonic() - start < 50
+    assert lac.terminate(EXIT_TIMEOUT) == 0

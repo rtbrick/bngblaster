@@ -105,6 +105,7 @@ typedef struct bbl_session_
     /* Optional reconnect delay in seconds */
     uint32_t reconnect_delay;
     bool reconnect_disabled;
+    bool restart; /* session-restart, reconnect regardless of config */
 
     uint8_t chap_identifier;
     uint8_t chap_response[CHALLENGE_LEN];

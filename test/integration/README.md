@@ -2,8 +2,9 @@
 
 Functional tests over veth pairs between network namespaces:
 
-* BNG Blaster L2TP LAC against BNG Blaster L2TP LNS
-  (`test_l2tp_lac_lns.py`)
+* BNG Blaster L2TP LAC against BNG Blaster L2TP LNS, including PPPoL2TP
+  session traffic in both directions, stream ports, ICMP client,
+  session-restart and the control message backoff (`test_l2tp_lac_lns.py`)
 * BNG Blaster BGP against GoBGP: IPv4/IPv6 unicast and labeled
   unicast with End-of-RIB and withdraw, connection collision,
   negotiated and zero hold time, MD5, TCP-AO and EVPN
@@ -61,6 +62,15 @@ Functional tests over veth pairs between network namespaces:
 * BNG Blaster LDP against FRR: label bindings (IPv4, IPv6, dual-stack),
   hold time, hello adjacency loss, teardown and stream labels
   (`test_ldp_frr.py`)
+* BNG Blaster L2TP LNS and LAC against a scripted L2TP peer: Private
+  Group ID of any length, Sequencing Required, missing Assigned Tunnel or
+  Session ID, LNS echo reply magic and terminate-ack, CDN result code,
+  peer strings with invalid UTF-8, SCCRQ retry to the second server and
+  tunnel ID range of the control commands (`test_l2tp_protocol.py`,
+  `l2tp_peer.py`)
+* BNG Blaster L2TP LAC against xl2tpd (LNS) with pppd: sessions, CCP
+  protocol-reject, ICMP client through the tunnel, session-restart and
+  teardown (`test_l2tp_xl2tpd.py`)
 * BNG Blaster PPPoE client against a scripted PPPoE server: rejected LCP
   options, Code-Reject and Discard-Request, NCP timeout, Max-Failure,
   terminate and renegotiation by the server, ipcp-close retransmission,
@@ -119,12 +129,13 @@ go install github.com/osrg/gobgp/v4/cmd/...@15e9be9198ae51abad50b3d9b42aa63c3b46
   installed unless `BBL_REQUIRE_BIRD` is set. BIRD is started per test
   in foreground with config, control socket and log in the test
   directory, so the BIRD service can be stopped.
-* pppd and rp-pppoe (Debian/Ubuntu packages `ppp` and `pppoe`), tests
-  are skipped if not installed unless `BBL_REQUIRE_PPPD` is set. Without
-  installing, both packages can be extracted with `dpkg-deb -x` into a
-  directory given by `PPP_ROOT` (remove the setuid bit of the extracted
-  pppd). The pppd options are mounted at `/etc/ppp` per test with an
-  overlay in a private mount namespace.
+* pppd, rp-pppoe and xl2tpd (Debian/Ubuntu packages `ppp`, `pppoe` and
+  `xl2tpd`), tests are skipped if not installed unless `BBL_REQUIRE_PPPD`
+  or `BBL_REQUIRE_XL2TPD` is set. Without installing, the packages can be
+  extracted with `dpkg-deb -x` into a directory given by `PPP_ROOT`
+  (remove the setuid bit of the extracted pppd). The configuration is
+  mounted at `/etc` per test with an overlay in a private mount
+  namespace, xl2tpd runs in userspace mode (no kernel L2TP modules).
 * Linux kernel with `CONFIG_TCP_MD5SIG` and `CONFIG_TCP_AO` (6.7+),
   tests are skipped otherwise unless `BBL_REQUIRE_TCP_MD5` or
   `BBL_REQUIRE_TCP_AO` is set.

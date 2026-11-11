@@ -302,7 +302,7 @@ typedef struct bbl_l2tp_session_
     uint32_t peer_framing;
     uint32_t peer_bearer;
     uint32_t peer_physical_channel_id;
-    uint32_t peer_private_group_id;
+    char    *peer_private_group_id;
     uint32_t peer_call_serial_number;
 
     uint16_t proxy_auth_type;
@@ -317,6 +317,7 @@ typedef struct bbl_l2tp_session_
     uint8_t ip6cp_state;
 
     struct timer_ *timer_lcp_echo;
+    struct timer_ *timer_free; /* deferred free, see bbl_l2tp_session_delete() */
     uint8_t lcp_identifier;
     uint8_t lcp_retries;
 
@@ -405,6 +406,9 @@ bbl_l2tp_client_session_get_tunnel(bbl_session_s *session);
 
 void
 bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next);
+
+void
+bbl_l2tp_send_data_raw(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, uint8_t *payload, uint16_t len);
 
 void
 bbl_l2tp_client_session_connect(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_session_s *session);

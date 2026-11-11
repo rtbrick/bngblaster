@@ -366,14 +366,12 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                         l2tp_session->peer_physical_channel_id = be32toh(*(uint32_t*)avp.value);
                         break;
                     case L2TP_AVP_PRIVATE_GROUP_ID:
-                        if(avp.len != 4) {
-                            LOG(L2TP, "L2TP Error (%s) Invalid L2TP private group id AVP in %s from %s\n",
-                                      l2tp_tunnel_hostname(l2tp_tunnel),
-                                      l2tp_message_string(l2tp->type),
-                                      format_ipv4_address(&l2tp_tunnel->peer_ip));
-                            return false;
+                        /* Arbitrary number of octets (RFC 2661 section 4.4.5) */
+                        if(!l2tp_session->peer_private_group_id && avp.len) {
+                            l2tp_session->peer_private_group_id = malloc(avp.len + 1);
+                            memcpy(l2tp_session->peer_private_group_id, avp.value, avp.len);
+                            l2tp_session->peer_private_group_id[avp.len] = '\0';
                         }
-                        l2tp_session->peer_private_group_id = be32toh(*(uint32_t*)avp.value);
                         break;
                     case L2TP_AVP_SEQUENCING_REQUIRED:
                         l2tp_session->data_sequencing = true;
@@ -1041,9 +1039,10 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
                 avp.value_type = L2TP_AVP_VALUE_UINT16;
                 avp.value = (void*)(&l2tp_session->key.session_id);
                 bbl_l2tp_avp_encode(&buf, len, &avp);
-                /* Result Code */
+                /* Result Code, 0 is reserved (RFC 2661 section 4.4.2),
+                 * 3 is call disconnected for administrative reasons. */
                 bbl_l2tp_avp_encode_result_code(&buf, len,
-                                                l2tp_session->result_code,
+                                                l2tp_session->result_code ? l2tp_session->result_code : 3,
                                                 l2tp_session->error_code,
                                                 l2tp_session->error_message);
                 /* RFC3145 PPP Disconnect Cause Code AVP */

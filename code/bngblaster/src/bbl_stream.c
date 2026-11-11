@@ -996,12 +996,11 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
  * so the outer IP source is the LAC's network interface address and
  * the inner PPP payload flows from the client toward the LNS. */
 static bool
-bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream)
+bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream, bbl_l2tp_session_s *l2tp_session)
 {
     bbl_session_s *session = stream->session;
     bbl_stream_config_s *config = stream->config;
 
-    bbl_l2tp_session_s *l2tp_session = session->l2tp_session;
     bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
     bbl_network_interface_s *network_interface = l2tp_tunnel->interface;
 
@@ -1020,10 +1019,12 @@ bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream)
     eth.dst = network_interface->gateway_mac;
     eth.src = network_interface->mac;
     eth.vlan_outer = network_interface->vlan;
-    eth.vlan_inner = 0;
+    eth.vlan_inner = network_interface->inner_vlan;
+    eth.qinq = network_interface->qinq;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &l2tp_ipv4;
-    l2tp_ipv4.src = network_interface->ip.address;
+    l2tp_ipv4.src = l2tp_tunnel->client && l2tp_tunnel->client->client_address ?
+                    l2tp_tunnel->client->client_address : network_interface->ip.address;
     l2tp_ipv4.dst = l2tp_tunnel->peer_ip;
     l2tp_ipv4.ttl = config->ttl;
     l2tp_ipv4.tos = config->priority;
@@ -1038,8 +1039,8 @@ bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream)
     l2tp.session_id = l2tp_session->peer_session_id;
     l2tp.with_length = l2tp_tunnel->config->data_length;
     l2tp.with_offset = l2tp_tunnel->config->data_offset;
-    udp.src = config->src_port;
-    udp.dst = config->dst_port;
+    udp.src = stream->src_port;
+    udp.dst = stream->dst_port;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.next = &bbl;
     bbl.type = BBL_TYPE_UNICAST;
@@ -1139,12 +1140,11 @@ bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream)
  * the LNS is the sender, so the outer IP source is the LNS server address
  * and the inner PPP payload flows from the LNS toward the client. */
 static bool
-bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
+bbl_stream_build_l2tp_packet(bbl_stream_s *stream, bbl_l2tp_session_s *l2tp_session)
 {
     bbl_session_s *session = stream->session;
     bbl_stream_config_s *config = stream->config;
 
-    bbl_l2tp_session_s *l2tp_session = stream->session->l2tp_session;
     bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
 
     bbl_network_interface_s *network_interface = l2tp_tunnel->interface;
@@ -1276,17 +1276,23 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream)
 static bool
 bbl_stream_build_packet(bbl_stream_s *stream)
 {
+    bbl_l2tp_session_s *l2tp_session;
+
     if(stream->config->stream_group_id == 0) {
         /* RAW stream */
         return bbl_stream_build_network_packet(stream);
     }
     if(stream->session) {
+        /* The L2TP session is read once, as it may be removed by the
+         * main thread while a TX thread builds the packet (the memory
+         * is freed deferred, see bbl_l2tp_session_delete). */
+        l2tp_session = __atomic_load_n(&stream->session->l2tp_session, __ATOMIC_ACQUIRE);
         if(stream->session->access_type == ACCESS_TYPE_PPPOE) {
-            if(stream->session->l2tp_session) {
+            if(l2tp_session) {
                 if(stream->direction == BBL_DIRECTION_UP) {
                     return bbl_stream_build_access_pppoe_packet(stream);
                 } else {
-                    return bbl_stream_build_l2tp_packet(stream);
+                    return bbl_stream_build_l2tp_packet(stream, l2tp_session);
                 }
             } else if(stream->session->a10nsp_session) {
                 return bbl_stream_build_a10nsp_pppoe_packet(stream);
@@ -1315,8 +1321,13 @@ bbl_stream_build_packet(bbl_stream_s *stream)
                 }
             }
         } else if(stream->session->access_type == ACCESS_TYPE_PPPOL2TP) {
-            if(stream->session->l2tp_session && stream->direction == BBL_DIRECTION_UP) {
-                return bbl_stream_build_pppol2tp_packet(stream);
+            if(stream->direction == BBL_DIRECTION_UP) {
+                if(l2tp_session) {
+                    return bbl_stream_build_pppol2tp_packet(stream, l2tp_session);
+                }
+            } else {
+                /* Downstream is routed by the LNS to the session address. */
+                return bbl_stream_build_network_packet(stream);
             }
         }
     }
@@ -1360,6 +1371,41 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
                     }
                 }
             }
+        } else if(stream->tx_flags & STREAM_FLAG_NETWORK) {
+            /* PPPoL2TP (LAC) upstream is sent on the network interface. */
+            network_interface = stream->tx_network_interface;
+            network_interface->stats.packets_tx += packets;
+            network_interface->stats.bytes_tx += bytes;
+            network_interface->stats.stream_tx += packets;
+            network_interface->stats.l2tp_data_tx += packets;
+            if(session) {
+                session->stats.packets_tx += packets;
+                session->stats.bytes_tx += bytes;
+                session->stats.accounting_packets_tx += packets;
+                session->stats.accounting_bytes_tx += bytes;
+                if(session->l2tp_session) {
+                    session->l2tp_session->tunnel->stats.data_tx += packets;
+                    session->l2tp_session->stats.data_tx += packets;
+                    if(stream->sub_type == BBL_SUB_TYPE_IPV4) {
+                        session->l2tp_session->stats.data_ipv4_tx += packets;
+                    }
+                }
+                if(stream->tx_flags & STREAM_FLAG_SESSION_TRAFFIC) {
+                    switch(stream->sub_type) {
+                        case BBL_SUB_TYPE_IPV4:
+                            network_interface->stats.session_ipv4_tx += packets;
+                            break;
+                        case BBL_SUB_TYPE_IPV6:
+                            network_interface->stats.session_ipv6_tx += packets;
+                            break;
+                        case BBL_SUB_TYPE_IPV6PD:
+                            network_interface->stats.session_ipv6pd_tx += packets;
+                            break;
+                        default:
+                            break;
+                    }
+                }
+            }
         }
     } else {
         if(stream->tx_flags & STREAM_FLAG_NETWORK) {
@@ -1371,7 +1417,8 @@ bbl_stream_tx_stats(bbl_stream_s *stream, uint64_t packets, uint64_t bytes)
                 network_interface->stats.mc_tx += packets;
             }
             if(session) {
-                if(session->l2tp_session) {
+                /* LNS downstream, PPPoL2TP downstream is plain IP. */
+                if(session->access_type == ACCESS_TYPE_PPPOE && session->l2tp_session) {
                     network_interface->stats.l2tp_data_tx += packets;
                     session->l2tp_session->tunnel->stats.data_tx += packets;
                     session->l2tp_session->stats.data_tx += packets;
@@ -2356,6 +2403,11 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
     }
 
     if(config->direction & BBL_DIRECTION_UP) {
+        if(session->access_config->access_type == ACCESS_TYPE_PPPOL2TP && !network_interface) {
+            /* PPPoL2TP upstream is sent through the L2TP tunnel. */
+            LOG(ERROR, "Failed to add stream %s (upstream) because PPPoL2TP requires a network interface\n", config->name);
+            return false;
+        }
         if(config->type == BBL_SUB_TYPE_IPV4) {
             if(!(session->access_config->access_type == ACCESS_TYPE_PPPOL2TP ||
                  (network_interface && network_interface->ip.address) ||

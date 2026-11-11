@@ -204,7 +204,18 @@ bbl_l2tp_session_free(bbl_l2tp_session_s *l2tp_session)
     free(l2tp_session->peer_sub_address);
     free(l2tp_session->peer_ari);
     free(l2tp_session->peer_aci);
+    free(l2tp_session->peer_private_group_id);
     free(l2tp_session);
+}
+
+static void
+bbl_l2tp_session_free_job(timer_s *timer)
+{
+    bbl_l2tp_session_s *l2tp_session = timer->data;
+    /* Detach the timer first, the timer walk clears its reference
+     * after this callback returns. */
+    timer_del(l2tp_session->timer_free);
+    bbl_l2tp_session_free(l2tp_session);
 }
 
 /**
@@ -219,6 +230,7 @@ void
 bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
 {
     bbl_l2tp_tunnel_s *l2tp_tunnel;
+    bool linked = false;
 
     if(l2tp_session) {
         l2tp_tunnel = l2tp_session->tunnel;
@@ -245,6 +257,9 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
             bbl_session_s *session = l2tp_session->session;
             l2tp_session->session = NULL;
             session->l2tp_session = NULL;
+            /* Streams rebuild their packets without this session. */
+            session->version++;
+            linked = true;
             /* In LAC mode the PPP session lifecycle is tied to the L2TP session:
              * terminate it so that it can be restarted or counted as terminated. */
             if(l2tp_session->tunnel->is_lac &&
@@ -276,8 +291,14 @@ bbl_l2tp_session_delete(bbl_l2tp_session_s *l2tp_session)
             }
         }
 
-        /* Free session memory */
-        bbl_l2tp_session_free(l2tp_session);
+        if(linked) {
+            /* Free deferred, TX threads may still build a stream
+             * packet with this session (read before the unlink). */
+            timer_add(&g_ctx->timer_root, &l2tp_session->timer_free, "L2TP FREE",
+                      1, 0, l2tp_session, &bbl_l2tp_session_free_job);
+        } else {
+            bbl_l2tp_session_free(l2tp_session);
+        }
     }
 }
 
@@ -440,7 +461,8 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
         if(L2TP_SEQ_LT(q->ns, max_ns)) {
             if(q->last_tx_time.tv_sec) {
                 timespec_sub(&time_diff, &now, &q->last_tx_time);
-                backoff = 1U << (q->retries > 31 ? 30 : q->retries - 1);
+                /* Exponential backoff capped at 8 seconds (RFC 2661 section 5.8) */
+                backoff = 1U << (q->retries > 4 ? 3 : q->retries - 1);
                 if(time_diff.tv_sec < backoff) {
                     q = CIRCLEQ_NEXT(q, tunnel_tx_qnode);
                     continue;
@@ -691,8 +713,9 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
  * @param protocol Payload type (IPCP, IPv4, ...).
  * @param next Payload structure.
  */
-void
-bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next) {
+static void
+bbl_l2tp_send_data_payload(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next,
+                           uint8_t *payload, uint16_t payload_len) {
 
     bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
     bbl_network_interface_s *interface = l2tp_tunnel->interface;
@@ -736,6 +759,8 @@ bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *ne
         ipv4.tos = l2tp_tunnel->config->data_control_tos;
     }
     l2tp.next = next;
+    l2tp.payload = payload;
+    l2tp.payload_len = payload_len;
     if(bbl_l2tp_encode(q, &eth)) {
         bbl_l2tp_interface_txq_append(interface, q);
         l2tp_tunnel->stats.data_tx++;
@@ -750,11 +775,29 @@ bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *ne
     }
 }
 
+void
+bbl_l2tp_send_data(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, void *next)
+{
+    bbl_l2tp_send_data_payload(l2tp_session, protocol, next, NULL, 0);
+}
+
+/**
+ * bbl_l2tp_send_data_raw
+ *
+ * Send a raw PPP payload (e.g. an IP packet of a TUN interface).
+ */
+void
+bbl_l2tp_send_data_raw(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, uint8_t *payload, uint16_t len)
+{
+    bbl_l2tp_send_data_payload(l2tp_session, protocol, NULL, payload, len);
+}
+
 static void
 bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, bbl_l2tp_s *l2tp) {
     bbl_ipv4_s *ipv4 = (bbl_ipv4_s*)eth->next;
 
     bbl_l2tp_server_s *l2tp_server = g_ctx->config.l2tp_server;
+    bbl_l2tp_server_s *l2tp_server2;
     bbl_l2tp_tunnel_s *l2tp_tunnel;
     bbl_l2tp_tunnel_s *l2tp_tunnel2;
     bbl_l2tp_session_s *l2tp_session;
@@ -808,8 +851,9 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
         return;
     }
 
-    /* Check for SCCRQ retry ... */
-    CIRCLEQ_FOREACH(l2tp_tunnel2, &l2tp_server->tunnel_qhead, tunnel_qnode) {
+    /* Check for SCCRQ retry (tunnels of all servers) ... */
+    for(l2tp_server2 = l2tp_server; l2tp_server2; l2tp_server2 = l2tp_server2->next)
+    CIRCLEQ_FOREACH(l2tp_tunnel2, &l2tp_server2->tunnel_qhead, tunnel_qnode) {
         if(l2tp_tunnel2->peer_ip == l2tp_tunnel->peer_ip &&
             l2tp_tunnel2->peer_tunnel_id == l2tp_tunnel->peer_tunnel_id) {
                 if(l2tp_tunnel2->state > BBL_L2TP_TUNNEL_WAIT_CTR_CONN) {
@@ -1046,6 +1090,24 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
         bbl_l2tp_session_free(l2tp_session);
         return;
     }
+    if(!l2tp_session->peer_session_id) {
+        /* Mandatory Assigned Session ID missing, no CDN can be sent. */
+        LOG(ERROR, "L2TP Error (%s) ICRQ without assigned session id from %s\n",
+            l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
+        bbl_l2tp_session_free(l2tp_session);
+        return;
+    }
+    if(l2tp_session->data_sequencing) {
+        /* Data messages are sent without sequence numbers. */
+        LOG(ERROR, "L2TP Error (%s) ICRQ with sequencing required from %s (not supported)\n",
+            l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
+        l2tp_session->result_code = 2; /* see error code */
+        l2tp_session->error_code = 6; /* generic error */
+        l2tp_session->error_message = "data sequencing not supported";
+        bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
+        bbl_l2tp_session_free(l2tp_session);
+        return;
+    }
 
     l2tp_session->key.tunnel_id = l2tp_tunnel->tunnel_id;
 
@@ -1079,6 +1141,23 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
 }
 
 /**
+ * bbl_l2tp_lcp_magic
+ *
+ * Magic-Number of the LNS, as sent in its LCP configure-request,
+ * or zero if not negotiated by the LNS (RFC 1661 section 6.4).
+ */
+static uint32_t
+bbl_l2tp_lcp_magic(bbl_l2tp_session_s *l2tp_session)
+{
+    uint32_t magic;
+    if(!(l2tp_session->tunnel->server && l2tp_session->tunnel->server->lcp_conf_request)) {
+        return 0;
+    }
+    magic = htobe32((uint32_t)l2tp_session->key.tunnel_id << 16 | l2tp_session->key.session_id);
+    return magic ? magic : htobe32(1);
+}
+
+/**
  * bbl_l2tp_lcp_echo
  *
  * Periodic timer job sending LCP echo-requests from the LNS
@@ -1098,6 +1177,7 @@ bbl_l2tp_lcp_echo(timer_s *timer)
         LOG(L2TP, "L2TP Info (%s) Tunnel (%u) session (%u) LCP echo timeout\n",
             l2tp_tunnel->server->host_name, l2tp_tunnel->tunnel_id,
             l2tp_session->key.session_id);
+        l2tp_session->result_code = 1; /* loss of carrier */
         l2tp_session->disconnect_code = 3;
         l2tp_session->disconnect_protocol = 0;
         l2tp_session->disconnect_direction = 2;
@@ -1108,6 +1188,7 @@ bbl_l2tp_lcp_echo(timer_s *timer)
     l2tp_session->lcp_retries++;
     lcp.code = PPP_CODE_ECHO_REQUEST;
     lcp.identifier = ++l2tp_session->lcp_identifier;
+    lcp.magic = bbl_l2tp_lcp_magic(l2tp_session);
     bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp);
 }
 
@@ -1190,6 +1271,18 @@ bbl_l2tp_iccn_rx(bbl_network_interface_s *interface,
         l2tp_session->result_code = 2;
         l2tp_session->error_code = 6;
         l2tp_session->error_message = "decode error";
+        bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
+        bbl_l2tp_session_delete(l2tp_session);
+        return;
+    }
+    if(l2tp_session->data_sequencing) {
+        /* Sequencing Required (RFC 2661 section 4.4.6) is not supported,
+         * data messages are sent without sequence numbers. */
+        LOG(ERROR, "L2TP Error (%s) Tunnel (%u) session (%u) sequencing required in ICCN (not supported)\n",
+            l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id, l2tp_session->key.session_id);
+        l2tp_session->result_code = 2;
+        l2tp_session->error_code = 6;
+        l2tp_session->error_message = "data sequencing not supported";
         bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
         bbl_l2tp_session_delete(l2tp_session);
         return;
@@ -1368,9 +1461,7 @@ bbl_l2tp_lcp_conf_request_tx(bbl_l2tp_session_s *l2tp_session, uint8_t identifie
     lcp_tx.code = PPP_CODE_CONF_REQUEST;
     lcp_tx.identifier = identifier;
     lcp_tx.auth = l2tp_session->lcp_auth;
-    lcp_tx.magic = (uint32_t)l2tp_session->key.tunnel_id << 16 |
-                    l2tp_session->key.session_id;
-    if(!lcp_tx.magic) lcp_tx.magic = 1;
+    lcp_tx.magic = bbl_l2tp_lcp_magic(l2tp_session);
     lcp_tx.padding = l2tp_session->tunnel->config->lcp_padding;
     bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, &lcp_tx);
 }
@@ -1445,8 +1536,10 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
     if(l2tp_session->tunnel->is_lac) {
         bbl_session_s *session = l2tp_session->session;
         if(session) {
+            /* The raw length is used for unsupported protocols only. */
             bbl_ppp_rx(session->access_interface, session, NULL,
-                       l2tp->protocol, l2tp->next, 0);
+                       l2tp->protocol, l2tp->next,
+                       l2tp->payload_len >= 4 ? l2tp->payload_len - 4 : 0);
         }
         return;
     }
@@ -1456,11 +1549,18 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
             lcp_rx = (bbl_lcp_s*)l2tp->next;
             lcp_rx->padding = l2tp_session->tunnel->config->lcp_padding;
             if(lcp_rx->code == PPP_CODE_ECHO_REQUEST) {
+                /* Reply with the own magic number (RFC 1661 section 5.8) */
                 lcp_rx->code = PPP_CODE_ECHO_REPLY;
+                lcp_rx->magic = bbl_l2tp_lcp_magic(l2tp_session);
                 bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
             } else if(lcp_rx->code == PPP_CODE_ECHO_REPLY) {
                 l2tp_session->lcp_retries = 0;
             } else if(lcp_rx->code == PPP_CODE_TERM_REQUEST) {
+                /* Acknowledge before the call is cleared (RFC 1661 section 5.5) */
+                lcp_rx->code = PPP_CODE_TERM_ACK;
+                lcp_rx->options = NULL;
+                lcp_rx->options_len = 0;
+                bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
                 l2tp_session->disconnect_code = 3;
                 l2tp_session->disconnect_protocol = 0;
                 l2tp_session->disconnect_direction = 1;
@@ -1680,6 +1780,17 @@ bbl_l2tp_sccrp_rx(bbl_network_interface_s *interface,
         bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
         return;
     }
+    if(!l2tp_tunnel->peer_tunnel_id) {
+        /* Mandatory Assigned Tunnel ID (RFC 2661 section 6.2) */
+        LOG(ERROR, "L2TP Error (%s) SCCRP without assigned tunnel id from %s\n",
+            l2tp_tunnel_hostname(l2tp_tunnel), format_ipv4_address(&l2tp_tunnel->peer_ip));
+        l2tp_tunnel->result_code = 2;
+        l2tp_tunnel->error_code = 6;
+        l2tp_tunnel->error_message = "missing assigned tunnel id";
+        bbl_l2tp_tunnel_update_state(l2tp_tunnel, BBL_L2TP_TUNNEL_SEND_STOPCCN);
+        bbl_l2tp_send(l2tp_tunnel, NULL, L2TP_MESSAGE_STOPCCN);
+        return;
+    }
     /* Validate challenge response if secret is configured */
     if(l2tp_tunnel->config->secret) {
         if(l2tp_tunnel->peer_challenge_response_len) {
@@ -1758,10 +1869,12 @@ bbl_l2tp_icrp_rx(bbl_network_interface_s *interface,
         return;
     }
     l2tp_tunnel = l2tp_session->tunnel;
-    if(!bbl_l2tp_avp_decode_session(l2tp, l2tp_tunnel, l2tp_session)) {
+    if(!bbl_l2tp_avp_decode_session(l2tp, l2tp_tunnel, l2tp_session) ||
+       !l2tp_session->peer_session_id) {
+        /* Decode error or mandatory Assigned Session ID missing (RFC 2661 section 6.7) */
         l2tp_session->result_code = 2;
         l2tp_session->error_code = 6;
-        l2tp_session->error_message = "decode error";
+        l2tp_session->error_message = l2tp_session->peer_session_id ? "decode error" : "missing assigned session id";
         bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_CDN);
         bbl_l2tp_session_delete(l2tp_session);
         return;
@@ -2248,22 +2361,23 @@ l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
         }
     }
 
-    return json_pack("{ss si si si si si ss ss ss ss ss sI sI ss ss sI sI sI sI}",
+    /* Strings received from the peer may not be valid UTF-8. */
+    return json_pack("{ss si si si si si so so so so so sI sI so so sI sI sI sI}",
                      "state", l2tp_session_state_string(l2tp_session->state),
                      "tunnel-id", l2tp_session->key.tunnel_id,
                      "session-id", l2tp_session->key.session_id,
                      "peer-tunnel-id", l2tp_session->tunnel->peer_tunnel_id,
                      "peer-session-id", l2tp_session->peer_session_id,
                      "peer-proxy-auth-type", l2tp_session->proxy_auth_type,
-                     "peer-proxy-auth-name", string_or_na(l2tp_session->proxy_auth_name),
-                     "peer-proxy-auth-response", string_or_na(proxy_auth_response),
-                     "peer-called-number", string_or_na(l2tp_session->peer_called_number),
-                     "peer-calling-number", string_or_na(l2tp_session->peer_calling_number),
-                     "peer-sub-address", string_or_na(l2tp_session->peer_sub_address),
+                     "peer-proxy-auth-name", bbl_json_cstring(l2tp_session->proxy_auth_name),
+                     "peer-proxy-auth-response", bbl_json_cstring(proxy_auth_response),
+                     "peer-called-number", bbl_json_cstring(l2tp_session->peer_called_number),
+                     "peer-calling-number", bbl_json_cstring(l2tp_session->peer_calling_number),
+                     "peer-sub-address", bbl_json_cstring(l2tp_session->peer_sub_address),
                      "peer-tx-bps", (json_int_t)l2tp_session->peer_tx_bps,
                      "peer-rx-bps", (json_int_t)l2tp_session->peer_rx_bps,
-                     "peer-ari", string_or_na(l2tp_session->peer_ari),
-                     "peer-aci", string_or_na(l2tp_session->peer_aci),
+                     "peer-ari", bbl_json_cstring(l2tp_session->peer_ari),
+                     "peer-aci", bbl_json_cstring(l2tp_session->peer_aci),
                      "data-packets-rx", (json_int_t)l2tp_session->stats.data_rx,
                      "data-packets-tx", (json_int_t)l2tp_session->stats.data_tx,
                      "data-ipv4-packets-rx", (json_int_t)l2tp_session->stats.data_ipv4_rx,
@@ -2287,15 +2401,16 @@ l2tp_tunnel_json(bbl_l2tp_tunnel_s *l2tp_tunnel, const char *name_key, const cha
         }
     }
 
-    return json_pack("{ss ss ss si si ss ss ss ss si si si si si sI sI si si}",
+    /* Strings received from the peer may not be valid UTF-8. */
+    return json_pack("{ss ss ss si si so ss so ss si si si si si sI sI si si}",
                      "state", l2tp_tunnel_state_string(l2tp_tunnel->state),
                      name_key, name,
                      "server-address", format_ipv4_address(server_ip),
                      "tunnel-id", l2tp_tunnel->tunnel_id,
                      "peer-tunnel-id", l2tp_tunnel->peer_tunnel_id,
-                     "peer-name", string_or_na(l2tp_tunnel->peer_name),
+                     "peer-name", bbl_json_cstring(l2tp_tunnel->peer_name),
                      "peer-address", format_ipv4_address(&l2tp_tunnel->peer_ip),
-                     "peer-vendor", string_or_na(l2tp_tunnel->peer_vendor),
+                     "peer-vendor", bbl_json_cstring(l2tp_tunnel->peer_vendor),
                      "secret", string_or_na(secret),
                      "control-packets-rx", l2tp_tunnel->stats.control_rx,
                      "control-packets-rx-dup", l2tp_tunnel->stats.control_rx_dup,
@@ -2328,6 +2443,12 @@ bbl_l2tp_ctrl_sessions(int fd, uint32_t session_id __attribute__((unused)), json
 
     json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id);
     json_unpack(arguments, "{s:i}", "session-id", &l2tp_session_id);
+    if(l2tp_tunnel_id < 0 || l2tp_tunnel_id > UINT16_MAX) {
+        return bbl_ctrl_status(fd, "error", 400, "invalid tunnel-id");
+    }
+    if(l2tp_session_id < 0 || l2tp_session_id > UINT16_MAX) {
+        return bbl_ctrl_status(fd, "error", 400, "invalid session-id");
+    }
 
     sessions = json_array();
 
@@ -2410,6 +2531,9 @@ bbl_l2tp_ctrl_csurq(int fd, uint32_t session_id __attribute__((unused)), json_t 
     if(json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
     }
+    if(l2tp_tunnel_id < 1 || l2tp_tunnel_id > UINT16_MAX) {
+        return bbl_ctrl_status(fd, "error", 400, "invalid tunnel-id");
+    }
     l2tp_key.tunnel_id = l2tp_tunnel_id;
     search = dict_search(g_ctx->l2tp_session_dict, &l2tp_key);
     if(search) {
@@ -2468,6 +2592,9 @@ bbl_l2tp_ctrl_tunnel_terminate(int fd, uint32_t session_id __attribute__((unused
     /* Unpack further arguments */
     if(json_unpack(arguments, "{s:i}", "tunnel-id", &l2tp_tunnel_id) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing tunnel-id");
+    }
+    if(l2tp_tunnel_id < 1 || l2tp_tunnel_id > UINT16_MAX) {
+        return bbl_ctrl_status(fd, "error", 400, "invalid tunnel-id");
     }
     l2tp_key.tunnel_id = l2tp_tunnel_id;
     search = dict_search(g_ctx->l2tp_session_dict, &l2tp_key);

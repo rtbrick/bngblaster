@@ -36,6 +36,12 @@ typedef struct bbl_ctrl_thread_ {
 int
 bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message);
 
+json_t *
+bbl_json_string(const char *data, size_t len);
+
+json_t *
+bbl_json_cstring(const char *data);
+
 bool
 bbl_ctrl_socket_init();
 

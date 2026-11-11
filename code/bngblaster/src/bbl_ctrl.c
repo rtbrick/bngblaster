@@ -211,6 +211,55 @@ bbl_ctrl_terminate(int fd, uint32_t session_id, json_t *arguments)
     }
 }
 
+/**
+ * bbl_json_string
+ *
+ * JSON string of data received from a peer, which may not be valid
+ * UTF-8 (json_pack fails and the whole object would be dropped).
+ * Bytes above 0x7f of invalid strings are escaped as \\xNN.
+ *
+ * @param data string data or NULL (N/A)
+ * @param len data length
+ * @return JSON string
+ */
+json_t *
+bbl_json_string(const char *data, size_t len)
+{
+    json_t *string;
+    char *copy;
+    size_t i, pos = 0;
+
+    if(!data) {
+        return json_string("N/A");
+    }
+    string = json_stringn(data, len);
+    if(string) {
+        return string;
+    }
+    copy = malloc(len * 4 + 1);
+    if(!copy) {
+        return json_string("N/A");
+    }
+    for(i = 0; i < len; i++) {
+        if(data[i] & 0x80 || data[i] == 0) {
+            pos += sprintf(copy + pos, "\\x%02X", (uint8_t)data[i]);
+        } else {
+            copy[pos++] = data[i];
+        }
+    }
+    copy[pos] = 0;
+    string = json_string(copy);
+    free(copy);
+    return string;
+}
+
+/* Same for NUL terminated strings */
+json_t *
+bbl_json_cstring(const char *data)
+{
+    return bbl_json_string(data, data ? strlen(data) : 0);
+}
+
 int
 bbl_ctrl_status(int fd, const char *status, uint32_t code, const char *message)
 {
