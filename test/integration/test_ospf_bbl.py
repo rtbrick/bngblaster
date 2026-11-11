@@ -103,3 +103,22 @@ def test_lsa_update_invalid(instances, lsa, error):
     a, _ = instances
     result = a.ctrl("ospf-lsa-update", instance=1, lsa=[lsa])
     assert (result["code"], result.get("message")) == (400, error)
+
+
+def test_lsa_update_size_limit(instances):
+    """An LSA which does not fit into an LS Update PDU (65535 bytes with
+    header) is rejected, it overflowed the PDU buffer when flooded. The
+    largest LSA which fits is accepted."""
+    a, _ = instances
+
+    def lsa(size):
+        body = struct.pack(">HH", 7, size - 24) + b"x" * (size - 24)
+        data = bytearray(struct.pack(">HBB4s4sIHH", 0, 0, OSPF_LSA_TYPE_OPAQUE_AREA,
+                                     socket.inet_aton("4.0.0.0"), socket.inet_aton(ROUTER_ID_B),
+                                     0x80000001, 0, size) + body)
+        data[16:18] = fletcher(data[2:], 14)
+        return data.hex()
+
+    assert a.ctrl("ospf-lsa-update", instance=1, lsa=[lsa(65535)])["code"] != 200
+    assert a.ctrl("ospf-lsa-update", instance=1, lsa=[lsa(65507)])["code"] == 200
+    assert a.alive()

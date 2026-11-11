@@ -361,6 +361,10 @@ ospf_pdu_add_ipv4(ospf_pdu_s *pdu, uint32_t ipv4)
 void
 ospf_pdu_add_bytes(ospf_pdu_s *pdu, uint8_t *buf, uint16_t len)
 {
+    if(len > pdu->pdu_buf_len - pdu->cur) {
+        LOG(ERROR, "OSPF PDU exceeds %u bytes\n", pdu->pdu_buf_len);
+        return;
+    }
     memcpy(OSPF_PDU_CURSOR(pdu), buf, len);
     OSPF_PDU_BUMP_WRITE_BUFFER(pdu, len);
 }

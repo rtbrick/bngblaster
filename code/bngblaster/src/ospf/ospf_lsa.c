@@ -2266,7 +2266,7 @@ ospf_lsa_load_external(ospf_instance_s *ospf_instance, uint32_t lsa_count, uint8
             return false;
         }
         lsa_len = be16toh(hdr->length);
-        if(lsa_len > len) {
+        if(lsa_len > len || lsa_len > OSPF_LSA_LEN_MAX) {
             LOG(ERROR, "Failed to decode external OSPF LSA %s (invalid LSA len %u)\n", ospf_lsa_hdr_string(hdr), lsa_len);
             return false;
         }
