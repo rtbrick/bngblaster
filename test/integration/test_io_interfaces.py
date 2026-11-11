@@ -71,6 +71,33 @@ def test_raw_vlan(topology, processes, tmp_path, rx_threads):
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
+VLAN_FLOOD = """
+import sys
+from scapy.all import Ether, Dot1Q, IP, UDP, Raw, sendp
+p = Ether(dst="ff:ff:ff:ff:ff:ff", src="02:00:00:00:00:99") / Dot1Q(vlan=10) / \\
+    IP(src="192.0.2.99", dst="192.0.2.98") / UDP(sport=1, dport=2) / Raw(b"x" * 100)
+sendp(p, iface=sys.argv[1], count=int(sys.argv[2]), verbose=False)
+"""
+
+
+def test_vlan_rx_bytes_rx_queue_full(topology, processes, tmp_path):
+    """packet_mmap RX thread: a VLAN frame retried while the queue towards
+    the main thread is full is counted once with the stripped tag."""
+    instance = start(topology, processes, tmp_path, {
+        "interfaces": {"links": [{"interface": topology.if_a, "io-mode": "packet_mmap", "rx-threads": 1,
+                                  "io-slots-rx": 32, "rx-interval": 500}],
+                       "network": [{"interface": topology.if_a, "address": BBL4 + "/24", "gateway": PEER4,
+                                    "vlan": 10}]}})
+    scapy(topology.b, VLAN_FLOOD, topology.if_b, 200)
+    time.sleep(2)
+    link = [i for i in instance.ctrl("interfaces")["interfaces"] if i["name"] == topology.if_a][0]
+    # Frames are dropped by the kernel while the RX thread waits.
+    assert link["rx-packets"] > 32
+    # 146 byte frames plus a few ARP requests.
+    assert link["rx-bytes"] <= link["rx-packets"] * 146, link
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
 @pytest.mark.parametrize("link", [
     {"io-mode": "raw", "tx-threads": 1},
     {"io-mode": "packet_mmap"},

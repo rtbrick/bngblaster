@@ -320,6 +320,9 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
                 /* The frame is retried, count it once. */
                 io->stats.packets--;
                 io->stats.bytes -= io->buf_len;
+                if(io->vlan_tpid) {
+                    io->stats.bytes -= 4;
+                }
                 break;
             }
             /* Return ownership back to kernel */
