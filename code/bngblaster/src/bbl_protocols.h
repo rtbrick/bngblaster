@@ -923,7 +923,7 @@ typedef struct bbl_dhcpv6_ {
     uint16_t       elapsed;
     uint32_t       xid;
     uint8_t       *interface_id;
-    uint8_t        interface_id_len;
+    uint16_t       interface_id_len;
     uint8_t       *client_duid;
     uint16_t       client_duid_len;
     uint8_t       *server_duid;
@@ -933,7 +933,7 @@ typedef struct bbl_dhcpv6_ {
     bool           rapid;
     bool           oro;
     uint8_t       *ia_na_option;
-    uint8_t        ia_na_option_len;
+    uint16_t       ia_na_option_len;
     uint32_t       ia_na_iaid;
     uint16_t       ia_na_status_code;
     ipv6addr_t    *ia_na_address;
@@ -942,7 +942,7 @@ typedef struct bbl_dhcpv6_ {
     uint32_t       ia_na_preferred_lifetime;
     uint32_t       ia_na_valid_lifetime;
     uint8_t       *ia_pd_option;
-    uint8_t        ia_pd_option_len;
+    uint16_t       ia_pd_option_len;
     uint32_t       ia_pd_iaid;
     uint16_t       ia_pd_status_code;
     ipv6_prefix   *ia_pd_prefix;

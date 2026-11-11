@@ -591,6 +591,61 @@ test_protocols_dhcpv6_timer_byte_order(void **unused) {
     free(sp);
 }
 
+/* DHCPv6 options of 256 bytes or more are decoded and echoed with
+ * their full length (16 bit option length). */
+static void
+test_protocols_dhcpv6_long_interface_id(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[1024];
+    uint8_t reencoded[1024];
+    uint8_t interface_id[300];
+    uint16_t interface_id_len = sizeof(interface_id);
+    uint16_t len = 0;
+    uint16_t reencoded_len = 0;
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    ipv6addr_t src_ip = {0};
+    ipv6addr_t dst_ip = {0};
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_dhcpv6_s dhcpv6 = {0};
+    bbl_ethernet_header_s *decoded;
+    bbl_dhcpv6_s *decoded_dhcpv6;
+
+    memset(interface_id, 0x5a, sizeof(interface_id));
+    inet_pton(AF_INET6, "fe80::1", src_ip);
+    inet_pton(AF_INET6, "ff02::1:2", dst_ip);
+    eth.dst = dst;
+    eth.src = src;
+    eth.type = ETH_TYPE_IPV6;
+    eth.next = &ipv6;
+    ipv6.src = src_ip;
+    ipv6.dst = dst_ip;
+    ipv6.protocol = IPV6_NEXT_HEADER_UDP;
+    ipv6.ttl = 64;
+    ipv6.next = &udp;
+    udp.src = DHCPV6_UDP_SERVER;
+    udp.dst = DHCPV6_UDP_CLIENT;
+    udp.protocol = UDP_PROTOCOL_DHCPV6;
+    udp.next = &dhcpv6;
+    dhcpv6.type = DHCPV6_MESSAGE_REPLY;
+    dhcpv6.interface_id = interface_id;
+    dhcpv6.interface_id_len = interface_id_len;
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    decoded_dhcpv6 = (bbl_dhcpv6_s*)((bbl_udp_s*)((bbl_ipv6_s*)decoded->next)->next)->next;
+    assert_int_equal(decoded_dhcpv6->interface_id_len, 300);
+    udp.next = decoded_dhcpv6;
+    assert_int_equal(encode_ethernet(reencoded, &reencoded_len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(reencoded_len, len);
+    assert_memory_equal(reencoded, buf, len);
+    free(sp);
+}
+
 /* Gratuitous ARP: broadcast ARP request with sender IP == target IP. */
 static void
 test_protocols_gratuitous_arp(void **unused) {
@@ -1063,6 +1118,7 @@ int main() {
         cmocka_unit_test(test_protocols_dhcp_end_option),
         cmocka_unit_test(test_protocols_dhcp_agent_option_repeated),
         cmocka_unit_test(test_protocols_dhcpv6_timer_byte_order),
+        cmocka_unit_test(test_protocols_dhcpv6_long_interface_id),
         cmocka_unit_test(test_protocols_gratuitous_arp),
         cmocka_unit_test(test_protocols_unsolicited_na),
         cmocka_unit_test(test_protocols_pppoe_max_payload),
