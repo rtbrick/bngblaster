@@ -110,6 +110,13 @@ l2tp_session_state_string(l2tp_session_state_t state)
     }
 }
 
+static void
+bbl_l2tp_queue_free(bbl_l2tp_queue_s *q)
+{
+    free(q->packet);
+    free(q);
+}
+
 /* Append TXQ to the L2TP interface queue and return true if added. */
 static bool
 bbl_l2tp_interface_txq_append(bbl_network_interface_s *interface, bbl_l2tp_queue_s *q)
@@ -135,7 +142,7 @@ bbl_l2tp_interface_txq_remove(bbl_network_interface_s *interface, bbl_l2tp_queue
     if(q->refcount) {
         return false;
     } else {
-        free(q);
+        bbl_l2tp_queue_free(q);
         return true;
     }
 }
@@ -153,7 +160,7 @@ bbl_l2tp_tunnel_txq_remove(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_queue_s *q)
     if(q->refcount) {
         return bbl_l2tp_interface_txq_remove(l2tp_tunnel->interface, q);
     } else {
-        free(q);
+        bbl_l2tp_queue_free(q);
         return true;
     }
 }
@@ -625,13 +632,19 @@ bbl_l2tp_tunnel_control_job(timer_s *timer)
  * @return true if encoded into the queue entry.
  */
 static bool
-bbl_l2tp_encode(bbl_l2tp_queue_s *q, bbl_ethernet_header_s *eth)
+bbl_l2tp_encode(bbl_l2tp_queue_s *q, bbl_ethernet_header_s *eth, bbl_network_interface_s *interface)
 {
     static uint8_t buf[UINT16_MAX];
     uint16_t len = 0;
 
+    /* The frame is limited by the MTU of the network interface
+     * with ethernet header and up to two VLAN tags. */
     if(encode_ethernet(buf, &len, eth) != PROTOCOL_SUCCESS || 
-       len > sizeof(q->packet)) {
+       len > interface->mtu + 14 + 2 * 4) {
+        return false;
+    }
+    q->packet = malloc(len);
+    if(!q->packet) {
         return false;
     }
     memcpy(q->packet, buf, len);
@@ -711,10 +724,10 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
     }
     q->ns = l2tp.ns;
     q->tunnel = l2tp_tunnel;
-    if(bbl_l2tp_encode(q, &eth)) {
+    if(bbl_l2tp_encode(q, &eth, interface)) {
         if(l2tp_type == L2TP_MESSAGE_ZLB) {
             if(l2tp_tunnel->zlb_qnode) {
-                free(q);
+                bbl_l2tp_queue_free(q);
             } else {
                 q->refcount++;
                 l2tp_tunnel->zlb_qnode = q;
@@ -730,7 +743,7 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
     } else {
         /* Encode error.... */
         LOG_NOARG(ERROR, "L2TP Encode Error!\n");
-        free(q);
+        bbl_l2tp_queue_free(q);
     }
 }
 
@@ -792,7 +805,7 @@ bbl_l2tp_send_data_payload(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, 
     l2tp.next = next;
     l2tp.payload = payload;
     l2tp.payload_len = payload_len;
-    if(bbl_l2tp_encode(q, &eth)) {
+    if(bbl_l2tp_encode(q, &eth, interface)) {
         bbl_l2tp_interface_txq_append(interface, q);
         l2tp_tunnel->stats.data_tx++;
         l2tp_session->stats.data_tx++;
@@ -802,7 +815,7 @@ bbl_l2tp_send_data_payload(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, 
         }
     } else {
         LOG_NOARG(ERROR, "L2TP Data Encode Error!\n");
-        free(q);
+        bbl_l2tp_queue_free(q);
     }
 }
 

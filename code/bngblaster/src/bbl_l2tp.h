@@ -11,7 +11,9 @@
 #define __BBL_L2TP_H__
 
 #define L2TP_MD5_DIGEST_LEN         16
-#define L2TP_MAX_PACKET_SIZE        1500
+/* Overhead of PPP over L2TP: IPv4, UDP, L2TP header with length
+ * and offset, PPP address, control and protocol. */
+#define L2TP_PPP_OVERHEAD           (20 + 8 + 16 + 4)
 #define L2TP_MAX_AVP_SIZE           1024
 #define L2TP_MAX_MESSAGE_LEN        244 /* Error and disconnect messages of control commands (RFC3145: 255 byte AVP - 11) */
 #define L2TP_MAX_CONFIG_STRING_LEN  255 /* Host name, calling and called number */
@@ -169,7 +171,7 @@ typedef struct bbl_l2tp_queue_
     uint8_t  ns_offset;
     uint8_t  nr_offset;
     uint8_t  retries;
-    uint8_t  packet[L2TP_MAX_PACKET_SIZE];
+    uint8_t *packet; /* allocated with the encoded length */
     uint16_t packet_len;
     struct timespec last_tx_time;
     struct bbl_l2tp_tunnel_ *tunnel;

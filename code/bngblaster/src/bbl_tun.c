@@ -218,6 +218,9 @@ bbl_tun_ipoe_tx_job(timer_s *timer) {
 bool
 bbl_tun_session_up(bbl_session_s *session)
 {
+    uint16_t mtu;
+    uint16_t network_mtu;
+
     if(!session->tun_dev) return true;
     if(session->access_type == ACCESS_TYPE_PPPOE) {
         timer_add_periodic(&g_ctx->timer_root, &session->timer_tun, "TUN", 
@@ -229,7 +232,15 @@ bbl_tun_session_up(bbl_session_s *session)
         timer_add_periodic(&g_ctx->timer_root, &session->timer_tun, "TUN", 
             0, 1 * MSEC, session, &bbl_tun_ipoe_tx_job);
     }
-    return bbl_tun_config(session->tun_dev, true, session->ip_address, session->peer_mru);
+    mtu = session->peer_mru;
+    if(session->access_type == ACCESS_TYPE_PPPOL2TP && session->l2tp_session) {
+        /* Packets must fit into the tunnel frame on the network interface. */
+        network_mtu = session->l2tp_session->tunnel->interface->mtu;
+        if(network_mtu > L2TP_PPP_OVERHEAD && (!mtu || mtu > network_mtu - L2TP_PPP_OVERHEAD)) {
+            mtu = network_mtu - L2TP_PPP_OVERHEAD;
+        }
+    }
+    return bbl_tun_config(session->tun_dev, true, session->ip_address, mtu);
 }
 
 bool

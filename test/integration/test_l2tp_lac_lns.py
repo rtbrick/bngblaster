@@ -505,6 +505,26 @@ def test_icmp_client(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+def test_icmp_client_network_mtu(topology, processes, tmp_path):
+    """Data frames of PPPoL2TP sessions are limited by the network interface
+    MTU (1600) instead of 1500 bytes including the ethernet header, so the
+    ICMP client sends requests of 1440 bytes through the tunnel."""
+    for ns, ifname in ((topology.a, topology.if_a), (topology.b, topology.if_b)):
+        ns.exec(["ip", "link", "set", ifname, "mtu", "1600"])
+
+    def update(config):
+        config["interfaces"]["network"]["mtu"] = 1600
+        config["interfaces"]["access"][0]["icmp-client-group-id"] = 1
+        config["icmp-client"] = [{"icmp-client-group-id": 1, "destination-address": "192.0.2.1",
+                                  "size": 1440, "interval": 0.2}]
+
+    lac, lns = start_pair(topology, processes, tmp_path, sessions=1, update=update)
+    wait_until(lambda: lns_sessions(lns) and lns_sessions(lns)[0]["data-ipv4-packets-rx"] >= 3, 10,
+               message="ICMP requests received by the LNS")
+    assert "L2TP Data Encode Error" not in open(lac.path("log")).read()
+    assert_clean_exit(lac, lns)
+
+
 def test_session_restart(topology, processes, tmp_path):
     """session-restart restarts a PPPoL2TP session without reconnect."""
     lac, lns = start_pair(topology, processes, tmp_path)
