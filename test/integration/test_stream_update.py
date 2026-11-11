@@ -5,6 +5,9 @@ Updating the rate of streams must keep all of them sending, also if the
 new rate equals the current one, so that the streams are added back to
 the bucket being walked (same pps).
 
+stream-reset with TX and RX threads must not count packets received in
+flight of the reset after it.
+
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
@@ -27,7 +30,7 @@ class Host:
         return cmd
 
 
-def loopback_config(threads):
+def loopback_config(threads, pps=PPS):
     if threads:
         links = [{"interface": "locA", "loopback-peer": "locB", "tx-threads": 1, "rx-threads": 1},
                  {"interface": "locB", "tx-threads": 1, "rx-threads": 1}]
@@ -45,7 +48,7 @@ def loopback_config(threads):
         "traffic": {"autostart": True},
         "streams": [
             {"name": "S%d" % i, "type": "ipv4", "direction": "downstream", "network-interface": "locA",
-             "destination-ipv4-address": "10.0.0.2", "pps": PPS}
+             "destination-ipv4-address": "10.0.0.2", "pps": pps}
             for i in range(STREAMS)
         ]
     }
@@ -74,4 +77,31 @@ def test_stream_update_same_pps(tmp_path, processes, threads):
         assert instance.ctrl("stream-update", pps=pps)["code"] == 200
         time.sleep(0.5)
         assert sending() == all_streams, "streams sending after stream-update pps %d" % pps
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_stream_reset_in_flight(tmp_path, processes):
+    """After stream-reset, each stream counts only the packets sent after
+    it. The race of the RX thread with the reset is rare (about one in
+    thousands of resets per flow), so this test does not fail reliably
+    without the RX thread handling the reset."""
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(loopback_config(True, pps=5000))
+    processes.append(instance)
+
+    def verified():
+        stats = instance.ctrl("stream-stats")["stream-stats"]
+        return stats["verified-flows"] == stats["total-flows"]
+
+    wait_until(verified, 10, message="streams verified")
+    for _ in range(20):
+        assert instance.ctrl("stream-reset")["code"] == 200
+        wait_until(verified, 10, interval=0.05, message="streams verified after reset")
+        assert instance.ctrl("stream-stop")["code"] == 200
+        time.sleep(0.3)
+        for i in range(STREAMS):
+            info = instance.ctrl("stream-info", **{"flow-id": i + 1})["stream-info"]
+            expected = info["rx-last-seq"] - info["rx-first-seq"] + 1
+            assert info["rx-packets"] == expected and info["rx-packets"] <= info["tx-packets"], info
+            assert info["rx-wrong-order"] == 0 and info["rx-loss"] == 0, info
+        assert instance.ctrl("stream-start")["code"] == 200
     assert instance.terminate(EXIT_TIMEOUT) == 0

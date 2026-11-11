@@ -158,6 +158,10 @@ typedef struct bbl_stream_args_
 /* STREAM_FLAG_SESSION_TRAFFIC is set in rx_flags once session traffic
  * received on an access interface is verified (see rx_session_id). */
 
+/* Flags used in rx_flags only (values shared with TX only flags). */
+#define STREAM_FLAG_RX_NAT          (1 << 0) /* upstream NAT stream (RX copy) */
+#define STREAM_FLAG_RX_RESET        (1 << 1) /* reset requested by the main thread */
+
 /* RX interface type flags (rx_flags), exactly one is set if
  * the RX interface union below is valid. The type never changes
  * once set, only the interface. */
@@ -210,7 +214,6 @@ typedef struct bbl_stream_
 
     /* RX Thread */
     uint64_t rx_packets __attribute__((__aligned__(CACHE_LINE_SIZE)));
-    uint64_t rx_loss;
     uint64_t rx_last_seq;
     uint64_t rx_min_delay_us;
     uint64_t rx_max_delay_us;
@@ -221,15 +224,22 @@ typedef struct bbl_stream_
         bbl_network_interface_s *rx_network_interface;
         bbl_a10nsp_interface_s *rx_a10nsp_interface;
     };
-    uint32_t rx_wrong_order;
+
+    /* Expected session of verified session traffic received on access
+     * interfaces (STREAM_FLAG_SESSION_TRAFFIC set in rx_flags), RX copy
+     * to avoid reading TX cache lines and the session per packet. */
+    uint32_t rx_session_id;
+    uint16_t rx_session_outer_vlan;
+    uint16_t rx_session_inner_vlan;
+    uint8_t  rx_session_mac[ETH_ADDR_LEN];
     uint16_t rx_flags;
-    volatile bool verified;
-    bool rx_nat; /* Upstream NAT stream, RX copy to avoid reading TX cache lines */
 
     /* All variables used in RX hot path are defined until
      * here and fit into a single cache line. */
 
+    uint64_t rx_loss; /* Written per gap only */
     uint64_t rx_first_seq;
+    uint32_t rx_wrong_order;
     uint32_t rx_wrong_session;
     uint16_t rx_len;
     uint16_t rx_fragment_offset; /* Max fragmentation offset received */
@@ -255,13 +265,10 @@ typedef struct bbl_stream_
     uint32_t rx_mpls1_label;
     uint32_t rx_mpls2_label;
 
-    /* Expected session of verified session traffic received on access
-     * interfaces (STREAM_FLAG_SESSION_TRAFFIC set in rx_flags), RX copy
-     * to avoid reading TX cache lines and the session per packet. */
-    uint32_t rx_session_id;
-    uint16_t rx_session_outer_vlan;
-    uint16_t rx_session_inner_vlan;
-    uint8_t  rx_session_mac[ETH_ADDR_LEN];
+    /* RX packets and loss at the time the RX thread
+     * has seen the reset (STREAM_FLAG_RX_RESET). */
+    uint64_t rx_reset_packets;
+    uint64_t rx_reset_loss;
 
     /* Main Thread */
     char _pad1 __attribute__((__aligned__(CACHE_LINE_SIZE))); /* empty cache line */
@@ -289,6 +296,8 @@ typedef struct bbl_stream_
     bbl_rate_s *rate_packets_rx;
 
     volatile bool update_pps;
+    volatile bool verified;
+    bool rx_reset_pending; /* STREAM_FLAG_RX_RESET not yet seen by the RX thread */
     double pps;
 
 
@@ -415,7 +424,8 @@ bbl_stream_rx_interface_set(bbl_stream_s *stream, uint16_t type, void *interface
     if(!(flags & STREAM_FLAG_RX_INTERFACE)) {
         /* Publish pointer before type (see bbl_stream_rx_interface_get). */
         __atomic_store_n(&stream->rx_interface, interface, __ATOMIC_RELEASE);
-        __atomic_store_n(&stream->rx_flags, flags|type, __ATOMIC_RELEASE);
+        /* Atomic, the main thread sets STREAM_FLAG_RX_RESET. */
+        __atomic_fetch_or(&stream->rx_flags, type, __ATOMIC_RELEASE);
     } else if(flags & type) {
         /* RX interface has changed! */
         if(stream->rx_interface_changes < UINT8_MAX) {

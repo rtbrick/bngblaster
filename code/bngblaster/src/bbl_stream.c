@@ -1665,6 +1665,35 @@ bbl_stream_setup_established(bbl_stream_s *stream)
 }
 
 static void
+bbl_stream_verify(bbl_stream_s *stream, bbl_session_s *session)
+{
+    if(!stream->rx_first_seq) {
+        return;
+    }
+    if(stream->tx_flags & STREAM_FLAG_SESSION_TRAFFIC) {
+        if(session) {
+            stream->verified = true;
+            bbl_stream_setup_established(stream);
+            session->session_traffic.flows_verified++;
+            g_ctx->stats.session_traffic_flows_verified++;
+            if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
+                LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
+            }
+        }
+    } else {
+        stream->verified = true;
+        bbl_stream_setup_established(stream);
+        g_ctx->stats.stream_traffic_flows_verified++;
+        if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
+            LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
+        }
+    }
+    if(stream->verified && g_ctx->config.traffic_stop_verified) {
+        stream->enabled = false;
+    }
+}
+
+static void
 bbl_stream_ctrl(bbl_stream_s *stream, struct timespec *now)
 {
     bbl_session_s *session = stream->session;
@@ -1674,6 +1703,7 @@ bbl_stream_ctrl(bbl_stream_s *stream, struct timespec *now)
     uint64_t packets_delta;
     uint64_t bytes_delta;
     uint64_t loss_delta;
+    bool verify = false;
 
     /* Calculate TX packets/bytes since last sync. */
     packets = stream->tx_packets;
@@ -1704,41 +1734,23 @@ bbl_stream_ctrl(bbl_stream_s *stream, struct timespec *now)
         loss_delta = loss - stream->last_sync_loss;
         stream->last_sync_loss = loss;
         bbl_stream_rx_stats(stream, packets_delta, bytes_delta, loss_delta);
-        if(unlikely(!stream->verified)) {
-            if(!stream->rx_first_seq && !__atomic_load_n(&stream->reset, __ATOMIC_ACQUIRE) &&
-               __atomic_load_n(&stream->rx_last_seq, __ATOMIC_RELAXED)) {
-                /* The RX thread stored the sequence number of a packet received
-                 * before the reset after it was cleared (no handshake), so it
-                 * continues in the verified path without first sequence number.
-                 * The RX thread does not write rx_first_seq in this state. */
-                stream->rx_first_seq = __atomic_load_n(&stream->rx_last_seq, __ATOMIC_RELAXED);
-            }
-            if(stream->rx_first_seq) {
-                if(stream->tx_flags & STREAM_FLAG_SESSION_TRAFFIC) {
-                    if(session) {
-                        stream->verified = true;
-                        bbl_stream_setup_established(stream);
-                        session->session_traffic.flows_verified++;
-                        g_ctx->stats.session_traffic_flows_verified++;
-                        if(g_ctx->stats.session_traffic_flows_verified == g_ctx->stats.session_traffic_flows) {
-                            LOG_NOARG(INFO, "ALL SESSION TRAFFIC FLOWS VERIFIED\n");
-                        }
-                    }
-                } else {
-                    stream->verified = true;
-                    bbl_stream_setup_established(stream);
-                    g_ctx->stats.stream_traffic_flows_verified++;
-                    if(g_ctx->stats.stream_traffic_flows_verified == g_ctx->stats.stream_traffic_flows) {
-                        LOG_NOARG(INFO, "ALL STREAM TRAFFIC FLOWS VERIFIED\n");
-                    }
-                }
-            }
-            if(stream->verified) {
-                if(g_ctx->config.traffic_stop_verified) {
-                    stream->enabled = false;
-                }
-            }
+        verify = true;
+    }
+    if(unlikely(stream->rx_reset_pending)) {
+        if(__atomic_load_n(&stream->rx_flags, __ATOMIC_ACQUIRE) & STREAM_FLAG_RX_RESET) {
+            /* Packets counted by the RX thread before it has seen the
+             * reset are not verified (rx_first_seq not yet cleared). */
+            verify = false;
+        } else {
+            /* Exclude packets received in flight of the reset. */
+            stream->reset_packets_rx = stream->rx_reset_packets;
+            stream->reset_loss = stream->rx_reset_loss;
+            stream->rx_reset_pending = false;
+            verify = true;
         }
+    }
+    if(unlikely(verify && !stream->verified)) {
+        bbl_stream_verify(stream, session);
     }
     if(g_ctx->config.stream_rate_calc && stream->pps >= 1) {
         bbl_compute_stream_rate(stream->rate_packets_rx, packets, now);
@@ -1999,11 +2011,10 @@ bbl_stream_io_send(bbl_stream_s *stream)
     uint8_t *ptr;
     bool build;
 
-    if(unlikely(stream->reset)) {
-        stream->reset = false;
+    if(unlikely(__atomic_load_n(&stream->reset, __ATOMIC_ACQUIRE))) {
+        __atomic_store_n(&stream->reset, false, __ATOMIC_RELAXED);
         stream->tx_first_epoch = 0;
         stream->tx_first_seq = stream->flow_seq;
-        stream->rx_last_seq = 0;
         stream->session_version = 0;
         if(stream->max_packets) {
             stream->max_packets = stream->tx_packets + stream->config->max_packets;
@@ -2498,7 +2509,7 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
                 stream_up->endpoint = &(session->endpoint.ipv4);
                 if(config->nat) {
                     stream_up->tx_flags |= STREAM_FLAG_NAT;
-                    stream_up->rx_nat = true;
+                    stream_up->rx_flags |= STREAM_FLAG_RX_NAT;
                 }
                 break;
             case BBL_SUB_TYPE_IPV6:
@@ -2941,8 +2952,6 @@ bbl_stream_reset(bbl_stream_s *stream)
     stream->reset_packets_rx = stream->rx_packets;
     stream->reset_loss = stream->rx_loss;
 
-    stream->rx_min_delay_us = 0;
-    stream->rx_max_delay_us = 0;
     stream->rx_len = 0;
     stream->rx_fragments = 0;
     stream->rx_fragment_offset = 0;
@@ -2960,9 +2969,6 @@ bbl_stream_reset(bbl_stream_s *stream)
     stream->rx_mpls2_label = 0;
     stream->rx_source_ip = 0;
     stream->rx_source_port = 0;
-    stream->rx_first_seq = 0;
-    stream->rx_last_seq = 0;
-    stream->rx_wrong_order = 0;
     stream->rx_wrong_session = 0;
     stream->last_sync_wrong_session = 0;
     stream->rx_interface_changes = 0;
@@ -2973,8 +2979,15 @@ bbl_stream_reset(bbl_stream_s *stream)
     if(stream->rate_packets_rx) {
         stream->rate_packets_rx->avg_max = 0;
     }
-    stream->reset = true;
     stream->verified = false;
+    /* The RX thread owns its sequence state, counters and delays: it
+     * clears them and takes the reset snapshot with the next packet of
+     * this flow (bbl_stream_rx_reset), so that packets in flight of the
+     * reset are not counted after it (see bbl_stream_ctrl). The snapshot
+     * above is used until then. */
+    stream->rx_reset_pending = true;
+    __atomic_fetch_or(&stream->rx_flags, STREAM_FLAG_RX_RESET, __ATOMIC_SEQ_CST);
+    __atomic_store_n(&stream->reset, true, __ATOMIC_RELEASE);
 }
 
 const char *
@@ -3091,6 +3104,37 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
     return bbl_txq_to_buffer(network_interface->txq, &eth) == BBL_TXQ_OK;
 }
 
+/* MAC address compare inlined (memcmp with length 6 is a library call). */
+static inline bool
+bbl_stream_mac_equal(const uint8_t *a, const uint8_t *b)
+{
+    uint32_t a4, b4;
+    uint16_t a2, b2;
+    memcpy(&a4, a, sizeof(a4));
+    memcpy(&b4, b, sizeof(b4));
+    memcpy(&a2, a + 4, sizeof(a2));
+    memcpy(&b2, b + 4, sizeof(b2));
+    return a4 == b4 && a2 == b2;
+}
+
+/* Reset requested by the main thread (see bbl_stream_reset), the sequence
+ * state is cleared here as the RX thread would otherwise store the sequence
+ * number of a packet received in flight of the reset after the main thread
+ * cleared it. Packets sent before the reset are then rejected by the first
+ * sequence number check. */
+static void __attribute__((noinline))
+bbl_stream_rx_reset(bbl_stream_s *stream)
+{
+    stream->rx_reset_packets = stream->rx_packets;
+    stream->rx_reset_loss = stream->rx_loss;
+    stream->rx_first_seq = 0;
+    stream->rx_last_seq = 0;
+    stream->rx_wrong_order = 0;
+    stream->rx_min_delay_us = 0;
+    stream->rx_max_delay_us = 0;
+    __atomic_fetch_and(&stream->rx_flags, (uint16_t)~STREAM_FLAG_RX_RESET, __ATOMIC_RELEASE);
+}
+
 bbl_stream_s *
 bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
 {
@@ -3103,6 +3147,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
     uint64_t loss = 0;
     uint64_t flow_seq;
     uint64_t rx_last_seq;
+    uint16_t rx_flags;
     static bool log_loss = true;
 
     if(!(bbl && bbl->type == BBL_TYPE_UNICAST)) {
@@ -3112,15 +3157,19 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
     stream = bbl_stream_index_get(bbl->flow_id);
     if(stream) {
         flow_seq = bbl->flow_seq; 
+        rx_flags = __atomic_load_n(&stream->rx_flags, __ATOMIC_ACQUIRE);
+        if(unlikely(rx_flags & STREAM_FLAG_RX_RESET)) {
+            bbl_stream_rx_reset(stream);
+        }
         rx_last_seq = stream->rx_last_seq;
         if(rx_last_seq) {
             /* Stream already verified */
-            if(unlikely(!mac && (stream->rx_flags & STREAM_FLAG_SESSION_TRAFFIC))) {
+            if(unlikely(!mac && (rx_flags & STREAM_FLAG_SESSION_TRAFFIC))) {
                 /* Session traffic delivered to another session. */
                 if(bbl->outer_vlan_id != stream->rx_session_outer_vlan ||
                    bbl->inner_vlan_id != stream->rx_session_inner_vlan ||
                    bbl->session_id != stream->rx_session_id ||
-                   memcmp(stream->rx_session_mac, eth->dst, ETH_ADDR_LEN) != 0) {
+                   !bbl_stream_mac_equal(stream->rx_session_mac, eth->dst)) {
                     if(stream->rx_wrong_session < UINT32_MAX) {
                         stream->rx_wrong_session++;
                     }
@@ -3144,7 +3193,7 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                 stream->rx_wrong_order++;
                 stream->rx_packets++;
             }
-            if(stream->rx_nat && eth->type == ETH_TYPE_IPV4) {
+            if((rx_flags & STREAM_FLAG_RX_NAT) && eth->type == ETH_TYPE_IPV4) {
                 bbl_stream_rx_nat(eth, stream);
             }
         } else {
@@ -3215,11 +3264,10 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                     stream->rx_session_outer_vlan = session->vlan_key.outer_vlan_id;
                     stream->rx_session_inner_vlan = session->vlan_key.inner_vlan_id;
                     memcpy(stream->rx_session_mac, session->client_mac, ETH_ADDR_LEN);
-                    __atomic_store_n(&stream->rx_flags, stream->rx_flags|STREAM_FLAG_SESSION_TRAFFIC,
-                                     __ATOMIC_RELEASE);
+                    __atomic_fetch_or(&stream->rx_flags, STREAM_FLAG_SESSION_TRAFFIC, __ATOMIC_RELEASE);
                 }
             }
-            if(stream->rx_nat && eth->type == ETH_TYPE_IPV4) {
+            if((rx_flags & STREAM_FLAG_RX_NAT) && eth->type == ETH_TYPE_IPV4) {
                 bbl_stream_rx_nat(eth, stream);
             }
             stream->rx_first_seq = flow_seq;
@@ -3561,7 +3609,7 @@ bbl_stream_ctrl_args(int fd, uint32_t session_id, json_t *arguments, bbl_stream_
     }
 
     if(json_unpack(arguments, "{s:I}", "flow-id", &number) == 0) {
-        if(number < 1) {
+        if(number < 1 || number > UINT32_MAX) {
             return bbl_ctrl_status(fd, "warning", 400, "invalid flow-id");
         }
         args->flow_id = number;
@@ -3582,14 +3630,14 @@ bbl_stream_ctrl_args(int fd, uint32_t session_id, json_t *arguments, bbl_stream_
     }
     
     if(json_unpack(arguments, "{s:I}", "flow-id-min", &number) == 0) {
-        if(number < 0) {
+        if(number < 0 || number > UINT32_MAX) {
             return bbl_ctrl_status(fd, "warning", 400, "invalid flow-id-min");
         }
         args->flow_id_min = number;
     }
 
     if(json_unpack(arguments, "{s:I}", "flow-id-max", &number) == 0) {
-        if(number < 0) {
+        if(number < 0 || number > UINT32_MAX) {
             return bbl_ctrl_status(fd, "warning", 400, "invalid flow-id-max");
         }
         args->flow_id_max = number;
@@ -3714,7 +3762,7 @@ bbl_stream_ctrl_info(int fd, uint32_t session_id __attribute__((unused)), json_t
     if(json_unpack(arguments, "{s:I}", "flow-id", &number) != 0) {
         return bbl_ctrl_status(fd, "error", 400, "missing flow-id");
     }
-    if(number < 1) {
+    if(number < 1 || number > UINT32_MAX) {
         return bbl_ctrl_status(fd, "error", 400, "invalid flow-id");
     }
     flow_id = number;

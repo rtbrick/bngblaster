@@ -8,6 +8,7 @@ disabled).
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import sys
 import time
 
 import pytest
@@ -252,4 +253,73 @@ def test_rx_len_vlan(local_veth, bbl, vlan, link):
     wait_until(lambda: stream_info(instance, "S1")["verified"], 10, message="S1 verified")
     info = stream_info(instance, "S1")
     assert info["rx-len"] == info["tx-len"], info
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_flow_id_range(local_veth, bbl):
+    """Flow IDs are 32 bit, larger values are rejected instead of being
+    truncated to another flow."""
+    instance = bbl(network_config(local_veth))
+    big = 2**32 + 2  # flow 2 if truncated
+    for command in ("stream-info", "stream-stop"):
+        response = instance.ctrl(command, **{"flow-id": big})
+        assert response["code"] == 400, (command, response)
+    for argument in ("flow-id-min", "flow-id-max"):
+        response = instance.ctrl("stream-stop", **{argument: 2**32})
+        assert response["code"] == 400, (argument, response)
+    assert instance.ctrl("stream-info", **{"flow-id": 2})["stream-info"]["enabled"]
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+EOMPLS_INJECT = r"""
+import socket, struct, sys
+ifname, dst, count = sys.argv[1], bytes.fromhex(sys.argv[2].replace(":", "")), int(sys.argv[3])
+src = bytes.fromhex("020000000002")
+# BBL header of flow 1 with a sub-type the stream does not expect (rejected).
+bbl = struct.pack("<QBBBBIIHHIIQII", 0x5274427269636b21, 1, 99, 2, 0, 0, 0, 0, 0, 1, 0, 1, 0, 0)
+udp = struct.pack("!HHHH", 65056, 65056, 8 + len(bbl), 0) + bbl
+ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, 20 + len(udp), 0, 0, 64, 17, 0,
+                 socket.inet_aton("192.168.0.2"), socket.inet_aton("192.168.0.1"))
+csum = sum(struct.unpack("!10H", ip))
+csum = (csum & 0xffff) + (csum >> 16)
+ip = ip[:10] + struct.pack("!H", ~csum & 0xffff) + ip[12:]
+inner = dst + src + struct.pack("!H", 0x0800) + ip + udp
+frame = dst + src + struct.pack("!HI", 0x8847, (1000 << 12) | (1 << 8) | 64) + inner
+s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW)
+s.bind((ifname, 0))
+for _ in range(count):
+    s.send(frame)
+"""
+
+
+@pytest.mark.parametrize("a10nsp", [False, True], ids=["evpn", "a10nsp"])
+def test_eompls_rejected_rx_thread(local_veth, bbl, a10nsp):
+    """Ethernet over MPLS stream packets which are not accepted (e.g. sent
+    before stream-reset) are dropped by the RX thread instead of being
+    processed by the main thread a second time, which counts them as
+    received on the network or A10NSP interface."""
+    count = 200
+    local_veth.ns.exec(["sysctl", "-qw", "net.ipv6.conf.%s.disable_ipv6=1" % local_veth.if2])
+    config = {
+        "interfaces": {
+            "links": [{"interface": local_veth.if1, "rx-threads": 1}],
+            "network": [{"interface": local_veth.if1, "address": "192.168.0.1/24", "gateway": "192.168.0.2",
+                         "gateway-resolve-wait": False, "a10nsp": a10nsp}]
+        },
+        "traffic": {"autostart": False},
+        "streams": [{"name": "S1", "type": "ipv4", "pps": 10, "network-interface": local_veth.if1,
+                     "destination-ipv4-address": "192.168.0.2"}]
+    }
+    instance = bbl(config)
+    command = "a10nsp-interfaces" if a10nsp else "network-interfaces"
+
+    def rx_packets():
+        return instance.ctrl(command)[command][0]["rx-packets"]
+
+    mac = local_veth.ns.exec(["cat", "/sys/class/net/%s/address" % local_veth.if1]).strip()
+    before = rx_packets()
+    local_veth.ns.exec([sys.executable, "-c", EOMPLS_INJECT, local_veth.if2, mac, str(count)])
+    time.sleep(1)
+    assert rx_packets() - before < count // 10
+    assert not stream_info(instance, "S1")["verified"]
     assert instance.terminate(EXIT_TIMEOUT) == 0

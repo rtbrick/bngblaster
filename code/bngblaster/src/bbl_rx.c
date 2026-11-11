@@ -77,6 +77,14 @@ bbl_rx_stream_a10nsp(bbl_a10nsp_interface_s *interface,
     return false;
 }
 
+/* Packet of a known unicast stream (not accepted by bbl_stream_rx). */
+static inline bool
+bbl_rx_stream_known(bbl_ethernet_header_s *eth)
+{
+    return eth && eth->bbl && eth->bbl->type == BBL_TYPE_UNICAST &&
+           bbl_stream_index_get(eth->bbl->flow_id);
+}
+
 bool
 bbl_rx_thread(bbl_interface_s *interface, 
               bbl_ethernet_header_s *eth)
@@ -95,7 +103,8 @@ bbl_rx_thread(bbl_interface_s *interface,
         /* The inner header has no RX timestamp of its own. */
         ((bbl_ethernet_header_s*)eth->next)->mpls = eth->mpls;
         ((bbl_ethernet_header_s*)eth->next)->timestamp = eth->timestamp;
-        return bbl_rx_stream_a10nsp(interface->a10nsp, (bbl_ethernet_header_s*)eth->next);
+        if(bbl_rx_stream_a10nsp(interface->a10nsp, (bbl_ethernet_header_s*)eth->next)) return true;
+        return bbl_rx_stream_known((bbl_ethernet_header_s*)eth->next);
     }
     network_interface = interface->network_vlan[eth->vlan_outer];
     if(network_interface) {
@@ -108,9 +117,13 @@ bbl_rx_thread(bbl_interface_s *interface,
     /* Packets of known unicast streams which are not accepted (e.g. wrong
      * session or sent before stream-reset) are counted by bbl_stream_rx
      * and dropped, the main thread would process them a second time. */
-    if(eth->bbl && eth->bbl->type == BBL_TYPE_UNICAST &&
-       bbl_stream_index_get(eth->bbl->flow_id)) {
+    if(bbl_rx_stream_known(eth)) {
         return true;
+    }
+    if(eth->type == ETH_TYPE_ETH && eth->mpls) {
+        /* Ethernet over MPLS (EVPN or L2VPN), see bbl_rx_stream_network. */
+        return bbl_rx_stream_known((bbl_ethernet_header_s*)eth->next) ||
+               bbl_rx_stream_known((bbl_ethernet_header_s*)eth->next_cw);
     }
     return false;
 }
