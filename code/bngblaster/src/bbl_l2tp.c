@@ -849,6 +849,8 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
     dict_insert_result result;
 
     uint8_t l2tp_type;
+    char host_name[L2TP_MAX_CONFIG_STRING_LEN+1];
+    bool host_name_valid;
 
     /* Init tunnel ... */
     l2tp_tunnel = calloc(1, sizeof(bbl_l2tp_tunnel_s));
@@ -870,9 +872,19 @@ bbl_l2tp_sccrq_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth
     LOG(PACKET, "L2TP SCCRQ received from %s\n", format_ipv4_address(&ipv4->src));
 
     /* The server provides the secret and host name required to decode the
-     * attributes. The client-auth-id is verified after decoding (see below). */
+     * attributes. It is selected as below by address and client-auth-id with
+     * the Host Name AVP if not hidden, otherwise by address only. The
+     * client-auth-id is verified after decoding (see below). */
+    host_name_valid = bbl_l2tp_avp_host_name(l2tp, host_name, sizeof(host_name));
     for(l2tp_tunnel->server = l2tp_server; l2tp_tunnel->server; l2tp_tunnel->server = l2tp_tunnel->server->next) {
-        if(l2tp_tunnel->server->ip == ipv4->dst) break;
+        if(l2tp_tunnel->server->ip == ipv4->dst &&
+           (!host_name_valid || l2tp_tunnel->server->client_auth_id == NULL ||
+            strcmp(l2tp_tunnel->server->client_auth_id, host_name) == 0)) break;
+    }
+    if(!l2tp_tunnel->server) {
+        for(l2tp_tunnel->server = l2tp_server; l2tp_tunnel->server; l2tp_tunnel->server = l2tp_tunnel->server->next) {
+            if(l2tp_tunnel->server->ip == ipv4->dst) break;
+        }
     }
     if(!l2tp_tunnel->server) {
         bbl_l2tp_tunnel_delete(l2tp_tunnel);

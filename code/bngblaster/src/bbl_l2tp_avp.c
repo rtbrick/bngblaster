@@ -501,6 +501,38 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
     return true;
 }
 
+/**
+ * bbl_l2tp_avp_host_name
+ *
+ * Copy the Host Name AVP of a control message, if present and
+ * not hidden, which selects the server before the attributes are
+ * decoded with its secret.
+ *
+ * @return true if the host name was copied
+ */
+bool
+bbl_l2tp_avp_host_name(bbl_l2tp_s *l2tp, char *name, uint16_t name_size)
+{
+    uint8_t *buf = l2tp->payload;
+    uint16_t len = l2tp->payload_len;
+    bbl_l2tp_avp_t avp = {0};
+
+    while(len) {
+        if(!bbl_l2tp_avp_decode(&buf, &len, &avp)) {
+            return false;
+        }
+        if(avp.vendor == 0 && avp.type == L2TP_AVP_HOST_NAME) {
+            if(avp.h || avp.len == 0 || avp.len >= name_size) {
+                return false;
+            }
+            memcpy(name, avp.value, avp.len);
+            name[avp.len] = 0;
+            return true;
+        }
+    }
+    return false;
+}
+
 bool
 bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
 {

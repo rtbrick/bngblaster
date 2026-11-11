@@ -8,6 +8,7 @@ lac scenarios (against the BNG Blaster LNS):
   sequencing        ICCN with Sequencing Required
   no-session-id     ICRQ without Assigned Session ID
   no-iccn           ICRQ answered with ICRP, but no ICCN
+  hidden-avp        SCCRQ with a hidden Vendor Name (--secret)
   lcp               LCP configure-request, echo-request with own magic,
                     terminate-request (echo reply magic, terminate-ack, CDN)
   binary-strings    host name, called number and ARI with invalid UTF-8
@@ -23,6 +24,7 @@ Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
 import argparse
+import hashlib
 import json
 import socket
 import struct
@@ -35,12 +37,26 @@ from l2tp_proxy_lac import (AVP_ASSIGNED_SESSION_ID, AVP_ASSIGNED_TUNNEL_ID, AVP
                             LOCAL_TUNNEL_ID, SCCCN, SCCRP, SCCRQ, STOPCCN, Lac, avp, avp16, avp32,
                             decode_avps)
 
+AVP_VENDOR_NAME = 8
+AVP_CHALLENGE = 11
+AVP_RANDOM_VECTOR = 36
 AVP_CALLED_NUMBER = 21
 AVP_PRIVATE_GROUP_ID = 37
 AVP_SEQUENCING_REQUIRED = 39
 LCP = 0xc021
 CONF_REQ, CONF_ACK, TERM_REQ, TERM_ACK, ECHO_REQ, ECHO_REP = 1, 2, 5, 6, 9, 10
 MAGIC = 0x11223344
+
+
+def hidden_avp(avp_type, value, secret, random_vector):
+    """Mandatory AVP with value hidden as in RFC 2661 section 4.3."""
+    data = struct.pack("!H", len(value)) + value
+    out, block = b"", hashlib.md5(struct.pack("!H", avp_type) + secret + random_vector).digest()
+    for i in range(0, len(data), 16):
+        chunk = bytes(a ^ b for a, b in zip(data[i:i + 16], block))
+        out += chunk
+        block = hashlib.md5(secret + chunk).digest()
+    return struct.pack("!HHH", 0x8000 | 0x4000 | (6 + len(out)), 0, avp_type) + out
 
 
 def message_type(avps):
@@ -85,10 +101,10 @@ class Peer(Lac):
                 ppp.append(entry)
         return control, ppp
 
-    def tunnel(self, host_name=b"SCRIPT-LAC", retry=False):
+    def tunnel(self, host_name=b"SCRIPT-LAC", retry=False, extra=b""):
         sccrq = (avp16(AVP_MESSAGE_TYPE, SCCRQ) + avp16(AVP_PROTOCOL_VERSION, 0x0100) +
                  avp(AVP_HOST_NAME, host_name) + avp32(AVP_FRAMING_CAPABILITIES, 3) +
-                 avp16(AVP_ASSIGNED_TUNNEL_ID, LOCAL_TUNNEL_ID))
+                 avp16(AVP_ASSIGNED_TUNNEL_ID, LOCAL_TUNNEL_ID) + extra)
         self.send_ctrl(0, sccrq)
         if retry:
             # Retransmission with the same Ns before the SCCRP is acknowledged.
@@ -112,6 +128,12 @@ class Peer(Lac):
 def scenario_lac(args):
     peer = Peer(args.local, args.server)
     result = {}
+    if args.scenario == "hidden-avp":
+        random_vector = b"0123456789abcdef"
+        peer.tunnel(extra=avp(AVP_CHALLENGE, b"challenge-012345") + avp(AVP_RANDOM_VECTOR, random_vector) +
+                    hidden_avp(AVP_VENDOR_NAME, b"hidden-vendor", args.secret.encode(), random_vector))
+        result["control"] = [{"type": SCCRP, "result-code": None, "session-id": 0}]
+        return result
     if args.scenario == "binary-strings":
         peer.tunnel(host_name=b"LAC-\xff\xfe")
         peer.call(avp(AVP_CALLED_NUMBER, b"\xc3\x28") +
@@ -212,6 +234,7 @@ def main():
     parser.add_argument("--local", required=True)
     parser.add_argument("--server", default="")
     parser.add_argument("--duration", type=float, default=3)
+    parser.add_argument("--secret", default="")
     args = parser.parse_args()
     if args.mode == "lac":
         result = scenario_lac(args)

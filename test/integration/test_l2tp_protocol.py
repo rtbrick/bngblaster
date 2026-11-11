@@ -38,10 +38,10 @@ class Setup:
     def network(self):
         return {"interface": self.topology.if_a, "address": BBL_ADDRESS + "/24", "gateway": PEER_ADDRESS}
 
-    def start_lns(self):
+    def start_lns(self, servers=None):
         config = {
             "interfaces": {"network": self.network()},
-            "l2tp-server": [
+            "l2tp-server": servers or [
                 {"name": "LNS1", "address": BBL_ADDRESS, "lcp-conf-request": True},
                 {"name": "LNS2", "address": BBL_ADDRESS2}
             ]
@@ -63,9 +63,9 @@ class Setup:
         self.bbl = BngBlaster(self.topology.a, self.tmp_path, "lac").start(config, logging=("info", "l2tp"))
         self.processes.append(self.bbl)
 
-    def peer_cmd(self, mode, scenario, server=BBL_ADDRESS, duration=3):
+    def peer_cmd(self, mode, scenario, server=BBL_ADDRESS, duration=3, secret=""):
         return self.topology.b.cmd([sys.executable, PEER, mode, scenario, "--local", PEER_ADDRESS,
-                                    "--server", server, "--duration", str(duration)])
+                                    "--server", server, "--duration", str(duration), "--secret", secret])
 
     def peer(self, mode, scenario, **args):
         return json.loads(helpers.run(self.peer_cmd(mode, scenario, **args), timeout=60))
@@ -133,6 +133,18 @@ def test_lns_iccn_timeout(l2tp):
     cdn = [m for m in result["control"] if m["type"] == CDN]
     assert cdn and cdn[0]["result-code"] == 2, result
     assert l2tp.sessions() == []
+
+
+def test_hidden_avp_server_secret(l2tp):
+    """Hidden AVPs of an SCCRQ are decrypted with the secret of the server
+    selected by client-auth-id (Host Name), not of the first server with
+    the same address."""
+    l2tp.start_lns(servers=[
+        {"name": "OTHER", "address": BBL_ADDRESS, "client-auth-id": "OTHER-LAC", "secret": "other"},
+        {"name": "SCRIPT", "address": BBL_ADDRESS, "client-auth-id": "SCRIPT-LAC", "secret": "script"}])
+    result = l2tp.peer("lac", "hidden-avp", secret="script")
+    assert SCCRP in types(result), result
+    assert "Failed to decrypt hidden AVP" not in open(l2tp.bbl.path("log")).read()
 
 
 def test_lns_lcp(l2tp):

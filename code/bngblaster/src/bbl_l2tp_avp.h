@@ -80,6 +80,9 @@ bool
 bbl_l2tp_avp_decode_tunnel(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel);
 
 bool
+bbl_l2tp_avp_host_name(bbl_l2tp_s *l2tp, char *name, uint16_t name_size);
+
+bool
 bbl_l2tp_avp_decode_csun(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel);
 
 void
