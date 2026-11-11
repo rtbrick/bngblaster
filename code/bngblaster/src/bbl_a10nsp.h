@@ -13,6 +13,9 @@
 #define A10NSP_PPPOE_SERVICE_NAME   "access"
 #define A10NSP_PPPOE_AC_NAME        "BNG-Blaster-A10NSP"
 #define A10NSP_REPLY_MESSAGE        "BNG-Blaster-A10NSP"
+/* Replies are built from the received packet, which may grow by the
+ * tags added to a PADO (AC-Cookie, AC-Name and Service-Name). */
+#define A10NSP_REPLY_GROWTH         64
 
 typedef struct bbl_a10nsp_interface_
 {

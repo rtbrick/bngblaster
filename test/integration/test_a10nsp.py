@@ -90,6 +90,63 @@ def test_network_interface_vlan(pseudowire, processes, tmp_path, rx_threads):
     assert stats["untagged"] == 0, stats
 
 
+PADI_INJECT = r"""
+import socket, struct, sys, time
+ifname, host_uniq_len = sys.argv[1], int(sys.argv[2])
+s = socket.socket(socket.AF_PACKET, socket.SOCK_RAW, socket.htons(3))
+s.bind((ifname, 0))
+tags = struct.pack("!HH", 0x0101, 0) + struct.pack("!HH", 0x0103, host_uniq_len) + b"h" * host_uniq_len
+frame = (b"\xff" * 6 + bytes.fromhex("020000000001") + struct.pack("!HHHH", 0x8100, 100, 0x8100, 7) +
+         struct.pack("!HBBHH", 0x8863, 0x11, 0x09, 0, len(tags)) + tags)
+s.send(frame)
+largest, end = 0, time.monotonic() + 2
+s.settimeout(0.2)
+while time.monotonic() < end:
+    try:
+        data = s.recv(65535)
+    except socket.timeout:
+        continue
+    # The kernel strips the outer VLAN tag of received frames.
+    for offset in (12, 16, 20):
+        if data[offset:offset + 2] == b"\x88\x63" and data[offset + 3] == 0x07:
+            largest = max(largest, len(data))
+print(len(frame), largest)
+"""
+
+
+def test_pado_reply_slot_limit(local_veth, processes, tmp_path):
+    """A PADI close to the TXQ slot size is not answered, as the PADO with
+    AC-Cookie, AC-Name and Service-Name would not fit into the slot (was
+    encoded beyond the slot). Small PADIs are answered."""
+    for ifname in (local_veth.if1, local_veth.if2):
+        local_veth.ns.exec(["ip", "link", "set", ifname, "mtu", "9000"])
+    config = {
+        "interfaces": {
+            "links": [{"interface": local_veth.if1, "io-mode": "raw"}],
+            "a10nsp": [{"interface": local_veth.if1}],
+            "access": [{"interface": local_veth.if2, "type": "pppoe", "outer-vlan": 100, "inner-vlan": 7}]
+        },
+        "sessions": {"count": 1},
+        "dhcpv6": {"enable": False},
+        "ppp": {"ip6cp": {"enable": False}}
+    }
+    instance = BngBlaster(local_veth.ns, tmp_path, "bbl").start(config)
+    processes.append(instance)
+    wait_until(lambda: counters(instance)["sessions-established"] == 1, 15, message="session established")
+
+    def inject(host_uniq_len):
+        out = helpers.run(local_veth.ns.cmd([sys.executable, "-c", PADI_INJECT, local_veth.if2,
+                                             str(host_uniq_len)]))
+        return [int(v) for v in out.split()]
+
+    padi, pado = inject(16)
+    assert pado and pado < 200, (padi, pado)
+    padi, pado = inject(4026)
+    assert padi == 4062 and pado == 0, (padi, pado)
+    assert instance.alive()
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
 @pytest.mark.slow
 def test_dhcpv6_renew(local_veth, processes, tmp_path):
     """The A10NSP answers DHCPv6 Renew of IPoE sessions at T1 (300 seconds)
