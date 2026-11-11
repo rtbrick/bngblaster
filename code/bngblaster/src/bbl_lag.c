@@ -473,9 +473,27 @@ bbl_lag_member_link(bbl_interface_s *interface)
     if(!member) {
         return;
     }
-    if(interface->link_down && member->lacp_state) {
+    if(!member->lacp_state) {
+        bbl_lag_select(member->lag);
+    } else if(interface->link_down) {
         bbl_lag_member_lacp_reset(interface);
     } else {
+        /* The receive machine of an enabled port starts in state expired
+         * (IEEE 802.1AX), which assumes the short timeout of the partner
+         * and selects the fast periodic rate until the partner information
+         * is current or defaulted again. The first LACP PDU is sent
+         * immediately, a passive partner does not send before. */
+        member->lacp_state = LACP_EXPIRED;
+        member->actor_state |= LACP_STATE_FLAG_EXPIRED;
+        member->actor_state &= ~LACP_STATE_FLAG_DEFAULTED;
+        member->partner_state |= LACP_STATE_FLAG_SHORT_TIMEOUT;
+        if(member->actor_state & LACP_STATE_FLAG_SHORT_TIMEOUT) {
+            member->timeout = LACP_SHORT_TIMEOUT_TIME;
+        } else {
+            member->timeout = LACP_LONG_TIMEOUT_TIME;
+        }
+        member->periodic = 0;
+        bbl_lag_lacp_send(member);
         bbl_lag_select(member->lag);
     }
 }
