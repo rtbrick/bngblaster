@@ -199,5 +199,10 @@ default `/usr/lib/frr`), `VTYSH_BIN`, `BIRD_BIN` and `BIRDC_BIN`, or the build d
 `~/go/bin` of the invoking user (also with sudo) and `PATH`. Test artifacts are kept in `tmp/integration`
 (owned by the invoking user after sudo runs) unless `--basetemp` is set.
 
+Each run deletes all network namespaces starting with `bbl-it-` at start and end. To run several test
+sessions in parallel on one host, give each its own `BBL_IT_NETNS_PREFIX` (e.g. `bbl-it2-`), `BBL_IT_ID_BASE`
+(first veth number, e.g. `2000`, the interfaces are named `bbl<n>a`/`bbl<n>b`) and `--basetemp`. Tests with
+fixed interface names (e.g. `test_fragments.py`) can still collide.
+
 Alternatively configure CMake with `-DBNGBLASTER_INTEGRATION_TESTS=ON`
 and run `sudo -E ctest -L integration`.

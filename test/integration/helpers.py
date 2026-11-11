@@ -19,7 +19,9 @@ import time
 from pathlib import Path
 
 REPO = Path(__file__).resolve().parents[2]
-NETNS_PREFIX = "bbl-it-"
+# Parallel runs on one host need their own namespace prefix (cleanup
+# deletes all namespaces with this prefix) and interface number base.
+NETNS_PREFIX = os.environ.get("BBL_IT_NETNS_PREFIX", "bbl-it-")
 
 
 def env_path(name, default):

@@ -12,7 +12,7 @@ import pytest
 import helpers
 from helpers import BgpSink, Bird, BngBlaster, Frr, GoBgp, Netns
 
-_ids = itertools.count(1)
+_ids = itertools.count(int(os.environ.get("BBL_IT_ID_BASE", "1")))
 
 
 def pytest_configure(config):
