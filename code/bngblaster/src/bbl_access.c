@@ -1882,6 +1882,8 @@ bbl_access_lcp_restart(bbl_session_s *session, bool peer)
     }
     
     if (session->ip6cp_state > BBL_PPP_DISABLED) {
+        /* Stops the DHCPv6 timers (lease, T1, T2) of the old binding. */
+        bbl_dhcpv6_stop(session);
         session->ip6cp_state = BBL_PPP_CLOSED;
         session->ipv6_prefix.len = 0;
         session->delegated_ipv6_prefix.len = 0;
@@ -1890,20 +1892,6 @@ bbl_access_lcp_restart(bbl_session_s *session, bool peer)
         session->ipv6_address_ia_na = false;
         memset(session->ipv6_dns1, 0x0, IPV6_ADDR_LEN);
         memset(session->ipv6_dns2, 0x0, IPV6_ADDR_LEN);
-        if(session->dhcpv6_state > BBL_DHCP_DISABLED) {
-            session->dhcpv6_state = BBL_DHCP_INIT;
-            if(session->dhcpv6_established) {
-                session->dhcpv6_established = false;
-                g_ctx->dhcpv6_established--;
-            }
-            if(session->dhcpv6_requested) {
-                session->dhcpv6_requested = false;
-                g_ctx->dhcpv6_requested--;
-            }
-            memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
-            memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
-            memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
-        }
         ENABLE_ENDPOINT(session->endpoint.ipv6);
         ENABLE_ENDPOINT(session->endpoint.ipv6pd);
         bbl_session_traffic_reset(session, session->session_traffic.ipv6_up);
