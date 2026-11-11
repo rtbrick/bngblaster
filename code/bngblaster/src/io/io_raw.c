@@ -93,6 +93,10 @@ io_raw_rx_job(timer_s *timer)
         io->buf_len = len;
         io->stats.packets++;
         io->stats.bytes += io->buf_len;
+        if(io->vlan_tpid) {
+            /* Outer VLAN tag stripped by the kernel. */
+            io->stats.bytes += 4;
+        }
         if(io->buf_len > max_len) {
             io->stats.to_long++;
             continue;

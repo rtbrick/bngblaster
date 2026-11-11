@@ -100,6 +100,10 @@ rx_handler(io_thread_s *thread, io_handle_s *io)
 
     io->stats.packets++;
     io->stats.bytes += io->buf_len;
+    if(io->vlan_tpid) {
+        /* Outer VLAN tag stripped by the kernel. */
+        io->stats.bytes += 4;
+    }
     if(packet_is_bbl(io->buf, io->buf_len)) {
         /** Process */
         decode_result = decode_ethernet(io->buf, io->buf_len, thread->sp, SCRATCHPAD_LEN, &eth);

@@ -80,6 +80,10 @@ io_packet_mmap_rx_job(timer_s *timer)
         io->buf_len = tphdr->tp_snaplen;
         io->stats.packets++;
         io->stats.bytes += io->buf_len;
+        if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
+            /* Outer VLAN tag stripped by the kernel. */
+            io->stats.bytes += 4;
+        }
         decode_result = decode_ethernet(io->buf, io->buf_len, g_ctx->sp, SCRATCHPAD_LEN, &eth);
         if(decode_result == PROTOCOL_SUCCESS) {
             if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
