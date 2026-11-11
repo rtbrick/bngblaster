@@ -161,6 +161,24 @@ bbl_access_update_eth(bbl_session_s *session,
     eth->vlan_three = session->access_third_vlan;
 }
 
+/* Link the reply headers to the ethernet copy. A PPPoE session header
+ * is copied as well, as it is shared with the received packet. */
+static void
+bbl_access_reply_next(bbl_ethernet_header_s *eth_tx,
+                      bbl_pppoe_session_s *pppoe_tx,
+                      void *next)
+{
+    if(eth_tx->type == ETH_TYPE_PPPOE_SESSION) {
+        *pppoe_tx = *(bbl_pppoe_session_s*)eth_tx->next;
+        pppoe_tx->raw_len = 0;
+        pppoe_tx->lwip = false;
+        pppoe_tx->next = next;
+        eth_tx->next = pppoe_tx;
+    } else {
+        eth_tx->next = next;
+    }
+}
+
 static bbl_txq_result_t
 bbl_access_icmp_reply(bbl_session_s *session,
                       bbl_ethernet_header_s *eth,
@@ -168,11 +186,12 @@ bbl_access_icmp_reply(bbl_session_s *session,
                       bbl_icmp_s *icmp)
 {
     bbl_ethernet_header_s eth_tx = *eth;
+    bbl_pppoe_session_s pppoe_tx;
     bbl_ipv4_s ipv4_tx = *ipv4;
     bbl_icmp_s icmp_tx = *icmp;
 
     bbl_access_update_eth(session, &eth_tx);
-    eth_tx.next = &ipv4_tx;
+    bbl_access_reply_next(&eth_tx, &pppoe_tx, &ipv4_tx);
     ipv4_tx.next = &icmp_tx;
     ipv4_tx.dst = ipv4->src;
     ipv4_tx.src = ipv4->dst;
@@ -188,11 +207,12 @@ bbl_access_icmpv6_na(bbl_session_s *session,
                      bbl_icmpv6_s *icmpv6)
 {
     bbl_ethernet_header_s eth_tx = *eth;
+    bbl_pppoe_session_s pppoe_tx;
     bbl_ipv6_s ipv6_tx = *ipv6;
     bbl_icmpv6_s icmpv6_tx = *icmpv6;
 
     bbl_access_update_eth(session, &eth_tx);
-    eth_tx.next = &ipv6_tx;
+    bbl_access_reply_next(&eth_tx, &pppoe_tx, &ipv6_tx);
     ipv6_tx.next = &icmpv6_tx;
     ipv6_tx.dst = ipv6->src;
     ipv6_tx.src = icmpv6_tx.prefix.address;
@@ -214,6 +234,7 @@ bbl_access_icmpv6_ns(bbl_session_s *session,
                      bbl_icmpv6_s *icmpv6)
 {
     bbl_ethernet_header_s eth_tx = *eth;
+    bbl_pppoe_session_s pppoe_tx;
     bbl_ipv6_s ipv6_tx = *ipv6;
     bbl_icmpv6_s icmpv6_tx = *icmpv6;
     ipv6addr_t ipv6_dst;
@@ -224,7 +245,7 @@ bbl_access_icmpv6_ns(bbl_session_s *session,
     ((uint8_t*)ipv6_dst)[15] = ((uint8_t*)ipv6->src)[15];
 
     bbl_access_update_eth(session, &eth_tx);
-    eth_tx.next = &ipv6_tx;
+    bbl_access_reply_next(&eth_tx, &pppoe_tx, &ipv6_tx);
     ipv6_tx.next = &icmpv6_tx;
     ipv6_tx.ttl = 255;
     icmpv6_tx.type = IPV6_ICMPV6_NEIGHBOR_SOLICITATION;
@@ -247,11 +268,12 @@ bbl_access_icmpv6_echo_reply(bbl_session_s *session,
                              bbl_icmpv6_s *icmpv6)
 {
     bbl_ethernet_header_s eth_tx = *eth;
+    bbl_pppoe_session_s pppoe_tx;
     bbl_ipv6_s ipv6_tx = *ipv6;
     bbl_icmpv6_s icmpv6_tx = *icmpv6;
 
     bbl_access_update_eth(session, &eth_tx);
-    eth_tx.next = &ipv6_tx;
+    bbl_access_reply_next(&eth_tx, &pppoe_tx, &ipv6_tx);
     ipv6_tx.next = &icmpv6_tx;
     ipv6_tx.dst = ipv6->src;
     ipv6_tx.src = ipv6->dst;

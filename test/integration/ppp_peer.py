@@ -28,6 +28,7 @@ TAG_SERVICE_NAME, TAG_AC_NAME, TAG_HOST_UNIQ, TAG_AC_COOKIE = 0x0101, 0x0102, 0x
 TAG_RELAY_SESSION_ID = 0x0110
 RELAY_SESSION_ID = b"relay-012345"
 LCP, PAP, CHAP, IPCP, IP6CP = 0xc021, 0xc023, 0xc223, 0x8021, 0x8057
+PPP_IPV4 = 0x0021
 CONF_REQ, CONF_ACK, CONF_NAK, CONF_REJ, TERM_REQ, TERM_ACK, CODE_REJ, PROT_REJ = 1, 2, 3, 4, 5, 6, 7, 8
 ECHO_REQ, ECHO_REP, DISCARD_REQ = 9, 10, 11
 LCP_MRU, LCP_AUTH, LCP_MAGIC = 1, 3, 5
@@ -58,6 +59,23 @@ def encode_options(opts):
 
 def control(code, identifier, data=b""):
     return struct.pack("!BBH", code, identifier, 4 + len(data)) + data
+
+
+def checksum(data):
+    if len(data) % 2:
+        data += b"\x00"
+    total = sum(struct.unpack("!%dH" % (len(data) // 2), data))
+    while total >> 16:
+        total = (total & 0xffff) + (total >> 16)
+    return ~total & 0xffff
+
+
+def icmp_echo_request(src, dst, identifier, sequence):
+    icmp = struct.pack("!BBHHH", 8, 0, 0, identifier, sequence) + b"bngblaster"
+    icmp = icmp[:2] + struct.pack("!H", checksum(icmp)) + icmp[4:]
+    ip = struct.pack("!BBHHHBBH4s4s", 0x45, 0, 20 + len(icmp), 1, 0, 64, 1, 0, src, dst)
+    ip = ip[:10] + struct.pack("!H", checksum(ip)) + ip[12:]
+    return ip + icmp
 
 
 class Server:
@@ -326,6 +344,8 @@ class Server:
             self.send_ppp(0x80fd, control(CONF_REQ, self.next_id(), b"\x1a\x04\x78\x00"))
         elif action == "ipcp-unknown-code":
             self.send_ppp(IPCP, control(15, self.next_id(), b"\x01\x02"))
+        elif action == "icmp-echo":
+            self.send_ppp(PPP_IPV4, icmp_echo_request(SERVER_ADDRESS, CLIENT_ADDRESS, 0x1234, 1))
         elif action == "lcp-hold":
             # Ignore configure-requests of the client for some time.
             self.lcp_hold_until = time.monotonic() + 3
@@ -353,6 +373,12 @@ class Server:
         if len(body) < 6:
             return
         protocol = struct.unpack("!H", body[:2])[0]
+        if protocol == PPP_IPV4:
+            ip = body[2:]
+            if len(ip) >= 28 and ip[9] == 1:
+                self.record(kind="icmp", type=ip[20], src=socket.inet_ntoa(ip[12:16]),
+                            dst=socket.inet_ntoa(ip[16:20]))
+            return
         ccode, cid, clen = struct.unpack("!BBH", body[2:6])
         data = body[6:2 + clen]
         handler = {LCP: self.lcp, PAP: self.pap, CHAP: self.chap, IPCP: self.ipcp, IP6CP: self.ip6cp}.get(protocol)

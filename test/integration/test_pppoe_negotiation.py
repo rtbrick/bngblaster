@@ -146,6 +146,19 @@ def test_ipcp_renegotiation_by_peer(ppp):
     assert ppp.session()["ipv4-address"] == "10.0.0.100"
 
 
+def test_icmp_echo_reply(ppp):
+    """ICMP echo request of the server to the session address is answered
+    with an echo reply in the PPPoE session (crashed with the replies built
+    from copies of the received headers)."""
+    ppp.start_server("--actions", "3:icmp-echo")
+    ppp.start_bbl(access={"ipv6": False})
+    ppp.wait_state("Established")
+    wait_until(lambda: ppp.received("icmp"), 10, message="ICMP echo reply")
+    reply = ppp.received("icmp")[0]
+    assert (reply["type"], reply["src"], reply["dst"]) == (0, "10.0.0.100", "10.0.0.1")
+    assert ppp.bbl.alive() and ppp.state() == "Established"
+
+
 def test_ipcp_close_retransmit(ppp):
     """ipcp-close on an established session with the first terminate-request
     lost: it is retransmitted, IPCP is closed and can be opened again."""
