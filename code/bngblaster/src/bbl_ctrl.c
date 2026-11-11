@@ -156,12 +156,27 @@ const schema_arg_s schema_igmp[] = {
 
 
 static bool
-bbl_ctrl_schema(json_t *arguments, const schema_arg_s schema[])
+bbl_ctrl_schema_type(json_t *value, schema_arg_type_t type)
 {
-    size_t i;
+    switch(type) {
+        case SCHEMA_ARG_NUMBER: return json_is_number(value);
+        case SCHEMA_ARG_BOOLEAN: return json_is_boolean(value);
+        case SCHEMA_ARG_ARRAY: return json_is_array(value);
+        case SCHEMA_ARG_STRING:
+        default: return json_is_string(value);
+    }
+}
+
+/* Unknown arguments and known arguments of the wrong
+ * JSON type are rejected, the latter with *type_error set. */
+static bool
+bbl_ctrl_schema(json_t *arguments, const schema_arg_s schema[], const char **type_error)
+{
+    size_t i, i2;
     bool valid;
     const char *key;
     json_t *value = NULL;
+    json_t *element;
     json_object_foreach(arguments, key, value) {
         valid = false; i = 0;
         while(schema[i].name) {
@@ -172,6 +187,18 @@ bbl_ctrl_schema(json_t *arguments, const schema_arg_s schema[])
             i++;
         }
         if(valid) {
+            if(!bbl_ctrl_schema_type(value, schema[i].type)) {
+                *type_error = key;
+                return false;
+            }
+            if(schema[i].type == SCHEMA_ARG_ARRAY) {
+                json_array_foreach(value, i2, element) {
+                    if(!bbl_ctrl_schema_type(element, schema[i].sub_type)) {
+                        *type_error = key;
+                        return false;
+                    }
+                }
+            }
             continue;
         }
         /* Deprecated!
@@ -691,6 +718,8 @@ bbl_ctrl_socket_thread(void *thread_data)
     json_t* arguments = NULL;
     json_t* value = NULL;
     const char *command = NULL;
+    const char *type_error = NULL;
+    char error_message[128];
     uint32_t session_id = 0;
     uint32_t number;
     int buffer;
@@ -812,8 +841,14 @@ bbl_ctrl_socket_thread(void *thread_data)
                             bbl_ctrl_status(fd, "error", 400, "unknown command");
                             break;
                         } else if(strcmp(actions[i].name, command) == 0) {
-                            if(actions[i].schema && !bbl_ctrl_schema(arguments, actions[i].schema)) {
-                                bbl_ctrl_status(fd, "error", 400, "invalid argument");
+                            type_error = NULL;
+                            if(actions[i].schema && !bbl_ctrl_schema(arguments, actions[i].schema, &type_error)) {
+                                if(type_error) {
+                                    snprintf(error_message, sizeof(error_message), "invalid argument type %s", type_error);
+                                    bbl_ctrl_status(fd, "error", 400, error_message);
+                                } else {
+                                    bbl_ctrl_status(fd, "error", 400, "invalid argument");
+                                }
                                 break;
                             }
                             if(actions[i].fn == bbl_ctrl_terminate && !session_id && !test_main_loop() &&

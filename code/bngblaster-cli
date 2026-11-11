@@ -42,7 +42,18 @@ Examples:
     sys.exit(1)
 
 
-def argument_value(arg):
+def argument_value(arg, arg_type=None):
+    if arg_type == "string":
+        # string arguments like "username 12345" stay strings
+        return arg
+    if arg_type == "array":
+        try:
+            return json.loads(arg)
+        except ValueError:
+            try:
+                return ast.literal_eval(arg)
+            except (ValueError, SyntaxError):
+                return arg
     if re.fullmatch(r"-?[0-9]+", arg):
         # integer arguments like "session-id 1"
         return int(arg)
@@ -66,7 +77,7 @@ def argument_value(arg):
     return arg
 
 
-def build_request(argv):
+def build_request(argv, arg_types=None):
     request = {}
     request["command"] = argv[2]
     if len(argv) > 3:
@@ -74,8 +85,23 @@ def build_request(argv):
             raise ValueError("argument %s without value" % argv[-1])
         request["arguments"] = {}
         for i in range(3, len(argv), 2):
-            request["arguments"][argv[i]] = argument_value(argv[i+1])
+            arg_type = (arg_types or {}).get(argv[i])
+            request["arguments"][argv[i]] = argument_value(argv[i+1], arg_type)
     return request
+
+
+def argument_types(socket_path, command):
+    """Argument types of the command as announced by the commands
+    request, empty if not available (older versions)."""
+    try:
+        data = send_request(socket_path, {"command": "commands"})
+        for cmd in data.get("commands", []):
+            if cmd.get("command") == command:
+                return {arg["name"]: arg["type"] for arg in cmd.get("arguments", [])
+                        if isinstance(arg, dict)}
+    except (AttributeError, KeyError, TypeError):
+        pass
+    return {}
 
 
 def send_request(socket_path, request):
@@ -110,8 +136,11 @@ def main():
         usage()
 
     socket_path = sys.argv[1]
+    arg_types = None
+    if len(sys.argv) > 3:
+        arg_types = argument_types(socket_path, sys.argv[2])
     try:
-        request = build_request(sys.argv)
+        request = build_request(sys.argv, arg_types)
     except Exception as e:
         error("invalid command: %s" % e)
     #print(json.dumps(request).encode('utf-8'))

@@ -12,6 +12,8 @@ SPDX-License-Identifier: BSD-3-Clause
 """
 import json
 import socket
+import subprocess
+import sys
 import time
 
 import pytest
@@ -53,6 +55,37 @@ def instance(topology, processes, tmp_path):
 def test_invalid_session_argument(instance, argument, value):
     response = instance.ctrl("session-info", **{argument: value})
     assert response["code"] == 400
+
+
+@pytest.mark.parametrize("command,arguments", [
+    ("session-update", {"username": 12345}),
+    ("session-update", {"agent-remote-id": True}),
+    ("stream-summary", {"name": 5}),
+    ("stream-summary", {"verified-only": "yes"}),
+    ("session-summary", {"sessions": ["1"]}),
+    ("l2tp-tunnel-terminate", {"tunnel-id": 1, "error-message": 5}),
+])
+def test_invalid_argument_type(instance, command, arguments):
+    """Arguments of the wrong JSON type are rejected instead of being
+    ignored by the command, which answered 200."""
+    response = instance.ctrl(command, **arguments)
+    assert response["code"] == 400
+    assert response["message"].startswith("invalid argument type")
+
+
+def test_cli_string_arguments(instance):
+    """bngblaster-cli sends numeric looking values of string
+    arguments as strings and numbers as numbers."""
+    cli = [sys.executable, str(helpers.REPO / "code/bngblaster-cli"), instance.socket]
+    out = subprocess.run(cli + ["stream-summary", "name", "12345"],
+                         capture_output=True, text=True, timeout=30)
+    assert json.loads(out.stdout)["code"] == 200, out.stdout + out.stderr
+    out = subprocess.run(cli + ["session-info", "session-id", "1"],
+                         capture_output=True, text=True, timeout=30)
+    assert json.loads(out.stdout)["code"] == 404, out.stdout + out.stderr
+    out = subprocess.run(cli + ["session-update", "session-id", "1", "username", "12345"],
+                         capture_output=True, text=True, timeout=30)
+    assert json.loads(out.stdout)["code"] == 404, out.stdout + out.stderr
 
 
 def test_main_loop_commands(instance):
