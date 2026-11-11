@@ -113,6 +113,26 @@ bbl_session_tx_qnode_remove(bbl_session_s *session)
     CIRCLEQ_PREV(session, session_tx_qnode) = NULL;
 }
 
+/* Reset a session traffic stream of one address family, the
+ * stream is verified again and counted again by bbl_stream_ctrl. */
+static void
+bbl_session_traffic_reset(bbl_session_s *session, bbl_stream_s *stream)
+{
+    bool verified;
+
+    if(!stream) return;
+    verified = stream->verified;
+    bbl_stream_reset(stream);
+    if(verified && !stream->verified) {
+        if(session->session_traffic.flows_verified) {
+            session->session_traffic.flows_verified--;
+        }
+        if(g_ctx->stats.session_traffic_flows_verified) {
+            g_ctx->stats.session_traffic_flows_verified--;
+        }
+    }
+}
+
 /**
  * bbl_session_ncp_down
  *
@@ -131,8 +151,8 @@ bbl_session_ncp_down(bbl_session_s *session, bool ipcp)
         session->dns1 = 0;
         session->dns2 = 0;
         ENABLE_ENDPOINT(session->endpoint.ipv4);
-        bbl_stream_reset(session->session_traffic.ipv4_up);
-        bbl_stream_reset(session->session_traffic.ipv4_down);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv4_up);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv4_down);
     } else {
         session->ipv6_prefix.len = 0;
         session->delegated_ipv6_prefix.len = 0;
@@ -144,10 +164,10 @@ bbl_session_ncp_down(bbl_session_s *session, bool ipcp)
         bbl_dhcpv6_stop(session);
         ENABLE_ENDPOINT(session->endpoint.ipv6);
         ENABLE_ENDPOINT(session->endpoint.ipv6pd);
-        bbl_stream_reset(session->session_traffic.ipv6_up);
-        bbl_stream_reset(session->session_traffic.ipv6_down);
-        bbl_stream_reset(session->session_traffic.ipv6pd_up);
-        bbl_stream_reset(session->session_traffic.ipv6pd_down);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv6_up);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv6_down);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv6pd_up);
+        bbl_session_traffic_reset(session, session->session_traffic.ipv6pd_down);
     }
     session->version++;
 }

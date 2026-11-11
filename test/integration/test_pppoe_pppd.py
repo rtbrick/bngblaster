@@ -20,6 +20,7 @@ import time
 
 import pytest
 
+import helpers
 from helpers import BngBlaster, wait_until
 
 PPP_ROOT = os.environ.get("PPP_ROOT", "")
@@ -150,3 +151,37 @@ def test_ipcp_rejected_ipv4_only(pppd):
     pppd.start_pppd("require-pap", "noip")
     pppd.start_bbl(access={"ipv6": False})
     pppd.wait_state("Terminated")
+
+
+def test_session_traffic_ipcp_reopen(pppd):
+    """Session traffic is routed by pppd between the session and a network
+    interface (VLAN 100) on the same link. ipcp-close and ipcp-open reset the IPv4
+    session traffic, the flows are verified again without counting them
+    twice, so the session is not pending afterwards (IP6CP keeps the link)."""
+    topology = pppd.topology
+    vlan = topology.if_b + ".100"
+    topology.b.exec(["ip", "link", "add", "link", topology.if_b, "name", vlan, "type", "vlan", "id", "100"])
+    topology.b.exec(["ip", "link", "set", vlan, "up"])
+    helpers.kernel_address(topology.b, vlan, "192.168.1.2/24")
+    topology.b.exec(["sysctl", "-qw", "net.ipv4.ip_forward=1"])
+    pppd.start_pppd("require-pap")
+    pppd.start_bbl(interfaces={
+        "network": {"interface": topology.if_a, "vlan": 100, "address": "192.168.1.1/24",
+                    "gateway": "192.168.1.2"},
+        "access": [{"interface": topology.if_a, "type": "pppoe", "outer-vlan": 0, "inner-vlan": 0,
+                    "vlan-mode": "N:1", "username": USERNAME, "password": PASSWORD}]},
+        **{"session-traffic": {"autostart": True, "ipv4-pps": 10}})
+    pppd.wait_state("Established")
+
+    def verified():
+        counters = pppd.bbl.ctrl("session-counters")["session-counters"]
+        return counters["session-traffic-flows"], counters["session-traffic-flows-verified"]
+
+    wait_until(lambda: verified() == (2, 2), 15, message="session traffic verified")
+    pppd.bbl.ctrl("ipcp-close", **{"session-id": 1})
+    wait_until(lambda: pppd.session()["ipcp-state"] == "Closed", 10, message="IPCP closed")
+    pppd.bbl.ctrl("ipcp-open", **{"session-id": 1})
+    wait_until(lambda: pppd.session()["ipcp-state"] == "Opened", 10, message="IPCP opened")
+    wait_until(lambda: not pppd.bbl.ctrl("sessions-pending")["sessions-pending"], 15,
+               message="session traffic verified again")
+    assert verified() == (2, 2)
