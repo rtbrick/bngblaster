@@ -286,8 +286,9 @@ that if the prefix is `10.0.0.0/24`, the lookup address should be `10.0.0.0`.
 .. note::
 
     There is currently no longest prefix match supported, if several
-    prefixes with this address exist, the one with the longest prefix
-    length is used. 
+    prefixes with this address exist, the active one with the longest
+    prefix length is used. Streams switch to another prefix length
+    if a longer prefix is learned or the used one is withdrawn.
 
 RAW Update Files
 ~~~~~~~~~~~~~~~~

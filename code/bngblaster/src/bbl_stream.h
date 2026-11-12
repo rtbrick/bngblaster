@@ -285,6 +285,7 @@ typedef struct bbl_stream_
     uint32_t last_sync_wrong_session;
 
     uint32_t ldp_entry_version;
+    uint32_t ldp_lookup_version; /* db_version of the LDP instance */
     uint32_t evpn_entry_version; /* version of the EVPN or L2VPN entry */
     uint32_t evpn_lookup_version;
 

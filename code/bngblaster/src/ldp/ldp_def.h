@@ -347,6 +347,7 @@ typedef struct ldp_instance_ {
         hb_tree *ipv4;
         hb_tree *ipv6;
     } db; /* Label database. */
+    uint32_t db_version; /* Incremented if an entry is (de)activated. */
 
     /* Pointer to next instance. */
     struct ldp_instance_ *next;

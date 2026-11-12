@@ -1783,31 +1783,34 @@ static bool
 bbl_stream_ldp_lookup(bbl_stream_s *stream)
 {
     ldp_db_entry_s *entry = stream->ldp_entry;
-    ldp_instance_s *instance;
+    /* Instance of link or targeted LDP on the interface. */
+    ldp_instance_s *instance = stream->tx_network_interface->ldp_instance;
+    ldp_db_entry_s *selected = NULL;
     uint32_t version;
 
-    if(!entry) {
-        /* Instance of link or targeted LDP on the interface. */
-        instance = stream->tx_network_interface->ldp_instance;
-        if(!instance) {
-            return false;
-        }
-        if(pthread_rwlock_tryrdlock(&g_ctx->label_db_lock) != 0) {
-            return false;
-        }
+    if(!instance) {
+        return false;
+    }
+    /* Search the longest active prefix again only if an entry of the
+     * instance was (de)activated since the last search (initially 0). */
+    version = __atomic_load_n(&instance->db_version, __ATOMIC_ACQUIRE);
+    if(unlikely(version != stream->ldp_lookup_version) &&
+       pthread_rwlock_tryrdlock(&g_ctx->label_db_lock) == 0) {
+        stream->ldp_lookup_version = version;
         if(stream->config->ipv4_ldp_lookup_address) {
-            entry = ldb_db_lookup_ipv4(instance, stream->config->ipv4_ldp_lookup_address);
+            selected = ldb_db_lookup_ipv4(instance, stream->config->ipv4_ldp_lookup_address);
         } else if (*(uint64_t*)stream->config->ipv6_ldp_lookup_address) {
-            entry = ldb_db_lookup_ipv6(instance, &stream->config->ipv6_ldp_lookup_address);
+            selected = ldb_db_lookup_ipv6(instance, &stream->config->ipv6_ldp_lookup_address);
+        }
+        if(selected && selected != entry) {
+            entry = selected;
+            __atomic_store_n(&stream->ldp_entry, entry, __ATOMIC_RELAXED);
+            /* Rebuild the packet with the label of the new entry. */
+            stream->ldp_entry_version = entry->version - 1;
         }
         pthread_rwlock_unlock(&g_ctx->label_db_lock);
-        if(!entry) {
-            return false;
-        }
-        __atomic_store_n(&stream->ldp_entry, entry, __ATOMIC_RELAXED);
     }
-
-    if(!__atomic_load_n(&entry->active, __ATOMIC_RELAXED)) {
+    if(!entry || !__atomic_load_n(&entry->active, __ATOMIC_RELAXED)) {
         return false;
     }
     version = __atomic_load_n(&entry->version, __ATOMIC_ACQUIRE);

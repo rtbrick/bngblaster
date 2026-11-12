@@ -347,6 +347,56 @@ def test_ldp_raw_messages(local_veth, bbl, tmp_path):
     wait_until(lambda: session(2)["state"] == "operational", 20, message="session operational again")
 
 
+@pytest.mark.parametrize("threads", [False, True], ids=["main", "threads"])
+def test_ldp_longest_prefix(local_veth, bbl, tmp_path, threads):
+    """The stream uses the active entry with the longest prefix length for
+    its lookup address: it switches to a /24 learned after the /16 and back
+    to the /16 if the /24 is withdrawn."""
+    mapping16 = ldp_pdu(tmp_path / "mapping16.ldp", ldp_message(MAPPING, ldp_fec("13.37.0.0/16"), label(10000)))
+    mapping24 = ldp_pdu(tmp_path / "mapping24.ldp", ldp_message(MAPPING, ldp_fec("13.37.0.0/24"), label(10001)))
+    withdraw24 = ldp_pdu(tmp_path / "withdraw24.ldp", ldp_message(WITHDRAW, ldp_fec("13.37.0.0/24")))
+    config = link_config(local_veth, raw_files=[mapping16, mapping24, withdraw24], streams=[{
+        "name": "S1", "type": "ipv4", "direction": "downstream", "pps": 100,
+        "network-interface": local_veth.if2, "destination-ipv4-address": "100.0.0.1",
+        "ldp-ipv4-lookup-address": "13.37.0.0"}])
+    config["interfaces"]["links"] = links(local_veth, threads)
+    instance = bbl(config)
+
+    def session(instance_id):
+        return instance.ctrl("ldp-sessions", **{"ldp-instance-id": instance_id})["ldp-sessions"][0]
+
+    def active():
+        db = instance.ctrl("ldp-database", **{"ldp-instance-id": 2})["ldp-database"]
+        return {e["prefix"]: e["label"] for e in db if e["active"] and e["prefix"].startswith("13.37.")}
+
+    def send(path):
+        wait_until(lambda: instance.ctrl("ldp-raw-update", file=path, **{"ldp-instance-id": 1})
+                   ["ldp-raw-update"]["started"] == 1, 5, 0.2, message="RAW update started")
+
+    def info():
+        return instance.ctrl("stream-info", **{"flow-id": 1})["stream-info"]
+
+    def received_label(expected, message):
+        # The received label is recorded with the first packet after a reset.
+        assert instance.ctrl("stream-reset")["code"] == 200
+        wait_until(lambda: info().get("rx-packets", 0) > 0 and info().get("rx-mpls1") == expected, 10,
+                   message=message)
+
+    wait_until(lambda: session(1)["state"] == "operational" and session(2)["state"] == "operational", 30,
+               message="LDP session operational")
+    send(mapping16)
+    wait_until(lambda: active() == {"13.37.0.0/16": 10000}, 10, message="/16 learned")
+    received_label(10000, "stream sent with label of /16")
+    send(mapping24)
+    wait_until(lambda: active() == {"13.37.0.0/16": 10000, "13.37.0.0/24": 10001}, 10, message="/24 learned")
+    received_label(10001, "stream switched to label of /24 learned later")
+    send(withdraw24)
+    wait_until(lambda: active() == {"13.37.0.0/16": 10000}, 10, message="/24 withdrawn")
+    received_label(10000, "stream continued with label of /16")
+    tx = info()["tx-packets"]
+    wait_until(lambda: info()["tx-packets"] >= tx + 50, 5, message="stream sending")
+
+
 def test_ldp_implicit_null(local_veth, bbl):
     """The LSR-ID of instance 1 is advertised with implicit null label, which
     is not sent (RFC 3032), so the stream of instance 2 is sent unlabeled."""

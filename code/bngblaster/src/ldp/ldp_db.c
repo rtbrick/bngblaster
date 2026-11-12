@@ -48,12 +48,15 @@ ldb_db_init(ldp_instance_s *instance)
 
 /* Traffic streams (TX threads) read the state and version without
  * lock and rebuild their packets (with lock) if the version changes,
- * so the version must be updated after all other fields. */
+ * so the version must be updated after all other fields. A changed
+ * state also increments the instance version, which lets streams
+ * search the longest active prefix again (with lock). */
 static void
-ldb_db_update(ldp_db_entry_s *entry)
+ldb_db_update(ldp_instance_s *instance, ldp_db_entry_s *entry)
 {
     ldp_db_mapping_s *mapping = entry->mappings;
     ldp_db_mapping_s *selected = NULL;
+    bool active = entry->active;
 
     /* Keep the current source if it still has a mapping. */
     while(mapping) {
@@ -69,6 +72,9 @@ ldb_db_update(ldp_db_entry_s *entry)
     }
     __atomic_store_n(&entry->active, selected != NULL, __ATOMIC_RELAXED);
     __atomic_store_n(&entry->version, entry->version + 1, __ATOMIC_RELEASE);
+    if(entry->active != active) {
+        __atomic_store_n(&instance->db_version, instance->db_version + 1, __ATOMIC_RELEASE);
+    }
 }
 
 static void
@@ -78,7 +84,7 @@ ldb_db_mapping_add(ldp_db_entry_s *entry, ldp_session_s *session, uint32_t label
     while(*ptr) {
         if((*ptr)->session == session) {
             (*ptr)->label = label;
-            ldb_db_update(entry);
+            ldb_db_update(session->instance, entry);
             return;
         }
         ptr = &(*ptr)->next;
@@ -86,7 +92,7 @@ ldb_db_mapping_add(ldp_db_entry_s *entry, ldp_session_s *session, uint32_t label
     *ptr = calloc(1, sizeof(ldp_db_mapping_s));
     (*ptr)->session = session;
     (*ptr)->label = label;
-    ldb_db_update(entry);
+    ldb_db_update(session->instance, entry);
 }
 
 /* Remove the mapping of the session, with any label
@@ -102,7 +108,7 @@ ldb_db_mapping_del(ldp_db_entry_s *entry, ldp_session_s *session, uint32_t label
             if(any_label || mapping->label == label) {
                 *ptr = mapping->next;
                 free(mapping);
-                ldb_db_update(entry);
+                ldb_db_update(session->instance, entry);
             }
             return;
         }
@@ -149,7 +155,7 @@ ldb_db_add_ipv4(ldp_session_s *session, ipv4_prefix *prefix, uint32_t label)
  *
  * @param instance LDP instance
  * @param address IPv4 address
- * @return entry with this address and the longest prefix length
+ * @return active entry with this address and the longest prefix length
  */
 ldp_db_entry_s *
 ldb_db_lookup_ipv4(ldp_instance_s *instance, uint32_t address)
@@ -158,12 +164,18 @@ ldb_db_lookup_ipv4(ldp_instance_s *instance, uint32_t address)
     ldp_db_entry_s *entry;
     ipv4_prefix key = {.len = UINT8_MAX, .address = address};
 
-    search = hb_tree_search_le(instance->db.ipv4, &key);
-    if(search) {
+    while((search = hb_tree_search_le(instance->db.ipv4, &key))) {
         entry = *search;
-        if(entry->prefix.ipv4.address == address) {
+        if(entry->prefix.ipv4.address != address) {
+            break;
+        }
+        if(entry->active) {
             return entry;
         }
+        if(!entry->prefix.ipv4.len) {
+            break;
+        }
+        key.len = entry->prefix.ipv4.len - 1;
     }
     return NULL;
 }
@@ -209,7 +221,7 @@ ldb_db_add_ipv6(ldp_session_s *session, ipv6_prefix *prefix, uint32_t label)
  *
  * @param instance LDP instance
  * @param address IPv6 address
- * @return entry with this address and the longest prefix length
+ * @return active entry with this address and the longest prefix length
  */
 ldp_db_entry_s *
 ldb_db_lookup_ipv6(ldp_instance_s *instance, ipv6addr_t *address)
@@ -219,12 +231,18 @@ ldb_db_lookup_ipv6(ldp_instance_s *instance, ipv6addr_t *address)
     ipv6_prefix key = {.len = UINT8_MAX};
 
     memcpy(&key.address, address, sizeof(ipv6addr_t));
-    search = hb_tree_search_le(instance->db.ipv6, &key);
-    if(search) {
+    while((search = hb_tree_search_le(instance->db.ipv6, &key))) {
         entry = *search;
-        if(memcmp(&entry->prefix.ipv6.address, address, sizeof(ipv6addr_t)) == 0) {
+        if(memcmp(&entry->prefix.ipv6.address, address, sizeof(ipv6addr_t)) != 0) {
+            break;
+        }
+        if(entry->active) {
             return entry;
         }
+        if(!entry->prefix.ipv6.len) {
+            break;
+        }
+        key.len = entry->prefix.ipv6.len - 1;
     }
     return NULL;
 }
