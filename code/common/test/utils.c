@@ -116,6 +116,13 @@ test_format_ipv4_prefix(void **unused) {
     ipv4.len = 16;
 
     assert_string_equal(format_ipv4_prefix(&ipv4), "1.2.3.4/16");
+
+    /* Longest prefix in every row of the static buffer ring. */
+    ipv4.address = htobe32(0xffffffff);
+    ipv4.len = 32;
+    for(int i = 0; i < 32; i++) {
+        assert_string_equal(format_ipv4_prefix(&ipv4), "255.255.255.255/32");
+    }
 }
 
 static void
@@ -142,6 +149,14 @@ test_format_ipv6_prefix(void **unused) {
     ipv6.address[15] = 0x02;
 
     assert_string_equal(format_ipv6_prefix(&ipv6), "fe80::2/64");
+
+    /* Longest prefix in every row of the static buffer ring. */
+    memset(ipv6.address, 0xff, sizeof(ipv6.address));
+    ipv6.len = 128;
+    for(int i = 0; i < 32; i++) {
+        assert_string_equal(format_ipv6_prefix(&ipv6),
+                            "ffff:ffff:ffff:ffff:ffff:ffff:ffff:ffff/128");
+    }
 }
 
 static void

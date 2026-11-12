@@ -275,11 +275,13 @@ format_ipv4_prefix(ipv4_prefix *addr4)
     static __thread char buffer[16][IPV4_DOTTED_PREFIX_STR_LEN];
     static __thread int idx = 0;
     char *ret;
+    size_t used;
     ret = buffer[idx];
     *ret = '\0';
     idx = (idx+1) & 15;
     inet_ntop(AF_INET, &addr4->address, ret, IPV4_DOTTED_STR_LEN);
-    snprintf(ret + strlen(ret), 5, "/%d", addr4->len);
+    used = strlen(ret);
+    snprintf(ret + used, sizeof(buffer[0]) - used, "/%u", addr4->len);
     return ret;
 }
 
@@ -318,11 +320,13 @@ format_ipv6_prefix(ipv6_prefix *addr6)
     static __thread char buffer[16][IPV6_PREFIX_STR_LEN];
     static __thread int idx = 0;
     char *ret;
+    size_t used;
     ret = buffer[idx];
     *ret = '\0';
     idx = (idx+1) & 15;
     inet_ntop(AF_INET6, addr6->address, ret, IPV6_STR_LEN);
-    snprintf(ret + strlen(ret), 5, "/%d", addr6->len);
+    used = strlen(ret);
+    snprintf(ret + used, sizeof(buffer[0]) - used, "/%u", addr6->len);
     return ret;
 }
 
