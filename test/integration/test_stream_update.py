@@ -105,3 +105,32 @@ def test_stream_reset_in_flight(tmp_path, processes):
             assert info["rx-wrong-order"] == 0 and info["rx-loss"] == 0, info
         assert instance.ctrl("stream-start")["code"] == 200
     assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_stream_real_arguments(tmp_path, processes):
+    """Integer arguments sent as integral reals (bngblaster-cli sends 2.0
+    as real) must select the objects like integers, other reals must be
+    rejected, instead of being ignored with the command applied to all."""
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(loopback_config(False))
+    processes.append(instance)
+
+    def info(flow_id):
+        return instance.ctrl("stream-info", **{"flow-id": flow_id}, debug=True)["stream-info"]
+
+    def enabled():
+        return [info(i + 1)["enabled"] for i in range(STREAMS)]
+
+    assert instance.ctrl("stream-stop", **{"flow-id": 2.0})["code"] == 200
+    assert enabled() == [i != 1 for i in range(STREAMS)]
+    assert instance.ctrl("stream-start")["code"] == 200
+    assert instance.ctrl("stream-stop", flows=[1.0, 3])["code"] == 200
+    assert enabled() == [i not in (0, 2) for i in range(STREAMS)]
+    assert instance.ctrl("stream-start")["code"] == 200
+
+    for args in ({"flow-id": 1.5}, {"flow-id-min": 3.5}, {"flows": [1.5]}, {"flow-id": 1e300}):
+        assert instance.ctrl("stream-stop", **args)["code"] == 400, args
+    assert all(enabled())
+
+    assert instance.ctrl("stream-update", **{"flow-id": 1.0, "pps": 12.5})["code"] == 200
+    assert [info(i + 1)["debug-tx-pps-config"] for i in range(STREAMS)] == [12.5] + [PPS] * (STREAMS - 1)
+    assert instance.terminate(EXIT_TIMEOUT) == 0

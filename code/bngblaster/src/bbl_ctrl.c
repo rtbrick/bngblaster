@@ -36,7 +36,8 @@ extern volatile bool g_monkey;
 
 typedef enum {
     SCHEMA_ARG_STRING = 0,
-    SCHEMA_ARG_NUMBER,
+    SCHEMA_ARG_NUMBER, /* integer, also as integral real (e.g. 2.0) */
+    SCHEMA_ARG_REAL, /* integer or real */
     SCHEMA_ARG_BOOLEAN,
     SCHEMA_ARG_ARRAY,
 } schema_arg_type_t;
@@ -49,6 +50,7 @@ typedef struct schema_arg_ {
 
 #define ARG_STR(_name)     { _name, SCHEMA_ARG_STRING, 0 }
 #define ARG_NUM(_name)     { _name, SCHEMA_ARG_NUMBER, 0 }
+#define ARG_REAL(_name)    { _name, SCHEMA_ARG_REAL, 0 }
 #define ARG_BOOL(_name)    { _name, SCHEMA_ARG_BOOLEAN, 0 }
 #define ARG_ARR_NUM(_name) { _name, SCHEMA_ARG_ARRAY, SCHEMA_ARG_NUMBER }
 #define ARG_ARR_STR(_name) { _name, SCHEMA_ARG_ARRAY, SCHEMA_ARG_STRING }
@@ -106,7 +108,7 @@ const schema_arg_s schema_stream_update[] = {
     ARG_STR("name"), ARG_STR("interface"), ARG_STR("direction"),
     ARG_BOOL("verified-only"), ARG_BOOL("bidirectional-verified-only"),
     ARG_BOOL("pending-only"),
-    ARG_STR("tcp-flags"), ARG_NUM("pps"),
+    ARG_STR("tcp-flags"), ARG_REAL("pps"),
     ARG_END
 };
 const schema_arg_s schema_bgp[] = {
@@ -155,11 +157,31 @@ const schema_arg_s schema_igmp[] = {
 };
 
 
+/* The handlers read integer arguments with json_unpack, which fails
+ * for reals and silently ignores the argument (e.g. a selector, so
+ * the command applies to all objects). Integral reals (e.g. 2.0 from
+ * bngblaster-cli) are therefore converted to integers, all other
+ * reals are rejected. Returns the integer or NULL if not valid. */
+static json_t *
+bbl_ctrl_schema_integer(json_t *value)
+{
+    double d;
+    if(!json_is_real(value)) {
+        return NULL;
+    }
+    d = json_real_value(value);
+    if(!(d >= -9007199254740992.0 && d <= 9007199254740992.0) || d != (double)(json_int_t)d) {
+        return NULL;
+    }
+    return json_integer((json_int_t)d);
+}
+
 static bool
 bbl_ctrl_schema_type(json_t *value, schema_arg_type_t type)
 {
     switch(type) {
-        case SCHEMA_ARG_NUMBER: return json_is_number(value);
+        case SCHEMA_ARG_NUMBER: return json_is_integer(value);
+        case SCHEMA_ARG_REAL: return json_is_number(value);
         case SCHEMA_ARG_BOOLEAN: return json_is_boolean(value);
         case SCHEMA_ARG_ARRAY: return json_is_array(value);
         case SCHEMA_ARG_STRING:
@@ -177,6 +199,7 @@ bbl_ctrl_schema(json_t *arguments, const schema_arg_s schema[], const char **typ
     const char *key;
     json_t *value = NULL;
     json_t *element;
+    json_t *integer;
     json_object_foreach(arguments, key, value) {
         valid = false; i = 0;
         while(schema[i].name) {
@@ -187,12 +210,20 @@ bbl_ctrl_schema(json_t *arguments, const schema_arg_s schema[], const char **typ
             i++;
         }
         if(valid) {
+            if(schema[i].type == SCHEMA_ARG_NUMBER && (integer = bbl_ctrl_schema_integer(value))) {
+                json_object_iter_set_new(arguments, json_object_key_to_iter(key), integer);
+                continue;
+            }
             if(!bbl_ctrl_schema_type(value, schema[i].type)) {
                 *type_error = key;
                 return false;
             }
             if(schema[i].type == SCHEMA_ARG_ARRAY) {
                 json_array_foreach(value, i2, element) {
+                    if(schema[i].sub_type == SCHEMA_ARG_NUMBER && (integer = bbl_ctrl_schema_integer(element))) {
+                        json_array_set_new(value, i2, integer);
+                        continue;
+                    }
                     if(!bbl_ctrl_schema_type(element, schema[i].sub_type)) {
                         *type_error = key;
                         return false;
