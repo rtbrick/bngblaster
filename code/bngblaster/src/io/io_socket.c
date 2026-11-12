@@ -161,6 +161,23 @@ set_ring(io_handle_s *io, int slots)
     return true;
 }
 
+/* The default receive buffer (net.core.rmem_default, 212992 bytes) holds
+ * only about 90 frames on some drivers (e.g. i40e), which raw mode loses
+ * with bursts. Size it for the configured RX slots instead. */
+static bool
+set_rcvbuf(io_handle_s *io, int slots)
+{
+    int size = slots * 2048;
+
+    if(setsockopt(io->fd, SOL_SOCKET, SO_RCVBUFFORCE, &size, sizeof(size)) == -1 &&
+       setsockopt(io->fd, SOL_SOCKET, SO_RCVBUF, &size, sizeof(size)) == -1) {
+        LOG(ERROR, "Failed to set receive buffer of interface %s RX socket - %s (%d)\n",
+            io->interface->name, strerror(errno), errno);
+        return false;
+    }
+    return true;
+}
+
 bool
 io_socket_open(io_handle_s *io) {
 
@@ -227,6 +244,9 @@ io_socket_open(io_handle_s *io) {
         }
     } else if(io->direction == IO_INGRESS) {
         if(!set_packet_auxdata(io)) {
+            return false;
+        }
+        if(!set_rcvbuf(io, slots)) {
             return false;
         }
     }
