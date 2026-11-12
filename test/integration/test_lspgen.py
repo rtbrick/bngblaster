@@ -3,7 +3,7 @@ lspgen command line
 
 Invalid option values are rejected, and lspgen exits with failure if
 the output is incomplete or was not written. An explicit sequence
-number takes precedence over the sequence cache.
+number takes precedence over the sequence cache and the config file.
 
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
@@ -103,3 +103,31 @@ def test_lspgen_sequence_option(tmp_path, protocol, initial):
     assert sequences(tmp_path / "out.json") == {maximum}
     lspgen(args, cwd=str(tmp_path))
     assert sequences(tmp_path / "out.json") == {initial}
+
+
+@pytest.mark.parametrize("protocol", ["isis", "ospf2", "ospf3"])
+def test_lspgen_sequence_config_file(tmp_path, protocol):
+    lspgen(["-P", protocol, "-c", "5", "-w", "topo.json"], cwd=str(tmp_path))
+    for cache in tmp_path.glob("*-sequence-cache.json"):
+        cache.unlink()
+    # The cache holds the sequence of the emitted link state packets.
+    args = ["-P", protocol, "-r", "topo.json", "-m", "out.mrt"]
+
+    # An explicit sequence wins over the config file.
+    lspgen(args + ["-q", "5"], cwd=str(tmp_path))
+    cache, = tmp_path.glob("*-sequence-cache.json")
+    assert sequences(cache) == {5}
+    lspgen(args, cwd=str(tmp_path))
+    assert sequences(cache) == {6}
+
+    # A higher sequence in the config file wins over the cache.
+    config = json.loads((tmp_path / "topo.json").read_text())
+    for nodes in config.values():
+        if isinstance(nodes, list):
+            for node in nodes:
+                node["sequence"] = "0x00000064"
+    (tmp_path / "topo.json").write_text(json.dumps(config))
+    lspgen(args, cwd=str(tmp_path))
+    assert sequences(cache) == {100}
+    lspgen(args, cwd=str(tmp_path))
+    assert sequences(cache) == {101}

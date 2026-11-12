@@ -397,7 +397,10 @@ in the current working directory (``isis-level<level>-sequence-cache.json``,
 The next run of ``lspgen`` for
 the same level or area increments those sequence numbers by one, so that the
 updated link state packets replace the previous ones in the network.
-An explicit sequence number (``-q``) takes precedence over the sequence cache.
+An explicit sequence number (``-q``) takes precedence over the sequence cache
+and over the ``sequence`` of the nodes in a configuration file (``-r``).
+Without ``-q``, a node of a configuration file uses the higher of its
+``sequence`` and the cached sequence number incremented by one.
 A sequence number which can not be incremented any more (ISIS 0xffffffff,
 OSPF 0x7fffffff) is not stored, the next run starts again with the initial
 sequence number.

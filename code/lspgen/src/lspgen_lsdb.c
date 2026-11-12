@@ -603,8 +603,9 @@ lsdb_add_node(struct lsdb_ctx_ *ctx, struct lsdb_node_ *node_template)
 
         /*
          * Get values from template if set, else read default values from context.
+         * An explicit sequence (-q) takes precedence over the config file.
          */
-        if (node_template->sequence) {
+        if (node_template->sequence && !ctx->sequence_set) {
             node->sequence = node_template->sequence;
         } else {
             node->sequence = ctx->sequence;

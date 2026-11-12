@@ -145,11 +145,24 @@ lspgen_write_seq_cache(lsdb_ctx_t *ctx)
     LOG(NORMAL, "Wrote %u nodes to file %s\n", num_nodes, seq_cache_filename);
 }
 
+/*
+ * Sequence a is newer than b, OSPF uses a signed sequence space.
+ */
+static bool
+lspgen_sequence_newer(lsdb_ctx_t *ctx, uint32_t a, uint32_t b)
+{
+    if (ctx->protocol_id == PROTO_OSPF2 || ctx->protocol_id == PROTO_OSPF3) {
+        return (int32_t)a > (int32_t)b;
+    }
+    return a > b;
+}
+
 void
 lspgen_read_node_seq_cache(lsdb_ctx_t *ctx, json_t *node_obj)
 {
     struct lsdb_node_ node_template;
     struct lsdb_node_ *node;
+    uint32_t sequence;
     char *s;
 
     /* Read the node sequence information and bump it by one in the LSDB. */
@@ -167,8 +180,13 @@ lspgen_read_node_seq_cache(lsdb_ctx_t *ctx, json_t *node_obj)
         }
 
         if (json_unpack(node_obj, "{s:s}", "sequence", &s) == 0) {
+            sequence = node->sequence;
             node->sequence = strtoul(s, NULL, 0);
             lsdb_bump_sequence(node);
+            /* Keep a higher sequence from the config file (-r). */
+            if (lspgen_sequence_newer(ctx, sequence, node->sequence)) {
+                node->sequence = sequence;
+            }
         }
     }
 }
