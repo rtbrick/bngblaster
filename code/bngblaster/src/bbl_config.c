@@ -2106,8 +2106,10 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
 static bool
 json_parse_isis_node_sids(json_t *isis, isis_config_s *isis_config)
 {
+    const char *schema[] = { "algo", "index" };
     json_t *sids, *sid, *algo, *index;
     size_t i;
+    uint8_t n;
 
     sids = json_object_get(isis, "sr-node-sids");
     if(!sids) return true;
@@ -2120,6 +2122,9 @@ json_parse_isis_node_sids(json_t *isis, isis_config_s *isis_config)
         return false;
     }
     json_array_foreach(sids, i, sid) {
+        if(!schema_validate(sid, "sr-node-sids", schema, sizeof(schema)/sizeof(schema[0]))) {
+            return false;
+        }
         algo = json_object_get(sid, "algo");
         index = json_object_get(sid, "index");
         if(!json_is_number(index) || json_number_value(index) < 0 || json_number_value(index) > 1048575 ||
@@ -2133,6 +2138,13 @@ json_parse_isis_node_sids(json_t *isis, isis_config_s *isis_config)
         }
         isis_config->sr_node_sid[isis_config->sr_node_sid_count].index = json_number_value(index);
         isis_config->sr_node_sid[isis_config->sr_node_sid_count].algo = algo ? json_number_value(algo) : 0;
+        for(n = 0; n < isis_config->sr_node_sid_count; n++) {
+            if(isis_config->sr_node_sid[n].algo == isis_config->sr_node_sid[isis_config->sr_node_sid_count].algo) {
+                fprintf(stderr, "JSON config error: Duplicate isis->sr-node-sids algo %u\n",
+                        isis_config->sr_node_sid[n].algo);
+                return false;
+            }
+        }
         isis_config->sr_node_sid_count++;
     }
     return true;
@@ -2153,6 +2165,7 @@ json_parse_isis_flex_algo(json_t *isis, isis_config_s *isis_config)
     json_t *list, *obj, *value;
     const char *s;
     size_t i;
+    uint8_t n;
 
     list = json_object_get(isis, "flex-algo");
     if(!list) return true;
@@ -2173,6 +2186,12 @@ json_parse_isis_flex_algo(json_t *isis, isis_config_s *isis_config)
         JSON_OBJ_GET_NUMBER(obj, value, "isis->flex-algo", "algo", 128, 255);
         if(value) {
             fad->algo = json_number_value(value);
+            for(n = 0; n < isis_config->flex_algo_count - 1; n++) {
+                if(isis_config->flex_algo[n].algo == fad->algo) {
+                    fprintf(stderr, "JSON config error: Duplicate isis->flex-algo algo %u\n", fad->algo);
+                    return false;
+                }
+            }
         } else {
             fprintf(stderr, "JSON config error: Missing value for isis->flex-algo->algo\n");
             return false;
@@ -6027,7 +6046,7 @@ bbl_config_load_json(const char *filename)
     json_error_t error;
     bool result = false;
 
-    root = json_load_file(filename, 0, &error);
+    root = json_load_file(filename, JSON_REJECT_DUPLICATES, &error);
     if(root) {
         result = json_parse_config(root);
         json_decref(root);
@@ -6050,13 +6069,16 @@ bbl_config_load_json(const char *filename)
 bool
 bbl_config_streams_load_json(const char *filename)
 {
+    const char *const root_schema[] = { "streams" };
     json_t *root = NULL;
     json_error_t error;
     bool result = false;
 
-    root = json_load_file(filename, 0, &error);
+    root = json_load_file(filename, JSON_REJECT_DUPLICATES, &error);
     if(root) {
-        result = json_parse_config_streams(root);
+        /* Only streams are loaded from this file. */
+        result = schema_validate(root, "root", root_schema, sizeof(root_schema)/sizeof(root_schema[0])) &&
+                 json_parse_config_streams(root);
         json_decref(root);
     } else {
         fprintf(stderr, "JSON stream config error: File %s Line %d: %s\n", filename, error.line, error.text);

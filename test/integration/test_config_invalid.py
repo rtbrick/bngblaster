@@ -263,12 +263,12 @@ def test_config_multicast_traffic_length_range(topology, tmp_path):
         assert "Invalid value for igmp->multicast-traffic-length (128 - 1500)" in f.read()
 
 
-def run_command_line(tmp_path, args):
+def run_command_line(tmp_path, args, config_text=None):
     """Run BNG Blaster without network namespace, the interface does not
     exist, so a run which passes the command line checks stops after the
     configuration was loaded."""
     config_file = tmp_path / "bbl.json"
-    config_file.write_text(json.dumps(config("bbl-it-none")))
+    config_file.write_text(config_text or json.dumps(config("bbl-it-none")))
     result = subprocess.run([str(BNGBLASTER_BIN), "-C", str(config_file), "-b"] + args,
                             capture_output=True, text=True, timeout=30)
     return result.returncode, result.stdout + result.stderr
@@ -319,3 +319,53 @@ def test_command_line_report_file(tmp_path):
     code, output = run_command_line(tmp_path, args)
     assert "Started BNG Blaster" in output
     assert report.read_text() == "old"
+
+
+ISIS_SR = {"sr-base": 1000, "sr-range": 100}
+
+
+@pytest.mark.parametrize("isis,message", [
+    (dict(ISIS_SR, **{"sr-node-sids": [{"index": 1, "alg": 128}, {"index": 2}]}),
+     "Invalid attribute name 'alg' in 'sr-node-sids'"),
+    (dict(ISIS_SR, **{"sr-node-sids": [{"index": 1}, {"index": 2, "algo": 0}]}),
+     "Duplicate isis->sr-node-sids algo 0"),
+    ({"flex-algo": [{"algo": 128}, {"algo": 129}, {"algo": 128, "priority": 200}]},
+     "Duplicate isis->flex-algo algo 128"),
+], ids=["sr-node-sids-key", "sr-node-sids-duplicate", "flex-algo-duplicate"])
+def test_config_isis_sr_rejected(tmp_path, isis, message):
+    """Unknown keys and duplicate algorithms were ignored, "alg": 128
+    loaded as algorithm 0 (R4-022)."""
+    code, output = run_command_line(tmp_path, [], json.dumps(config("bbl-it-none", isis=isis)))
+    assert message in output
+    assert "Failed to load configuration file" in output
+
+
+def test_config_duplicate_keys(tmp_path):
+    """Duplicate keys are rejected instead of using the last one (R4-022)."""
+    text = json.dumps(config("bbl-it-none"))[:-1] + ', "sessions": {"count": 1}, "sessions": {"count": 2}}'
+    code, output = run_command_line(tmp_path, [], text)
+    assert "duplicate object key" in output
+    assert "Failed to load configuration file" in output
+
+
+@pytest.mark.parametrize("streams,message", [
+    ('{"stream": [{"name": "S1", "type": "ipv4", "pps": 10}]}', "Invalid attribute name 'stream' in 'root'"),
+    ('{"streams": [{"name": "S1", "type": "ipv4", "pps": 10}], "streams": []}', "duplicate object key"),
+], ids=["root-key", "duplicate-key"])
+def test_stream_config_rejected(tmp_path, streams, message):
+    """A stream configuration file (-T) with another root key loaded 0
+    streams silently (R4-022)."""
+    streams_file = tmp_path / "streams.json"
+    streams_file.write_text(streams)
+    code, output = run_command_line(tmp_path, ["-T", str(streams_file)])
+    assert code != 0
+    assert message in output
+    assert "Failed to load stream configuration file" in output
+
+
+def test_stream_config_loads(tmp_path):
+    streams_file = tmp_path / "streams.json"
+    streams_file.write_text('{"_comment": "ignored", "streams": [{"name": "S1", "type": "ipv4", "pps": 10, "stream-group-id": 1}]}')
+    code, output = run_command_line(tmp_path, ["-T", str(streams_file)])
+    assert "Failed to load" not in output
+    assert "Failed to add link bbl-it-none" in output
