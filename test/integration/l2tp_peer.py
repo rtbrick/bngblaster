@@ -17,6 +17,8 @@ lac scenarios (against the BNG Blaster LNS):
   control-host-name host name with newline and terminal escape sequence
   window-nr         Receive Window Size 1, three ICRQ, then a ZLB acknowledging
                     the ICRP held back by the window (Nr 4)
+  proxy-authen-name ICCN with a PAP Proxy Authen Name with newline and
+                    terminal escape sequence
 
 lns scenarios (against the BNG Blaster LAC):
   no-tunnel-id      SCCRP without Assigned Tunnel ID
@@ -40,7 +42,9 @@ import time
 
 from l2tp_proxy_lac import (AVP_ASSIGNED_SESSION_ID, AVP_ASSIGNED_TUNNEL_ID, AVP_CALL_SERIAL_NUMBER,
                             AVP_FRAMING_CAPABILITIES, AVP_FRAMING_TYPE, AVP_HOST_NAME, AVP_MESSAGE_TYPE,
-                            AVP_PROTOCOL_VERSION, AVP_RESULT_CODE, AVP_TX_CONNECT_SPEED, BROADBAND_FORUM,
+                            AVP_PROTOCOL_VERSION, AVP_PROXY_AUTHEN_ID, AVP_PROXY_AUTHEN_NAME,
+                            AVP_PROXY_AUTHEN_RESPONSE, AVP_PROXY_AUTHEN_TYPE, AVP_RESULT_CODE,
+                            AVP_TX_CONNECT_SPEED, BROADBAND_FORUM,
                             ACCESS_LINE_ARI, CDN, ICCN, ICRP, ICRQ, L2TP_PORT, LOCAL_SESSION_ID,
                             LOCAL_TUNNEL_ID, SCCCN, SCCRP, SCCRQ, STOPCCN, Lac, avp, avp16, avp32,
                             decode_avps)
@@ -53,6 +57,7 @@ AVP_PRIVATE_GROUP_ID = 37
 AVP_RECEIVE_WINDOW_SIZE = 10
 AVP_SEQUENCING_REQUIRED = 39
 CONTROL_HOST_NAME = b"LAC\nFAKE LOG LINE\x1b[2J"
+CONTROL_PROXY_NAME = b"user\nFAKE LOG LINE\x1b[2J"
 LCP = 0xc021
 CONF_REQ, CONF_ACK, TERM_REQ, TERM_ACK, ECHO_REQ, ECHO_REP = 1, 2, 5, 6, 9, 10
 MAGIC = 0x11223344
@@ -208,6 +213,9 @@ def scenario_lac(args):
         return result
     if args.scenario == "private-group-id":
         peer.call(avp(AVP_PRIVATE_GROUP_ID, b"group6"))
+    elif args.scenario == "proxy-authen-name":
+        peer.call(avp16(AVP_PROXY_AUTHEN_TYPE, 3) + avp(AVP_PROXY_AUTHEN_NAME, CONTROL_PROXY_NAME) +
+                  avp(AVP_PROXY_AUTHEN_RESPONSE, b"secret") + avp16(AVP_PROXY_AUTHEN_ID, 1))
     elif args.scenario == "sequencing":
         peer.call(avp(AVP_SEQUENCING_REQUIRED, b""))
     elif args.scenario == "lcp":

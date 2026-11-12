@@ -291,3 +291,17 @@ def test_lac_retransmission_backoff_cap(l2tp):
     stopccn = [m for m in result["control"] if m["type"] == STOPCCN]
     assert stopccn, result
     assert 35 < stopccn[0]["time"] - scccn[0]["time"] < 45, result
+
+
+def test_lns_control_proxy_authen_name(l2tp):
+    """Control characters of the Proxy Authen Name are replaced in the log
+    and output, as for the peer Host Name."""
+    l2tp.start_lns()
+    peer = l2tp.peer_start("lac", "proxy-authen-name", duration=2)
+    wait_until(lambda: [s for s in l2tp.sessions() if s.get("peer-proxy-auth-name")], 10,
+               message="LNS session with proxy authen name")
+    assert l2tp.sessions()[0]["peer-proxy-auth-name"] == "user?FAKE LOG LINE?[2J"
+    peer.communicate(timeout=30)
+    log = open(l2tp.bbl.path("log")).read()
+    assert "accept proxy PAP authentication of user?FAKE LOG LINE?[2J" in log
+    assert "\nFAKE" not in log and "\x1b" not in log

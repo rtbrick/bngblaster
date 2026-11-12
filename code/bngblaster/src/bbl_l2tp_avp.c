@@ -248,6 +248,17 @@ bbl_l2tp_avp_unhide(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_avp_t *avp, uint8_t
     return true;
 }
 
+/* Copy a peer name for logging and output, control characters
+ * (newlines, terminal escape sequences) are replaced by '?'. */
+static void
+bbl_l2tp_avp_copy_name(char *name, const uint8_t *value, uint16_t len)
+{
+    for(uint16_t i = 0; i < len; i++) {
+        name[i] = (value[i] < 0x20 || value[i] == 0x7f) ? '?' : (char)value[i];
+    }
+    name[len] = 0;
+}
+
 bool
 bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session)
 {
@@ -394,8 +405,7 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                     case L2TP_AVP_PROXY_AUTHEN_NAME:
                         if(!l2tp_session->proxy_auth_name && avp.len) {
                             l2tp_session->proxy_auth_name = malloc(avp.len + 1);
-                            memcpy(l2tp_session->proxy_auth_name, avp.value, avp.len);
-                            *(l2tp_session->proxy_auth_name + avp.len) = '\0';
+                            bbl_l2tp_avp_copy_name(l2tp_session->proxy_auth_name, avp.value, avp.len);
                             l2tp_session->proxy_auth_name_len = avp.len;
                         }
                         break;
@@ -499,17 +509,6 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
         }
     }
     return true;
-}
-
-/* Copy a peer name for logging and output, control characters
- * (newlines, terminal escape sequences) are replaced by '?'. */
-static void
-bbl_l2tp_avp_copy_name(char *name, const uint8_t *value, uint16_t len)
-{
-    for(uint16_t i = 0; i < len; i++) {
-        name[i] = (value[i] < 0x20 || value[i] == 0x7f) ? '?' : (char)value[i];
-    }
-    name[len] = 0;
 }
 
 /**
