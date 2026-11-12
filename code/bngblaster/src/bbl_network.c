@@ -664,7 +664,10 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                 }
                 bbl_tcp_ipv6_rx(interface, eth, ipv6);
                 return;
-            } else if(ipv6->protocol == IPV6_NEXT_HEADER_OSPF && interface->ospfv3_interface) {
+            } else if((ipv6->protocol == IPV6_NEXT_HEADER_OSPF ||
+                       (ipv6->protocol == IPV6_NEXT_HEADER_FRAGMENT &&
+                        ipv6->frag_next_header == IPV6_NEXT_HEADER_OSPF)) &&
+                      interface->ospfv3_interface) {
                 ospf_handler_rx_ipv6(interface, eth, ipv6);
                 return;
             }

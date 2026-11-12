@@ -498,8 +498,9 @@ typedef struct ospf_interface_ {
     uint8_t state;
 
     uint8_t *frag_buf;
-    uint16_t frag_id;
+    uint32_t frag_id;
     uint16_t frag_off;
+    ipv6addr_t frag_src; /* OSPFv3 only */
 
     uint16_t metric;
     uint16_t neighbors_count;

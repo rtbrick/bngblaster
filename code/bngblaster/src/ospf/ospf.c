@@ -271,8 +271,49 @@ ospf_handler_rx_ipv6(bbl_network_interface_s *interface,
     ospf_neighbor_s  *ospf_neighbor = ospf_interface->neighbors;
 
     bbl_ospf_s *ospf = ipv6->next;
+    uint8_t ospf_sp[sizeof(bbl_ospf_s)];
 
     UNUSED(eth);
+
+    if(ipv6->protocol == IPV6_NEXT_HEADER_FRAGMENT) {
+        /* Reassembly of fragmented OSPFv3 packets (e.g. a large LS Request),
+         * supporting only in order fragments of one packet at a time. */
+        LOG(OSPF, "OSPFv3 RX PDU fragment on interface %s\n", interface->name);
+        if(ipv6->frag_offset == 0) {
+            /* First fragment. */
+            ospf_interface->frag_off = 0;
+            ospf_interface->frag_id = ipv6->frag_id;
+            memcpy(ospf_interface->frag_src, ipv6->src, sizeof(ipv6addr_t));
+        } else if(!(ospf_interface->frag_off &&
+                    ipv6->frag_offset == ospf_interface->frag_off &&
+                    ipv6->frag_id == ospf_interface->frag_id &&
+                    memcmp(ipv6->src, ospf_interface->frag_src, sizeof(ipv6addr_t)) == 0)) {
+            if(ospf_interface->frag_off) {
+                LOG(OSPF, "OSPFv3 RX PDU reassembling failed on interface %s\n", interface->name);
+            }
+            ospf_interface->frag_off = 0;
+            return;
+        }
+        if((uint32_t)ospf_interface->frag_off + ipv6->payload_len > OSPF_PDU_LEN_MAX ||
+           (ipv6->frag_more && (ipv6->payload_len == 0 || ipv6->payload_len % 8))) {
+            LOG(OSPF, "OSPFv3 RX PDU reassembling failed on interface %s\n", interface->name);
+            ospf_interface->frag_off = 0;
+            return;
+        }
+        memcpy(ospf_interface->frag_buf+ospf_interface->frag_off, ipv6->payload, ipv6->payload_len);
+        ospf_interface->frag_off += ipv6->payload_len;
+        if(ipv6->frag_more) {
+            return;
+        }
+        result = decode_ospf(ospf_interface->frag_buf, ospf_interface->frag_off, ospf_sp, sizeof(ospf_sp), &ospf);
+        ospf_interface->frag_off = 0;
+        if(result != PROTOCOL_SUCCESS) {
+            LOG(OSPF, "OSPFv3 RX PDU reassembling failed on interface %s\n", interface->name);
+            interface->stats.ospf_rx_error++;
+            return;
+        }
+        LOG(OSPF, "OSPFv3 RX PDU reassembled on interface %s\n", interface->name);
+    }
 
     interface->stats.ospf_rx++;
     result = ospf_pdu_load(&pdu, ospf->pdu, ospf->pdu_len);

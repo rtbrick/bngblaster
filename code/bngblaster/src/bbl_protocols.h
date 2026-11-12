@@ -119,6 +119,7 @@
 #define IPV4_OFFMASK                    0x1fff /* mask for fragmenting bits */
 
 #define IPV6_HDR_LEN                    40
+#define IPV6_FRAGMENT_HDR_LEN           8
 #define IPV6_IDENTIFER_LEN              8
 
 #define PPPOE_TAG_SERVICE_NAME          0x0101
@@ -237,6 +238,7 @@
 #define UDP_PROTOCOL_LDP                6  
 
 #define IPV6_NEXT_HEADER_TCP            6
+#define IPV6_NEXT_HEADER_FRAGMENT       44
 #define IPV6_NEXT_HEADER_UDP            17
 #define IPV6_NEXT_HEADER_ICMPV6         58
 #define IPV6_NEXT_HEADER_NO             59
@@ -841,8 +843,12 @@ typedef struct bbl_ipv6_ {
     uint16_t    len; /* IPv6 total length */
     uint8_t    *hdr; /* IPv6 header start */
     void       *next; /* next header */
-    void       *payload; /* IPv6 payload */
-    uint16_t    payload_len; /* IPv6 payload length */
+    void       *payload; /* IPv6 payload (fragment data for fragments) */
+    uint16_t    payload_len; /* IPv6 payload length (fragment data length for fragments) */
+    uint8_t     frag_next_header; /* next header after fragment header */
+    bool        frag_more; /* more fragments flag */
+    uint16_t    frag_offset; /* fragment offset in bytes */
+    uint32_t    frag_id; /* fragment identification */
 } bbl_ipv6_s;
 
 /*

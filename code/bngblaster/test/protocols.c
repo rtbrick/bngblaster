@@ -1140,6 +1140,57 @@ test_protocols_pppoe_relay_session_id(void **unused) {
     free(sp);
 }
 
+/* IPv6 fragment header: the protocol stays fragment, the payload is the
+ * fragment data which is reassembled by OSPFv3. */
+static void
+test_protocols_ipv6_fragment(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[256] = {0};
+    uint16_t data_len = 16;
+    uint16_t i;
+
+    uint8_t *ip6 = buf + ETH_HDR_LEN;
+    uint8_t *frag = ip6 + IPV6_HDR_LEN;
+    uint8_t *data = frag + IPV6_FRAGMENT_HDR_LEN;
+
+    bbl_ethernet_header_s *eth;
+    bbl_ipv6_s *ipv6;
+
+    *(uint16_t*)(buf + 12) = htobe16(ETH_TYPE_IPV6);
+    ip6[0] = 0x60;
+    *(uint16_t*)(ip6 + 4) = htobe16(IPV6_FRAGMENT_HDR_LEN + data_len);
+    ip6[6] = IPV6_NEXT_HEADER_FRAGMENT;
+    ip6[7] = 1;
+    ip6[8] = 0xfe; ip6[9] = 0x80; ip6[23] = 0x01; /* fe80::1 */
+    ip6[24] = 0xff; ip6[25] = 0x02; ip6[39] = 0x05; /* ff02::5 */
+    frag[0] = IPV6_NEXT_HEADER_OSPF;
+    *(uint16_t*)(frag + 2) = htobe16(1448 | 0x0001); /* offset 1448, M */
+    *(uint32_t*)(frag + 4) = htobe32(0x12345678);
+    for(i = 0; i < data_len; i++) {
+        data[i] = i;
+    }
+
+    assert_int_equal(decode_ethernet(buf, ETH_HDR_LEN + IPV6_HDR_LEN + IPV6_FRAGMENT_HDR_LEN + data_len,
+                                     sp, SCRATCHPAD_LEN, &eth), PROTOCOL_SUCCESS);
+    ipv6 = (bbl_ipv6_s*)eth->next;
+    assert_int_equal(ipv6->protocol, IPV6_NEXT_HEADER_FRAGMENT);
+    assert_null(ipv6->next);
+    assert_int_equal(ipv6->frag_next_header, IPV6_NEXT_HEADER_OSPF);
+    assert_int_equal(ipv6->frag_offset, 1448);
+    assert_true(ipv6->frag_more);
+    assert_int_equal(ipv6->frag_id, 0x12345678);
+    assert_ptr_equal(ipv6->payload, data);
+    assert_int_equal(ipv6->payload_len, data_len);
+
+    /* Truncated fragment header. */
+    *(uint16_t*)(ip6 + 4) = htobe16(IPV6_FRAGMENT_HDR_LEN - 1);
+    assert_int_equal(decode_ethernet(buf, ETH_HDR_LEN + IPV6_HDR_LEN + IPV6_FRAGMENT_HDR_LEN - 1,
+                                     sp, SCRATCHPAD_LEN, &eth), DECODE_ERROR);
+    free(sp);
+}
+
 static void
 test_protocols_ospf_fragment_reencode(void **unused) {
     (void) unused;
@@ -1211,6 +1262,7 @@ int main() {
         cmocka_unit_test(test_protocols_dhcpv6_duid),
         cmocka_unit_test(test_protocols_pppoe_relay_session_id),
         cmocka_unit_test(test_protocols_ospf_fragment_reencode),
+        cmocka_unit_test(test_protocols_ipv6_fragment),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

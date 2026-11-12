@@ -3691,6 +3691,20 @@ decode_ipv6(uint8_t *buf, uint16_t len,
         case IPV6_NEXT_HEADER_OSPF:
             ret_val = decode_ospf(buf, len, sp, sp_len, (bbl_ospf_s**)&ipv6->next);
             break;
+        case IPV6_NEXT_HEADER_FRAGMENT:
+            /* The protocol stays fragment, payload is the fragment data
+             * which is reassembled by the receiving protocol (OSPFv3). */
+            ipv6->next = NULL;
+            if(len < IPV6_FRAGMENT_HDR_LEN) {
+                return DECODE_ERROR;
+            }
+            ipv6->frag_next_header = *buf;
+            ipv6->frag_offset = be16toh(*(uint16_t*)(buf+2)) & 0xfff8;
+            ipv6->frag_more = be16toh(*(uint16_t*)(buf+2)) & 0x0001;
+            ipv6->frag_id = be32toh(*(uint32_t*)(buf+4));
+            ipv6->payload = buf + IPV6_FRAGMENT_HDR_LEN;
+            ipv6->payload_len = len - IPV6_FRAGMENT_HDR_LEN;
+            break;
         default:
             ipv6->next = NULL;
             break;
