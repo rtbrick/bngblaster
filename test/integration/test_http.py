@@ -107,3 +107,45 @@ def test_client_session_flap(local_veth, processes, tmp_path):
                10, message="session flapped")
     wait_until(lambda: client_port() not in (None, port), 20, message="new HTTP response")
     assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_client_stop_idle(local_veth, processes, tmp_path):
+    """http-clients-stop also stops clients which are not connected (idle
+    after a connect timeout, before the next connect), and http-clients
+    answers 404 for an unknown session like start and stop."""
+    config = {
+        "interfaces": {
+            # Without qdisc bypass, netem can drop the packets of the client.
+            "links": [{"interface": local_veth.if2, "qdisc-bypass": False}],
+            "network": [{"interface": local_veth.if1, "address": BBL_ADDRESS + "/16",
+                         "gateway": "10.0.1.1", "gateway-resolve-wait": False}],
+            "access": [{"interface": local_veth.if2, "type": "ipoe", "vlan-mode": "N:1",
+                        "ipv6": False, "address": "10.0.1.1", "gateway": BBL_ADDRESS,
+                        "http-client-group-id": 1}]
+        },
+        "sessions": {"count": 1},
+        "dhcp": {"enable": False},
+        "http-client": [{"name": "CLIENT", "http-client-group-id": 1, "url": "bbl.test",
+                         "destination-ipv4-address": BBL_ADDRESS, "autostart": False}]
+    }
+    instance = BngBlaster(local_veth.ns, tmp_path, "bbl").start(config, logging=("info", "http"))
+    processes.append(instance)
+
+    def state():
+        return instance.ctrl("http-clients", **{"session-id": 1})["http-clients"][0]["state"]
+
+    for command in ("http-clients", "http-clients-start", "http-clients-stop"):
+        assert instance.ctrl(command, **{"session-id": 2})["code"] == 404, command
+
+    wait_until(lambda: state() == "closed", 20, 0.1, message="session up, client closed")
+    # The connect times out after 10 s, as all packets of the client are dropped.
+    local_veth.ns.exec(["tc", "qdisc", "add", "dev", local_veth.if2, "root", "netem", "loss", "100%"])
+    assert instance.ctrl("http-clients-start", **{"session-id": 1})["code"] == 200
+    wait_until(lambda: state() == "connecting", 5, 0.1, message="client connecting")
+    # Idle for one client job interval (1 s) after the connect timeout.
+    wait_until(lambda: state() == "idle", 15, 0.1, message="client idle after connect timeout")
+    assert instance.ctrl("http-clients-stop", **{"session-id": 1})["code"] == 200
+    assert state() == "closed"
+    time.sleep(2.5)
+    assert state() == "closed"
+    assert instance.terminate(EXIT_TIMEOUT) == 0

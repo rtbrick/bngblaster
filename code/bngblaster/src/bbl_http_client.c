@@ -28,7 +28,10 @@ bbl_http_client_state_string(http_state_t state)
 static void
 bbl_http_client_close(bbl_http_client_s *client)
 {
-    if(client->state > HTTP_CLIENT_IDLE && client->state < HTTP_CLIENT_CLOSING) {
+    if(client->state == HTTP_CLIENT_IDLE || client->state == HTTP_CLIENT_RETRY_WAIT) {
+        /* Not connected, but would connect with the next job. */
+        client->state = HTTP_CLIENT_CLOSED;
+    } else if(client->state > HTTP_CLIENT_IDLE && client->state < HTTP_CLIENT_CLOSING) {
         client->state = HTTP_CLIENT_CLOSING;
     }
 }
@@ -402,12 +405,14 @@ bbl_http_client_ctrl(int fd, uint32_t session_id, json_t *arguments __attribute_
 
     if(session_id) {
         session = bbl_session_get(session_id);
-        if(session) {
-            client = session->http_client;
-            while(client) {
-                json_array_append_new(json_clients, bbl_http_client_json(client));
-                client = client->next;
-            }
+        if(!session) {
+            json_decref(json_clients);
+            return bbl_ctrl_status(fd, "warning", 404, "session not found");
+        }
+        client = session->http_client;
+        while(client) {
+            json_array_append_new(json_clients, bbl_http_client_json(client));
+            client = client->next;
         }
     } else {
         for(i = 0; i < g_ctx->sessions; i++) {
