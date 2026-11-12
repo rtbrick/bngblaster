@@ -60,6 +60,13 @@ if ((CMAKE_C_COMPILER_ID STREQUAL "GNU" AND CMAKE_C_COMPILER_VERSION VERSION_GRE
     set(BBL_FILE_PREFIX_MAP "-ffile-prefix-map=${CMAKE_SOURCE_DIR}=." "-ffile-prefix-map=${CMAKE_BINARY_DIR}=.")
 endif()
 
+# CMake uses ThinLTO for Clang, which renames promoted local symbols with
+# a suffix (.llvm.<hash>) derived from the module including its absolute
+# source path, not mapped by -ffile-prefix-map. Full LTO does not promote.
+if (CMAKE_C_COMPILER_ID STREQUAL "Clang")
+    set(CMAKE_C_COMPILE_OPTIONS_IPO "-flto=full")
+endif()
+
 function(bbl_reproducible_build)
     foreach(_target ${ARGN})
         target_compile_options(${_target} PRIVATE ${BBL_FILE_PREFIX_MAP})
