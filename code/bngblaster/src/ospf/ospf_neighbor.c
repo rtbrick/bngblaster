@@ -284,6 +284,7 @@ ospf_neighbor_bfd_update(ospf_neighbor_s *ospf_neighbor)
                                                             false, AF_INET6, NULL, &ospf_neighbor->ipv6,
                                                             BFD_CLIENT_OSPFV3, ospf_neighbor, ospf_neighbor_bfd_cb);
             }
+            bfd_session_peer_mac(ospf_neighbor->bfd, ospf_neighbor->mac);
         }
     } else if(ospf_neighbor->bfd) {
         bfd_session_client_del(ospf_neighbor->bfd, ospf_neighbor);
@@ -369,10 +370,14 @@ ospf_neighbor_update(ospf_neighbor_s *ospf_neighbor, ospf_pdu_s *pdu)
     uint8_t priority;
     uint32_t dr, bdr, id;
     bool change = false;
+    bool address_change = false;
 
     /* The neighbor is identified by router-id, source
      * address and MAC might change (RFC2328 section 10.5). */
-    memcpy(ospf_neighbor->mac, pdu->mac, ETH_ADDR_LEN);
+    if(memcmp(ospf_neighbor->mac, pdu->mac, ETH_ADDR_LEN) != 0) {
+        memcpy(ospf_neighbor->mac, pdu->mac, ETH_ADDR_LEN);
+        bfd_session_peer_mac(ospf_neighbor->bfd, ospf_neighbor->mac);
+    }
     if(pdu->pdu_version == OSPF_VERSION_2) {
         priority = *OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_PRIORITY);
         dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV2_OFFSET_HELLO_DR);
@@ -381,18 +386,29 @@ ospf_neighbor_update(ospf_neighbor_s *ospf_neighbor, ospf_pdu_s *pdu)
             /* The address is used as DR/BDR identifier. */
             ospf_neighbor->ipv4 = *(ipv4addr_t*)pdu->source;
             change = true;
+            address_change = true;
         }
     } else {
         priority = *OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_PRIORITY);
         dr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_DR);
         bdr = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_BDR);
-        memcpy(ospf_neighbor->ipv6, pdu->source, sizeof(ipv6addr_t));
+        if(memcmp(ospf_neighbor->ipv6, pdu->source, sizeof(ipv6addr_t)) != 0) {
+            memcpy(ospf_neighbor->ipv6, pdu->source, sizeof(ipv6addr_t));
+            address_change = true;
+        }
         id = *(uint32_t*)OSPF_PDU_OFFSET(pdu, OSPFV3_OFFSET_HELLO_INTERFACE_ID);
         if(ospf_neighbor->id != id) {
             /* The interface ID is advertised in the router LSA (RFC5340 section 4.2.2.1). */
             ospf_neighbor->id = id;
             ospf_lsa_self_update_request(ospf_interface->instance);
         }
+    }
+
+    if(address_change && ospf_neighbor->bfd) {
+        /* The BFD session follows the new address of the neighbor. */
+        bfd_session_client_del(ospf_neighbor->bfd, ospf_neighbor);
+        ospf_neighbor->bfd = NULL;
+        ospf_neighbor_bfd_update(ospf_neighbor);
     }
 
     if(change ||

@@ -366,6 +366,11 @@ typedef struct isis_peer_ {
     struct isis_adjacency_ *adjacency;
     struct isis_adjacency_p2p_ *adjacency_p2p;
 
+    /* BFD sessions of broadcast peers, on P2P
+     * links the sessions are bound to the adjacencies. */
+    bfd_session_s *bfd; /* IPv4 */
+    bfd_session_s *bfd6; /* IPv6 link-local */
+
     /* Pointer to next peer */
     struct isis_peer_ *next; 
 } isis_peer_s;
@@ -408,8 +413,8 @@ typedef struct isis_adjacency_ {
     isis_link_attr_s link_attr;
 
     uint16_t bfd_profile_id; /* 0 for no BFD */
-    bfd_session_s *bfd; /* IPv4 */
-    bfd_session_s *bfd6; /* IPv6 link-local */
+    bfd_session_s *bfd; /* IPv4 (P2P only) */
+    bfd_session_s *bfd6; /* IPv6 link-local (P2P only) */
     uint64_t csnp_start;
 
     struct {

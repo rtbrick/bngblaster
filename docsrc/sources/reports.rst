@@ -581,6 +581,44 @@ in the report file. Similar to ``-j streams`` which allows for including per str
 statistics. Both options can be also combined. With ``-j sessions``, the
 top-level ``sessions`` count is replaced by the array of per session statistics.
 
+If BFD is used (:ref:`BFD <bfd>`), the standard output report contains a BFD block
+and the JSON report the section ``bfd`` with the totals of all sessions and the details
+of each session (``bfd-sessions``), as shown by the command ``bfd-sessions``.
+
+.. code-block:: none
+
+    BFD:
+    ------------------------------------------------------------------------------
+      Sessions: 2 (Up: 0)
+      TX Packets: 412
+      RX Packets: 409 (Errors: 0 No Session: 0)
+      State Up: 2 Down: 0 (Detection Timeout: 0)
+
+.. code-block:: json
+
+    {
+      "report": {
+        "bfd": {
+          "sessions": 2,
+          "sessions-up": 0,
+          "tx-packets": 412,
+          "rx-packets": 409,
+          "rx-errors": 0,
+          "rx-no-session": 0,
+          "up": 2,
+          "down": 0,
+          "timeout": 0,
+          "bfd-sessions": []
+        }
+      }
+    }
+
+The counters ``up`` and ``down`` count the transitions to and from state Up. A local
+AdminDown (``bfd-session-disable`` or the teardown) is not counted as ``down``, so
+``down`` and ``timeout`` stay zero in a test without BFD failures. The sessions of
+routing protocols, which are deleted with the protocol sessions at the teardown, are
+kept in state AdminDown for the report.
+
 Those extensive JSON reports could be easily verified with simple python scripts to 
 extract the desired results. 
 

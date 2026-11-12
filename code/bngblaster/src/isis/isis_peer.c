@@ -93,6 +93,7 @@ isis_peer_down(isis_peer_s *peer, const char *reason)
         return;
     }
     peer->state = ISIS_PEER_STATE_DOWN;
+    isis_peer_bfd_update(peer);
 
     LOG(ISIS, "ISIS %s %s to %s on interface %s\n",
         isis_level_string(adjacency->level), reason,
@@ -145,16 +146,25 @@ void
 isis_peer_update(isis_peer_s *peer, isis_pdu_s *pdu)
 {
     bbl_network_interface_s *interface;
+    ipv4addr_t ipv4 = peer->ipv4;
+    ipv6addr_t ipv6;
 
+    memcpy(ipv6, peer->ipv6, sizeof(ipv6addr_t));
     isis_peer_update_addresses(peer, pdu);
-    /* BFD sessions of adjacencies which are already up. */
+    /* BFD sessions follow address changes of the neighbor. */
+    if(ipv4 != peer->ipv4) {
+        isis_peer_bfd_del(peer, AF_INET);
+    }
+    if(memcmp(ipv6, peer->ipv6, sizeof(ipv6addr_t)) != 0) {
+        isis_peer_bfd_del(peer, AF_INET6);
+    }
+    /* BFD sessions of P2P adjacencies which are already up, broadcast
+     * peers are updated after the hello has been processed. */
     if(peer->adjacency_p2p) {
         interface = peer->adjacency_p2p->interface;
         for(int i=0; i<ISIS_LEVELS; i++) {
             if(interface->isis_adjacency[i]) isis_adjacency_bfd_add(interface->isis_adjacency[i]);
         }
-    } else if(peer->adjacency && peer->state == ISIS_PEER_STATE_UP) {
-        isis_adjacency_bfd_add(peer->adjacency);
     }
     peer->level = *ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_LEVEL) & 0x03;
     memcpy(peer->system_id, ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_SYSTEM_ID), ISIS_SYSTEM_ID_LEN);

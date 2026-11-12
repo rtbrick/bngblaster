@@ -135,7 +135,7 @@ isis_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth) 
             isis_hello_handler_rx(interface, eth, &pdu, ISIS_LEVEL_2);
             break;
         case ISIS_PDU_P2P_HELLO:
-            isis_p2p_hello_handler_rx(interface, &pdu);
+            isis_p2p_hello_handler_rx(interface, eth, &pdu);
             break;
         case ISIS_PDU_L1_LSP:
             isis_lsp_handler_rx(interface, &pdu, ISIS_LEVEL_1);

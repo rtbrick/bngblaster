@@ -119,64 +119,162 @@ isis_adjacency_init(bbl_network_interface_s *interface,
     return true;
 }
 
+/* P2P: BFD down brings the adjacency (all levels) down. */
 static void
 isis_adjacency_bfd_cb(void *client, bfd_session_s *session, bfd_event_t event)
 {
     isis_adjacency_s *adjacency = client;
-    isis_peer_s *peer;
     UNUSED(session);
 
     if(event != BFD_EVENT_DOWN || adjacency->state != ISIS_ADJACENCY_STATE_UP) {
         return;
     }
-    if(adjacency->p2p) {
-        isis_peer_down_p2p(adjacency->peer, "BFD down");
+    isis_peer_down_p2p(adjacency->peer, "BFD down");
+}
+
+/* Broadcast: BFD down brings only this peer down. */
+static void
+isis_peer_bfd_cb(void *client, bfd_session_s *session, bfd_event_t event)
+{
+    isis_peer_s *peer = client;
+    UNUSED(session);
+
+    if(event != BFD_EVENT_DOWN || peer->state != ISIS_PEER_STATE_UP) {
         return;
     }
-    peer = adjacency->peer;
-    while(peer) {
-        if(peer->state == ISIS_PEER_STATE_UP) {
-            isis_peer_down(peer, "BFD down");
+    isis_peer_down(peer, "BFD down");
+}
+
+/* One BFD session per address family (RFC 6213), to the IPv4 interface
+ * address (TLV 132) and the IPv6 link-local address (TLV 232). */
+static void
+isis_bfd_add(isis_adjacency_s *adjacency, isis_peer_s *peer, void *client, bfd_client_cb cb,
+             bfd_session_s **bfd, bfd_session_s **bfd6)
+{
+    bbl_network_interface_s *interface = adjacency->interface;
+
+    if(!*bfd && interface->ip.address && peer->ipv4) {
+        *bfd = bfd_session_client_add(interface, adjacency->bfd_profile_id, false,
+                                      AF_INET, NULL, &peer->ipv4,
+                                      BFD_CLIENT_ISIS, client, cb);
+        bfd_session_peer_mac(*bfd, peer->mac);
+    }
+    if(!*bfd6 && ipv6_addr_not_zero(&peer->ipv6)) {
+        *bfd6 = bfd_session_client_add(interface, adjacency->bfd_profile_id, false,
+                                       AF_INET6, NULL, &peer->ipv6,
+                                       BFD_CLIENT_ISIS, client, cb);
+        bfd_session_peer_mac(*bfd6, peer->mac);
+    }
+}
+
+static void
+isis_bfd_del(void *client, uint8_t af, bfd_session_s **bfd, bfd_session_s **bfd6)
+{
+    if(*bfd && af != AF_INET6) {
+        bfd_session_client_del(*bfd, client);
+        *bfd = NULL;
+    }
+    if(*bfd6 && af != AF_INET) {
+        bfd_session_client_del(*bfd6, client);
+        *bfd6 = NULL;
+    }
+}
+
+/**
+ * isis_peer_bfd_update
+ *
+ * Add or delete the BFD sessions of a broadcast peer,
+ * which are bound to peers in state up of adjacencies
+ * in state up.
+ *
+ * @param peer IS-IS broadcast peer
+ */
+void
+isis_peer_bfd_update(isis_peer_s *peer)
+{
+    isis_adjacency_s *adjacency = peer->adjacency;
+
+    if(!adjacency || !adjacency->bfd_profile_id) return;
+    if(peer->state == ISIS_PEER_STATE_UP && adjacency->state == ISIS_ADJACENCY_STATE_UP) {
+        isis_bfd_add(adjacency, peer, peer, isis_peer_bfd_cb, &peer->bfd, &peer->bfd6);
+    } else {
+        isis_bfd_del(peer, 0, &peer->bfd, &peer->bfd6);
+    }
+}
+
+/**
+ * isis_peer_bfd_del
+ *
+ * Delete the BFD sessions of a peer, e.g. if its address
+ * has changed (sessions are added again with the next hello).
+ *
+ * @param peer IS-IS peer
+ * @param af address family (AF_INET, AF_INET6 or 0 for both)
+ */
+void
+isis_peer_bfd_del(isis_peer_s *peer, uint8_t af)
+{
+    bbl_network_interface_s *interface;
+
+    if(peer->adjacency_p2p) {
+        interface = peer->adjacency_p2p->interface;
+        for(int i=0; i<ISIS_LEVELS; i++) {
+            if(interface->isis_adjacency[i]) isis_adjacency_bfd_del(interface->isis_adjacency[i], af);
         }
-        peer = peer->next;
+    } else {
+        isis_bfd_del(peer, af, &peer->bfd, &peer->bfd6);
     }
 }
 
 /**
  * isis_adjacency_bfd_add
  *
- * One BFD session per address family of the adjacency (RFC 6213),
- * to the IPv4 interface address (TLV 132) and the IPv6 link-local
- * address (TLV 232) of the neighbor. Called for every hello of an
- * adjacency in state up, as the addresses may be advertised later.
+ * Add the BFD sessions of an adjacency in state up, called for every
+ * hello as the addresses may be advertised later. On P2P links the
+ * sessions are bound to the adjacency (shared by L1 and L2) and on
+ * broadcast links to each peer in state up.
  *
  * @param adjacency IS-IS adjacency
  */
 void
 isis_adjacency_bfd_add(isis_adjacency_s *adjacency)
 {
-    bbl_network_interface_s *interface = adjacency->interface;
     isis_peer_s *peer = adjacency->peer;
 
-    if(!adjacency->bfd_profile_id || adjacency->state != ISIS_ADJACENCY_STATE_UP ||
-       (adjacency->bfd && adjacency->bfd6)) {
+    if(!adjacency->bfd_profile_id || adjacency->state != ISIS_ADJACENCY_STATE_UP) {
         return;
     }
-    while(peer && !adjacency->p2p && peer->state != ISIS_PEER_STATE_UP) {
+    if(adjacency->p2p) {
+        isis_bfd_add(adjacency, peer, adjacency, isis_adjacency_bfd_cb, &adjacency->bfd, &adjacency->bfd6);
+        return;
+    }
+    while(peer) {
+        isis_peer_bfd_update(peer);
         peer = peer->next;
     }
-    if(!peer) {
+}
+
+/**
+ * isis_adjacency_bfd_del
+ *
+ * Delete the BFD sessions of an adjacency (P2P) or
+ * of all its peers (broadcast).
+ *
+ * @param adjacency IS-IS adjacency
+ * @param af address family (AF_INET, AF_INET6 or 0 for both)
+ */
+void
+isis_adjacency_bfd_del(isis_adjacency_s *adjacency, uint8_t af)
+{
+    isis_peer_s *peer = adjacency->peer;
+
+    if(adjacency->p2p) {
+        isis_bfd_del(adjacency, af, &adjacency->bfd, &adjacency->bfd6);
         return;
     }
-    if(!adjacency->bfd && interface->ip.address && peer->ipv4) {
-        adjacency->bfd = bfd_session_client_add(interface, adjacency->bfd_profile_id, false,
-                                                AF_INET, NULL, &peer->ipv4,
-                                                BFD_CLIENT_ISIS, adjacency, isis_adjacency_bfd_cb);
-    }
-    if(!adjacency->bfd6 && ipv6_addr_not_zero(&peer->ipv6)) {
-        adjacency->bfd6 = bfd_session_client_add(interface, adjacency->bfd_profile_id, false,
-                                                 AF_INET6, NULL, &peer->ipv6,
-                                                 BFD_CLIENT_ISIS, adjacency, isis_adjacency_bfd_cb);
+    while(peer) {
+        isis_bfd_del(peer, af, &peer->bfd, &peer->bfd6);
+        peer = peer->next;
     }
 }
 
@@ -246,14 +344,7 @@ isis_adjacency_down(isis_adjacency_s *adjacency, const char *reason)
         isis_system_id_to_str(adjacency->peer->system_id),
         adjacency->interface->name, reason);
 
-    if(adjacency->bfd) {
-        bfd_session_client_del(adjacency->bfd, adjacency);
-        adjacency->bfd = NULL;
-    }
-    if(adjacency->bfd6) {
-        bfd_session_client_del(adjacency->bfd6, adjacency);
-        adjacency->bfd6 = NULL;
-    }
+    isis_adjacency_bfd_del(adjacency, 0);
 
     timer_del(adjacency->timer_tx);
     timer_del(adjacency->timer_retry);

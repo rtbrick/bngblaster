@@ -113,6 +113,8 @@ The peer address of the BFD session is:
   to the IPv6 link-local address of the neighbor (hello TLV 232). Implementations
   using only one address family for BFD (e.g. FRR uses IPv6 on dual-stack circuits)
   leave the other session down, which does not affect the adjacency.
+  On broadcast circuits, the sessions are bound to each neighbor in state Up, and a
+  BFD failure brings down only this neighbor.
 * OSPFv2: the interface address of the neighbor.
 * OSPFv3: the link-local address of the neighbor.
 * BGP: the peer address of the session. Without ``bfd-multihop``, the session is
@@ -125,6 +127,11 @@ Multiple protocols may share one BFD session to the same peer, for example
 OSPFv2 and ISIS or ISIS level 1 and level 2. A shared session uses the profile
 of the protocol which created it, and all protocols are brought down if it goes
 down. A static session to the same peer is shared as well.
+
+The sessions follow address changes of OSPF and ISIS neighbors. Single-hop
+sessions of OSPF and ISIS are sent to the MAC address of the neighbor, all
+other single-hop sessions (static, BGP, LDP) to the gateway MAC address of the
+network interface until the first packet of the peer is received.
 
 .. code-block:: json
 
@@ -289,4 +296,4 @@ which starts a poll sequence for sessions in state Up.
 .. include:: ../api/bfd.rst
 
 The final JSON report contains the section ``bfd`` with the totals
-of all sessions and the session details (``bfd-sessions``).
+of all sessions and the session details (``bfd-sessions``), see :ref:`Reports <reports>`.

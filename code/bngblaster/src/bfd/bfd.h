@@ -37,6 +37,9 @@ bfd_session_client_add(bbl_network_interface_s *interface, uint16_t profile_id, 
 void
 bfd_session_client_del(bfd_session_s *session, void *client);
 
+void
+bfd_session_peer_mac(bfd_session_s *session, uint8_t *mac);
+
 bfd_session_s *
 bfd_session_by_id(uint32_t id);
 

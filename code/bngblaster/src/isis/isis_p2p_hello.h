@@ -16,6 +16,7 @@ isis_p2p_hello_encode(bbl_network_interface_s *interface,
 
 void
 isis_p2p_hello_handler_rx(bbl_network_interface_s *interface,
+                          bbl_ethernet_header_s *eth,
                           isis_pdu_s *pdu);
                     
 #endif

@@ -523,9 +523,10 @@ def test_bfd_admin_down(topology, pair, disabled):
     assert s["local-diagnostic"] == "neighbor-signaled-session-down"
     # The sessions stay down without detection timeout.
     time.sleep(1.5)
-    for instance in (local, peer):
+    # Local AdminDown (disable) is not counted as down.
+    for instance, down in ((local, 0), (peer, 1)):
         s = session(instance)
-        assert s["stats"]["timeout"] == 0 and s["stats"]["down"] == 1
+        assert s["stats"]["timeout"] == 0 and s["stats"]["down"] == down
     assert session(local)["state"] == "AdminDown" and session(peer)["state"] == "Down"
     # Disable again is no state change.
     assert local.ctrl("bfd-session-disable", **{"bfd-session-id": 1})["code"] == 200
@@ -611,7 +612,7 @@ def test_bfd_teardown(topology, pair):
         last = bfd_packets(a, src)[-1]
         assert (last["state"], last["diag"]) == (STATE_ADMIN_DOWN, 7)
     report = a.report()["report"]["bfd"]
-    assert (report["sessions"], report["up"], report["timeout"]) == (2, 2, 0)
+    assert (report["sessions"], report["up"], report["down"], report["timeout"]) == (2, 2, 0, 0)
     assert report["tx-packets"] > 0 and report["rx-packets"] > 0 and report["rx-errors"] == 0
     assert b.terminate() == 0
     report = b.report()["report"]["bfd"]
@@ -892,6 +893,21 @@ def test_bfd_ldp_session_down(topology, bbl, command):
     for instance in (a, b):
         assert "BFD down" not in log(instance)
         assert "detection time expired" not in log(instance)
+
+
+def test_bfd_ldp_report(topology, bbl):
+    """Sessions of protocols (deleted with the LDP session at the teardown)
+    are kept in the final report, and the teardown (local AdminDown) is
+    not counted as down."""
+    a, b = start_ldp(topology, bbl, "link")
+    wait_until(lambda: session(a)["stats"]["rx-packets"] >= 3, 10, 0.1, message="BFD packets received")
+    assert a.terminate() == 0
+    report = a.report()["report"]["bfd"]
+    assert (report["sessions"], report["up"], report["down"], report["timeout"]) == (1, 1, 0, 0), report
+    s = report["bfd-sessions"][0]
+    assert (s["state"], s["clients"], s["peer-address"]) == ("AdminDown", ["ldp"], IP_B), s
+    assert s["stats"]["rx-packets"] >= 3 and s["stats"]["down"] == 0, s
+    assert b.terminate() == 0
 
 
 # Configuration -------------------------------------------------------------------

@@ -17,9 +17,10 @@ import time
 
 import pytest
 
-from helpers import Frr, wait_until
-from igp_common import (BBL_ADDRESS, BBL_ADDRESS6, BBL_ROUTER_ID, FRR_ADDRESS, FRR_ADDRESS6,
-                        FRR_ROUTER_ID, IgpSetup, IsisSetup, Ospf6Setup, OspfSetup)
+import helpers
+from helpers import BngBlaster, Frr, Netns, wait_until
+from igp_common import (BBL_ADDRESS, BBL_ADDRESS6, BBL_ROUTER_ID, BBL_SYSTEM_ID, FRR_ADDRESS, FRR_ADDRESS6,
+                        FRR_ROUTER_ID, FRR_SYSTEM_ID, ISIS_AREA, IgpSetup, IsisSetup, Ospf6Setup, OspfSetup)
 
 pytestmark = pytest.mark.usefixtures("frr_bin")
 
@@ -379,7 +380,8 @@ def test_admin_down(static, variant):
     static.frr_peer_exec(frr_address, frr_local, multihop, "no shutdown")
     wait_bfd_up(bbl, frr, bbl_peer, frr_address, multihop)
     s = bbl_session(bbl)
-    assert s["stats"]["up"] == 3 and s["stats"]["down"] == 2, s
+    # Local AdminDown (disable) is not counted as down, the peer AdminDown is.
+    assert s["stats"]["up"] == 3 and s["stats"]["down"] == 1, s
     static.teardown()
 
 
@@ -768,3 +770,91 @@ def test_isis_dual_stack(topology, processes, tmp_path):
                 s["state"] == "Up" and "isis" in s["clients"]]
     wait_until(lambda: len(bbl_sessions(client.bbl)) == 2, 10, 0.2, message="two BFD sessions")
     wait_until(ipv6_up, 10, 0.2, message="IPv6 link-local BFD session up")
+
+
+FRR2_SYSTEM_ID = "1921.6800.1003"
+
+
+def frr_isis_lan_config(ifname, system_id, priority):
+    return frr_bfd_profile() + "\n".join([
+        "router isis bbl",
+        " net %s.%s.00" % (ISIS_AREA, system_id),
+        " is-type level-2-only",
+        " metric-style wide",
+        " no hostname dynamic",
+        "exit",
+        "interface %s" % ifname,
+        " ip router isis bbl",
+        " isis circuit-type level-2-only",
+        " isis hello-interval 1",
+        " isis hello-multiplier 10",
+        " isis priority %d level-2" % priority,
+        " isis bfd",
+        " isis bfd profile bbl",
+        "exit",
+    ]) + "\n"
+
+
+@pytest.mark.full
+def test_isis_lan_bfd_per_neighbor(topology, processes, tmp_path):
+    """IS-IS on a LAN with two FRR neighbors: the BNG Blaster runs one BFD
+    session per neighbor, and the BFD failure of one neighbor brings down
+    only this neighbor, not the other one."""
+    n = topology.if_a[3:-1]
+    ns_b = topology.b
+    ns_b.exec(["ip", "link", "add", "br0", "type", "bridge", "stp_state", "0", "mcast_snooping", "0"])
+    ns_b.exec(["ip", "link", "set", "br0", "up"])
+    ns_b.exec(["ip", "link", "set", topology.if_b, "master", "br0"])
+    namespaces, frrs, addresses = [], [], []
+    try:
+        for i, (tag, system_id, priority) in enumerate((("c", FRR_SYSTEM_ID, 64), ("d", FRR2_SYSTEM_ID, 50))):
+            ns = Netns("%s-%s" % (n, tag))
+            namespaces.append(ns)
+            ifname = "bbl%s%s" % (n, tag)
+            helpers.veth_pair(ns, ifname, ns_b, ifname + "b")
+            ns_b.exec(["ip", "link", "set", ifname + "b", "master", "br0"])
+            addresses.append("10.0.0.%d" % (i + 2))
+            helpers.kernel_address(ns, ifname, addresses[-1] + "/24")
+            workdir = tmp_path / ("frr%d" % (i + 1))
+            workdir.mkdir()
+            frr = Frr(ns, workdir, ("isisd", "bfdd"))
+            processes.append(frr)
+            frrs.append(frr.start(frr_isis_lan_config(ifname, system_id, priority)))
+
+        bbl = BngBlaster(topology.a, tmp_path).start({
+            "interfaces": {"network": {
+                "interface": topology.if_a, "address": BBL_ADDRESS + "/24",
+                "gateway": addresses[0], "isis-instance-id": 1, "isis-level": 2,
+                "isis-p2p": False, "isis-l2-priority": 100, "isis-bfd-profile-id": 1}},
+            "bfd": [BBL_PROFILE],
+            "isis": [{"instance-id": 1, "level": 2, "area": ["%s/24" % ISIS_AREA],
+                      "system-id": BBL_SYSTEM_ID, "router-id": BBL_ROUTER_ID,
+                      "hostname": "BBL", "hello-interval": 1, "hold-time": 10}]},
+            logging=("info", "isis", "bfd"))
+        processes.append(bbl)
+
+        def up_peers():
+            return sorted(s["peer-address"] for s in bbl_sessions(bbl)
+                          if s["state"] == "Up" and "isis" in s["clients"])
+        wait_until(lambda: up_peers() == addresses, 40, 0.5, message="BFD up to both LAN neighbors")
+
+        def session(address):
+            return [s for s in bbl_sessions(bbl) if s["peer-address"] == address][0]
+        frr2_session_id = session(addresses[1])["bfd-session-id"]
+
+        # bfdd of FRR1 fails while its IS-IS adjacency (isisd) stays.
+        bfdd = frrs[0].procs[frrs[0].daemons.index("bfdd")]
+        bfdd.kill()
+        bfdd.wait(5)
+        wait_until(lambda: session(addresses[0])["state"] != "Up", 5, 0.1, message="BFD to FRR1 down")
+        time.sleep(2)
+        # The session of FRR2 was never deleted (FRR2 not brought down).
+        s = session(addresses[1])
+        assert (s["bfd-session-id"], s["state"], s["stats"]["down"]) == (frr2_session_id, "Up", 0), s
+        assert bbl.terminate() == 0
+        log = bbl_log(bbl)
+        assert "ISIS L2 BFD down to %s" % FRR_SYSTEM_ID in log
+        assert "BFD down to %s" % FRR2_SYSTEM_ID not in log
+    finally:
+        for ns in namespaces:
+            ns.delete()

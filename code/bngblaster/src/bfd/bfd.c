@@ -178,6 +178,22 @@ bfd_session_poll_stop(bfd_session_s *session)
     bfd_session_timers_update(session);
 }
 
+/**
+ * bfd_session_peer_mac
+ *
+ * Set the MAC address of a single-hop peer known by the client
+ * (e.g. IS-IS or OSPF neighbor), which is otherwise learned from
+ * received packets. Without, packets are sent to the gateway MAC
+ * until the first packet of the peer is received.
+ */
+void
+bfd_session_peer_mac(bfd_session_s *session, uint8_t *mac)
+{
+    if(!session || !mac || session->multihop) return;
+    memcpy(session->peer_mac, mac, ETH_ADDR_LEN);
+    session->peer_mac_learned = true;
+}
+
 static uint8_t *
 bfd_session_dst_mac(bfd_session_s *session)
 {
@@ -335,6 +351,12 @@ bfd_session_free(bfd_session_s *session)
 {
     bfd_client_s *client;
 
+    if(g_ctx->bfd.teardown) {
+        /* Sessions deleted by clients during the teardown
+         * are kept (AdminDown) for the final report. */
+        return;
+    }
+
     hb_tree_remove(g_ctx->bfd.discr_db, &session->local_discr);
     hb_tree_remove(g_ctx->bfd.key_db, &session->key);
     if(session->prev) {
@@ -423,8 +445,11 @@ bfd_session_state_change(bfd_session_s *session, bfd_state_t state, uint8_t diag
             bfd_session_poll_start(session, session->config_tx_interval, session->config_rx_interval);
         }
     } else if(old == BFD_STATE_UP) {
-        session->stats.down++;
-        g_ctx->bfd.stats.down++;
+        if(state != BFD_STATE_ADMIN_DOWN) {
+            /* Local AdminDown (disable or teardown) is no failure. */
+            session->stats.down++;
+            g_ctx->bfd.stats.down++;
+        }
         if(g_ctx->bfd.sessions_up) g_ctx->bfd.sessions_up--;
     }
     if(state < BFD_STATE_INIT) {
@@ -665,9 +690,12 @@ bfd_session_client_del(bfd_session_s *session, void *client)
         prev = c;
         c = c->next;
     }
-    session->client_types &= BFD_CLIENT_STATIC;
-    for(c = session->clients; c; c = c->next) {
-        session->client_types |= c->type;
+    if(!g_ctx->bfd.teardown) {
+        /* Client types are kept for the final report. */
+        session->client_types &= BFD_CLIENT_STATIC;
+        for(c = session->clients; c; c = c->next) {
+            session->client_types |= c->type;
+        }
     }
     if(session->clients || session->client_types & BFD_CLIENT_STATIC || session->deleted) {
         return;
@@ -876,6 +904,9 @@ bfd_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth,
     }
 
     if(session->state == BFD_STATE_ADMIN_DOWN) {
+        if(bfd->flags & BFD_FLAG_POLL) {
+            bfd_session_send(session, true);
+        }
         return;
     }
     bfd_detect_start(session);
@@ -905,7 +936,9 @@ bfd_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth,
         bfd_session_free(session);
         return;
     }
-    if(bfd->flags & BFD_FLAG_POLL && bfd_session_tx_allowed(session)) {
+    /* The Final is no periodic packet and therefore also sent
+     * if the remote required min RX interval is zero (6.8.7). */
+    if(bfd->flags & BFD_FLAG_POLL) {
         bfd_session_send(session, true);
     }
 }

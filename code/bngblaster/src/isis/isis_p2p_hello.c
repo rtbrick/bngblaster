@@ -138,10 +138,11 @@ isis_p2p_adjacency_update(bbl_network_interface_s *interface, isis_pdu_s *pdu, b
  * without adjacency state TLV are accepted (RFC 1195).
  *
  * @param interface receive interface
+ * @param eth received ethernet header
  * @param pdu received ISIS PDU
  */
 void
-isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
+isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth, isis_pdu_s *pdu)
 {
     isis_adjacency_p2p_s *adjacency_p2p = interface->isis_adjacency_p2p;
     isis_instance_s *instance;
@@ -202,6 +203,7 @@ isis_p2p_hello_handler_rx(bbl_network_interface_s *interface, isis_pdu_s *pdu)
         isis_p2p_adjacency_update(interface, NULL, false);
     }
 
+    memcpy(peer->mac, eth->src, ETH_ADDR_LEN);
     isis_peer_update(peer, pdu);
 
     tlv = isis_pdu_first_tlv(pdu);

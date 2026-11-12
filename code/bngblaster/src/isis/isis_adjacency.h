@@ -23,4 +23,13 @@ isis_adjacency_down(isis_adjacency_s *adjacency, const char *reason);
 void
 isis_adjacency_bfd_add(isis_adjacency_s *adjacency);
 
+void
+isis_adjacency_bfd_del(isis_adjacency_s *adjacency, uint8_t af);
+
+void
+isis_peer_bfd_update(isis_peer_s *peer);
+
+void
+isis_peer_bfd_del(isis_peer_s *peer, uint8_t af);
+
 #endif

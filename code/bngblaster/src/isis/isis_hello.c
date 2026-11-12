@@ -157,6 +157,7 @@ isis_hello_handler_rx(bbl_network_interface_s *interface,
     isis_config_s    *config    = NULL;
 
     isis_peer_s *peer;
+    isis_peer_s *hello_peer;
     isis_tlv_s *tlv;
 
     uint8_t new_state = ISIS_PEER_STATE_INIT;
@@ -208,6 +209,7 @@ isis_hello_handler_rx(bbl_network_interface_s *interface,
     if(adjacency->dis) dis_pseudo_node_id = adjacency->dis->pseudo_node_id;
 
     peer = isis_peer(adjacency, eth->src);
+    hello_peer = peer;
     if(peer->state != ISIS_PEER_STATE_DOWN &&
        memcmp(peer->system_id, ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_SYSTEM_ID), ISIS_SYSTEM_ID_LEN) != 0) {
         /* The system-id of the neighbor has changed, so the
@@ -264,6 +266,9 @@ isis_hello_handler_rx(bbl_network_interface_s *interface,
             isis_adjacency_down(adjacency, "hello goodbye");
         }
     }
+
+    /* BFD of the peer depends on peer and adjacency state. */
+    isis_peer_bfd_update(hello_peer);
 
     if(isis_peer_dis_elect(adjacency)) {
         self_update = true;
