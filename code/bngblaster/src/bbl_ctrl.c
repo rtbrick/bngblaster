@@ -617,7 +617,8 @@ static const char *
 bbl_ctrl_schema_arg_type_string(schema_arg_type_t type)
 {
     switch(type) {
-        case SCHEMA_ARG_NUMBER: return "number";
+        case SCHEMA_ARG_NUMBER:
+        case SCHEMA_ARG_REAL: return "number";
         case SCHEMA_ARG_BOOLEAN: return "boolean";
         case SCHEMA_ARG_ARRAY: return "array";
         case SCHEMA_ARG_STRING:

@@ -11,11 +11,14 @@ flight of the reset after it.
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import json
+import subprocess
+import sys
 import time
 
 import pytest
 
-from helpers import BngBlaster, if_id, wait_until
+from helpers import REPO, BngBlaster, if_id, wait_until
 
 EXIT_TIMEOUT = 30
 STREAMS = 8
@@ -167,4 +170,12 @@ def test_stream_real_arguments(tmp_path, processes):
 
     assert instance.ctrl("stream-update", **{"flow-id": 1.0, "pps": 12.5})["code"] == 200
     assert [info(i + 1)["debug-tx-pps-config"] for i in range(STREAMS)] == [12.5] + [PPS] * (STREAMS - 1)
+
+    # bngblaster-cli sends pps as number (announced type of the real argument).
+    cli = [sys.executable, str(REPO / "code/bngblaster-cli"), instance.socket]
+    for pps, flow_id in (("50", "2"), ("50.5", "3")):
+        out = subprocess.run(cli + ["stream-update", "flow-id", flow_id, "pps", pps],
+                             capture_output=True, text=True, timeout=30)
+        assert json.loads(out.stdout)["code"] == 200, out.stdout + out.stderr
+    assert [info(i + 1)["debug-tx-pps-config"] for i in range(3)] == [12.5, 50, 50.5]
     assert instance.terminate(EXIT_TIMEOUT) == 0
