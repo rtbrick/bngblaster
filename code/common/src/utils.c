@@ -849,7 +849,16 @@ lock_file_acquire(const char *path)
     int fd;
 
     while(true) {
-        fd = open(path, O_RDWR|O_CREAT|O_CLOEXEC, 0666);
+        /* Open an existing file without O_CREAT, which fails with EACCES
+         * for a file of another user in the sticky /run/lock directory
+         * (fs.protected_regular), e.g. a stale lock of a non-root run. */
+        fd = open(path, O_RDWR|O_CLOEXEC);
+        if(fd == -1 && errno == ENOENT) {
+            fd = open(path, O_RDWR|O_CREAT|O_EXCL|O_CLOEXEC, 0666);
+            if(fd == -1 && errno == EEXIST) {
+                continue;
+            }
+        }
         if(fd == -1) {
             return -1;
         }
