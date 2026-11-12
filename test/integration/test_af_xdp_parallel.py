@@ -27,8 +27,6 @@ import pytest
 from helpers import BNGBLASTER_BIN, BngBlaster, wait_until
 
 EXIT_TIMEOUT = 30
-IF1 = "xsk1"
-IF2 = "xsk2"
 
 
 @pytest.fixture
@@ -36,19 +34,6 @@ def af_xdp():
     version = subprocess.run([str(BNGBLASTER_BIN), "-v"], capture_output=True, text=True).stdout
     if "af_xdp" not in version:
         pytest.skip("BNG Blaster built without AF_XDP")
-
-
-@pytest.fixture
-def veth(local_veth):
-    """veth pair with both ends in one namespace and two queues each,
-    as AF_XDP uses separate RX and TX queues."""
-    ns = local_veth.ns
-    ns.exec(["ip", "link", "add", IF1, "numtxqueues", "2", "numrxqueues", "2", "type", "veth",
-             "peer", "name", IF2, "numtxqueues", "2", "numrxqueues", "2"])
-    for ifname in (IF1, IF2):
-        ns.exec(["sysctl", "-qw", "net.ipv6.conf.%s.disable_ipv6=1" % ifname])
-        ns.exec(["ip", "link", "set", ifname, "up"])
-    return ns
 
 
 def instance_config(ifname, index):
@@ -68,13 +53,15 @@ def xdp_attached(ns, ifname):
 
 
 @pytest.mark.parametrize("round", range(5))
-def test_parallel_start(af_xdp, veth, tmp_path, processes, round):
-    instances = [BngBlaster(veth, tmp_path, "bbl%d" % i) for i in (1, 2)]
+def test_parallel_start(af_xdp, local_veth, tmp_path, processes, round):
+    veth = veth_queues(local_veth, 2)
+    ifnames = (veth.if1, veth.if2)
+    instances = [BngBlaster(veth.ns, tmp_path, "bbl%d" % i) for i in (1, 2)]
     processes.extend(instances)
     with ThreadPoolExecutor(2) as pool:
         futures = [pool.submit(instance.start, instance_config(ifname, i + 1),
                                ("info", "af_xdp"))
-                   for i, (instance, ifname) in enumerate(zip(instances, (IF1, IF2)))]
+                   for i, (instance, ifname) in enumerate(zip(instances, ifnames))]
         for future in futures:
             future.result()
     for instance in instances:
@@ -84,8 +71,8 @@ def test_parallel_start(af_xdp, veth, tmp_path, processes, round):
         with open(instance.path("log")) as f:
             log = f.read()
         assert "queue 0 bound" in log and "queue 1 bound" in log
-    for ifname in (IF1, IF2):
-        assert not xdp_attached(veth, ifname), "XDP program left on %s" % ifname
+    for ifname in ifnames:
+        assert not xdp_attached(veth.ns, ifname), "XDP program left on %s" % ifname
 
 
 def veth_queues(local_veth, queues):

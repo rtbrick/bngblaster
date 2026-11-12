@@ -16,7 +16,7 @@ import struct
 import time
 from collections import defaultdict
 
-from helpers import BngBlaster, wait_until
+from helpers import BngBlaster, if_id, wait_until
 
 EXIT_TIMEOUT = 30
 PCAPNG_EPB = 6
@@ -107,24 +107,26 @@ def check_stream_capture(filename):
 
 
 def loopback_config():
+    n = if_id()
+    link_a, link_b = "loc%da" % n, "loc%db" % n
     return {
         "interfaces": {
             "io-mode": "loopback",
             "capture-include-streams": True,
             "links": [
-                {"interface": "locA", "loopback-peer": "locB", "tx-threads": 1, "rx-threads": 1},
-                {"interface": "locB", "tx-threads": 1, "rx-threads": 1}
+                {"interface": link_a, "loopback-peer": link_b, "tx-threads": 1, "rx-threads": 1},
+                {"interface": link_b, "tx-threads": 1, "rx-threads": 1}
             ],
             "network": [
-                {"interface": "locA", "address": "10.0.0.1/24", "gateway": "10.0.0.2"},
-                {"interface": "locB", "address": "10.0.0.2/24", "gateway": "10.0.0.1"}
+                {"interface": link_a, "address": "10.0.0.1/24", "gateway": "10.0.0.2"},
+                {"interface": link_b, "address": "10.0.0.2/24", "gateway": "10.0.0.1"}
             ]
         },
         "traffic": {"autostart": True},
         "streams": [
-            {"name": "A", "type": "ipv4", "direction": "downstream", "network-interface": "locA",
+            {"name": "A", "type": "ipv4", "direction": "downstream", "network-interface": link_a,
              "destination-ipv4-address": "10.0.0.2", "pps": 1000},
-            {"name": "B", "type": "ipv4", "direction": "downstream", "network-interface": "locB",
+            {"name": "B", "type": "ipv4", "direction": "downstream", "network-interface": link_b,
              "destination-ipv4-address": "10.0.0.1", "pps": 1000}
         ]
     }

@@ -8,6 +8,7 @@ Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
 import grp
+import itertools
 import json
 import os
 import shutil
@@ -22,6 +23,14 @@ REPO = Path(__file__).resolve().parents[2]
 # Parallel runs on one host need their own namespace prefix (cleanup
 # deletes all namespaces with this prefix) and interface number base.
 NETNS_PREFIX = os.environ.get("BBL_IT_NETNS_PREFIX", "bbl-it-")
+_if_ids = itertools.count(int(os.environ.get("BBL_IT_ID_BASE", "1")))
+
+
+def if_id():
+    """Next number for interface names unique on the host (bbl<n>a), as
+    the interface lock files of the BNG Blaster are host-wide, also for
+    interfaces in different namespaces or loopback links."""
+    return next(_if_ids)
 
 
 def env_path(name, default):

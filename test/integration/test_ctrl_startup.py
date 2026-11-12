@@ -16,7 +16,7 @@ from contextlib import contextmanager
 
 import pytest
 
-from helpers import BngBlaster, wait_until
+from helpers import BngBlaster, if_id, wait_until
 
 STARTUP_LOCK = "/run/lock/bngblaster_startup.lock"
 EXIT_TIMEOUT = 30
@@ -30,19 +30,20 @@ class Host:
         return cmd
 
 
-def loopback_config():
+def loopback_config(n):
+    link_a, link_b = "loc%da" % n, "loc%db" % n
     return {
         "interfaces": {
             "io-mode": "loopback",
             "links": [
-                {"interface": "loc1a", "loopback-peer": "loc1b",
+                {"interface": link_a, "loopback-peer": link_b,
                  "tx-threads": 1, "tx-auto-cpuset": True},
-                {"interface": "loc1b",
+                {"interface": link_b,
                  "rx-threads": 1, "rx-auto-cpuset": True}
             ],
             "network": [
-                {"interface": "loc1a", "address": "10.1.0.1/24", "gateway": "10.1.0.2"},
-                {"interface": "loc1b", "address": "10.1.0.2/24", "gateway": "10.1.0.1"}
+                {"interface": link_a, "address": "10.1.0.1/24", "gateway": "10.1.0.2"},
+                {"interface": link_b, "address": "10.1.0.2/24", "gateway": "10.1.0.1"}
             ]
         }
     }
@@ -76,10 +77,11 @@ def startup_lock():
 
 
 def test_startup_status(tmp_path, processes):
+    n = if_id()
     with startup_lock():
         instance = BngBlaster(Host(), tmp_path, "bbl")
         processes.append(instance)
-        instance.start(loopback_config(), wait_started=False)
+        instance.start(loopback_config(n), wait_started=False)
         info = wait_until(lambda: instance.ctrl("test-info")["test-info"], 10,
                           message="test-info while starting")
         assert info["status"] == "starting"
@@ -98,7 +100,7 @@ def test_startup_status(tmp_path, processes):
     assert "startup-lock-pid" not in info
 
     threads = instance.ctrl("threads")["threads"]
-    assert sorted(t["name"] for t in threads) == ["main", "rx0-loc1b", "tx0-loc1a"]
+    assert sorted(t["name"] for t in threads) == ["main", "rx0-loc%db" % n, "tx0-loc%da" % n]
     pinned = proc_threads(instance.proc.pid)
     for thread in threads:
         assert thread["cpu-auto"], thread
@@ -116,7 +118,7 @@ def test_abort_startup(tmp_path, processes, stop):
     with startup_lock():
         instance = BngBlaster(Host(), tmp_path, "bbl")
         processes.append(instance)
-        instance.start(loopback_config(), wait_started=False)
+        instance.start(loopback_config(if_id()), wait_started=False)
         wait_until(lambda: instance.ctrl("test-info")["test-info"]["task"] == "wait-startup-lock",
                    10, message="waiting for startup lock")
         if stop.startswith("SIG"):

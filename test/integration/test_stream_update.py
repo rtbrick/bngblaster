@@ -15,7 +15,7 @@ import time
 
 import pytest
 
-from helpers import BngBlaster, wait_until
+from helpers import BngBlaster, if_id, wait_until
 
 EXIT_TIMEOUT = 30
 STREAMS = 8
@@ -31,23 +31,25 @@ class Host:
 
 
 def loopback_config(threads, pps=PPS):
+    n = if_id()
+    link_a, link_b = "loc%da" % n, "loc%db" % n
     if threads:
-        links = [{"interface": "locA", "loopback-peer": "locB", "tx-threads": 1, "rx-threads": 1},
-                 {"interface": "locB", "tx-threads": 1, "rx-threads": 1}]
+        links = [{"interface": link_a, "loopback-peer": link_b, "tx-threads": 1, "rx-threads": 1},
+                 {"interface": link_b, "tx-threads": 1, "rx-threads": 1}]
     else:
-        links = [{"interface": "locA", "loopback-peer": "locB"}]
+        links = [{"interface": link_a, "loopback-peer": link_b}]
     return {
         "interfaces": {
             "io-mode": "loopback",
             "links": links,
             "network": [
-                {"interface": "locA", "address": "10.0.0.1/24", "gateway": "10.0.0.2"},
-                {"interface": "locB", "address": "10.0.0.2/24", "gateway": "10.0.0.1"}
+                {"interface": link_a, "address": "10.0.0.1/24", "gateway": "10.0.0.2"},
+                {"interface": link_b, "address": "10.0.0.2/24", "gateway": "10.0.0.1"}
             ]
         },
         "traffic": {"autostart": True},
         "streams": [
-            {"name": "S%d" % i, "type": "ipv4", "direction": "downstream", "network-interface": "locA",
+            {"name": "S%d" % i, "type": "ipv4", "direction": "downstream", "network-interface": link_a,
              "destination-ipv4-address": "10.0.0.2", "pps": pps}
             for i in range(STREAMS)
         ]

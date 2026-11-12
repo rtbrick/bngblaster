@@ -16,7 +16,7 @@ import time
 
 import pytest
 
-from helpers import BngBlaster, wait_until
+from helpers import BngBlaster, if_id, wait_until
 
 EXIT_TIMEOUT = 30
 STREAMS = 10
@@ -30,12 +30,19 @@ class Host:
         return cmd
 
 
-def lag_config(rx_threads, lacp, max_active_links=None):
+@pytest.fixture
+def lol():
+    """Member names A1, A2 (lagA) and B1, B2 (lagB), unique on the host."""
+    n = if_id()
+    return {member: "lol%d%s" % (n, member) for member in ("A1", "A2", "B1", "B2")}
+
+
+def lag_config(lol, rx_threads, lacp, max_active_links=None):
     links = [
-        {"interface": "lolA1", "loopback-peer": "lolB1", "lag-interface": "lagA"},
-        {"interface": "lolA2", "loopback-peer": "lolB2", "lag-interface": "lagA"},
-        {"interface": "lolB1", "lag-interface": "lagB"},
-        {"interface": "lolB2", "lag-interface": "lagB"}
+        {"interface": lol["A1"], "loopback-peer": lol["B1"], "lag-interface": "lagA"},
+        {"interface": lol["A2"], "loopback-peer": lol["B2"], "lag-interface": "lagA"},
+        {"interface": lol["B1"], "lag-interface": "lagB"},
+        {"interface": lol["B2"], "lag-interface": "lagB"}
     ]
     if rx_threads:
         # TX threads are not supported for LAG members.
@@ -74,8 +81,8 @@ def lags_up(instance):
 
 @pytest.mark.parametrize("lacp", [False, True], ids=["static", "lacp"])
 @pytest.mark.parametrize("rx_threads", [False, True], ids=["main-loop", "rx-threads"])
-def test_lag_traffic(tmp_path, processes, rx_threads, lacp):
-    instance = BngBlaster(Host(), tmp_path, "bbl").start(lag_config(rx_threads, lacp))
+def test_lag_traffic(lol, tmp_path, processes, rx_threads, lacp):
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(lag_config(lol, rx_threads, lacp))
     processes.append(instance)
     # LACP converges within a few PDUs, as state changes are sent immediately.
     wait_until(lambda: lags_up(instance), 5, 0.1, message="LAG interfaces up")
@@ -88,7 +95,7 @@ def test_lag_traffic(tmp_path, processes, rx_threads, lacp):
 
     # Streams are distributed over both members of each LAG.
     links = {i["name"]: i for i in instance.ctrl("interfaces")["interfaces"]}
-    for member in ("lolA1", "lolA2", "lolB1", "lolB2"):
+    for member in lol.values():
         assert links[member]["tx-packets"] > 0, links[member]
 
     assert instance.terminate(EXIT_TIMEOUT) == 0
@@ -111,13 +118,13 @@ def tx_packets(instance):
     return {i["name"]: i["tx-packets"] for i in instance.ctrl("interfaces")["interfaces"]}
 
 
-def test_lacp_standby(tmp_path, processes):
+def test_lacp_standby(lol, tmp_path, processes):
     """With lacp-max-active-links 1, the second member of each LAG is
     standby, which is not in sync (IEEE 802.1AX), so that neither side
     uses it, and takes over if the active member fails."""
-    instance = BngBlaster(Host(), tmp_path, "bbl").start(lag_config(False, True, 1))
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(lag_config(lol, False, True, 1))
     processes.append(instance)
-    expected = {"lolA1": "Up", "lolA2": "Standby", "lolB1": "Up", "lolB2": "Standby"}
+    expected = {lol["A1"]: "Up", lol["A2"]: "Standby", lol["B1"]: "Up", lol["B2"]: "Standby"}
     wait_until(lambda: {i: m[0] for i, m in members(instance).items()} == expected, 5, 0.1,
                message="one active and one standby member per LAG")
     for interface, (state, actor_state) in members(instance).items():
@@ -129,19 +136,19 @@ def test_lacp_standby(tmp_path, processes):
 
     # Only the active members send stream traffic (standby only LACP).
     before = tx_packets(instance)
-    wait_until(lambda: tx_packets(instance)["lolA1"] - before["lolA1"] > 10 * STREAMS, 10,
+    wait_until(lambda: tx_packets(instance)[lol["A1"]] - before[lol["A1"]] > 10 * STREAMS, 10,
                message="stream traffic on active member")
     after = tx_packets(instance)
-    for standby in ("lolA2", "lolB2"):
+    for standby in (lol["A2"], lol["B2"]):
         assert after[standby] - before[standby] < 10, (standby, before, after)
 
     # The standby members take over if the active member of lagA fails,
     # lagB once LACP of the disabled member expired.
-    assert instance.ctrl("interface-disable", interface="lolA1")["code"] == 200
-    wait_until(lambda: (members(instance)["lolA2"][0], members(instance)["lolB2"][0]) == ("Up", "Up"),
+    assert instance.ctrl("interface-disable", interface=lol["A1"])["code"] == 200
+    wait_until(lambda: (members(instance)[lol["A2"]][0], members(instance)[lol["B2"]][0]) == ("Up", "Up"),
                10, 0.1, message="standby members up after failure of active member")
     before = tx_packets(instance)
-    wait_until(lambda: tx_packets(instance)["lolA2"] - before["lolA2"] > 10 * STREAMS, 10,
+    wait_until(lambda: tx_packets(instance)[lol["A2"]] - before[lol["A2"]] > 10 * STREAMS, 10,
                message="stream traffic on former standby member")
 
     assert instance.terminate(EXIT_TIMEOUT) == 0
@@ -150,10 +157,10 @@ def test_lacp_standby(tmp_path, processes):
 ACTIVE = 0x01
 
 
-def test_lacp_timeout_long(tmp_path, processes):
+def test_lacp_timeout_long(lol, tmp_path, processes):
     """The first LACP PDU is sent at startup, so that the LAG comes up
     without waiting for the periodic interval (30s with long timeout)."""
-    config = lag_config(False, True)
+    config = lag_config(lol, False, True)
     for lag in config["interfaces"]["lag"]:
         lag["lacp-timeout-short"] = False
     instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
@@ -167,24 +174,24 @@ def lacp_tx(instance):
             for lag in instance.ctrl("lag-info")["lag-info"] for m in lag["members"]}
 
 
-def test_lacp_passive(tmp_path, processes):
+def test_lacp_passive(lol, tmp_path, processes):
     """A passive LAG (lagB) does not signal LACP activity but follows the
     active partner (lagA) and sends its state changes immediately, so that
     the LAG comes up without waiting for the periodic LACP PDU of the
     passive side (long timeout)."""
-    config = lag_config(False, True)
+    config = lag_config(lol, False, True)
     config["interfaces"]["lag"][1].update({"lacp-passive": True, "lacp-timeout-short": False})
     instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
     processes.append(instance)
     wait_until(lambda: lags_up(instance), 5, 0.1, message="LAG interfaces up")
     for interface, (state, actor_state) in members(instance).items():
-        assert bool(actor_state & ACTIVE) == interface.startswith("lolA"), (interface, actor_state)
+        assert bool(actor_state & ACTIVE) == (interface in (lol["A1"], lol["A2"])), (interface, actor_state)
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
-def test_lacp_passive_both(tmp_path, processes):
+def test_lacp_passive_both(lol, tmp_path, processes):
     """Two passive partners send no LACP PDUs, so the LAG stays down."""
-    config = lag_config(False, True)
+    config = lag_config(lol, False, True)
     for lag in config["interfaces"]["lag"]:
         lag["lacp-passive"] = True
     instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
@@ -197,11 +204,11 @@ def test_lacp_passive_both(tmp_path, processes):
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
-def test_stream_update_lacp_down(tmp_path, processes):
+def test_stream_update_lacp_down(lol, tmp_path, processes):
     """Streams of a LACP LAG interface, which is not up as the peer
     does not run LACP, have no IO assigned yet. Updating their rate
     must not crash and the new rate is used once the LAG comes up."""
-    config = lag_config(False, True)
+    config = lag_config(lol, False, True)
     config["interfaces"]["lag"][1]["lacp"] = False
     instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
     processes.append(instance)
@@ -217,11 +224,11 @@ def test_stream_update_lacp_down(tmp_path, processes):
 
 
 @pytest.mark.full
-def test_lacp_timeout_mixed(tmp_path, processes):
+def test_lacp_timeout_mixed(lol, tmp_path, processes):
     """The periodic rate follows the timeout of the partner (IEEE 802.1AX):
     lagB with long timeout sends every second to lagA with short timeout,
     so that lagA does not expire, while lagA sends only every 30 seconds."""
-    config = lag_config(False, True)
+    config = lag_config(lol, False, True)
     config["interfaces"]["lag"][1]["lacp-timeout-short"] = False
     instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
     processes.append(instance)
@@ -237,8 +244,8 @@ def test_lacp_timeout_mixed(tmp_path, processes):
     assert transitions() == transitions_before, (transitions_before, transitions())
     assert lags_up(instance)
     after = lacp_tx(instance)
-    for member in ("lolB1", "lolB2"):
+    for member in (lol["B1"], lol["B2"]):
         assert after[member] - before[member] >= 6, (member, before, after)
-    for member in ("lolA1", "lolA2"):
+    for member in (lol["A1"], lol["A2"]):
         assert after[member] - before[member] <= 1, (member, before, after)
     assert instance.terminate(EXIT_TIMEOUT) == 0

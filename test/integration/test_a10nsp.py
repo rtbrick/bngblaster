@@ -12,7 +12,6 @@ the A10NSP interface on both ends of a veth pair.
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
-import itertools
 import json
 import signal
 import subprocess
@@ -28,7 +27,6 @@ EXIT_TIMEOUT = 30
 SESSIONS = 2
 VLAN = 10
 RELAY = str(Path(__file__).parent / "a10nsp_relay.py")
-_ids = itertools.count(1)
 
 
 def counters(bbl):
@@ -39,7 +37,7 @@ def counters(bbl):
 def pseudowire():
     """Namespace A with access (acc) and network (net) interface, both
     connected to namespace B."""
-    n = next(_ids)
+    n = helpers.if_id()
     topo = type("Topology", (), {})()
     topo.a, topo.b = Netns("a10nsp%d-a" % n), Netns("a10nsp%d-b" % n)
     topo.acc_a, topo.acc_b = "a10acc%da" % n, "a10acc%db" % n

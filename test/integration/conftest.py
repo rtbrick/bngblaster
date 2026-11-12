@@ -4,16 +4,12 @@ BNG Blaster Integration Test Fixtures
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
-import itertools
 import os
 
 import pytest
 
 import helpers
 from helpers import BgpSink, Bird, BngBlaster, Frr, GoBgp, Netns
-
-_ids = itertools.count(int(os.environ.get("BBL_IT_ID_BASE", "1")))
-
 
 def pytest_configure(config):
     """Keep artifacts in the (git ignored) repository tmp directory
@@ -83,7 +79,7 @@ def tcp_ao_kernel():
 def topology(request):
     """Two namespaces A and B connected by veth pair (bbl<n>a <-> bbl<n>b).
     Test artifacts (configs, logs, pcaps, reports) are kept in tmp_path."""
-    n = next(_ids)
+    n = helpers.if_id()
     ns_a = Netns("%d-a" % n)
     ns_b = Netns("%d-b" % n)
     topo = type("Topology", (), {})()
@@ -99,7 +95,7 @@ def topology(request):
 def local_veth():
     """One namespace with both ends of a veth pair, as used by a single
     BNG Blaster instance in the quickstart guide."""
-    n = next(_ids)
+    n = helpers.if_id()
     ns = Netns("%d" % n)
     topo = type("Topology", (), {})()
     topo.ns = ns

@@ -22,17 +22,19 @@ EXIT_TIMEOUT = 30
 def test_reassembly(topology, processes, tmp_path, duplicate):
     """Fragmented stream packets are reassembled and verified without loss,
     also if fragments are duplicated (RFC 791 reassembly by offset)."""
-    veth(topology.a, "bblfragA", topology.b, "bblfragB")
+    n = helpers.if_id()
+    frag_a, frag_b = "bbl%da" % n, "bbl%db" % n
+    veth(topology.a, frag_a, topology.b, frag_b)
     topology.b.exec(["sysctl", "-qw", "net.ipv4.ip_forward=1"])
     helpers.kernel_address(topology.b, topology.if_b, "10.1.0.1/24")
-    helpers.kernel_address(topology.b, "bblfragB", "10.2.0.1/24")
-    topology.b.exec(["ip", "link", "set", "bblfragB", "mtu", "1000"])
+    helpers.kernel_address(topology.b, frag_b, "10.2.0.1/24")
+    topology.b.exec(["ip", "link", "set", frag_b, "mtu", "1000"])
     if duplicate:
-        topology.b.exec(["tc", "qdisc", "add", "dev", "bblfragB", "root", "netem", "duplicate", "50%"])
+        topology.b.exec(["tc", "qdisc", "add", "dev", frag_b, "root", "netem", "duplicate", "50%"])
     instance = BngBlaster(topology.a, tmp_path, "bbl").start({
         "interfaces": {"network": [
             {"interface": topology.if_a, "address": "10.1.0.10/24", "gateway": "10.1.0.1"},
-            {"interface": "bblfragA", "address": "10.2.0.10/24", "gateway": "10.2.0.1"}]},
+            {"interface": frag_a, "address": "10.2.0.10/24", "gateway": "10.2.0.1"}]},
         "traffic": {"reassemble-fragments": True},
         "streams": [{"name": "S1", "type": "ipv4", "direction": "downstream", "pps": 20, "length": 1400,
                      "ipv4-df": False, "network-interface": topology.if_a,

@@ -17,7 +17,7 @@ from concurrent.futures import ThreadPoolExecutor
 
 import pytest
 
-from helpers import BngBlaster, wait_until
+from helpers import BngBlaster, if_id, wait_until
 
 LOCK_DIR = "/run/lock"
 LOCK_FILE = re.compile(r"^bngblaster_cpu(\d+)\.(\d+)\.lock$")
@@ -32,11 +32,11 @@ class Host:
         return cmd
 
 
-def instance_config(index):
+def instance_config(index, n):
     """Two loopback links with one TX and one RX thread, which are
     placed automatically like the main thread (three CPUs)."""
-    link_a = "lo%da" % index
-    link_b = "lo%db" % index
+    link_a = "lo%da" % n
+    link_b = "lo%db" % n
     return {
         "interfaces": {
             "io-mode": "loopback",
@@ -113,17 +113,20 @@ def available_cpus():
     return len(os.sched_getaffinity(0))
 
 
-def start_parallel(tmp_path, processes, indexes, name="bbl"):
+def start_parallel(tmp_path, processes, indexes, name="bbl", if_ids=None):
     """Start instances at the same time and wait until all I/O threads
-    are pinned to their CPUs."""
+    are pinned to their CPUs. The links of each instance are named after
+    its if_id (new ones by default)."""
     indexes = list(indexes)
+    if_ids = if_ids or [if_id() for _ in indexes]
     instances = [BngBlaster(Host(), tmp_path, "%s%d" % (name, i)) for i in indexes]
     processes.extend(instances)
     with ThreadPoolExecutor(len(instances)) as pool:
-        list(pool.map(lambda pair: pair[0].start(instance_config(pair[1])),
-                      zip(instances, indexes)))
-    for instance, index in zip(instances, indexes):
-        threads = {"rx0-lo%db" % index, "tx0-lo%da" % index}
+        list(pool.map(lambda args: args[0].start(instance_config(args[1], args[2])),
+                      zip(instances, indexes, if_ids)))
+    for instance, n in zip(instances, if_ids):
+        instance.if_id = n
+        threads = {"rx0-lo%db" % n, "tx0-lo%da" % n}
         wait_until(lambda: threads <= set(pinned_cpus(instance)),
                    10, message="I/O threads of %s pinned" % instance.name)
     return instances
@@ -203,9 +206,10 @@ def test_killed_instance(tmp_path, processes):
     killed.proc.wait()
     assert lock_files()[killed.proc.pid] == killed_cpus
 
-    instance = start_parallel(tmp_path, processes, [1], name="next")[0]
+    instance = start_parallel(tmp_path, processes, [1], name="next", if_ids=[killed.if_id])[0]
     assert set(pinned_cpus(instance).values()) == killed_cpus
     assert killed.proc.pid not in lock_files()
     assert instance.terminate(EXIT_TIMEOUT) == 0
     assert "sharing CPU" not in log(instance)
-    assert not {"bngblaster_lo1a.lock", "bngblaster_lo1b.lock"} & set(os.listdir(LOCK_DIR))
+    n = killed.if_id
+    assert not {"bngblaster_lo%da.lock" % n, "bngblaster_lo%db.lock" % n} & set(os.listdir(LOCK_DIR))

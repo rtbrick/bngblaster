@@ -214,8 +214,10 @@ default `/usr/lib/frr`), `VTYSH_BIN`, `BIRD_BIN` and `BIRDC_BIN`, or the build d
 
 Each run deletes all network namespaces starting with `bbl-it-` at start and end. To run several test
 sessions in parallel on one host, give each its own `BBL_IT_NETNS_PREFIX` (e.g. `bbl-it2-`), `BBL_IT_ID_BASE`
-(first veth number, e.g. `2000`, the interfaces are named `bbl<n>a`/`bbl<n>b`) and `--basetemp`. Tests with
-fixed interface names (e.g. `test_fragments.py`) can still collide.
+(first interface number, e.g. `2000`) and `--basetemp`. All interface names, also of loopback links on the
+host, contain a number from `helpers.if_id()` (e.g. `bbl<n>a`/`bbl<n>b`), as the interface lock files in
+`/run/lock` are host-wide. The startup lock and the CPU lock files are host-wide as well, so instances of
+parallel runs start one after another and share the CPUs (`test_cpu_placement.py` expects free CPUs).
 
 Alternatively configure CMake with `-DBNGBLASTER_INTEGRATION_TESTS=ON`
 and run `sudo -E ctest -L integration`.

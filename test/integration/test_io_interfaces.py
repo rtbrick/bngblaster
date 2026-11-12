@@ -205,12 +205,13 @@ def test_gateway_mac_change(topology, processes, tmp_path):
 def test_tun_link(topology, processes, tmp_path):
     """A link without link-layer address (tun, getifaddrs entry without
     address) does not crash the BNG Blaster."""
-    topology.a.exec(["ip", "tuntap", "add", "dev", "bbltun0", "mode", "tun"])
-    topology.a.exec(["ip", "link", "set", "bbltun0", "up"])
+    tun = "tun%d" % helpers.if_id()
+    topology.a.exec(["ip", "tuntap", "add", "dev", tun, "mode", "tun"])
+    topology.a.exec(["ip", "link", "set", tun, "up"])
     instance = BngBlaster(topology.a, tmp_path, "bbl")
     processes.append(instance)
     try:
-        instance.start({"interfaces": {"network": [{"interface": "bbltun0", "address": BBL4 + "/24",
+        instance.start({"interfaces": {"network": [{"interface": tun, "address": BBL4 + "/24",
                                                     "gateway": PEER4}]}})
     except RuntimeError:
         assert instance.proc.returncode > 0, instance.proc.returncode
@@ -219,15 +220,16 @@ def test_tun_link(topology, processes, tmp_path):
 
 
 def veth(ns_a, if_a, ns_b, if_b, index=None):
+    """veth pair created in the namespaces (not in the root namespace of
+    the host, where names and ifindex collide with parallel runs)."""
     cmd = ["ip", "link", "add", if_a]
     if index:
         cmd += ["index", str(index)]
-    cmd += ["type", "veth", "peer", "name", if_b]
+    cmd += ["type", "veth", "peer", "name", if_b, "netns", ns_b.name]
     if index:
         cmd += ["index", str(index + 1)]
-    helpers.run(cmd)
+    ns_a.exec(cmd)
     for ns, ifname in ((ns_a, if_a), (ns_b, if_b)):
-        helpers.run(["ip", "link", "set", ifname, "netns", ns.name])
         ns.exec(["sysctl", "-qw", "net.ipv6.conf.%s.disable_ipv6=1" % ifname])
         ns.exec(["ip", "link", "set", ifname, "up"])
 
@@ -235,15 +237,17 @@ def veth(ns_a, if_a, ns_b, if_b, index=None):
 def test_fanout_group_collision(topology, processes, tmp_path):
     """RX threads of interfaces whose kernel ifindex is equal in the lower
     16 bits (4465 and 70001) use different fanout groups."""
-    veth(topology.a, "bblfanA", topology.b, "bblfanB", index=4465)
-    veth(topology.a, "bblfanC", topology.b, "bblfanD", index=70001)
-    helpers.kernel_address(topology.b, "bblfanB", "192.0.2.1/24")
-    helpers.kernel_address(topology.b, "bblfanD", "198.51.100.1/24")
+    n = helpers.if_id()
+    fan_a, fan_b, fan_c, fan_d = ("fan%d%s" % (n, x) for x in "abcd")
+    veth(topology.a, fan_a, topology.b, fan_b, index=4465)
+    veth(topology.a, fan_c, topology.b, fan_d, index=70001)
+    helpers.kernel_address(topology.b, fan_b, "192.0.2.1/24")
+    helpers.kernel_address(topology.b, fan_d, "198.51.100.1/24")
     instance = start(topology, processes, tmp_path, {
         "interfaces": {
-            "links": [{"interface": "bblfanA", "rx-threads": 2}, {"interface": "bblfanC", "rx-threads": 2}],
-            "network": [{"interface": "bblfanA", "address": "192.0.2.10/24", "gateway": "192.0.2.1"},
-                        {"interface": "bblfanC", "address": "198.51.100.10/24", "gateway": "198.51.100.1"}]}})
+            "links": [{"interface": fan_a, "rx-threads": 2}, {"interface": fan_c, "rx-threads": 2}],
+            "network": [{"interface": fan_a, "address": "192.0.2.10/24", "gateway": "192.0.2.1"},
+                        {"interface": fan_c, "address": "198.51.100.10/24", "gateway": "198.51.100.1"}]}})
     for address in ("192.0.2.10", "198.51.100.10"):
         received, out = ping(topology.b, address)
         assert received == 3, out
@@ -335,15 +339,17 @@ def test_lacp_partner_changes(topology, processes, tmp_path):
 
 def test_lacp_different_partner_systems(topology, processes, tmp_path):
     """Members connected to different partner systems do not aggregate."""
-    veth(topology.a, "bbllag2a", topology.b, "bbllag2b")
-    lacp = Lacp(topology, processes, tmp_path, [topology.if_b, "bbllag2b"])
-    lacp.config["bbllag2b"]["system"] = "02:00:00:00:00:02"
+    n = helpers.if_id()
+    if_a, if_b = "bbl%da" % n, "bbl%db" % n
+    veth(topology.a, if_a, topology.b, if_b)
+    lacp = Lacp(topology, processes, tmp_path, [topology.if_b, if_b])
+    lacp.config[if_b]["system"] = "02:00:00:00:00:02"
     lacp.write()
     instance = start(topology, processes, tmp_path, {
         "interfaces": {
             "lag": [{"interface": "lag1", "lacp": True, "lacp-timeout-short": False}],
             "links": [{"interface": topology.if_a, "lag-interface": "lag1"},
-                      {"interface": "bbllag2a", "lag-interface": "lag1"}],
+                      {"interface": if_a, "lag-interface": "lag1"}],
             "network": [{"interface": "lag1", "address": BBL4 + "/24", "gateway": PEER4}]}},
         logging=("info", "lag"))
     wait_until(lambda: [m["state"] for m in lag_members(instance).values()].count("Up") == 1, 15,
