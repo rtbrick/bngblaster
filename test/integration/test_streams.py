@@ -202,6 +202,67 @@ def test_session_traffic_stop_verified_reconnect(local_veth, bbl):
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
+def control_ports_config(veth, ports, **extra):
+    config = {
+        "interfaces": {
+            "links": [{"interface": veth.if1}, {"interface": veth.if2}],
+            "network": [
+                {"interface": veth.if1, "address": "192.168.0.1/24", "gateway": "192.168.0.2",
+                 "address-ipv6": "fc66::1/64", "gateway-ipv6": "fc66::2"},
+                {"interface": veth.if2, "address": "192.168.0.2/24", "gateway": "192.168.0.1",
+                 "address-ipv6": "fc66::2/64", "gateway-ipv6": "fc66::1"}
+            ]
+        },
+        "streams": [
+            {"name": "V4-%d" % port, "type": "ipv4", "pps": 20, "network-interface": veth.if1,
+             "destination-ipv4-address": "192.168.0.2", "destination-port": port}
+            for port in ports
+        ] + [
+            {"name": "V6-%d" % port, "type": "ipv6", "pps": 20, "network-interface": veth.if1,
+             "destination-ipv6-address": "fc66::2", "destination-port": port}
+            for port in ports
+        ]
+    }
+    config.update(extra)
+    return config
+
+
+def wait_streams_received(instance, ports, packets=20):
+    names = ["V%d-%d" % (family, port) for family in (4, 6) for port in ports]
+
+    def received():
+        return {name: stream_info(instance, name)["rx-packets"] for name in names}
+
+    try:
+        wait_until(lambda: min(received().values()) >= packets, 20, message="streams received")
+    except TimeoutError:
+        pass
+    rx = received()
+    assert min(rx.values()) >= packets, rx
+
+
+def test_stream_control_ports(local_veth, bbl):
+    """Streams to the UDP ports of BFD are received as streams if BFD is
+    not configured."""
+    ports = [3784, 4784]
+    instance = bbl(control_ports_config(local_veth, ports))
+    wait_streams_received(instance, ports)
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_stream_control_ports_bfd(local_veth, bbl):
+    """With BFD configured, the BFD ports are decoded as BFD (sessions come
+    up) and streams to other ports are still received."""
+    ports = [3785]
+    sessions = [{"network-interface": local_veth.if1, "peer-ipv4-address": "192.168.0.2"},
+                {"network-interface": local_veth.if2, "peer-ipv4-address": "192.168.0.1"}]
+    instance = bbl(control_ports_config(local_veth, ports, **{"bfd-sessions": sessions}))
+    wait_streams_received(instance, ports)
+    wait_until(lambda: [s["state"] for s in instance.ctrl("bfd-sessions")["bfd-sessions"]] == ["Up", "Up"],
+               20, message="BFD sessions up")
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
 def test_session_group_filter_raw_stream(local_veth, bbl):
     """stream-stop with session-group-id does not stop streams without
     session (RAW streams)."""

@@ -42,6 +42,7 @@ uint8_t g_log_buf_cur = 0;
 char *g_log_buf = NULL;
 
 extern char *g_log_file;
+extern bool g_decode_bfd;
 volatile bool g_teardown = false;
 volatile bool g_teardown_request = false;
 volatile uint8_t g_teardown_request_count = 0;
@@ -854,6 +855,10 @@ main(int argc, char *argv[])
         }
     }
     g_monkey = g_ctx->config.monkey_autostart;
+
+    /* Decode BFD only if configured, otherwise streams
+     * to the BFD UDP ports are received as streams. */
+    g_decode_bfd = g_ctx->config.bfd_profile_config || g_ctx->config.bfd_session_config;
 
     /* Lock memory pages for DPDK and AF_XDP. */
     bbl_mlockall();

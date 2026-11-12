@@ -219,6 +219,14 @@ the port iterator resets to the initial port value and resumes incrementing.
 * ``source/destination-port-step`` (default: 0):	The value by which to increment the port for each new stream instance.
 * ``source/destination-port-max`` (default: 65535): The upper limit for the port range. When the current port exceeds this value, it wraps back to source-port.
 
+.. note::
+
+    Streams to the UDP destination port of a control protocol used in the
+    same test can't be received, because these packets are decoded as that
+    protocol. This applies to BFD (3784 and 4784) only if configured,
+    and always to L2TP (1701 as source and destination port), DHCP (67, 68),
+    DHCPv6 (546, 547) and the QMX LI port.
+
 **Examples:**
 
 Consider a scenario with 10 sessions, where each session generates 10 instances of a specific stream (total stream count = 100).

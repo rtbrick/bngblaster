@@ -18,6 +18,11 @@ static protocol_error_t encode_l2tp(uint8_t *buf, uint16_t *len, bbl_l2tp_s *l2t
 
 uint16_t g_li_udp_port = QMX_LI_UDP_PORT;
 
+/* BFD is decoded by its UDP ports only if configured (set on start),
+ * so that streams can use these ports (the payload is then checked
+ * for the BBL header). */
+bool g_decode_bfd = true;
+
 /** 
  * This function searches for the BNG Blaster data
  * traffic signature and returns true if found.
@@ -3590,8 +3595,10 @@ decode_udp(uint8_t *buf, uint16_t len,
             break;
         case BFD_UDP_PORT_SINGLE_HOP:
         case BFD_UDP_PORT_MULTI_HOP:
-            udp->protocol = UDP_PROTOCOL_BFD;
-            ret_val = decode_bfd(buf, len, sp, sp_len, (bbl_bfd_s**)&udp->next);
+            if(g_decode_bfd) {
+                udp->protocol = UDP_PROTOCOL_BFD;
+                ret_val = decode_bfd(buf, len, sp, sp_len, (bbl_bfd_s**)&udp->next);
+            }
             break;
         default:
             if(udp->dst == g_li_udp_port || udp->src == g_li_udp_port) {
