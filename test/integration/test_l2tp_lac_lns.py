@@ -224,13 +224,21 @@ def test_tunnel_session_counts(lac_lns):
 
 def test_csurq(lac_lns):
     """Connect speed update requests are limited to the number of AVPs
-    fitting into a control message, invalid session IDs are ignored."""
+    fitting into a control message. Session IDs must be integers (or
+    integral reals), IDs out of the range 0-65535 are skipped and the
+    CSURQ is sent with the remaining IDs."""
     lac, lns = lac_lns()
     tunnel_id = lns_tunnels(lns)[0]["tunnel-id"]
     csurq = lambda sessions: lns.ctrl("l2tp-csurq", **{"tunnel-id": tunnel_id, "sessions": sessions})
-    assert csurq(list(range(1, 51)))["code"] == 200
+    control_tx = lambda: [t for t in lns_tunnels(lns) if t["tunnel-id"] == tunnel_id][0]["control-packets-tx"]
     assert csurq(list(range(1, 61)))["code"] == 400
-    assert csurq([1, -1, "x", 70000])["code"] == 200
+    assert csurq([1, -1, "x", 70000])["code"] == 400
+    assert csurq([1, 2.5])["code"] == 400
+    before = control_tx()
+    assert csurq(list(range(1, 51)))["code"] == 200
+    assert csurq([1, -1, 70000])["code"] == 200
+    assert csurq([1.0, 70000])["code"] == 200
+    wait_until(lambda: control_tx() >= before + 3, 5, message="CSURQ sent")
     assert_clean_exit(lac, lns)
 
 
