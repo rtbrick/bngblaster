@@ -16,6 +16,7 @@ import json
 import signal
 import subprocess
 import sys
+import time
 from pathlib import Path
 
 import pytest
@@ -146,6 +147,33 @@ def test_pado_reply_slot_limit(local_veth, processes, tmp_path):
     padi, pado = inject(4026)
     assert padi == 4062 and pado == 0, (padi, pado)
     assert instance.alive()
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
+def test_padt_after_termination(local_veth, processes, tmp_path):
+    """The PADT sent with the termination of a PPPoE session does not
+    create the A10NSP session again, which would keep the old interface,
+    VLAN and label for the next connection."""
+    config = {
+        "interfaces": {
+            "a10nsp": [{"interface": local_veth.if1}],
+            "access": [{"interface": local_veth.if2, "type": "pppoe", "outer-vlan": 100, "inner-vlan": 7}]
+        },
+        "sessions": {"count": 1},
+        "dhcpv6": {"enable": False},
+        "ppp": {"ip6cp": {"enable": False}}
+    }
+    instance = BngBlaster(local_veth.ns, tmp_path, "bbl").start(config)
+    processes.append(instance)
+    wait_until(lambda: counters(instance)["sessions-established"] == 1, 15, message="session established")
+
+    def info():
+        return instance.ctrl("session-info", **{"session-id": 1})["session-info"]
+    assert info()["a10nsp"]["s-vlan"] == 100
+    assert instance.ctrl("session-stop", **{"session-id": 1})["code"] == 200
+    wait_until(lambda: info()["session-state"] == "Terminated", 10, 0.1, message="session terminated")
+    time.sleep(1)
+    assert "a10nsp" not in info(), info()
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 

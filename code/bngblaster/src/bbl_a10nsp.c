@@ -934,6 +934,16 @@ bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
 {
     /* Create A10NSP session if not already present */
     if(!session->a10nsp_session) {
+        /* The A10NSP session is freed with the termination, frames
+         * sent with the termination (e.g. PADT) or received in flight
+         * must not create it again with the old interface, VLAN and
+         * label, which would be kept for the next connection. */
+        if(session->session_state == BBL_TERMINATED ||
+           session->session_state == BBL_IDLE ||
+           (eth->type == ETH_TYPE_PPPOE_DISCOVERY &&
+            ((bbl_pppoe_discovery_s*)eth->next)->code == PPPOE_PADT)) {
+            return;
+        }
         bbl_a10nsp_session_init(interface, session, eth);
     }
     session->a10nsp_session->stats.packets_rx++;
