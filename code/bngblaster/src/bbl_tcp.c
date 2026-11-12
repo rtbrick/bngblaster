@@ -314,7 +314,9 @@ bbl_tcp_sent_cb(void *arg, struct tcp_pcb *tpcb, u16_t len)
                 /* tcp_write() length is 16 bit. */
                 tx = UINT16_MAX;
             }
-            if((tcpc->tx.offset + tx) > tcpc->tx.len) {
+            /* The remaining length is compared, because offset + tx
+             * wraps in 32 bit for buffers close to UINT32_MAX. */
+            if(tx > tcpc->tx.len - tcpc->tx.offset) {
                 tx = tcpc->tx.len - tcpc->tx.offset;
             }
             result = tcp_write(tpcb, tcpc->tx.buf + tcpc->tx.offset, (u16_t)tx, tcpc->tx.flags);
