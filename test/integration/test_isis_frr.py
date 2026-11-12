@@ -1,6 +1,6 @@
 """
 BNG Blaster ISIS against FRR (adjacency, database sync, authentication,
-lspgen control socket)
+lspgen control socket, LAN teardown as DIS)
 
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
@@ -11,7 +11,7 @@ import time
 import pytest
 
 import helpers
-from helpers import wait_until
+from helpers import BngBlaster, Frr, Netns, wait_until
 from igp_common import (BBL_ADDRESS, BBL_ROUTER_ID, BBL_SYSTEM_ID, FRR_SYSTEM_ID, ISIS_AREA,
                         LSPGEN_ROOT_SYSTEM_ID, IsisSetup, levels, mrt_lengths)
 
@@ -330,3 +330,117 @@ def test_lspgen_control_socket(isis, tmp_path):
     wait_until(lambda: len([lsp for lsp in isis.frr_database(1) if lsp.startswith("1921.6800.000")]) == 10,
                15, message="lspgen LSPs flooded to FRR")
     isis.teardown()
+
+
+FRR2_SYSTEM_ID = "1921.6800.1003"
+
+
+def frr_lan_config(ifname, system_id, priority):
+    return "\n".join([
+        "router isis bbl",
+        " net %s.%s.00" % (ISIS_AREA, system_id),
+        " is-type level-2-only",
+        " metric-style wide",
+        " no hostname dynamic",
+        " lsp-gen-interval 1",
+        " spf-interval 1",
+        "exit",
+        "interface %s" % ifname,
+        " ip router isis bbl",
+        " isis circuit-type level-2-only",
+        " isis hello-interval 1",
+        " isis hello-multiplier 10",
+        " isis priority %d level-2" % priority,
+        "exit",
+    ]) + "\n"
+
+
+def frr_reaches(frr, system_id):
+    """FRR has an SPF result (level 2) for the system-id."""
+    out = frr.vtysh("show isis topology level-2", json_output=False)
+    return any(line.split()[:1] == [system_id] for line in out.splitlines())
+
+
+def frr_pseudonodes(frr):
+    """Return the IDs of the pseudonode LSPs (level 2) known by FRR, without
+    purged LSPs (FRR shows their ZeroAgeLifetime in parentheses)."""
+    result = set()
+    for area in frr.vtysh("show isis database").get("areas", []):
+        for level in area.get("levels", []):
+            if level.get("id") == 2:
+                result.update(lsp["lsp"]["id"][:17] for lsp in level.get("lsps", [])
+                              if not lsp["lsp"]["id"].endswith(".00-00")
+                              and str(lsp.get("holdtime", 0)).isdigit()
+                              and int(lsp["holdtime"]) > 0)
+    return result
+
+
+@pytest.fixture
+def lan(topology, processes, tmp_path):
+    """BNG Blaster (namespace A) and two FRR instances (namespaces C and D,
+    priority 64 and 50) on a bridge in namespace B."""
+    n = topology.if_a[3:-1]
+    ns_b = topology.b
+    ns_b.exec(["ip", "link", "add", "br0", "type", "bridge", "stp_state", "0",
+               "mcast_snooping", "0"])
+    ns_b.exec(["ip", "link", "set", "br0", "up"])
+    ns_b.exec(["ip", "link", "set", topology.if_b, "master", "br0"])
+    lan = type("Lan", (), {})()
+    lan.ns, lan.frr = [], []
+    for i, (tag, system_id, priority) in enumerate((("c", FRR_SYSTEM_ID, 64),
+                                                     ("d", FRR2_SYSTEM_ID, 50))):
+        ns = Netns("%s-%s" % (n, tag))
+        lan.ns.append(ns)
+        ifname = "bbl%s%s" % (n, tag)
+        helpers.veth_pair(ns, ifname, ns_b, ifname + "b")
+        ns_b.exec(["ip", "link", "set", ifname + "b", "master", "br0"])
+        helpers.kernel_address(ns, ifname, "10.0.0.%d/24" % (i + 2))
+        workdir = tmp_path / ("%s-frr%d" % (tmp_path.name, i + 1))
+        workdir.mkdir()
+        frr = Frr(ns, workdir, ("isisd",))
+        processes.append(frr)
+        lan.frr.append(frr.start(frr_lan_config(ifname, system_id, priority)))
+    yield lan
+    for ns in lan.ns:
+        ns.delete()
+
+
+def test_lan_teardown_dis(lan, topology, processes, tmp_path):
+    """The BNG Blaster as DIS purges its pseudonode LSP with isis-teardown.
+    It must give up the DIS role, so that the FRR instances elect a new DIS
+    and keep reaching each other over the LAN, instead of following a DIS
+    without pseudonode LSP for the whole teardown."""
+    frr1, frr2 = lan.frr
+    bbl = BngBlaster(topology.a, tmp_path).start({
+        "interfaces": {"network": {
+            "interface": topology.if_a, "address": BBL_ADDRESS + "/24",
+            "gateway": "10.0.0.2", "isis-instance-id": 1, "isis-level": 2,
+            "isis-p2p": False, "isis-l2-priority": 100}},
+        "isis": [{"instance-id": 1, "level": 2, "area": ["%s/24" % ISIS_AREA],
+                  "system-id": BBL_SYSTEM_ID, "router-id": BBL_ROUTER_ID,
+                  "hostname": "BBL", "hello-interval": 1, "hold-time": 10,
+                  "teardown-time": 5}]}, logging=("info", "isis"))
+    processes.append(bbl)
+    wait_until(lambda: frr_reaches(frr1, BBL_SYSTEM_ID) and frr_reaches(frr1, FRR2_SYSTEM_ID)
+               and frr_reaches(frr2, FRR_SYSTEM_ID), 40,
+               message="LAN with the BNG Blaster as DIS converged")
+    assert frr_pseudonodes(frr1) == {"%s.01" % BBL_SYSTEM_ID}
+
+    bbl.ctrl("isis-teardown")
+
+    def new_dis():
+        return all({p[:14] for p in frr_pseudonodes(frr)} == {FRR_SYSTEM_ID} for frr in lan.frr) \
+            and frr_reaches(frr1, FRR2_SYSTEM_ID) and frr_reaches(frr2, FRR_SYSTEM_ID)
+
+    # The BNG Blaster keeps sending hellos during and after the teardown
+    # time (5 seconds), so the FRR adjacencies to it stay up. FRR needs a
+    # few seconds (lsp-gen-interval, spf-interval) to settle on the new DIS.
+    wait_until(new_dis, 8, message="FRR instances reach each other with FRR %s as new DIS"
+               % FRR_SYSTEM_ID)
+    time.sleep(3)
+    # The BNG Blaster must not take the DIS role back.
+    for _ in range(5):
+        assert new_dis()
+        time.sleep(1)
+    assert bbl.alive()
+    assert bbl.terminate(30) == 0

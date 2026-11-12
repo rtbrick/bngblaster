@@ -186,9 +186,28 @@ isis_teardown_job(timer_s *timer) {
 static void
 isis_teardown_withdraw(isis_instance_s *instance)
 {
+    isis_adjacency_s *adjacency;
+
     LOG(ISIS, "Withdraw IS-IS instance %u\n", instance->config->id);
     instance->teardown = true;
     for(int i=0; i<ISIS_LEVELS; i++) {
+        adjacency = instance->level[i].adjacency;
+        while(adjacency) {
+            if(!adjacency->p2p) {
+                /* Give up the DIS role on LANs, as the pseudonode LSP is
+                 * purged. ISO 10589 has no priority to be ineligible, so
+                 * the lowest priority 0 is announced immediately to let
+                 * the other routers elect a new DIS. */
+                adjacency->priority = 0;
+                isis_peer_dis_elect(adjacency);
+                if(adjacency->level == ISIS_LEVEL_1) {
+                    adjacency->interface->send_requests |= BBL_IF_SEND_ISIS_L1_HELLO;
+                } else {
+                    adjacency->interface->send_requests |= BBL_IF_SEND_ISIS_L2_HELLO;
+                }
+            }
+            adjacency = adjacency->next;
+        }
         if(instance->level[i].adjacency) {
             isis_lsp_self_update(instance, i+1);
             if(instance->config->external_purge) {

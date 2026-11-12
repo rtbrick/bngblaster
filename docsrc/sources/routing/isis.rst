@@ -217,6 +217,11 @@ newer sequence numbers and a remaining lifetime of 0.
 LSPs of type ``external`` are purged the same way if
 ``external->purge`` is enabled (default ``true``).
 
+With the purge, the BNG Blaster also gives up the DIS role on
+broadcast interfaces, as its pseudonode LSP is purged. The hellos
+are sent with priority 0 from then on, so that the other routers of
+the LAN elect a new DIS.
+
 On teardown, the purge waits until all BGP and LDP sessions are
 closed plus one second, at the latest until their **teardown-time**
 expired, and additionally for the configured **teardown-delay**.
