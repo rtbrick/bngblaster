@@ -441,6 +441,30 @@ set_kernel_info(bbl_interface_s *interface)
     return true;
 }
 
+/* Track the carrier of kernel interfaces, as DPDK does with the link
+ * status, so that the interface or LAG member goes down with the link
+ * (e.g. a static LAG without LACP would keep hashing to a down member). */
+static void
+io_interface_link_status(bbl_interface_s *interface)
+{
+    struct ifreq ifr = {0};
+    int fd = socket(PF_INET, SOCK_DGRAM|SOCK_CLOEXEC, IPPROTO_IP);
+    if(fd == -1) {
+        return;
+    }
+    snprintf(ifr.ifr_name, sizeof(ifr.ifr_name), "%s", interface->name);
+    if(ioctl(fd, SIOCGIFFLAGS, &ifr) == 0) {
+        bbl_interface_link_state(interface, (ifr.ifr_flags & IFF_UP) && (ifr.ifr_flags & IFF_RUNNING));
+    }
+    close(fd);
+}
+
+static void
+io_interface_link_job(timer_s *timer)
+{
+    io_interface_link_status(timer->data);
+}
+
 /* Set interface in promisc mode. */
 static bool
 set_promisc(bbl_interface_s *interface) {
@@ -666,6 +690,9 @@ io_interface_init(bbl_interface_s *interface)
                 return false;
             }
         }
+        io_interface_link_status(interface);
+        timer_add_periodic(&g_ctx->timer_root, &interface->io.link_job, "Link", 0, MSEC100,
+                           interface, &io_interface_link_job);
     }
     return true;
 }
