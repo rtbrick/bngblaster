@@ -14,6 +14,7 @@
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
+#include <sys/un.h>
 #include <linux/capability.h>
 #include "bbl.h"
 #include "bbl_pcap.h"
@@ -768,6 +769,12 @@ main(int argc, char *argv[])
 
     if(!config_file) {
         fprintf(stderr, "Error: No configuration specified (-C / --config <file>)\n");
+        goto CLEANUP;
+    }
+    if(g_ctx->ctrl_socket_path &&
+       strlen(g_ctx->ctrl_socket_path) >= sizeof(((struct sockaddr_un *)0)->sun_path)) {
+        fprintf(stderr, "Error: Control socket path too long (max %zu characters): %s\n",
+                sizeof(((struct sockaddr_un *)0)->sun_path) - 1, g_ctx->ctrl_socket_path);
         goto CLEANUP;
     }
 

@@ -8,9 +8,13 @@ or crashing.
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
 """
+import json
+import os
+import subprocess
+
 import pytest
 
-from helpers import BngBlaster
+from helpers import BNGBLASTER_BIN, BngBlaster
 
 
 def config(ifname, interfaces=None, link=None, isis=None):
@@ -257,3 +261,28 @@ def test_config_multicast_traffic_length_range(topology, tmp_path):
         instance.start(bbl)
     with open(instance.path("stdout")) as f:
         assert "Invalid value for igmp->multicast-traffic-length (128 - 1500)" in f.read()
+
+
+def run_command_line(tmp_path, args):
+    """Run BNG Blaster without network namespace, the interface does not
+    exist, so a run which passes the command line checks stops after the
+    configuration was loaded."""
+    config_file = tmp_path / "bbl.json"
+    config_file.write_text(json.dumps(config("bbl-it-none")))
+    result = subprocess.run([str(BNGBLASTER_BIN), "-C", str(config_file), "-b"] + args,
+                            capture_output=True, text=True, timeout=30)
+    return result.returncode, result.stdout + result.stderr
+
+
+def test_ctrl_socket_path_too_long(tmp_path):
+    """A control socket path which does not fit into sun_path (108 bytes)
+    was truncated silently, the next start failed to bind (R4-020)."""
+    path = str(tmp_path / ("s" * (107 - len(str(tmp_path)))))
+    assert len(path) == 108
+    code, output = run_command_line(tmp_path, ["-S", path])
+    assert code != 0
+    assert "Control socket path too long (max 107 characters)" in output
+    assert os.listdir(tmp_path) == ["bbl.json"]
+    code, output = run_command_line(tmp_path, ["-S", path[:-1]])
+    assert "Opened control socket %s" % path[:-1] in output
+    assert os.listdir(tmp_path) == ["bbl.json"]
