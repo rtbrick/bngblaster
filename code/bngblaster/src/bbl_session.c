@@ -1086,6 +1086,12 @@ bbl_sessions_init()
 
     /* Init list of sessions */
     g_ctx->session_list = calloc(g_ctx->config.sessions, sizeof(bbl_session_s));
+    if(!g_ctx->session_list && g_ctx->config.sessions) {
+        LOG(ERROR, "Failed to allocate %u sessions (%lu MB)\n",
+            g_ctx->config.sessions,
+            (unsigned long)(((uint64_t)g_ctx->config.sessions * sizeof(bbl_session_s)) >> 20));
+        return false;
+    }
     access_config = g_ctx->config.access_config;
 
     /* For equal distribution of sessions over access configurations

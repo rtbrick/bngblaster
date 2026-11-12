@@ -813,7 +813,7 @@ main(int argc, char *argv[])
     if(username) g_ctx->config.username = username;
     if(password) g_ctx->config.password = password;
     if(sessions) {
-        if(!bbl_parse_number_arg(sessions, 0, 100000000, &number)) {
+        if(!bbl_parse_number_arg(sessions, 0, 10000000, &number)) {
             fprintf(stderr, "Error: invalid session count: %s\n", sessions);
             goto CLEANUP;
         }
