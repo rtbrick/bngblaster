@@ -8,6 +8,62 @@
  */
 #include "ospf.h"
 
+static void
+ospf_hello_v2_pdu(ospf_interface_s *ospf_interface, ospf_pdu_s *pdu)
+{
+    bbl_network_interface_s *interface = ospf_interface->interface;
+    ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
+    ospf_instance_s *ospf_instance = ospf_interface->instance;
+    ospf_config_s *config = ospf_instance->config;
+
+    uint8_t options = 0;
+
+    ospf_pdu_init(pdu, OSPF_PDU_HELLO, OSPF_VERSION_2);
+
+    /* OSPFv2 header */
+    ospf_pdu_add_u8(pdu, OSPF_VERSION_2);
+    ospf_pdu_add_u8(pdu, pdu->pdu_type);
+    ospf_pdu_add_u16(pdu, 0); /* skip length */
+    ospf_pdu_add_ipv4(pdu, config->router_id); /* Router ID */
+    ospf_pdu_add_ipv4(pdu, config->area); /* Area ID */
+    ospf_pdu_add_u16(pdu, 0); /* skip checksum */
+
+    /* Authentication */
+    ospf_pdu_add_u16(pdu, OSPF_AUTH_NONE);
+    ospf_pdu_zero_bytes(pdu, OSPFV2_AUTH_DATA_LEN);
+
+    /* OSPFv2 hello packet */
+    ospf_pdu_add_ipv4(pdu, ipv4_len_to_mask(interface->ip.len));
+    ospf_pdu_add_u16(pdu, config->hello_interval);
+    options |= OSPF_OPTION_E_BIT;
+    ospf_pdu_add_u8(pdu, options);
+    ospf_pdu_add_u8(pdu, config->router_priority);
+    ospf_pdu_add_u32(pdu, config->dead_interval);
+    switch(ospf_interface->type) {
+        case OSPF_INTERFACE_P2P:
+        case OSPF_INTERFACE_VIRTUAL:
+            ospf_pdu_zero_bytes(pdu, 2*IPV4_ADDR_LEN);
+            break;
+        default:
+            ospf_pdu_add_ipv4(pdu, ospf_interface->dr);
+            ospf_pdu_add_ipv4(pdu, ospf_interface->bdr);
+            break;
+    }
+
+    /* The neighbor list is controlled by the peers, stop at the MTU. */
+    while(ospf_neighbor && (20 + OSPF_MD5_DIGEST_LEN + pdu->pdu_len + IPV4_ADDR_LEN) <= interface->mtu) {
+        if(ospf_neighbor->state > OSPF_NBSTATE_DOWN) {
+            ospf_pdu_add_ipv4(pdu, ospf_neighbor->router_id);
+        }
+        ospf_neighbor = ospf_neighbor->next;
+    }
+
+    /* Update length, auth and checksum. */
+    ospf_pdu_update_len(pdu);
+    ospf_pdu_update_auth(pdu, config->auth_type, config->auth_key);
+    ospf_pdu_update_checksum(pdu);
+}
+
 /**
  * ospf_hello_v2_encode
  *
@@ -29,56 +85,8 @@ ospf_hello_v2_encode(bbl_network_interface_s *interface,
     ospf_pdu_s pdu = {0};
 
     ospf_interface_s *ospf_interface = interface->ospfv2_interface;
-    ospf_neighbor_s *ospf_neighbor = ospf_interface->neighbors;
-    ospf_instance_s *ospf_instance = ospf_interface->instance;
-    ospf_config_s *config = ospf_instance->config;
 
-    uint8_t options = 0;
-
-    ospf_pdu_init(&pdu, OSPF_PDU_HELLO, OSPF_VERSION_2);
-
-    /* OSPFv2 header */
-    ospf_pdu_add_u8(&pdu, OSPF_VERSION_2);
-    ospf_pdu_add_u8(&pdu, pdu.pdu_type);
-    ospf_pdu_add_u16(&pdu, 0); /* skip length */
-    ospf_pdu_add_ipv4(&pdu, config->router_id); /* Router ID */
-    ospf_pdu_add_ipv4(&pdu, config->area); /* Area ID */
-    ospf_pdu_add_u16(&pdu, 0); /* skip checksum */
-
-    /* Authentication */
-    ospf_pdu_add_u16(&pdu, OSPF_AUTH_NONE);
-    ospf_pdu_zero_bytes(&pdu, OSPFV2_AUTH_DATA_LEN);
-
-    /* OSPFv2 hello packet */
-    ospf_pdu_add_ipv4(&pdu, ipv4_len_to_mask(interface->ip.len));
-    ospf_pdu_add_u16(&pdu, config->hello_interval);
-    options |= OSPF_OPTION_E_BIT;
-    ospf_pdu_add_u8(&pdu, options);
-    ospf_pdu_add_u8(&pdu, config->router_priority);
-    ospf_pdu_add_u32(&pdu, config->dead_interval);
-    switch(ospf_interface->type) {
-        case OSPF_INTERFACE_P2P:
-        case OSPF_INTERFACE_VIRTUAL:
-            ospf_pdu_zero_bytes(&pdu, 2*IPV4_ADDR_LEN);
-            break;
-        default:
-            ospf_pdu_add_ipv4(&pdu, ospf_interface->dr);
-            ospf_pdu_add_ipv4(&pdu, ospf_interface->bdr);
-            break;
-    }
-
-    /* The neighbor list is controlled by the peers, stop at the MTU. */
-    while(ospf_neighbor && (20 + OSPF_MD5_DIGEST_LEN + pdu.pdu_len + IPV4_ADDR_LEN) <= interface->mtu) {
-        if(ospf_neighbor->state > OSPF_NBSTATE_DOWN) {
-            ospf_pdu_add_ipv4(&pdu, ospf_neighbor->router_id);
-        }
-        ospf_neighbor = ospf_neighbor->next;
-    }
-
-    /* Update length, auth, checksum and send... */
-    ospf_pdu_update_len(&pdu);
-    ospf_pdu_update_auth(&pdu, config->auth_type, config->auth_key);
-    ospf_pdu_update_checksum(&pdu);
+    ospf_hello_v2_pdu(ospf_interface, &pdu);
 
     /* Build packet ... */
     eth->type = ETH_TYPE_IPV4;
@@ -231,6 +239,45 @@ ospf_hello_timeout(timer_s *timer)
 }
 
 /**
+ * ospf_hello_request
+ *
+ * Request a hello on the OSPF interface, which is sent before all
+ * packets queued in the TXQ of the network interface. With MD5
+ * authentication, OSPFv2 hellos are queued to the TXQ instead,
+ * because the queued packets already have their cryptographic
+ * sequence number, which must not decrease on the wire
+ * (RFC 2328 appendix D.3).
+ *
+ * @param ospf_interface OSPF interface
+ */
+void
+ospf_hello_request(ospf_interface_s *ospf_interface)
+{
+    bbl_network_interface_s *interface = ospf_interface->interface;
+    ospf_pdu_s pdu = {0};
+
+    switch(ospf_interface->version) {
+        case OSPF_VERSION_2:
+            if(ospf_interface->instance->config->auth_type == OSPF_AUTH_MD5) {
+                ospf_hello_v2_pdu(ospf_interface, &pdu);
+                if(ospf_pdu_tx(&pdu, ospf_interface, NULL) == PROTOCOL_SUCCESS) {
+                    ospf_interface->stats.hello_tx++;
+                } else {
+                    LOG(OSPF, "OSPFv2 TX Hello failed on interface %s (TXQ full)\n", interface->name);
+                }
+            } else {
+                interface->send_requests |= BBL_IF_SEND_OSPFV2_HELLO;
+            }
+            break;
+        case OSPF_VERSION_3:
+            interface->send_requests |= BBL_IF_SEND_OSPFV3_HELLO;
+            break;
+        default:
+            break;
+    }
+}
+
+/**
  * ospf_hello_rx
  *
  * @param ospf_interface receive interface
@@ -248,6 +295,7 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
     uint32_t ip;
 
     bool is2way = false;
+    bool new_neighbor = false;
 
     uint32_t options;
 
@@ -316,17 +364,17 @@ ospf_hello_rx(ospf_interface_s *ospf_interface,
         ospf_neighbor = ospf_neighbor_new(ospf_interface, pdu);
         ospf_neighbor->next = ospf_interface->neighbors;
         ospf_interface->neighbors = ospf_neighbor;
-        if(ospf_interface->version == OSPF_VERSION_2) {
-            ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV2_HELLO;
-        } else {
-            ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV3_HELLO;
-        }
+        new_neighbor = true;
     } else {
         ospf_neighbor_update(ospf_neighbor, pdu);
     }
 
     if(ospf_neighbor->state == OSPF_NBSTATE_DOWN) {
         ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_INIT);
+    }
+    if(new_neighbor) {
+        /* Send hello with the new neighbor (state init). */
+        ospf_hello_request(ospf_interface);
     }
 
     /* Reset inactivity timer */

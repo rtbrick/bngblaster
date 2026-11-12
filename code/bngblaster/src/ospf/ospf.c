@@ -397,16 +397,7 @@ ospf_teardown_job(timer_s *timer) {
             ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_DOWN);
             ospf_neighbor = ospf_neighbor->next;
         }
-        switch(ospf_interface->version) {
-            case OSPF_VERSION_2:
-                ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV2_HELLO;
-                break;
-            case OSPF_VERSION_3:
-                ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV3_HELLO;
-                break;
-            default:
-                break;
-        }
+        ospf_hello_request(ospf_interface);
         ospf_interface = ospf_interface->next;
     }
     /* Wait one more second to send hello with empty neighbor list 

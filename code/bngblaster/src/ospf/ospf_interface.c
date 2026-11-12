@@ -252,16 +252,7 @@ ospf_interface_hello_job(timer_s *timer)
                   &ospf_interface_wait_job);
     }
 
-    switch(ospf_interface->version) {
-        case OSPF_VERSION_2:
-            ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV2_HELLO;
-            break;
-        case OSPF_VERSION_3:
-            ospf_interface->interface->send_requests |= BBL_IF_SEND_OSPFV3_HELLO;
-            break;
-        default:
-            break;
-    }
+    ospf_hello_request(ospf_interface);
 }
 
 /**
