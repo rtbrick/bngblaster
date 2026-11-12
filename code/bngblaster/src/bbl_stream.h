@@ -299,6 +299,7 @@ typedef struct bbl_stream_
     volatile bool update_pps;
     volatile bool verified;
     bool rx_reset_pending; /* STREAM_FLAG_RX_RESET not yet seen by the RX thread */
+    bool tx_reset_pending; /* reset not yet seen by the TX thread */
     double pps;
 
 

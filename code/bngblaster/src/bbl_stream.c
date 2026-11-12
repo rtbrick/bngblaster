@@ -1705,6 +1705,15 @@ bbl_stream_ctrl(bbl_stream_s *stream, struct timespec *now)
     uint64_t loss_delta;
     bool verify = false;
 
+    if(unlikely(stream->tx_reset_pending) && !__atomic_load_n(&stream->reset, __ATOMIC_ACQUIRE)) {
+        /* The TX thread has seen the reset. All packets sent before it,
+         * also a packet in flight of the reset, have a sequence number
+         * below tx_first_seq (flow_seq starts with 1 and is incremented
+         * per packet sent), which RX rejects as sent before the reset. */
+        stream->reset_packets_tx = stream->tx_first_seq - 1;
+        stream->tx_reset_pending = false;
+    }
+
     /* Calculate TX packets/bytes since last sync. */
     packets = stream->tx_packets;
     packets_delta = packets - stream->last_sync_packets_tx;
@@ -2015,7 +2024,6 @@ bbl_stream_io_send(bbl_stream_s *stream)
     bool build;
 
     if(unlikely(__atomic_load_n(&stream->reset, __ATOMIC_ACQUIRE))) {
-        __atomic_store_n(&stream->reset, false, __ATOMIC_RELAXED);
         stream->tx_first_epoch = 0;
         stream->tx_first_seq = stream->flow_seq;
         stream->session_version = 0;
@@ -2025,6 +2033,8 @@ bbl_stream_io_send(bbl_stream_s *stream)
         if(stream->config->setup_interval) {
             stream->setup = true;
         }
+        /* Publish tx_first_seq with the handshake (see bbl_stream_ctrl). */
+        __atomic_store_n(&stream->reset, false, __ATOMIC_RELEASE);
         return STREAM_WAIT;
     }
 
@@ -2951,7 +2961,10 @@ bbl_stream_reset(bbl_stream_s *stream)
     if(stream->reset) return;
     stream->tx_first_seq = UINT64_MAX;
 
+    /* Taken again from tx_first_seq once the TX thread has seen
+     * the reset, which may be in the middle of sending a packet. */
     stream->reset_packets_tx = stream->tx_packets;
+    stream->tx_reset_pending = true;
     stream->reset_packets_rx = stream->rx_packets;
     stream->reset_loss = stream->rx_loss;
 
