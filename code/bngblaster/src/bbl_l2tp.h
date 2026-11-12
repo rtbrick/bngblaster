@@ -219,6 +219,7 @@ typedef struct bbl_l2tp_tunnel_
     uint32_t lac_sessions; /* LAC: PPP sessions pending or connected over this tunnel */
 
     uint16_t ns;
+    uint16_t ns_sent; /* Ns. following the highest Ns. sent */
     uint16_t nr;
     uint16_t peer_ns;
     uint16_t peer_nr;

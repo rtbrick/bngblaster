@@ -221,6 +221,16 @@ def test_lns_bogus_nr(l2tp):
     assert ICRP in types(result), result
 
 
+def test_lns_nr_window(l2tp):
+    """An Nr beyond the last sent Ns is ignored, also if the messages it
+    acknowledges are already queued but held back by the send window.
+    They were deleted unsent, only 1 of 3 ICRP went out with window 1."""
+    l2tp.start_lns()
+    result = l2tp.peer("lac", "window-nr", duration=8)
+    icrp = [m["session-id"] for m in result["control"] if m["type"] == ICRP]
+    assert sorted(set(icrp)) == [1, 2, 3], result
+
+
 def test_lns_control_host_name(l2tp):
     """Control characters of the peer Host Name are replaced in the log
     and output, a newline in the log faked log lines."""

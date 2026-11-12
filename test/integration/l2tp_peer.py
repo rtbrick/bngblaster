@@ -15,6 +15,8 @@ lac scenarios (against the BNG Blaster LNS):
   sccrq-retry       the SCCRQ is retransmitted before the SCCRP is acknowledged
   bogus-nr          ZLB acknowledging messages never sent (Nr far ahead), then ICRQ
   control-host-name host name with newline and terminal escape sequence
+  window-nr         Receive Window Size 1, three ICRQ, then a ZLB acknowledging
+                    the ICRP held back by the window (Nr 4)
 
 lns scenarios (against the BNG Blaster LAC):
   no-tunnel-id      SCCRP without Assigned Tunnel ID
@@ -156,6 +158,29 @@ def scenario_lac(args):
         peer.call(avp(AVP_CALLED_NUMBER, b"\xc3\x28") +
                   avp(ACCESS_LINE_ARI, b"ari-\xff", mandatory=False, vendor=BROADBAND_FORUM))
         result["control"], _ = peer.collect(args.duration)
+        return result
+    if args.scenario == "window-nr":
+        peer.tunnel(extra=avp16(AVP_RECEIVE_WINDOW_SIZE, 1))
+        nr = peer.nr
+        for session_id in (1, 2, 3):
+            peer.nr = nr  # the ICRP are not acknowledged
+            peer.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, ICRQ) + avp16(AVP_ASSIGNED_SESSION_ID, session_id) +
+                           avp32(AVP_CALL_SERIAL_NUMBER, session_id))
+        time.sleep(0.5)
+        # SCCRP is Ns 0, the ICRP are Ns 1 to 3, but only Ns 1 was sent (window 1).
+        peer.zlb(nr=4)
+        control = []
+        deadline = time.time() + args.duration
+        while time.time() < deadline:
+            try:
+                is_control, payload = peer.recv(max(0.01, deadline - time.time()))
+            except socket.timeout:
+                break
+            if is_control and payload:
+                control.append({"type": message_type(payload), "result-code": result_code(payload),
+                                "session-id": peer.last_session_id})
+                peer.zlb()
+        result["control"] = control
         return result
     peer.tunnel(retry=args.scenario == "sccrq-retry")
     if args.scenario == "sccrq-retry":

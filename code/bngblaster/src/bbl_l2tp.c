@@ -529,6 +529,9 @@ bbl_l2tp_tunnel_tx_job(timer_s *timer)
             if(bbl_l2tp_interface_txq_append(interface, q)) {
                 l2tp_tunnel->stats.control_tx++;
                 interface->stats.l2tp_control_tx++;
+                if(L2TP_SEQ_GT((uint16_t)(q->ns + 1), l2tp_tunnel->ns_sent)) {
+                    l2tp_tunnel->ns_sent = q->ns + 1;
+                }
             }
             /* With lcp-start "iccn-tx", this entry is the ICCN of a PPP
              * session which is started as soon as the ICCN itself has been
@@ -2288,13 +2291,14 @@ bbl_l2tp_handler_rx(bbl_network_interface_s *interface,
         l2tp_tunnel->stats.control_rx++;
         interface->stats.l2tp_control_rx++;
         if(L2TP_SEQ_GT(l2tp->nr, l2tp_tunnel->peer_nr)) {
-            /* An Nr beyond the own Ns would acknowledge
-             * messages before they are sent. */
-            if(L2TP_SEQ_GT(l2tp->nr, l2tp_tunnel->ns)) {
+            /* An Nr beyond the last sent Ns would acknowledge
+             * messages before they are sent, including those
+             * still held back by the send window. */
+            if(L2TP_SEQ_GT(l2tp->nr, l2tp_tunnel->ns_sent)) {
                 LOG(DEBUG, "L2TP Debug (%s) Tunnel (%u) %s with invalid Nr. %u (Ns. %u) received from %s\n",
                     l2tp_tunnel_hostname(l2tp_tunnel), l2tp_tunnel->tunnel_id,
                     l2tp_message_string(l2tp->type),
-                    l2tp->nr, l2tp_tunnel->ns,
+                    l2tp->nr, l2tp_tunnel->ns_sent,
                     format_ipv4_address(&ipv4->src));
             } else {
                 l2tp_tunnel->peer_nr = l2tp->nr;
