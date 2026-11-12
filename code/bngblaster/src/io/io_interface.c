@@ -454,8 +454,10 @@ set_promisc(bbl_interface_s *interface) {
 
     /* This socket is only opened, but not closed. Closing the socket would reset
      * its flags - effectively removing the just added promisc mode.
-     * We want to keep the interface in promisc mode until the end of the program. */
-    if((sfd = socket(AF_PACKET, SOCK_RAW, htons(ETH_P_ALL))) == -1) {
+     * We want to keep the interface in promisc mode until the end of the program.
+     * Protocol 0 receives no frames, otherwise every frame of the namespace
+     * would be queued to this socket, which is never read. */
+    if((sfd = socket(AF_PACKET, SOCK_RAW, 0)) == -1) {
         LOG_NOARG(ERROR, "Unable to open control socket for promiscuous mode activation\n");
         return false;
     }
@@ -464,6 +466,7 @@ set_promisc(bbl_interface_s *interface) {
     mreq.mr_ifindex = interface->kernel_index;
     if(setsockopt(sfd, SOL_PACKET, PACKET_ADD_MEMBERSHIP, &mreq, sizeof(mreq)) != 0) {
         LOG(ERROR, "Failed to put interface %s in promiscuous mode\n", interface->name);
+        close(sfd);
         return false;
     }
     return true;
