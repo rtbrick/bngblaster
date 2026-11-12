@@ -486,9 +486,15 @@ class Bird:
         return self
 
     def birdc(self, command):
-        """Run birdc command and return output lines without banner."""
-        out = run([BIRDC_BIN, "-s", self.socket] + command.split())
-        return [line for line in out.splitlines()[1:] if line.strip()]
+        """Run birdc command and return output lines without banner.
+        Errors (e.g. syntax errors) are printed by birdc on stdout."""
+        result = subprocess.run([BIRDC_BIN, "-s", self.socket] + command.split(),
+                                stdout=subprocess.PIPE, stderr=subprocess.STDOUT,
+                                text=True, timeout=30)
+        lines = [line for line in result.stdout.splitlines()[1:] if line.strip()]
+        if result.returncode != 0:
+            raise RuntimeError("birdc %s failed (%d): %s" % (command, result.returncode, " ".join(lines)))
+        return lines
 
     def stop(self):
         if self.proc and self.proc.poll() is None:

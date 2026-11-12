@@ -79,6 +79,7 @@ class BfdSetup:
         self.bird = None
         self.bbl = None
         self.bird_args = {}
+        self.bird_details = None  # 'show bfd sessions all' (BIRD >= 2.15)
         helpers.kernel_address(topology.b, topology.if_b,
                                BIRD_ADDRESS + "/24", BIRD_ADDRESS6 + "/64")
         topology.b.exec(["ip", "addr", "add", BIRD_LOOPBACK + "/32", "dev", "lo"])
@@ -160,11 +161,22 @@ class BfdSetup:
         assert any("Reconfigured" in l for l in out), out
 
     def bird_sessions(self):
-        """Return BIRD BFD sessions by address from 'show bfd sessions all',
+        """Return BIRD BFD sessions by address from 'show bfd sessions all'
+        (session table only before BIRD 2.15, see bird_details),
         keys as shown by BIRD, prefixed with local/remote for the local
         and remote parameters (e.g. 'remote min tx interval')."""
+        if self.bird_details is not False:
+            try:
+                lines = self.bird.birdc("show bfd sessions all")
+                self.bird_details = True
+            except RuntimeError:
+                if self.bird_details:
+                    raise
+                self.bird_details = False
+        if not self.bird_details:
+            return self.bird_sessions_table()
         sessions, session, prefix = {}, None, ""
-        for line in self.bird.birdc("show bfd sessions all"):
+        for line in lines:
             if ":" not in line:
                 continue
             key, value = (s.strip() for s in line.split(":", 1))
@@ -178,6 +190,20 @@ class BfdSetup:
                 prefix = key.split()[0] + " "
             else:
                 session[prefix + key] = value
+        return sessions
+
+    def bird_sessions_table(self):
+        """BIRD before 2.15 has only the session table (address, interface,
+        state, since, interval, timeout), the interval and timeout are
+        returned in the format of the detailed output (e.g. '- / 0.300')."""
+        sessions = {}
+        for line in self.bird.birdc("show bfd sessions"):
+            fields = line.split()
+            if len(fields) < 5 or fields[0] == "IP" or fields[0].endswith(":"):
+                continue
+            sessions[fields[0]] = {"session state": fields[2],
+                                   "transmit timer": "- / " + fields[-2],
+                                   "detect timer": "- / " + fields[-1]}
         return sessions
 
     def bird_session(self, address):
@@ -330,17 +356,19 @@ def test_session(bfd, name):
     assert session["detection-time-us"] == 900000
     assert session["stats"]["rx-errors"] == 0
     bird = bfd.bird_session(local)
-    assert bird["session type"] == ("Multihop" if name == "multihop" else "Direct")
-    assert bird["remote discriminator"] == str(session["local-discriminator"])
-    assert bird["local discriminator"] == str(session["remote-discriminator"])
+    if bfd.bird_details:
+        assert bird["session type"] == ("Multihop" if name == "multihop" else "Direct")
+        assert bird["remote discriminator"] == str(session["local-discriminator"])
+        assert bird["local discriminator"] == str(session["remote-discriminator"])
 
     assert bfd.bbl.terminate(30) == 0
     report = bfd.bbl.report()["report"]["bfd"]
     assert report, report
     wait_until(lambda: bfd.bird_state(local) == "Down", 5, message="BIRD session down")
     bird = bfd.bird_session(local)
-    assert bird["remote state"] == "AdminDown", bird
-    assert bird["local diagnostic"] == "Neighbor down", bird
+    if bfd.bird_details:
+        assert bird["remote state"] == "AdminDown", bird
+        assert bird["local diagnostic"] == "Neighbor down", bird
 
 
 @pytest.mark.full
@@ -398,8 +426,13 @@ def test_authentication(bfd, auth_type):
     assert session["stats"]["rx-auth-errors"] == 0, session
     assert "Bad packet" not in bfd.bird_log()
     assert bfd.bbl.terminate(30) == 0
-    wait_until(lambda: bfd.bird_session(BBL_ADDRESS)["remote state"] == "AdminDown", 5,
-               message="authenticated AdminDown accepted by BIRD")
+    if bfd.bird_details:
+        wait_until(lambda: bfd.bird_session(BBL_ADDRESS)["remote state"] == "AdminDown", 5,
+                   message="authenticated AdminDown accepted by BIRD")
+    else:
+        wait_until(lambda: bfd.bird_state(BBL_ADDRESS) == "Down", 5,
+                   message="authenticated AdminDown accepted by BIRD")
+    assert "Bad packet" not in bfd.bird_log()
 
 
 @pytest.mark.full
@@ -481,9 +514,10 @@ def test_timer_negotiation(bfd):
         return bird["transmit timer"].endswith("/ 0.500") and \
             bird["detect timer"].endswith("/ 0.800") and bird
     bird = wait_until(bird_negotiated, 5, message="negotiated BIRD timers")
-    assert bird_seconds(bird["remote min tx interval"]) == 200000
-    assert bird_seconds(bird["remote min rx interval"]) == 500000
-    assert bird["remote multiplier"] == "4"
+    if bfd.bird_details:
+        assert bird_seconds(bird["remote min tx interval"]) == 200000
+        assert bird_seconds(bird["remote min rx interval"]) == 500000
+        assert bird["remote multiplier"] == "4"
     assert bfd.bbl.terminate(30) == 0
 
 
@@ -518,7 +552,8 @@ def test_poll_sequence(bfd):
         return bird["transmit timer"].endswith("/ 0.100") and \
             bird["detect timer"].endswith("/ 0.500") and bird
     bird = wait_until(bird_updated, 5, message="BIRD timers updated")
-    assert bird["remote multiplier"] == "5"
+    if bfd.bird_details:
+        assert bird["remote multiplier"] == "5"
 
     # Timer change by BIRD (poll sequence started by BIRD).
     bfd.bird_reconfigure(tx=200, rx=400, multiplier=3)
@@ -555,9 +590,10 @@ def test_admin_down_bbl(bfd):
     assert session["local-diagnostic"] == "administratively-down"
     wait_until(lambda: bfd.bird_state(BBL_ADDRESS) == "Down", 3, message="BIRD session down")
     bird = bfd.bird_session(BBL_ADDRESS)
-    assert bird["remote state"] == "AdminDown"
-    assert bird["local diagnostic"] == "Neighbor down"
-    assert bird["remote diagnostic"] == "Admin down"
+    if bfd.bird_details:
+        assert bird["remote state"] == "AdminDown"
+        assert bird["local diagnostic"] == "Neighbor down"
+        assert bird["remote diagnostic"] == "Admin down"
     # Stays AdminDown, also with packets of BIRD.
     time.sleep(3)
     assert bfd.bbl_state("ipv4") == "AdminDown"
@@ -623,8 +659,9 @@ def test_detection_timeout(bfd, name):
                message="BIRD session down")
     bird = bfd.bird_session(local)
     assert bird["session state"] in ("Down", "Init"), bird
-    assert bird["remote state"] == "Down", bird
-    assert bird["remote diagnostic"] == "Time expired", bird
+    if bfd.bird_details:
+        assert bird["remote state"] == "Down", bird
+        assert bird["remote diagnostic"] == "Time expired", bird
 
     bfd.bird_drop_bfd(False)
     bfd.wait_up((name,), timeout=10)
