@@ -1114,6 +1114,14 @@ from this file instead of the configuration left behind:
 
     Warning: AF_XDP interface eth1 was not restored by a previous BNG Blaster (killed or crashed), the NIC configuration saved in /run/lock/bngblaster_eth1.af_xdp is restored on exit
 
+As ``/run/lock`` is writable by all users, this file is only used if it is a
+regular file (no symbolic link) owned by the same user and not writable by
+group or others, as written by BNG Blaster (mode ``0600``). Otherwise, it is
+ignored with a warning and the configuration found at startup is restored.
+This means that the configuration left behind by a killed instance of
+another user (e.g. a test run without ``sudo`` followed by one with ``sudo``)
+is not restored.
+
 BNG Blaster removes its AF_XDP sockets on exit, which also detaches the XDP
 program from the interface. An XDP program which is still attached after
 the sockets are removed is detached on exit as well, if the interface had no

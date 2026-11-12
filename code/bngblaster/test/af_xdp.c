@@ -616,6 +616,7 @@ test_af_xdp_state_file(void **unused)
     assert_non_null(file);
     fprintf(file, "ifindex %u\nchannels 8 0 0 0\nxdp 0\nend\n", TEST_KERNEL_INDEX + 1);
     fclose(file);
+    assert_int_equal(chmod(path, 0644), 0);
     nic.channels = 3;
     nic_indir_default();
     test_init(1, 1);
@@ -633,6 +634,69 @@ test_af_xdp_state_file(void **unused)
     assert_int_equal(nic.invalid, 0);
 }
 
+static void
+test_af_xdp_state_file_untrusted(void **unused)
+{
+    (void)unused;
+    char path[FILE_PATH_LEN];
+    char tmp_path[FILE_PATH_LEN+4];
+    char target[FILE_PATH_LEN+8];
+    struct stat st;
+    struct stat target_st;
+    FILE *file;
+
+    test_interface.lock_fd = 1;
+    io_af_xdp_state_file_path(&test_interface, path, sizeof(path));
+    snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path);
+    snprintf(target, sizeof(target), "%s.target", path);
+    unlink(path);
+    unlink(tmp_path);
+    unlink(target);
+    nic.channels = 3;
+    nic_indir_default();
+
+    /* A state file writable by others (world-writable lock directory)
+     * is ignored and replaced by the state file of this instance. */
+    file = fopen(path, "w");
+    assert_non_null(file);
+    fprintf(file, "ifindex %u\nchannels 8 0 0 0\nxdp 0\nend\n", TEST_KERNEL_INDEX);
+    fclose(file);
+    assert_int_equal(chmod(path, 0666), 0);
+    test_init(1, 1);
+    assert_false(test_interface.io.af_xdp_state->loaded);
+    assert_int_equal(lstat(path, &st), 0);
+    assert_true(S_ISREG(st.st_mode));
+    assert_int_equal(st.st_mode & 0777, 0600);
+    assert_true(io_af_xdp_restore_state(&test_interface));
+    assert_int_equal(nic.channels, 3);
+    assert_int_not_equal(access(path, F_OK), 0);
+    test_teardown(NULL);
+
+    /* A symbolic link is not followed, neither for the state file nor
+     * for a temporary file left behind. */
+    file = fopen(target, "w");
+    assert_non_null(file);
+    fprintf(file, "ifindex %u\nchannels 8 0 0 0\nxdp 0\nend\n", TEST_KERNEL_INDEX);
+    fclose(file);
+    assert_int_equal(chmod(target, 0600), 0);
+    assert_int_equal(stat(target, &target_st), 0);
+    assert_int_equal(symlink(target, path), 0);
+    assert_int_equal(symlink(target, tmp_path), 0);
+    test_init(1, 1);
+    assert_false(test_interface.io.af_xdp_state->loaded);
+    assert_int_equal(lstat(path, &st), 0);
+    assert_true(S_ISREG(st.st_mode));
+    assert_int_not_equal(access(tmp_path, F_OK), 0);
+    assert_int_equal(lstat(target, &st), 0);
+    assert_int_equal(st.st_size, target_st.st_size);
+    assert_int_equal(st.st_mtim.tv_nsec, target_st.st_mtim.tv_nsec);
+    assert_true(io_af_xdp_restore_state(&test_interface));
+    assert_int_equal(nic.channels, 3);
+    assert_int_not_equal(access(path, F_OK), 0);
+    unlink(target);
+    assert_int_equal(nic.invalid, 0);
+}
+
 int
 main()
 {
@@ -645,6 +709,7 @@ main()
         cmocka_unit_test_setup_teardown(test_af_xdp_xdp_program, test_setup, test_teardown),
         cmocka_unit_test_setup_teardown(test_af_xdp_restore_default_user_table, test_setup, test_teardown),
         cmocka_unit_test_setup_teardown(test_af_xdp_state_file, test_setup, test_teardown),
+        cmocka_unit_test_setup_teardown(test_af_xdp_state_file_untrusted, test_setup, test_teardown),
     };
     return cmocka_run_group_tests(tests, NULL, NULL);
 }

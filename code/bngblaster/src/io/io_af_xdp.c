@@ -46,6 +46,8 @@
 #endif
 #include <linux/if_link.h>
 #include <sys/sysinfo.h>
+#include <sys/stat.h>
+#include <fcntl.h>
 #include <linux/ethtool.h>
 #include <linux/sockios.h>
 
@@ -278,6 +280,7 @@ io_af_xdp_state_file_write(bbl_interface_s *interface)
     char tmp_path[FILE_PATH_LEN+4];
     FILE *file;
     uint32_t i;
+    int fd;
     bool success;
 
     if(interface->lock_fd < 0 || state->loaded) {
@@ -286,10 +289,22 @@ io_af_xdp_state_file_write(bbl_interface_s *interface)
     }
     io_af_xdp_state_file_path(interface, path, sizeof(path));
     snprintf(tmp_path, sizeof(tmp_path), "%s.tmp", path);
-    file = fopen(tmp_path, "w");
+    /* The lock directory is world-writable, therefore never follow or
+     * reuse an existing file. A temporary file left behind by a killed
+     * instance is removed, which is refused (sticky directory) if owned
+     * by another user. */
+    fd = open(tmp_path, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0600);
+    if(fd < 0 && errno == EEXIST && unlink(tmp_path) == 0) {
+        fd = open(tmp_path, O_WRONLY|O_CREAT|O_EXCL|O_NOFOLLOW|O_CLOEXEC, 0600);
+    }
+    file = fd < 0 ? NULL : fdopen(fd, "w");
     if(!file) {
         LOG(INFO, "Warning: AF_XDP failed to write NIC configuration of interface %s to %s (%s)\n",
             interface->name, tmp_path, strerror(errno));
+        if(fd >= 0) {
+            close(fd);
+            unlink(tmp_path);
+        }
         return;
     }
     fprintf(file, "ifindex %u\n", interface->kernel_index);
@@ -335,7 +350,9 @@ io_af_xdp_state_file_load(bbl_interface_s *interface)
     uint32_t *rss_indir = NULL;
     uint32_t v[4];
     uint32_t i;
+    struct stat st;
     FILE *file;
+    int fd;
     bool ifindex = false;
     bool valid = false;
 
@@ -343,8 +360,26 @@ io_af_xdp_state_file_load(bbl_interface_s *interface)
         return;
     }
     io_af_xdp_state_file_path(interface, path, sizeof(path));
-    file = fopen(path, "r");
+    /* The lock directory is world-writable, therefore only a regular
+     * file written by the same user is trusted (O_NONBLOCK for FIFOs). */
+    fd = open(path, O_RDONLY|O_NOFOLLOW|O_NONBLOCK|O_CLOEXEC);
+    if(fd < 0) {
+        if(errno != ENOENT) {
+            LOG(INFO, "Warning: AF_XDP ignores NIC configuration of interface %s in %s (%s)\n",
+                interface->name, path, strerror(errno));
+        }
+        return;
+    }
+    file = fdopen(fd, "r");
     if(!file) {
+        close(fd);
+        return;
+    }
+    if(fstat(fd, &st) != 0 || !S_ISREG(st.st_mode) || st.st_uid != geteuid() ||
+       (st.st_mode & (S_IWGRP|S_IWOTH))) {
+        LOG(INFO, "Warning: AF_XDP ignores NIC configuration of interface %s in %s "
+            "(not a regular file of this user or writable by others)\n", interface->name, path);
+        fclose(file);
         return;
     }
     saved.rss_indir = NULL;

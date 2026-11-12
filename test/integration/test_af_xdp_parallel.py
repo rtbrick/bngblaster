@@ -194,3 +194,38 @@ def test_restore_after_kill(af_xdp, local_veth, tmp_path, processes):
     finally:
         if os.path.exists(state_file(veth.if1)):
             os.unlink(state_file(veth.if1))
+
+
+@pytest.mark.parametrize("tamper", ["mode", "owner", "symlink"])
+def test_untrusted_state_file(af_xdp, local_veth, tmp_path, processes, tamper):
+    """A state file in the world-writable lock directory, which might be
+    written by another user (writable by others, other owner or symbolic
+    link), is ignored and the NIC configuration found is restored."""
+    veth = veth_queues(local_veth, 4)
+    config = stream_config({}, [(veth.if1, 1)])
+    path = state_file(veth.if1)
+    ifindex = int(veth.ns.exec(["cat", "/sys/class/net/%s/ifindex" % veth.if1]))
+    planted = str(tmp_path / "planted.af_xdp") if tamper == "symlink" else path
+    try:
+        with open(planted, "w") as f:
+            f.write("ifindex %d\nchannels 0 1 1 0\nxdp 0\nend\n" % ifindex)
+        os.chmod(planted, 0o600)
+        if tamper == "symlink":
+            os.symlink(planted, path)
+        else:
+            if tamper == "mode":
+                os.chmod(path, 0o666)
+            else:
+                os.chown(path, 65534, 65534)
+        instance = BngBlaster(veth.ns, tmp_path)
+        processes.append(instance)
+        instance.start(config, ("info", "af_xdp"))
+        assert instance.terminate(EXIT_TIMEOUT) == 0
+        with open(instance.path("log")) as f:
+            log = f.read()
+        assert "ignores NIC configuration" in log
+        assert nic_state(veth.ns, veth.if1) == ((4, 4), True)
+        assert not os.path.lexists(path)
+    finally:
+        if os.path.lexists(path):
+            os.unlink(path)
