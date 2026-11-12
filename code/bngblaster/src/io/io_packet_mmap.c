@@ -363,6 +363,22 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
     }
 }
 
+/* Notify kernel about queued TX frames, back off shortly on error. */
+static void
+io_packet_mmap_thread_notify(io_handle_s *io, struct timespec *sleep)
+{
+    struct timespec rem;
+
+    if(sendto(io->fd, NULL, 0, 0, NULL, 0) < 0) {
+        LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n",
+            io->interface->name, strerror(errno), errno);
+        io->stats.io_errors++;
+        nanosleep(sleep, &rem);
+    } else {
+        io->queued = 0;
+    }
+}
+
 void
 io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
 {
@@ -409,6 +425,13 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
         if(TP_STATUS_LOAD(tphdr) != TP_STATUS_AVAILABLE) {
             /* If no buffer is available poll kernel. */
             io->stats.no_buffer++;
+            if(io->queued) {
+                /* Frames left over from a failed sendto() (e.g. link
+                 * down) are only sent after another kick. Without it,
+                 * the ring stays full and the interface never sends
+                 * again. */
+                io_packet_mmap_thread_notify(io, &sleep);
+            }
             poll_kernel(io, POLLOUT);
             continue;
         }
@@ -483,15 +506,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
 
         if(io->queued) {
             idle_rounds = 0;
-            /* Notify kernel. */
-            if(sendto(io->fd, NULL, 0, 0, NULL, 0) < 0) {
-                LOG(IO, "PACKET_MMAP sendto on interface %s failed with error %s (%d)\n",
-                    interface->name, strerror(errno), errno);
-                io->stats.io_errors++;
-                nanosleep(&sleep, &rem);
-            } else {
-                io->queued = 0;
-            }
+            io_packet_mmap_thread_notify(io, &sleep);
         } else if(++idle_rounds >= idle_spin_rounds) {
             /* Nothing was queued for many consecutive rounds in a row.
              * Only now back off, instead of busy-spinning forever, or
