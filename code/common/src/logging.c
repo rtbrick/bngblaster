@@ -68,22 +68,24 @@ log_format_timestamp(void)
 }
 
 /*
- * Enable logging.
+ * Enable logging, returns false for an unknown log name.
  */
-void
+bool
 log_enable(char *log_name)
 {
     int idx;
     if(!log_name) {
-        return;
+        return false;
     }
     idx = 0;
     while(log_names[idx].key) {
         if (strcmp(log_names[idx].key, log_name) == 0) {
             log_id[log_names[idx].val].enable = 1;
+            return true;
         }
         idx++;
     }
+    return false;
 }
 
 /*

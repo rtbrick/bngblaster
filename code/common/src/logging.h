@@ -162,7 +162,7 @@ extern uint8_t g_log_buf_cur;
 extern struct log_id_ log_id[];
 extern char * log_format_timestamp(void);
 
-void
+bool
 log_enable(char *log_name);
 
 void

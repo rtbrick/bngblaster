@@ -286,3 +286,36 @@ def test_ctrl_socket_path_too_long(tmp_path):
     code, output = run_command_line(tmp_path, ["-S", path[:-1]])
     assert "Opened control socket %s" % path[:-1] in output
     assert os.listdir(tmp_path) == ["bbl.json"]
+
+
+@pytest.mark.parametrize("args,message", [
+    (["-l", "isis2"], "Error: invalid logging: isis2"),
+    (["-j", "session"], "Error: invalid JSON report content: session"),
+    (["-L", "{tmp}/missing/bbl.log"], "Error: Failed to open log file {tmp}/missing/bbl.log"),
+    (["-J", "{tmp}/missing/report.json"], "Error: Failed to open JSON report file {tmp}/missing/report.json"),
+    (["-J", "{tmp}"], "Error: Failed to open JSON report file {tmp} (Is a directory)"),
+], ids=["logging", "json-report-content", "log-file", "report-file", "report-directory"])
+def test_command_line_rejected(tmp_path, args, message):
+    """Unknown -l and -j values and a log or report file which can not be
+    written are rejected on start instead of being ignored, the report
+    was lost at the end of the test (R4-021)."""
+    code, output = run_command_line(tmp_path, [a.format(tmp=tmp_path) for a in args])
+    assert code != 0
+    assert message.format(tmp=tmp_path) in output
+    assert "Started BNG Blaster" not in output
+
+
+def test_command_line_report_file(tmp_path):
+    """The start check of the report file neither creates a new file
+    nor changes an existing one."""
+    report = tmp_path / "report.json"
+    log = tmp_path / "bbl.log"
+    args = ["-J", str(report), "-L", str(log), "-l", "info", "-l", "isis", "-j", "streams"]
+    code, output = run_command_line(tmp_path, args)
+    assert "Started BNG Blaster" in output
+    assert "Failed to add link bbl-it-none" in output
+    assert log.exists() and not report.exists()
+    report.write_text("old")
+    code, output = run_command_line(tmp_path, args)
+    assert "Started BNG Blaster" in output
+    assert report.read_text() == "old"

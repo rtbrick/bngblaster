@@ -11,6 +11,7 @@
  * Copyright (C) 2020-2026, RtBrick, Inc.
  * SPDX-License-Identifier: BSD-3-Clause
  */
+#include <fcntl.h>
 #include <sys/mman.h>
 #include <sys/resource.h>
 #include <sys/syscall.h>
@@ -653,6 +654,28 @@ bbl_parse_number_arg(const char *arg, long min, long max, long *value)
     return true;
 }
 
+/* The JSON report is written at the end of the test, check
+ * on start that it can be written without changing the file. */
+static bool
+bbl_report_file_writable(const char *filename)
+{
+    int fd = open(filename, O_WRONLY|O_APPEND|O_CLOEXEC);
+    if(fd >= 0) {
+        close(fd);
+        return true;
+    }
+    if(errno != ENOENT) {
+        return false;
+    }
+    fd = open(filename, O_WRONLY|O_CREAT|O_EXCL|O_CLOEXEC, 0666);
+    if(fd < 0) {
+        return false;
+    }
+    close(fd);
+    unlink(filename);
+    return true;
+}
+
 int
 main(int argc, char *argv[])
 {
@@ -710,6 +733,9 @@ main(int argc, char *argv[])
                     g_ctx->config.json_report_sessions = true;
                 } else if(strcmp("streams", optarg) == 0) {
                     g_ctx->config.json_report_streams = true;
+                } else {
+                    fprintf(stderr, "Error: invalid JSON report content: %s\n", optarg);
+                    goto CLEANUP;
                 }
                 break;
             case 'J':
@@ -722,7 +748,10 @@ main(int argc, char *argv[])
                 config_streams_file = optarg;
                 break;
             case 'l':
-                log_enable(optarg);
+                if(!log_enable(optarg)) {
+                    fprintf(stderr, "Error: invalid logging: %s\n", optarg);
+                    goto CLEANUP;
+                }
                 break;
             case 'L':
                 g_log_file = optarg;
@@ -777,9 +806,19 @@ main(int argc, char *argv[])
                 sizeof(((struct sockaddr_un *)0)->sun_path) - 1, g_ctx->ctrl_socket_path);
         goto CLEANUP;
     }
+    if(g_ctx->config.json_report_filename &&
+       !bbl_report_file_writable(g_ctx->config.json_report_filename)) {
+        fprintf(stderr, "Error: Failed to open JSON report file %s (%s)\n",
+                g_ctx->config.json_report_filename, strerror(errno));
+        goto CLEANUP;
+    }
 
     /* Open logfile. */
     log_open();
+    if(g_log_file && !g_log_fp) {
+        fprintf(stderr, "Error: Failed to open log file %s (%s)\n", g_log_file, strerror(errno));
+        goto CLEANUP;
+    }
     if(g_log_fp) {
         timer_add_periodic(&g_ctx->timer_root, &g_ctx->logfile_fflush_timer, 
                     "logfile fflush()", 0, 100 * MSEC, g_ctx, 
