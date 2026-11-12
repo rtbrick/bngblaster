@@ -351,8 +351,8 @@
                 },
                 "max-payload": {
                     "type": "integer",
-                    "description": "PPP-Max-Payload (RFC4638)",
-                    "minimum": 1,
+                    "description": "PPP-Max-Payload (RFC4638), 0 = disabled",
+                    "minimum": 0,
                     "maximum": 65535
                 },
                 "vlan-priority": {
@@ -762,7 +762,7 @@
                 "zapping-interval": {
                     "type": "integer",
                     "description": "IGMP channel zapping interval in seconds (0 = disabled)",
-                    "minimum": 1,
+                    "minimum": 0,
                     "maximum": 65535
                 },
                 "zapping-count": {
@@ -810,9 +810,11 @@
                 },
                 "multicast-traffic-length": {
                     "type": "integer",
-                    "description": "Multicast traffic IP length",
-                    "minimum": 128,
-                    "maximum": 1500
+                    "description": "Multicast traffic IP length (0 = minimum stream length)",
+                    "oneOf": [
+                        {"const": 0},
+                        {"minimum": 128, "maximum": 1500}
+                    ]
                 },
                 "multicast-traffic-tos": {
                     "type": "integer",

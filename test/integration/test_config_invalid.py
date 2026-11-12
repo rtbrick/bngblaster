@@ -236,3 +236,24 @@ def test_config_invalid_command_line(topology, tmp_path, args, message):
         instance.start(config(topology.if_a), args=args)
     with open(instance.path("stdout")) as f:
         assert message in f.read()
+
+
+def test_config_zero_disabled(topology, tmp_path):
+    """0 (disabled or minimum, the default) is accepted as documented (R4-019),
+    1.1.0 accepted -z 0 to disable IGMP zapping."""
+    bbl = config(topology.if_a)
+    bbl["pppoe"] = {"max-payload": 0}
+    bbl["igmp"] = {"zapping-interval": 0, "multicast-traffic-length": 0}
+    instance = BngBlaster(topology.a, tmp_path, "bbl")
+    instance.start(bbl, args=["-z", "0"])
+    assert instance.terminate() == 0
+
+
+def test_config_multicast_traffic_length_range(topology, tmp_path):
+    bbl = config(topology.if_a)
+    bbl["igmp"] = {"multicast-traffic-length": 64}
+    instance = BngBlaster(topology.a, tmp_path, "bbl")
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start(bbl)
+    with open(instance.path("stdout")) as f:
+        assert "Invalid value for igmp->multicast-traffic-length (128 - 1500)" in f.read()

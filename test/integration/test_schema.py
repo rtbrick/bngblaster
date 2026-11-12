@@ -79,8 +79,10 @@ def test_schema_doc_config(config):
     ({"icmp-client": [{"destination-address": "10.0.0.1", "interval": 0}]}, False),
     ({"isis": [{"instance-id": 1, "external-auto-refresh": True}]}, True),
     ({"ospf": [{"instance-id": 1, "external": {"auto-refresh": True}}]}, True),
+    ({"pppoe": {"max-payload": 0}, "igmp": {"zapping-interval": 0, "multicast-traffic-length": 0}}, True),
+    ({"igmp": {"multicast-traffic-length": 64}}, False),
 ], ids=["underscore", "misplaced", "pppoe-deprecated", "misspelled", "lcp-padding-max",
         "lcp-padding-above-max", "pps", "pps-zero", "icmp-interval-zero", "isis-auto-refresh",
-        "ospf-auto-refresh"])
+        "ospf-auto-refresh", "zero-disabled", "multicast-traffic-length-small"])
 def test_schema_attributes(config, valid):
     assert (errors(config) == []) == valid, errors(config)

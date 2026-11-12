@@ -842,7 +842,7 @@ main(int argc, char *argv[])
         g_ctx->config.igmp_group_count = number;
     }
     if(igmp_zap_interval) {
-        if(!bbl_parse_number_arg(igmp_zap_interval, 1, 65535, &number)) {
+        if(!bbl_parse_number_arg(igmp_zap_interval, 0, 65535, &number)) {
             fprintf(stderr, "Error: invalid IGMP zapping interval: %s\n", igmp_zap_interval);
             goto CLEANUP;
         }

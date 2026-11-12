@@ -24,7 +24,7 @@
 |                       | | Default: false                                                 |
 +-----------------------+------------------------------------------------------------------+
 | **max-payload**       | | PPP-Max-Payload (RFC4638).                                     |
-|                       | | Default: 0 (disabled)                                          |
+|                       | | Default: 0 (disabled) Range: 0 - 65535                         |
 +-----------------------+------------------------------------------------------------------+
 | **vlan-priority**     | | VLAN PBIT for all PPPoE/PPP control traffic.                   |
 |                       | | Default: 0                                                     |

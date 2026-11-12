@@ -4679,7 +4679,7 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.pppoe_host_uniq = json_boolean_value(value);
         }
-        JSON_OBJ_GET_NUMBER(section, value, "pppoe", "max-payload", 1, 65535);
+        JSON_OBJ_GET_NUMBER(section, value, "pppoe", "max-payload", 0, 65535);
         if(value) {
             g_ctx->config.pppoe_max_payload = json_number_value(value);
         }
@@ -5037,7 +5037,7 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.igmp_group_count = json_number_value(value);
         }
-        JSON_OBJ_GET_NUMBER(section, value, "igmp", "zapping-interval", 1, 65535);
+        JSON_OBJ_GET_NUMBER(section, value, "igmp", "zapping-interval", 0, 65535);
         if(value) {
             g_ctx->config.igmp_zap_interval = json_number_value(value);
         }
@@ -5061,8 +5061,10 @@ json_parse_config(json_t *root)
         if(value) {
             g_ctx->config.multicast_traffic_autostart = json_boolean_value(value);
         }
-        JSON_OBJ_GET_NUMBER(section, value, "igmp", "multicast-traffic-length", 128, 1500);
-        if(value) {
+        /* 0 selects the minimum stream length (default). */
+        value = json_object_get(section, "multicast-traffic-length");
+        if(value && !(json_is_number(value) && json_number_value(value) == 0)) {
+            JSON_OBJ_GET_NUMBER(section, value, "igmp", "multicast-traffic-length", 128, 1500);
             g_ctx->config.multicast_traffic_len = json_number_value(value);
         }
         JSON_OBJ_GET_NUMBER(section, value, "igmp", "multicast-traffic-tos", 0, 255);

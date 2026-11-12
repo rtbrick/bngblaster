@@ -37,7 +37,7 @@
 |                                   | | Default: 0.0.0.0 (ASM)                                             |
 +-----------------------------------+----------------------------------------------------------------------+
 | **zapping-interval**              | | IGMP channel zapping interval in seconds.                          |
-|                                   | | Default: 0 (disabled)                                              |
+|                                   | | Default: 0 (disabled) Range: 0 - 65535                             |
 +-----------------------------------+----------------------------------------------------------------------+
 | **zapping-count**                 | | Define the number of channel changes before starting               |
 |                                   | | the view duration.                                                 |
@@ -68,7 +68,7 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **multicast-traffic-length**      | | Multicast traffic IP length.                                       |
 |                                   | | Only applicable with **send-multicast-traffic** enabled!           |
-|                                   | | Default: 0 (minimum stream length) Range: 128 - 1500               |
+|                                   | | Default: 0 (minimum stream length) Range: 0 or 128 - 1500          |
 +-----------------------------------+----------------------------------------------------------------------+
 | **multicast-traffic-tos**         | | Multicast traffic TOS priority.                                    |
 |                                   | | Only applicable with **send-multicast-traffic** enabled!           |
