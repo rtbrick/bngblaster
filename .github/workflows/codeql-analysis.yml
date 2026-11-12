@@ -57,7 +57,7 @@ jobs:
 
     - name: Install Dependencies
       shell: bash
-      run: sudo apt install -y libcunit1-dev libncurses5-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
+      run: sudo apt-get update && sudo apt-get install -y libcunit1-dev libncurses-dev libssl-dev libjansson-dev libcmocka-dev libpcap-dev
 
     - name: Create Build Environment
       run: cmake -E make_directory ${{github.workspace}}/build
