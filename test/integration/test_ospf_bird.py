@@ -156,8 +156,8 @@ def bbl_lsas(ospf, lsa_type, router):
             if lsa["type"] == lsa_type and lsa["router"] == router and lsa["age"] < OSPF_MAX_AGE}
 
 
-@VERSIONS
-@pytest.mark.parametrize("p2p", [True, False], ids=["p2p", "broadcast"])
+@pytest.mark.parametrize("version", [2, pytest.param(3, marks=pytest.mark.full)], ids=["v2", "v3"])
+@pytest.mark.parametrize("p2p", [True, pytest.param(False, marks=pytest.mark.full)], ids=["p2p", "broadcast"])
 def test_adjacency(ospf, version, p2p):
     ospf.start(bird={"version": version, "p2p": p2p}, bbl={"p2p": p2p})
     ospf.wait_established()
@@ -170,6 +170,7 @@ def test_adjacency(ospf, version, p2p):
                message="BIRD neighbor down after BNG Blaster teardown")
 
 
+@pytest.mark.full
 @VERSIONS
 @pytest.mark.parametrize("bbl_priority,bird_priority,bbl_state,bird_role", [
     (64, 1, "DR", "Full/DR"),
@@ -189,6 +190,7 @@ def test_dr_election(ospf, version, bbl_priority, bird_priority, bbl_state, bird
     ospf.teardown()
 
 
+@pytest.mark.full
 @VERSIONS
 def test_dr_election_existing_dr(ospf, version):
     """The BNG Blaster joins a segment with an elected DR. The DR is
@@ -206,6 +208,7 @@ def test_dr_election_existing_dr(ospf, version):
     ospf.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("p2p", [True, False], ids=["p2p", "broadcast"])
 def test_database_sync_bbl_to_bird(ospf, tmp_path, p2p):
     """Topology loaded from MRT file is flooded to BIRD and BIRD installs
@@ -223,6 +226,7 @@ def test_database_sync_bbl_to_bird(ospf, tmp_path, p2p):
     ospf.teardown()
 
 
+@pytest.mark.full
 @VERSIONS
 def test_database_sync_bird_to_bbl(ospf, version):
     """BIRD external LSAs are flooded to the BNG Blaster, including
@@ -243,6 +247,7 @@ def test_database_sync_bird_to_bbl(ospf, version):
     ospf.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("auth_type", ["md5", "simple"])
 def test_authentication(ospf, tmp_path, auth_type):
     key = "BBL%s" % auth_type  # simple passwords are limited to 8 bytes
@@ -255,6 +260,7 @@ def test_authentication(ospf, tmp_path, auth_type):
     ospf.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("bird_key,bbl_key", [
     ("BNGBlasterMD5", "WrongKey"),
     ("BNGBlasterMD5", None),

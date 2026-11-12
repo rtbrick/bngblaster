@@ -14,6 +14,8 @@ SPDX-License-Identifier: BSD-3-Clause
 import ipaddress
 import time
 
+import pytest
+
 import helpers
 from bgp_common import BBL_ADDRESS, BBL_AS, GOBGP_ADDRESS
 from helpers import BgpSink, BngBlaster, bgpupdate, wait_until
@@ -50,6 +52,7 @@ def bbl_config(ifname, raw_update_file):
     }
 
 
+@pytest.mark.full
 def test_raw_update_sessions(topology, processes, tmp_path):
     helpers.kernel_address(topology.b, topology.if_b, GOBGP_ADDRESS + "/24")
     topology.b.exec(["ip", "route", "add", "local", str(PEER_NETWORK), "dev", "lo"])

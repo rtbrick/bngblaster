@@ -85,6 +85,7 @@ def responses(log, code):
     return [p["mru"] for p in received(log) if p["code"] == code]
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("max_payload,echo,server_mru,expected", [
     # Server requests an MRU above the echoed PPP-Max-Payload.
     (1570, True, 1600, 1570),
@@ -104,6 +105,7 @@ def test_nak_peer_mru(topology, processes, tmp_path, server, max_payload, echo, 
     assert instance.terminate() == 0
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("max_payload,echo,server_mru", [
     (1570, True, 1570),
     (1570, True, 1500),
@@ -121,6 +123,7 @@ def test_ack_peer_mru(topology, processes, tmp_path, server, max_payload, echo, 
     assert instance.terminate() == 0
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("max_payload,echo,client_mru,nak_mru,expected,invalid", [
     # Server suggests an MRU above the echoed PPP-Max-Payload.
     (1570, True, 1570, 1600, 1570, 1),

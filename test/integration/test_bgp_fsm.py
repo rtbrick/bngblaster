@@ -131,6 +131,7 @@ def test_peer_as_not_configured(setup):
     assert notifications(result) == [], result
 
 
+@pytest.mark.full
 def test_closing_ignores_messages(setup):
     """KEEPALIVE messages received after the NOTIFICATION of bgp-disconnect
     (while closing) do not restart the hold timer, which would expire
@@ -146,6 +147,7 @@ def test_closing_ignores_messages(setup):
     assert "session timeout" not in setup.log()
 
 
+@pytest.mark.full
 def test_no_reconnect_refuses_connection(setup):
     """A session with reconnect false stays down after bgp-disconnect,
     also if the peer connects again (RFC 4271 section 8.2.2)."""
@@ -218,6 +220,7 @@ def max_tcp_payload(capture, source):
     return max(sizes) if sizes else 0
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("ipv6,mtu,mss", [(False, 1280, 1240), (True, None, 1440)], ids=["ipv4-mtu1280", "ipv6"])
 def test_send_mss(setup, tmp_path, ipv6, mtu, mss):
     """The send MSS is limited by the MTU of the network interface (IPv4
@@ -240,6 +243,7 @@ def test_send_mss(setup, tmp_path, ipv6, mtu, mss):
     assert "ip-proto-6" not in out, out[-2000:]
 
 
+@pytest.mark.full
 def test_send_mss_syn_retransmit(setup, tmp_path):
     """A SYN retransmitted by the peer while the connection accepted by the
     BNG Blaster is in SYN_RCVD (SYN-ACK lost) does not replace the send MSS

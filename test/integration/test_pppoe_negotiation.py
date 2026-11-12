@@ -134,6 +134,7 @@ def test_ipcp_terminate_by_peer(ppp):
     assert session.get("ipv4-address") in (None, "0.0.0.0")
 
 
+@pytest.mark.full
 def test_ipcp_reopen_by_peer(ppp):
     """IPCP terminated by the server is opened again by a configure-request
     of the server (RFC 1661 Stopped + RCR), it was answered with
@@ -156,6 +157,7 @@ def test_ipcp_terminate_by_peer_ipv4_only(ppp):
     assert ppp.counters()["sessions-established"] == 0
 
 
+@pytest.mark.full
 def test_igmp_ipcp_reopen(ppp):
     """IGMP autostart: IPCP down resets the initial join, which is sent
     again once the server opened IPCP again."""
@@ -171,6 +173,7 @@ def test_igmp_ipcp_reopen(ppp):
     assert [g["group"] for g in groups] == ["239.2.0.1"], groups
 
 
+@pytest.mark.full
 def test_igmp_lcp_restart(ppp):
     """IGMP autostart: the initial join group is reset on LCP restart,
     the initial join after the restart took another slot (joined twice)."""
@@ -213,6 +216,7 @@ def test_icmp_echo_reply(ppp):
     assert ppp.bbl.alive() and ppp.state() == "Established"
 
 
+@pytest.mark.full
 def test_ipcp_close_in_network_phase(ppp):
     """ipcp-close while IP6CP is still negotiated: IP6CP is opened before
     the terminate-ack of IPCP, which then completes the network phase
@@ -346,6 +350,7 @@ def test_own_mru_limited(ppp):
     assert ppp.received("lcp", CONF_REQ)[0]["mru"] == 1492
 
 
+@pytest.mark.full
 def test_outstanding_after_lcp_restart(ppp):
     """A session restarted with lcp-restart is outstanding until it is
     established again."""
@@ -412,6 +417,7 @@ def test_pap_identifier(ppp):
     assert len(set(ids)) == len(ids), ids
 
 
+@pytest.mark.full
 def test_pado_echo_tags_limit(ppp):
     """A PADO with tags to echo above 1024 bytes (AC-Cookie) is discarded,
     which overflowed the TX frame of the PADR with large tags."""

@@ -151,7 +151,7 @@ def test_pado_reply_slot_limit(local_veth, processes, tmp_path):
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
-@pytest.mark.slow
+@pytest.mark.full
 def test_dhcpv6_renew(local_veth, processes, tmp_path):
     """The A10NSP answers DHCPv6 Renew of IPoE sessions at T1 (300 seconds)
     with Reply, the lease is not restarted with Solicit."""

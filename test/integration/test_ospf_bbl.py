@@ -81,7 +81,7 @@ def instances_auto_refresh(topology, processes, tmp_path):
     return start_instances(topology, processes, tmp_path, {"external": {"auto-refresh": True}})
 
 
-@pytest.mark.slow
+@pytest.mark.full
 def test_sequence_wrap(instances):
     """A floods a copy of the router information LSA of B with
     MaxSequenceNumber. B flushes this instance with MaxAge and originates
@@ -183,7 +183,7 @@ def test_auto_refresh_update_older(instances_auto_refresh):
     assert ri(b, "10.10.0.99")["checksum"] == ri(a, "10.10.0.99")["checksum"]
 
 
-@pytest.mark.slow
+@pytest.mark.full
 def test_auto_refresh_purge(instances_auto_refresh):
     """An external LSA loaded with MaxAge (purge) is not refreshed with
     external auto-refresh, but removed after the purge timer (it was

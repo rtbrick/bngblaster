@@ -113,6 +113,7 @@ def test_dhcp(local_veth, bbl):
     assert_clean_exit(instance)
 
 
+@pytest.mark.full
 def test_isis(local_veth, bbl, tmp_path):
     mrt = str(tmp_path / "isis.mrt")
     lspgen(["-a", "49.0001/24", "-K", "secret123", "-T", "md5", "-C", "1921.6800.1001", "-m", mrt])
@@ -189,6 +190,7 @@ def test_isis(local_veth, bbl, tmp_path):
     assert_clean_exit(bbl_isis)
 
 
+@pytest.mark.full
 def test_ldp(local_veth, bbl, tmp_path):
     raw_update = str(tmp_path / "out.ldp")
     ldpupdate(["-l", "10.2.3.1", "-p", "13.37.0.0/32", "-P", "10", "-M", "10000", "-f", raw_update])
@@ -286,6 +288,7 @@ GOBGPD_CONF = """
 """
 
 
+@pytest.mark.full
 @pytest.mark.usefixtures("gobgp_bin")
 def test_bgp(topology, processes, tmp_path):
     """BNG Blaster (namespace A) with iBGP session to GoBGP (namespace B)."""

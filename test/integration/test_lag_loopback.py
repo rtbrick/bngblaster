@@ -216,6 +216,7 @@ def test_stream_update_lacp_down(tmp_path, processes):
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
+@pytest.mark.full
 def test_lacp_timeout_mixed(tmp_path, processes):
     """The periodic rate follows the timeout of the partner (IEEE 802.1AX):
     lagB with long timeout sends every second to lagA with short timeout,

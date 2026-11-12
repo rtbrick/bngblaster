@@ -1,7 +1,7 @@
-name: Integration (slow)
+name: Integration (full)
 
-# Tests marked slow wait for long protocol timers and run only on
-# manual execution (Actions > Integration (slow) > Run workflow).
+# Tests marked full (protocol timers, interop variants) run only on
+# manual execution (Actions > Integration (full) > Run workflow).
 on:
   workflow_dispatch:
 
@@ -13,8 +13,8 @@ env:
   FRR_VERSION: frr-10
 
 jobs:
-  integration-slow:
-    name: Slow Integration Tests
+  integration-full:
+    name: Full Integration Tests
     runs-on: ubuntu-24.04
 
     steps:
@@ -72,21 +72,35 @@ jobs:
         # BIRD is started per test in network namespaces.
         sudo systemctl stop bird
 
+    - name: Install pppd
+      shell: bash
+      run: |
+        # pppoe-server (rp-pppoe) with pppd as PPPoE server and xl2tpd
+        # as L2TP LNS, started per test.
+        sudo apt install -y ppp pppoe xl2tpd
+        sudo systemctl stop xl2tpd || true
+
     - name: Install Python Dependencies
       shell: bash
       run: |
         python3 -m venv $RUNNER_TEMP/venv
         $RUNNER_TEMP/venv/bin/pip install -r test/integration/requirements.txt
 
-    - name: Slow Integration Tests
+    - name: Full Integration Tests
       shell: bash
       env:
         GOBGPD_BIN: /home/runner/gobgp/gobgpd
         GOBGP_BIN: /home/runner/gobgp/gobgp
+        BBL_REQUIRE_TCP_MD5: 1
+        BBL_REQUIRE_TCP_AO: 1
         BBL_REQUIRE_FRR: 1
         BBL_REQUIRE_BIRD: 1
+        BBL_REQUIRE_PPPD: 1
+        BBL_REQUIRE_XL2TPD: 1
       run: |
-        sudo -E $RUNNER_TEMP/venv/bin/python -m pytest -v test/integration --slow -m slow --basetemp=$RUNNER_TEMP/bbl-it
+        uname -r
+        grep -E "CONFIG_TCP_(AO|MD5SIG)=" /boot/config-$(uname -r) || true
+        sudo -E $RUNNER_TEMP/venv/bin/python -m pytest -v test/integration --full -m full --basetemp=$RUNNER_TEMP/bbl-it
 
     - name: Make Test Artifacts Readable
       if: failure()
@@ -99,5 +113,5 @@ jobs:
       if: failure()
       uses: actions/upload-artifact@v7
       with:
-        name: integration-slow-artifacts
+        name: integration-full-artifacts
         path: ${{ runner.temp }}/bbl-it

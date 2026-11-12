@@ -141,7 +141,8 @@ def targeted_interfaces(local_veth):
 
 
 @pytest.mark.parametrize("family", ["ipv4", "ipv6"])
-@pytest.mark.parametrize("mode", ["configured", "accept", "source"])
+@pytest.mark.parametrize("mode", [pytest.param("configured", marks=pytest.mark.full), "accept",
+                                  pytest.param("source", marks=pytest.mark.full)])
 def test_ldp_targeted(local_veth, bbl, tmp_path, family, mode):
     """Targeted LDP (extended discovery) without link hellos: LDP instance
     1 sends targeted hellos to instance 2, which has the reverse targeted
@@ -202,6 +203,7 @@ def test_ldp_targeted(local_veth, bbl, tmp_path, family, mode):
     assert adjacency2["configured"] != (mode == "accept") and adjacency2["tx-discovery"] > 0
 
 
+@pytest.mark.full
 def test_ldp_targeted_dual_stack(local_veth, bbl):
     """IPv4 and IPv6 targeted adjacencies to the same peer share one
     session, using the preferred transport (IPv6 per default)."""
@@ -302,6 +304,7 @@ def link_config(local_veth, streams=None, raw_files=()):
     return config
 
 
+@pytest.mark.full
 def test_ldp_raw_messages(local_veth, bbl, tmp_path):
     """Label messages of the peer (instance 1) received by instance 2:
     mappings without generic label or with labels above 20 bit are ignored,
@@ -453,6 +456,7 @@ def test_ldp_two_peers(local_veth, bbl, tmp_path):
                (True,) + other, 5, 0.2, message="mapping of the other peer used")
 
 
+@pytest.mark.full
 def test_ldp_disconnect_ipv6_filter(local_veth, bbl):
     """ldp-disconnect with IPv6 address filters."""
     v4, v6 = TARGETED["ipv4"]["transport"], TARGETED["ipv6"]["transport"]
@@ -513,6 +517,7 @@ for _ in range(rounds):
 """
 
 
+@pytest.mark.full
 def test_ldp_adjacencies_while_expiring(topology, processes, tmp_path):
     """ldp-adjacencies is answered while accepted targeted adjacencies
     expire and are freed (use after free in the control thread)."""
@@ -580,6 +585,7 @@ def family_hello(topology, family, count, inter=1, hold=4):
                      str(family), str(count), str(inter), str(hold)])
 
 
+@pytest.mark.full
 def test_ldp_session_reuse_other_family(topology, processes, tmp_path):
     """A closed IPv6 session reused by an IPv4 hello of the same peer
     takes the IPv4 transport and role (passive). It kept the IPv6 family

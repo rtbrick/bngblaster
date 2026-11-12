@@ -136,6 +136,7 @@ def test_l2vpn(local_veth, bbl, tmp_path, threads):
     assert info(2)["l2vpn-resolved"] is True
 
 
+@pytest.mark.full
 def test_l2vpn_stats_reset(local_veth, bbl, tmp_path):
     """The L2VPN counters restart at 0 on reconnect as all other
     session counters."""

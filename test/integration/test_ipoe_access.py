@@ -157,6 +157,7 @@ def test_igmp_rejoin_after_reconnect(ipoe):
     wait_until(lambda: state() == ["active"], 5, message="group active")
 
 
+@pytest.mark.full
 def test_igmp_initial_join_after_reconnect(ipoe):
     """The autostart initial join group is joined once after reconnects,
     it was kept and joined again besides the new initial join."""
@@ -188,6 +189,7 @@ def test_icmpv6_echo_multicast(ipoe):
     assert reply["src"].startswith("fe80:") and reply["dst"] == "fe80::1", reply
 
 
+@pytest.mark.full
 def test_igmpv3_records_and_querier(ipoe):
     """IGMPv3 joins use CHANGE_TO_EXCLUDE, query responses MODE_IS_EXCLUDE
     after a delay within the max response time (RFC 3376 sections 5.1
@@ -220,6 +222,7 @@ def test_igmpv3_join_record(ipoe):
     assert ipoe.entries(proto="igmp", type=0x22)[0]["records"][0]["type"] == 4
 
 
+@pytest.mark.full
 def test_zapping_stop_not_received(ipoe):
     """multicast-not-received does not grow after zapping-stop."""
     ipoe.peer("igmp")
@@ -241,6 +244,7 @@ def test_ra_n1_sessions(ipoe):
     ipoe.established(3)
 
 
+@pytest.mark.full
 def test_dhcp_rebind_and_names(ipoe):
     """An unanswered renew is followed by a broadcast rebind at T2 which
     keeps the address (RFC 2131 section 4.4.5), host and domain name of
@@ -271,6 +275,7 @@ def test_dhcpv6_long_duid_new_xid(ipoe):
     assert request["xid"] != solicit["xid"]
 
 
+@pytest.mark.full
 def test_dhcpv6_release_ra(ipoe):
     """A session which is stopped during the DHCPv6 release does not become
     established again by the first RA."""

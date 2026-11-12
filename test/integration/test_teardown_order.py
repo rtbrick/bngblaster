@@ -71,6 +71,7 @@ def isis_bgp(topology, processes, tmp_path):
     return IsisBgpSetup(topology, processes, tmp_path)
 
 
+@pytest.mark.full
 def test_bgp_closed_before_isis_withdraw(isis_bgp):
     isis_bgp.start()
     isis_bgp.wait_established(1)
@@ -92,6 +93,7 @@ def test_bgp_closed_before_isis_withdraw(isis_bgp):
                10, message="FRR received Cease notification")
 
 
+@pytest.mark.full
 def test_isis_teardown_delay(isis_bgp):
     isis_bgp.start(bbl={"bgp": False, "isis": {"teardown-delay": 3}})
     isis_bgp.wait_established(1)

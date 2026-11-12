@@ -219,6 +219,7 @@ def lan_dis(p):
     return p.raw[20:27]
 
 
+@pytest.mark.full
 def test_lan_dis_tie(setup):
     """ISO 10589 8.4.5: with equal priority the highest MAC address wins,
     so the BNG Blaster stays DIS against a neighbor with a lower MAC."""
@@ -354,6 +355,7 @@ def test_teardown_purge_header_only(setup):
     assert ip.hmac_ok(purge.raw[:purge.length], KEY, auth[0] + 1), "invalid HMAC"
 
 
+@pytest.mark.full
 def test_csnp_ranges_md5(setup, tmp_path):
     """CSNPs of a large LSDB describe every LSP exactly once in contiguous
     ranges, and each one has a valid HMAC-MD5 (RFC 5304)."""
@@ -387,6 +389,7 @@ def test_csnp_ranges_md5(setup, tmp_path):
     assert sorted(listed) == db
 
 
+@pytest.mark.full
 def test_lsp_retry_interval(setup):
     """Unacknowledged LSPs are retransmitted after lsp-retry-interval, the
     retry job runs every second (it used to take 2-3 times the interval)."""
@@ -399,6 +402,7 @@ def test_lsp_retry_interval(setup):
     assert all(2.9 < g < 4.3 for g in gaps), gaps
 
 
+@pytest.mark.full
 def test_expired_lsp_purge(setup):
     """An external LSP reaching lifetime 0 is purged in the network with
     the header only (ISO 10589 7.3.16.4)."""
@@ -452,6 +456,7 @@ def test_config_limits(topology, tmp_path):
             bbl.start(bbl_config(topology.if_a, isis=isis))
 
 
+@pytest.mark.full
 def test_pseudonode_lsp(setup):
     """The pseudonode LSP of many neighbors uses several fragments without
     adjacency SID (RFC 8667 section 2.2) and is purged when all
@@ -510,6 +515,7 @@ def test_teardown_p2p_hellos(setup):
     assert open(bbl.path("log")).read().count("adjacency UP") == 1
 
 
+@pytest.mark.full
 def test_terminate_p2p_hellos_ospf(topology, processes, tmp_path):
     """Terminate with IS-IS P2P and OSPF: OSPF keeps the instance running
     after the IS-IS teardown, hellos received meanwhile do not bring the
@@ -530,7 +536,7 @@ def test_terminate_p2p_hellos_ospf(topology, processes, tmp_path):
         peer.close()
 
 
-@pytest.mark.slow
+@pytest.mark.full
 def test_snp_request_expiry(setup):
     """An LSP requested by a CSNP entry but never received is removed:
     60 seconds request lifetime, 60 seconds purge timer and up to 30
@@ -546,7 +552,7 @@ def test_snp_request_expiry(setup):
     assert bbl.alive()
 
 
-@pytest.mark.slow
+@pytest.mark.full
 def test_flap_hmac(setup):
     """An external LSP flapped for longer than it is kept as purge (60
     seconds purge timer plus garbage collection) is re-created with a

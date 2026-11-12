@@ -54,6 +54,7 @@ def loopback_config(threads, pps=PPS):
     }
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("threads", [False, True], ids=["main", "threads"])
 def test_stream_update_same_pps(tmp_path, processes, threads):
     instance = BngBlaster(Host(), tmp_path, "bbl").start(loopback_config(threads))
@@ -80,6 +81,7 @@ def test_stream_update_same_pps(tmp_path, processes, threads):
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
+@pytest.mark.full
 def test_stream_reset_in_flight(tmp_path, processes):
     """After stream-reset, each stream counts only the packets sent after
     it. The race of the RX thread with the reset is rare (about one in

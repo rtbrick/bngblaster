@@ -152,6 +152,7 @@ for p in sniffer.stop():
 """
 
 
+@pytest.mark.full
 def test_dad_ns(topology, processes, tmp_path):
     """A DAD NS (source ::) is answered with NA to all nodes without the
     solicited flag, NS with a hop limit other than 255 are ignored
@@ -305,6 +306,7 @@ def lag_members(instance):
     return {m["interface"]: m for lag in instance.ctrl("lag-info")["lag-info"] for m in lag["members"]}
 
 
+@pytest.mark.full
 def test_lacp_partner_changes(topology, processes, tmp_path):
     """A changed partner key is applied (update_Selected) and stale partner
     information about the BNG Blaster is answered with a LACPDU right away
@@ -428,6 +430,7 @@ def test_packet_mmap_tx_max_len(local_veth, processes, tmp_path, tx_threads, len
     assert (interface["tx-to-long"] == 0) == sent, interface
 
 
+@pytest.mark.full
 def test_packet_mmap_tx_mtu_change(local_veth, processes, tmp_path):
     """packet_mmap follows MTU changes of the interface after start."""
     instance = BngBlaster(local_veth.ns, tmp_path).start(two_ends(local_veth, {"io-mode": "packet_mmap"}, 1400))

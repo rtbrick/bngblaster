@@ -113,6 +113,7 @@ def test_session(pppd):
     assert "remote IP address 10.0.0.100" in pppd.log()
 
 
+@pytest.mark.full
 def test_lcp_options_rejected(pppd):
     """pppd rejects the Magic-Number and MRU options (nomagic, -mru), the
     client requests LCP without them (RFC 1661 section 5.4)."""
@@ -124,6 +125,7 @@ def test_lcp_options_rejected(pppd):
     assert "rcvd [LCP CodeRej" not in log
 
 
+@pytest.mark.full
 def test_chap_rechallenge(pppd):
     """pppd sends a CHAP challenge every 3 seconds (chap-interval), the
     client answers each challenge (RFC 1994 section 2)."""
@@ -135,6 +137,7 @@ def test_chap_rechallenge(pppd):
     assert "Peer %s failed CHAP" % USERNAME not in pppd.log()
 
 
+@pytest.mark.full
 def test_ipcp_rejected_dual_stack(pppd):
     """pppd without IPv4 (noip) rejects IPCP with LCP protocol-reject,
     the dual stack session is established with IPv6 only."""
@@ -145,6 +148,7 @@ def test_ipcp_rejected_dual_stack(pppd):
     assert (session["ipcp-state"], session["ip6cp-state"]) == ("Rejected", "Opened")
 
 
+@pytest.mark.full
 def test_ipcp_rejected_ipv4_only(pppd):
     """pppd without IPv4 (noip) rejects IPCP of an IPv4 only session:
     no NCP can be opened and the session is terminated."""
@@ -153,6 +157,7 @@ def test_ipcp_rejected_ipv4_only(pppd):
     pppd.wait_state("Terminated")
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("stop_verified", [False, True], ids=["default", "stop-verified"])
 def test_session_traffic_ipcp_reopen(pppd, stop_verified):
     """Session traffic is routed by pppd between the session and a network
@@ -190,6 +195,7 @@ def test_session_traffic_ipcp_reopen(pppd, stop_verified):
     assert verified() == (2, 2)
 
 
+@pytest.mark.full
 def test_session_traffic_wrong_session(pppd):
     """Verified downstream session traffic of session 1 routed by pppd to
     session 2 is counted as wrong session of session 1 and not received
@@ -227,6 +233,7 @@ def test_session_traffic_wrong_session(pppd):
     assert traffic(2)["downstream-ipv4-wrong-session"] == 0
 
 
+@pytest.mark.full
 def test_session_traffic_violation_report(pppd):
     """Downstream session traffic is blackholed by the server for the first
     seconds, the only downstream IPv4 flow violates and the stdout report

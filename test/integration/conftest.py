@@ -33,8 +33,8 @@ def pytest_unconfigure(config):
 
 
 def pytest_addoption(parser):
-    parser.addoption("--slow", action="store_true", default=False,
-                     help="run slow tests (marked slow)")
+    parser.addoption("--full", action="store_true", default=False,
+                     help="run the full test suite, including the tests marked full")
 
 
 def pytest_collection_modifyitems(config, items):
@@ -46,8 +46,8 @@ def pytest_collection_modifyitems(config, items):
     for item in items:
         if reason:
             item.add_marker(pytest.mark.skip(reason=reason))
-        elif "slow" in item.keywords and not config.getoption("--slow"):
-            item.add_marker(pytest.mark.skip(reason="slow test (run with --slow)"))
+        elif "full" in item.keywords and not config.getoption("--full"):
+            item.add_marker(pytest.mark.skip(reason="full test suite only (run with --full)"))
 
 
 @pytest.fixture(scope="session", autouse=True)

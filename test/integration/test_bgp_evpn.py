@@ -55,6 +55,7 @@ def routes_by_type(bgp):
     return {r["route-type"]: r for r in bgp.bbl_evpn_routes() if r["active"]}
 
 
+@pytest.mark.full
 def test_evpn_route_types(bgp):
     bgp.start(families=("evpn",))
     bgp.wait_established()
@@ -86,6 +87,7 @@ def test_evpn_route_types(bgp):
     bgp.teardown()
 
 
+@pytest.mark.full
 def test_evpn_vxlan(bgp):
     """Labels of VXLAN routes are 24 bit VNIs (RFC 8365)."""
     bgp.start(families=("evpn",))
@@ -98,6 +100,7 @@ def test_evpn_vxlan(bgp):
     bgp.teardown()
 
 
+@pytest.mark.full
 def test_evpn_stream_label(bgp):
     """Stream resolves the inner label from the learned IP prefix route."""
     streams = [{
@@ -131,6 +134,7 @@ def test_evpn_stream_label(bgp):
     bgp.teardown()
 
 
+@pytest.mark.full
 def test_evpn_vpws_to_gobgp(bgp, tmp_path):
     """EVPN VPWS Ethernet A-D per EVI routes sent by the BNG Blaster."""
     services = 4
@@ -158,6 +162,7 @@ def mac_route(label):
             "rd", RD, "rt", RT, "encap", "mpls"]
 
 
+@pytest.mark.full
 def test_evpn_elan_stream_label(bgp):
     """E-LAN stream sends with the IMET ingress replication label (unknown
     unicast) until the MAC/IP route of the destination MAC is learned."""
@@ -195,6 +200,7 @@ def test_evpn_elan_stream_label(bgp):
     bgp.teardown()
 
 
+@pytest.mark.full
 def test_evpn_elan_to_gobgp(bgp, tmp_path):
     """EVPN E-LAN IMET and MAC/IP routes sent by the BNG Blaster."""
     services = 4

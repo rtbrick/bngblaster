@@ -170,6 +170,7 @@ def wait_session_traffic(instance):
                message="session traffic verified")
 
 
+@pytest.mark.full
 def test_session_traffic_reconnect(local_veth, bbl):
     """Session traffic convergence in the report is relative to the first
     packet sent after the reconnect, the L3 rate of session traffic is

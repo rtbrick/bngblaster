@@ -114,6 +114,7 @@ def xl2tpd(xl2tpd_bin, topology, processes, tmp_path):
     return Setup(topology, processes, tmp_path)
 
 
+@pytest.mark.full
 def test_sessions(xl2tpd):
     """PPPoL2TP sessions are established with addresses of the xl2tpd pool,
     CCP of pppd is answered with LCP protocol-reject and the LAC exits
@@ -132,6 +133,7 @@ def test_sessions(xl2tpd):
                message="xl2tpd calls and tunnel closed")
 
 
+@pytest.mark.full
 def test_icmp_client(xl2tpd):
     """The ICMP client of PPPoL2TP sessions pings the pppd address of the
     LNS through the tunnel and receives the replies."""
@@ -148,6 +150,7 @@ def test_icmp_client(xl2tpd):
     assert xl2tpd.lac.terminate(EXIT_TIMEOUT) == 0
 
 
+@pytest.mark.full
 def test_reassemble_downstream_fragments(xl2tpd):
     """Downstream stream traffic of PPPoL2TP sessions is fragmented by the
     LNS (pppd MTU 1000) and reassembled by the LAC, the stream is verified
@@ -169,6 +172,7 @@ def test_reassemble_downstream_fragments(xl2tpd):
     assert xl2tpd.lac.terminate(EXIT_TIMEOUT) == 0
 
 
+@pytest.mark.full
 def test_session_restart(xl2tpd):
     """session-restart restarts a PPPoL2TP session against xl2tpd."""
     xl2tpd.start_lns()

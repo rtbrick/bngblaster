@@ -189,6 +189,7 @@ def test_parallel_start_shared_cpus(tmp_path, processes):
     assert any("sharing CPU" in log(instance) for instance in instances)
 
 
+@pytest.mark.full
 def test_killed_instance(tmp_path, processes):
     """CPUs and interfaces of a killed instance are free again, and its
     CPU lock files, which are not locked anymore, are removed by the

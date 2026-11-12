@@ -50,6 +50,7 @@ def bbl(topology, processes, tmp_path):
     instance.terminate()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("arguments, peers", [
     ({}, [GOBGP_ADDRESS, GOBGP_ADDRESS6]),
     (V4, [GOBGP_ADDRESS]),
@@ -63,6 +64,7 @@ def test_sessions_filter(bbl, arguments, peers):
     assert [s["peer-address"] for s in sessions] == peers
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("arguments, started", [
     (V4, [GOBGP_ADDRESS]),
     (V6, [GOBGP_ADDRESS6]),
@@ -78,6 +80,7 @@ def test_raw_update_filter(bbl, tmp_path, arguments, started):
     assert [s["peer-address"] for s in sessions if s.get("raw-update-file")] == started
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("arguments", [V4, V6])
 def test_disconnect_filter(bbl, arguments):
     result = bbl.ctrl("bgp-disconnect", **arguments)["bgp-disconnect"]

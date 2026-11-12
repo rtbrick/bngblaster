@@ -98,6 +98,7 @@ def test_static_restart(local_veth, bbl):
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
+@pytest.mark.full
 def test_restart_idle(local_veth, bbl):
     """session-restart of idle sessions during a rate-limited ramp-up
     (sessions-pending | session-restart) must not corrupt the idle queue."""

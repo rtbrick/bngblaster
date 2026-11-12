@@ -34,7 +34,8 @@ def lsp_id(system_id):
     return "%s.00-00" % system_id
 
 
-@pytest.mark.parametrize("level", [1, 2, 3], ids=LEVEL_IDS.get)
+@pytest.mark.parametrize("level", [pytest.param(1, marks=pytest.mark.full), 2,
+                                   pytest.param(3, marks=pytest.mark.full)], ids=LEVEL_IDS.get)
 @pytest.mark.parametrize("p2p", [True, False], ids=["p2p", "broadcast"])
 def test_adjacency(isis, p2p, level):
     isis.start(frr={"level": level, "p2p": p2p}, bbl={"level": level, "p2p": p2p})
@@ -50,8 +51,8 @@ def test_adjacency(isis, p2p, level):
                message="FRR adjacency down after BNG Blaster teardown")
 
 
-@pytest.mark.parametrize("level", [1, 2], ids=LEVEL_IDS.get)
-@pytest.mark.parametrize("p2p", [True, False], ids=["p2p", "broadcast"])
+@pytest.mark.parametrize("level", [pytest.param(1, marks=pytest.mark.full), 2], ids=LEVEL_IDS.get)
+@pytest.mark.parametrize("p2p", [True, pytest.param(False, marks=pytest.mark.full)], ids=["p2p", "broadcast"])
 def test_database_sync_bbl_to_frr(isis, tmp_path, p2p, level):
     """Topology loaded from MRT file is flooded to FRR and FRR installs
     routes to all emulated nodes via the BNG Blaster."""
@@ -69,6 +70,7 @@ def test_database_sync_bbl_to_frr(isis, tmp_path, p2p, level):
     isis.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("level", [1, 2], ids=LEVEL_IDS.get)
 def test_database_sync_frr_to_bbl(isis, level):
     """FRR LSP updates are flooded to the BNG Blaster."""
@@ -91,6 +93,7 @@ def test_database_sync_frr_to_bbl(isis, level):
     isis.teardown()
 
 
+@pytest.mark.full
 def test_database_sync_dis_md5(isis, tmp_path):
     """The BNG Blaster as DIS describes a database of several CSNPs with
     HMAC-MD5. The LSPs loaded before the adjacency came up reach FRR only
@@ -110,6 +113,7 @@ def test_database_sync_dis_md5(isis, tmp_path):
     isis.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("p2p", [True, False], ids=["p2p", "broadcast"])
 def test_jumbo_frames(isis, topology, tmp_path, p2p):
     """FRR pads hellos to the interface MTU and the LSPs of the emulated
@@ -132,6 +136,7 @@ def test_jumbo_frames(isis, topology, tmp_path, p2p):
     isis.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("auth_type", ["md5", "simple"])
 @pytest.mark.parametrize("level", [1, 2], ids=LEVEL_IDS.get)
 def test_authentication(isis, tmp_path, level, auth_type):
@@ -153,6 +158,7 @@ def test_authentication(isis, tmp_path, level, auth_type):
     isis.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("frr_key,bbl_key", [
     ("BNGBlasterMD5", "WrongKey"),
     ("BNGBlasterMD5", None),
@@ -165,6 +171,7 @@ def test_authentication_mismatch(isis, frr_key, bbl_key):
     isis.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("level", [1, 2], ids=LEVEL_IDS.get)
 def test_overload(isis, tmp_path, level):
     """FRR does not use the overloaded BNG Blaster as transit, so the
@@ -231,6 +238,7 @@ def test_flex_algo_definition(isis, tmp_path):
     isis.teardown()
 
 
+@pytest.mark.full
 def test_flex_algo_spf(isis, tmp_path):
     """FRR elects the Flex-Algo definition advertised by lspgen and computes
     the Flex-Algo SPF via the BNG Blaster. The application-specific link
@@ -255,6 +263,7 @@ def test_flex_algo_spf(isis, tmp_path):
     isis.teardown()
 
 
+@pytest.mark.full
 def test_node_msd(isis, tmp_path):
     """lspgen advertises the node MSD (RFC 8491) and the E-flag (ELC) of the
     node prefixes (RFC 9088), FRR decodes the node MSD of all nodes."""
@@ -272,6 +281,7 @@ def test_node_msd(isis, tmp_path):
     isis.teardown()
 
 
+@pytest.mark.full
 def test_bbl_flex_algo(isis, tmp_path):
     """The BNG Blaster advertises node SIDs per SR algorithm, the node MSD,
     application-specific link attributes and a Flex-Algo definition, which
@@ -308,6 +318,7 @@ def test_bbl_flex_algo(isis, tmp_path):
     isis.teardown()
 
 
+@pytest.mark.full
 def test_lspgen_control_socket(isis, tmp_path):
     """lspgen injects the topology with the control socket and checks the
     reply of the BNG Blaster: a request to an unknown instance fails with
@@ -405,6 +416,7 @@ def lan(topology, processes, tmp_path):
         ns.delete()
 
 
+@pytest.mark.full
 def test_lan_teardown_dis(lan, topology, processes, tmp_path):
     """The BNG Blaster as DIS purges its pseudonode LSP with isis-teardown.
     It must give up the DIS role, so that the FRR instances elect a new DIS

@@ -120,6 +120,7 @@ def test_icrq_without_session_id(l2tp):
     assert l2tp.sessions() == []
 
 
+@pytest.mark.full
 def test_lns_iccn_timeout(l2tp):
     """A call answered with ICRP is cleared with CDN if no ICCN follows
     within 30 seconds, sessions waiting for ICCN kept their session ID
@@ -163,6 +164,7 @@ def test_lns_lcp(l2tp):
     assert cdn and cdn[0]["result-code"] not in (None, 0), result
 
 
+@pytest.mark.full
 def test_binary_peer_strings(l2tp):
     """Peer strings with invalid UTF-8 do not drop the tunnel and session
     from the l2tp-tunnels and l2tp-sessions output."""
@@ -198,6 +200,7 @@ def test_l2tp_ctrl_tunnel_id_range(l2tp):
     peer.communicate(timeout=30)
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("scenario,expected", [("no-tunnel-id", STOPCCN), ("no-session-id", CDN)])
 def test_lac_missing_assigned_id(l2tp, scenario, expected):
     """The LAC rejects SCCRP without Assigned Tunnel ID with StopCCN and
@@ -221,6 +224,7 @@ def test_lns_bogus_nr(l2tp):
     assert ICRP in types(result), result
 
 
+@pytest.mark.full
 def test_lns_nr_window(l2tp):
     """An Nr beyond the last sent Ns is ignored, also if the messages it
     acknowledges are already queued but held back by the send window.
@@ -244,6 +248,7 @@ def test_lns_control_host_name(l2tp):
     assert "\nFAKE" not in log and "\x1b" not in log
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("scenario", ["rws0", "rws65535"])
 def test_lac_peer_receive_window(l2tp, scenario):
     """A peer Receive Window Size of 0 or above half of the sequence number
@@ -255,6 +260,7 @@ def test_lac_peer_receive_window(l2tp, scenario):
     assert ICCN in types(result), result
 
 
+@pytest.mark.full
 def test_lac_icrp_timeout(l2tp):
     """A LAC session whose ICRQ is acknowledged but never answered with
     ICRP is cleared with CDN after 30 seconds instead of waiting forever."""
@@ -269,6 +275,7 @@ def test_lac_icrp_timeout(l2tp):
     assert counters["sessions-terminated"] == 1, counters
 
 
+@pytest.mark.full
 def test_lac_max_retry_stopccn(l2tp):
     """With max retry the StopCCN is sent behind the unacknowledged
     message, the window was reset to one after queuing the StopCCN."""
@@ -279,7 +286,7 @@ def test_lac_max_retry_stopccn(l2tp):
     assert stopccn and stopccn[0]["result-code"] == 2, result
 
 
-@pytest.mark.slow
+@pytest.mark.full
 def test_lac_retransmission_backoff_cap(l2tp):
     """Control messages of an established tunnel are retransmitted with
     backoff capped at 8 seconds, so max-retry 6 is reached after about 39

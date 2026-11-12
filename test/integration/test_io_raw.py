@@ -15,6 +15,7 @@ from helpers import BngBlaster, wait_until
 EXIT_TIMEOUT = 30
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("threads", [False, True], ids=["main", "threads"])
 def test_io_raw(local_veth, processes, tmp_path, threads):
     interfaces = {

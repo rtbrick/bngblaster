@@ -147,6 +147,7 @@ def assert_clean_exit(lac, lns):
     assert lns.terminate(EXIT_TIMEOUT) == 0
 
 
+@pytest.mark.full
 def test_setup_traffic_teardown(lac_lns):
     lac, lns = lac_lns()
     assert len(lns_tunnels(lns)) == 2
@@ -171,6 +172,7 @@ def test_setup_traffic_teardown(lac_lns):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_ppp_terminate_from_lac(lac_lns):
     """LCP terminate of a PPPoL2TP session must send CDN to the LNS."""
     lac, lns = lac_lns()
@@ -182,6 +184,7 @@ def test_ppp_terminate_from_lac(lac_lns):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_l2tp_session_terminate_from_lac(lac_lns):
     lac, lns = lac_lns()
     response = lac.ctrl("l2tp-session-terminate", **{"session-id": 1})
@@ -207,6 +210,7 @@ def tunnel_session_counts(bbl):
     return sessions, established
 
 
+@pytest.mark.full
 def test_tunnel_session_counts(lac_lns):
     """l2tp-tunnels reports the sessions of each tunnel on LNS and LAC."""
     lac, lns = lac_lns()
@@ -222,6 +226,7 @@ def test_tunnel_session_counts(lac_lns):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_csurq(lac_lns):
     """Connect speed update requests are limited to the number of AVPs
     fitting into a control message. Session IDs must be integers (or
@@ -242,6 +247,7 @@ def test_csurq(lac_lns):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_l2tp_tunnel_terminate_from_lns(lac_lns):
     lac, lns = lac_lns()
     tunnel_id = lns_tunnels(lns)[0]["tunnel-id"]
@@ -257,7 +263,7 @@ def test_l2tp_tunnel_terminate_from_lns(lac_lns):
     assert_clean_exit(lac, lns)
 
 
-@pytest.mark.slow
+@pytest.mark.full
 def test_lcp_echo_timeout(lac_lns):
     """LNS dies: the LAC detects the LCP echo timeout, tears down all
     sessions and tunnels (retries towards the dead LNS) and exits."""
@@ -273,6 +279,7 @@ def test_lcp_echo_timeout(lac_lns):
     assert lac.terminate(60) == 0
 
 
+@pytest.mark.full
 def test_dual_stack(lac_lns):
     lac, lns = lac_lns(sessions=2, ip6cp=True)
 
@@ -285,6 +292,7 @@ def test_dual_stack(lac_lns):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_chap(lac_lns):
     """The LNS proposes PAP, switches to CHAP after the Conf-Nak of the
     client and sends the CHAP challenge once LCP is opened."""
@@ -292,6 +300,7 @@ def test_chap(lac_lns):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_lcp_conf_request_disabled(topology, processes, tmp_path):
     """Without LCP Conf-Request from LNS (and no proxy LCP from the LAC)
     the PPP sessions can't complete LCP."""
@@ -359,6 +368,7 @@ def connect_speed_avp(avp_type, value, mandatory):
     return struct.pack("!HHHI", flags_len, 0, avp_type, value)
 
 
+@pytest.mark.full
 def test_connect_speed(lac_lns):
     """TX (AVP 24) and RX (AVP 38) connect speeds are configurable per
     LAC, the defaults (100 Mbps TX, no RX) remain unchanged."""
@@ -381,6 +391,7 @@ def test_connect_speed(lac_lns):
     assert struct.pack("!HHH", 10, 0, 38) + struct.pack("!I", 0) not in pcap
 
 
+@pytest.mark.full
 def test_connect_speed_limits(lac_lns):
     """Connect speeds use the full 32 bit range of the AVP."""
     lac, lns = lac_lns(sessions=4, client_options={
@@ -414,6 +425,7 @@ def test_receive_window_size_invalid(topology, tmp_path, value):
         assert "Invalid value for l2tp-client->receive-window-size (1 - 32767)" in f.read()
 
 
+@pytest.mark.full
 def test_invalid_icrq(topology, processes, tmp_path):
     """An invalid ICRQ is rejected with a CDN to the session ID of the
     LAC (RFC 2661) and is not counted as session, a valid ICRQ with the
@@ -459,6 +471,7 @@ def start_pair(topology, processes, tmp_path, sessions=2, update=None):
     return lac, lns
 
 
+@pytest.mark.full
 def test_session_traffic_both_directions(topology, processes, tmp_path):
     """Downstream session traffic of PPPoL2TP sessions is sent as IP from
     the network interface (routed by the LNS), upstream through the tunnel
@@ -481,6 +494,7 @@ def test_session_traffic_both_directions(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_stream_ports(topology, processes, tmp_path):
     """Upstream streams of PPPoL2TP sessions use the iterated ports of each
     stream (captured inside the L2TP tunnel in the LNS namespace)."""
@@ -510,6 +524,7 @@ def test_stream_ports(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_icmp_client(topology, processes, tmp_path):
     """The ICMP client of a PPPoL2TP session sends through the tunnel."""
     def update(config):
@@ -523,6 +538,7 @@ def test_icmp_client(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_icmp_client_network_mtu(topology, processes, tmp_path):
     """Data frames of PPPoL2TP sessions are limited by the network interface
     MTU (1600) instead of 1500 bytes including the ethernet header, so the
@@ -543,6 +559,7 @@ def test_icmp_client_network_mtu(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_session_restart(topology, processes, tmp_path):
     """session-restart restarts a PPPoL2TP session without reconnect."""
     lac, lns = start_pair(topology, processes, tmp_path)
@@ -553,6 +570,7 @@ def test_session_restart(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_lns_lcp_padding(topology, processes, tmp_path):
     """LCP packets of the LNS with the maximum lcp-padding fit into an L2TP
     data frame (MTU 1500), larger values are rejected (up to 65535 broke
@@ -575,6 +593,7 @@ def test_lns_lcp_padding(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+@pytest.mark.full
 def test_lac_lns_same_instance(local_veth, processes, tmp_path):
     """LAC and LNS in one instance: the PAP reply of the LNS naming its own
     session does not relink the LAC session to the LNS session, which sent
@@ -634,7 +653,7 @@ def test_lac_without_tunnel(local_veth, processes, tmp_path, group_id):
     assert bbl.terminate(EXIT_TIMEOUT) == 0
 
 
-@pytest.mark.slow
+@pytest.mark.full
 def test_retransmission_backoff(topology, processes, tmp_path):
     """Control messages to a dead LNS are retransmitted with exponential
     backoff (1, 2, 4, 8, 8 seconds), so max-retry 4 is reached after about
@@ -652,6 +671,7 @@ def test_retransmission_backoff(topology, processes, tmp_path):
     assert lac.terminate(EXIT_TIMEOUT + 15) == 0
 
 
+@pytest.mark.full
 def test_tunnel_round_robin_per_group(topology, processes, tmp_path):
     """Sessions are spread over the tunnels of their group. With two PPPoL2TP
     access interfaces, the global session ID selected the tunnel and all
@@ -667,7 +687,7 @@ def test_tunnel_round_robin_per_group(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
-@pytest.mark.slow
+@pytest.mark.full
 def test_sessions_beyond_tunnel_session_ids(topology, processes, tmp_path):
     """More sessions than session IDs of a tunnel open another tunnel, the
     sessions without a free session ID stayed in L2TP Wait forever."""

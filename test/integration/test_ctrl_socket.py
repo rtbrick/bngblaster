@@ -88,6 +88,7 @@ def test_cli_string_arguments(instance):
     assert json.loads(out.stdout)["code"] == 404, out.stdout + out.stderr
 
 
+@pytest.mark.full
 def test_main_loop_commands(instance):
     # Repeated requests of commands executed by the main loop.
     for _ in range(20):
@@ -130,6 +131,7 @@ def test_li_flows_bounded(instance, topology):
     assert li["flows"] == 65536 and li["rx-packets"] > 66000, li
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("request_data", [b"", b'{"command": '])
 def test_idle_client(instance, request_data):
     """A client which does not send a complete request is timed out, other

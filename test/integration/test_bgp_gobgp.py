@@ -70,6 +70,7 @@ def test_unicast(bgp, tmp_path):
     bgp.teardown()
 
 
+@pytest.mark.full
 def test_labeled_unicast(bgp, tmp_path):
     """Labeled unicast raw updates with End-of-RIB per family, and
     withdrawn routes packed into few updates with the RFC 8277 withdraw
@@ -106,6 +107,7 @@ def test_labeled_unicast(bgp, tmp_path):
     bgp.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("bbl_id", ["10.0.0.1", "10.0.0.3"], ids=["gobgp-wins", "bbl-wins"])
 def test_connection_collision(bgp, bbl_id):
     """Both sides connect actively. RFC 4271 section 6.8 keeps the
@@ -121,6 +123,7 @@ def test_connection_collision(bgp, bbl_id):
     bgp.teardown()
 
 
+@pytest.mark.full
 def test_peer_close(bgp):
     """The peer closes the established connection without NOTIFICATION
     (GoBGP killed, the kernel sends FIN). The session must go down
@@ -134,6 +137,7 @@ def test_peer_close(bgp):
     assert bgp.bbl.terminate(30) == 0
 
 
+@pytest.mark.full
 def test_hold_time_negotiated(bgp):
     """The smaller hold time of GoBGP is used (RFC 4271 section 4.2),
     so a silent peer is detected after 6 instead of 30 seconds."""
@@ -149,6 +153,7 @@ def test_hold_time_negotiated(bgp):
         os.kill(bgp.gobgp.proc.pid, signal.SIGCONT)
 
 
+@pytest.mark.full
 def test_hold_time_zero(bgp):
     """Hold time zero disables hold timer and keepalives (RFC 4271
     section 4.4), the session must stay up without keepalives."""
@@ -161,6 +166,7 @@ def test_hold_time_zero(bgp):
     bgp.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.usefixtures("md5_kernel")
 def test_md5(bgp):
     bgp.start(gobgp={"md5": "BNGBlasterMD5"},
@@ -170,12 +176,13 @@ def test_md5(bgp):
     bgp.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.usefixtures("md5_kernel")
 @pytest.mark.parametrize("gobgp_md5,bbl_md5", [
-    # Each mismatch waits for the hold timer, only wrong-key runs by default.
+    # Each mismatch waits for the hold timer.
     ("BNGBlasterMD5", "WrongKey"),
-    pytest.param("BNGBlasterMD5", None, marks=pytest.mark.slow),
-    pytest.param(None, "BNGBlasterMD5", marks=pytest.mark.slow),
+    ("BNGBlasterMD5", None),
+    (None, "BNGBlasterMD5"),
 ], ids=["wrong-key", "gobgp-only", "bbl-only"])
 def test_md5_mismatch(bgp, gobgp_md5, bbl_md5):
     bbl = {"tcp-ao-algorithm": "md5", "tcp-ao-key": bbl_md5} if bbl_md5 else {}

@@ -10,6 +10,8 @@ SPDX-License-Identifier: BSD-3-Clause
 import os
 import time
 
+import pytest
+
 from helpers import BngBlaster
 
 EXIT_TIMEOUT = 30
@@ -31,6 +33,7 @@ def read_fifo(path, duration):
     return data
 
 
+@pytest.mark.full
 def test_fifo_listener_restart(topology, processes, tmp_path):
     fifo = str(tmp_path / "capture.fifo")
     os.mkfifo(fifo)

@@ -16,9 +16,9 @@ pytestmark = pytest.mark.usefixtures("frr_bin")
 # Interface types with the expected FRR neighbor state of the BNG Blaster.
 INTERFACES = pytest.mark.parametrize("p2p,bbl_priority,frr_priority,frr_state", [
     (True, None, None, "Full/PointToPoint"),
-    (False, 64, 1, "Full/DR"),
-    (False, 1, 64, "Full/BDR"),
-    (False, 0, 64, "Full/DROther"),
+    pytest.param(False, 64, 1, "Full/DR", marks=pytest.mark.full),
+    pytest.param(False, 1, 64, "Full/BDR", marks=pytest.mark.full),
+    pytest.param(False, 0, 64, "Full/DROther", marks=pytest.mark.full),
 ], ids=["p2p", "bbl-dr", "bbl-bdr", "bbl-drother"])
 
 
@@ -57,6 +57,7 @@ def test_database_sync_bbl_to_frr(ospf, tmp_path, p2p, bbl_priority, frr_priorit
     ospf.teardown()
 
 
+@pytest.mark.full
 @pytest.mark.parametrize("address6,prefix", [
     ("fd00::1/48", "fd00::/48"),
     ("fd00::5/126", "fd00::4/126"),
@@ -73,6 +74,7 @@ def test_prefix_encoding(ospf, address6, prefix):
     ospf.teardown()
 
 
+@pytest.mark.full
 def test_restart_flush_network_lsa(ospf):
     """The BNG Blaster is restarted without purge and is no longer DR.
     The network LSA of the previous run is flushed (RFC 2328 section 13.4)

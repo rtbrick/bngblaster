@@ -178,6 +178,7 @@ def test_hold_time(ldp):
     assert ldp.bbl.terminate(30) == 0
 
 
+@pytest.mark.full
 def test_hello_adjacency_loss(ldp):
     """FRR hellos are dropped while the TCP connection stays up. The BNG
     Blaster terminates the session when its hello adjacency is lost
@@ -200,6 +201,7 @@ def test_hello_adjacency_loss(ldp):
     assert ldp.bbl.terminate(30) == 0
 
 
+@pytest.mark.full
 def test_teardown(ldp):
     """With ldp-teardown, the session is closed and the BNG Blaster stops
     sending hellos, so FRR removes the adjacency after the hold time and

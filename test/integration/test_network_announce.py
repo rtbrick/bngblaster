@@ -11,6 +11,7 @@ SPDX-License-Identifier: BSD-3-Clause
 import json
 import time
 
+import pytest
 from scapy.all import ARP, ICMPv6ND_NA, ICMPv6NDOptDstLLAddr, IPv6, rdpcap
 
 from helpers import BngBlaster, kernel_address, wait_until
@@ -73,6 +74,7 @@ def counters(instance):
     return interface["tx-garp"], interface["tx-unsolicited-na"]
 
 
+@pytest.mark.full
 def test_announce(topology, processes, tmp_path):
     mac = setup_peer(topology)
     ipv4, ipv6 = addresses()
@@ -119,6 +121,7 @@ def test_announce(topology, processes, tmp_path):
     assert na == {a: 2 * BURST for a in ipv6}
 
 
+@pytest.mark.full
 def test_announce_interval(topology, processes, tmp_path):
     setup_peer(topology)
     count = len(addresses()[0])

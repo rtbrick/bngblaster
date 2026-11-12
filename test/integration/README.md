@@ -175,13 +175,26 @@ cmake --build build
 sudo -E python3 -m pytest test/integration
 ```
 
-Tests marked `slow` wait for long protocol timers (hold timers, LCP
-echo timeouts, LSP lifetimes) and are skipped unless `--slow` is given. Only the slow tests run with `--slow -m slow`
-(GitHub workflow "Integration (slow)", started manually):
+By default, only the quick tests and the basic tests of each protocol
+run (about 10 minutes). Tests marked `full` take 5 seconds or more,
+mostly because they wait for protocol timers (hold timers, LCP echo
+timeouts, LSP lifetimes, retransmissions) or cover further variants
+(interop, authentication, broadcast links, levels). They are skipped
+unless `--full` is given:
 
 ```
-sudo -E python3 -m pytest test/integration --slow -m slow
+sudo -E python3 -m pytest test/integration --full
 ```
+
+Only the tests marked `full` run with `--full -m full` (GitHub workflow
+"Integration (full)", started manually):
+
+```
+sudo -E python3 -m pytest test/integration --full -m full
+```
+
+New tests that take 5 seconds or more should be marked
+`@pytest.mark.full`, except basic tests of a protocol.
 
 Without sudo, the tests also run in an unprivileged user namespace:
 
