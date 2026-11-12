@@ -1571,7 +1571,7 @@ bbl_session_json(bbl_session_s *session, bool debug)
             json_object_set_new(session_traffic, "upstream-ipv4-flow-id", json_integer(stream->flow_id));
             json_object_set_new(session_traffic, "upstream-ipv4-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
             json_object_set_new(session_traffic, "upstream-ipv4-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
-            json_object_set_new(session_traffic, "upstream-ipv4-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set_new(session_traffic, "upstream-ipv4-rx-first-seq", json_integer(bbl_stream_rx_reset_pending(stream) ? 0 : stream->rx_first_seq));
             json_object_set_new(session_traffic, "upstream-ipv4-loss", json_integer(stream->rx_loss - stream->reset_loss));
             json_object_set_new(session_traffic, "upstream-ipv4-wrong-session", json_integer(stream->rx_wrong_session));
         }
@@ -1580,7 +1580,7 @@ bbl_session_json(bbl_session_s *session, bool debug)
             json_object_set_new(session_traffic, "downstream-ipv4-flow-id", json_integer(stream->flow_id));
             json_object_set_new(session_traffic, "downstream-ipv4-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
             json_object_set_new(session_traffic, "downstream-ipv4-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
-            json_object_set_new(session_traffic, "downstream-ipv4-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set_new(session_traffic, "downstream-ipv4-rx-first-seq", json_integer(bbl_stream_rx_reset_pending(stream) ? 0 : stream->rx_first_seq));
             json_object_set_new(session_traffic, "downstream-ipv4-loss", json_integer(stream->rx_loss - stream->reset_loss));
             json_object_set_new(session_traffic, "downstream-ipv4-wrong-session", json_integer(stream->rx_wrong_session));
         }
@@ -1589,7 +1589,7 @@ bbl_session_json(bbl_session_s *session, bool debug)
             json_object_set_new(session_traffic, "upstream-ipv6-flow-id", json_integer(stream->flow_id));
             json_object_set_new(session_traffic, "upstream-ipv6-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
             json_object_set_new(session_traffic, "upstream-ipv6-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
-            json_object_set_new(session_traffic, "upstream-ipv6-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set_new(session_traffic, "upstream-ipv6-rx-first-seq", json_integer(bbl_stream_rx_reset_pending(stream) ? 0 : stream->rx_first_seq));
             json_object_set_new(session_traffic, "upstream-ipv6-loss", json_integer(stream->rx_loss - stream->reset_loss));
             json_object_set_new(session_traffic, "upstream-ipv6-wrong-session", json_integer(stream->rx_wrong_session));
         }
@@ -1598,7 +1598,7 @@ bbl_session_json(bbl_session_s *session, bool debug)
             json_object_set_new(session_traffic, "downstream-ipv6-flow-id", json_integer(stream->flow_id));
             json_object_set_new(session_traffic, "downstream-ipv6-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
             json_object_set_new(session_traffic, "downstream-ipv6-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
-            json_object_set_new(session_traffic, "downstream-ipv6-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set_new(session_traffic, "downstream-ipv6-rx-first-seq", json_integer(bbl_stream_rx_reset_pending(stream) ? 0 : stream->rx_first_seq));
             json_object_set_new(session_traffic, "downstream-ipv6-loss", json_integer(stream->rx_loss - stream->reset_loss));
             json_object_set_new(session_traffic, "downstream-ipv6-wrong-session", json_integer(stream->rx_wrong_session));
         }
@@ -1607,7 +1607,7 @@ bbl_session_json(bbl_session_s *session, bool debug)
             json_object_set_new(session_traffic, "upstream-ipv6pd-flow-id", json_integer(stream->flow_id));
             json_object_set_new(session_traffic, "upstream-ipv6pd-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
             json_object_set_new(session_traffic, "upstream-ipv6pd-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
-            json_object_set_new(session_traffic, "upstream-ipv6pd-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set_new(session_traffic, "upstream-ipv6pd-rx-first-seq", json_integer(bbl_stream_rx_reset_pending(stream) ? 0 : stream->rx_first_seq));
             json_object_set_new(session_traffic, "upstream-ipv6pd-loss", json_integer(stream->rx_loss - stream->reset_loss));
             json_object_set_new(session_traffic, "upstream-ipv6pd-wrong-session", json_integer(stream->rx_wrong_session));
         }
@@ -1616,7 +1616,7 @@ bbl_session_json(bbl_session_s *session, bool debug)
             json_object_set_new(session_traffic, "downstream-ipv6pd-flow-id", json_integer(stream->flow_id));
             json_object_set_new(session_traffic, "downstream-ipv6pd-tx-packets", json_integer(stream->tx_packets - stream->reset_packets_tx));
             json_object_set_new(session_traffic, "downstream-ipv6pd-rx-packets", json_integer(stream->rx_packets - stream->reset_packets_rx));
-            json_object_set_new(session_traffic, "downstream-ipv6pd-rx-first-seq", json_integer(stream->rx_first_seq));
+            json_object_set_new(session_traffic, "downstream-ipv6pd-rx-first-seq", json_integer(bbl_stream_rx_reset_pending(stream) ? 0 : stream->rx_first_seq));
             json_object_set_new(session_traffic, "downstream-ipv6pd-loss", json_integer(stream->rx_loss - stream->reset_loss));
             json_object_set_new(session_traffic, "downstream-ipv6pd-wrong-session", json_integer(stream->rx_wrong_session));
         }

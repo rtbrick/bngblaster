@@ -107,6 +107,36 @@ def test_stream_reset_in_flight(tmp_path, processes):
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
+@pytest.mark.parametrize("threads", [False, True], ids=["main", "threads"])
+def test_stream_reset_stopped(tmp_path, processes, threads):
+    """The RX sequence state and delays are cleared with the next packet
+    of the flow after stream-reset. A stopped stream, which receives
+    nothing more, must not show the values from before the reset."""
+    config = loopback_config(threads)
+    config["traffic"]["stream-delay-calculation"] = True
+    instance = BngBlaster(Host(), tmp_path, "bbl").start(config)
+    processes.append(instance)
+    keys = ("rx-first-seq", "rx-last-seq", "rx-wrong-order", "rx-delay-us-min", "rx-delay-us-max")
+
+    def info():
+        return instance.ctrl("stream-info", **{"flow-id": 1})["stream-info"]
+
+    wait_until(lambda: info()["rx-last-seq"] > 0, 10, message="stream receiving")
+    assert instance.ctrl("stream-stop")["code"] == 200
+    time.sleep(0.5)
+    assert instance.ctrl("stream-reset")["code"] == 200
+    time.sleep(0.5)
+    stopped = info()
+    assert stopped["tx-packets"] == 0 and stopped["rx-packets"] == 0, stopped
+    assert all(stopped[k] == 0 for k in keys), stopped
+
+    assert instance.ctrl("stream-start")["code"] == 200
+    wait_until(lambda: info()["rx-last-seq"] > 0, 10, message="stream receiving after start")
+    started = info()
+    assert started["rx-first-seq"] == started["tx-first-seq"], started
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
 def test_stream_real_arguments(tmp_path, processes):
     """Integer arguments sent as integral reals (bngblaster-cli sends 2.0
     as real) must select the objects like integers, other reals must be

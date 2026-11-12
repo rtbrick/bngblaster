@@ -2993,6 +2993,21 @@ bbl_stream_reset(bbl_stream_s *stream)
     __atomic_store_n(&stream->reset, true, __ATOMIC_RELEASE);
 }
 
+/**
+ * The RX sequence state and delays are cleared by the RX thread with
+ * the next packet of the flow after a reset (bbl_stream_rx_reset).
+ * Until then, the values from before the reset must not be shown,
+ * e.g. for a stream that is stopped and receives nothing more.
+ *
+ * @param stream stream
+ * @return true if the RX thread has not yet seen the reset
+ */
+bool
+bbl_stream_rx_reset_pending(bbl_stream_s *stream)
+{
+    return __atomic_load_n(&stream->rx_flags, __ATOMIC_ACQUIRE) & STREAM_FLAG_RX_RESET;
+}
+
 const char *
 stream_type_string(bbl_stream_s *stream)
 {
@@ -3359,6 +3374,7 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
     char *src_address = NULL;
     char *dst_address = NULL;
     uint16_t dst_port = 0;
+    bool rx_reset_pending = bbl_stream_rx_reset_pending(stream);
 
     /* Stream rates in 1/100 packets per second */
     uint64_t rate_packets_tx_avg = 0;
@@ -3433,8 +3449,8 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "rx-interface", rx_interface,
             "tx-seq", (json_int_t)stream->flow_seq,
             "tx-first-seq", (json_int_t)stream->tx_first_seq,
-            "rx-first-seq", (json_int_t)stream->rx_first_seq,
-            "rx-last-seq", (json_int_t)stream->rx_last_seq,
+            "rx-first-seq", (json_int_t)(rx_reset_pending ? 0 : stream->rx_first_seq),
+            "rx-last-seq", (json_int_t)(rx_reset_pending ? 0 : stream->rx_last_seq),
             "rx-tos-tc", stream->rx_priority,
             "rx-ttl", stream->rx_ttl,
             "rx-outer-vlan-pbit", stream->rx_outer_vlan_pbit,
@@ -3446,9 +3462,9 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             "rx-packets", (json_int_t)(stream->rx_packets - stream->reset_packets_rx),
             "rx-bytes", (json_int_t)((stream->rx_packets - stream->reset_packets_rx) * stream->rx_len),
             "rx-loss", (json_int_t)(stream->rx_loss - stream->reset_loss),
-            "rx-wrong-order", (json_int_t)stream->rx_wrong_order,
-            "rx-delay-us-min", (json_int_t)stream->rx_min_delay_us,
-            "rx-delay-us-max", (json_int_t)stream->rx_max_delay_us,
+            "rx-wrong-order", (json_int_t)(rx_reset_pending ? 0 : stream->rx_wrong_order),
+            "rx-delay-us-min", (json_int_t)(rx_reset_pending ? 0 : stream->rx_min_delay_us),
+            "rx-delay-us-max", (json_int_t)(rx_reset_pending ? 0 : stream->rx_max_delay_us),
             "rx-pps", (double)rate_packets_rx_avg / BBL_STREAM_RATE_SCALE,
             "tx-pps", (double)rate_packets_tx_avg / BBL_STREAM_RATE_SCALE,
             "rx-pps-max", (double)rate_packets_rx_avg_max / BBL_STREAM_RATE_SCALE,

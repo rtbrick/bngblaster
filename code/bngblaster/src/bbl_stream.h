@@ -360,6 +360,9 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac);
 bool
 bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner);
 
+bool
+bbl_stream_rx_reset_pending(bbl_stream_s *stream);
+
 void
 bbl_stream_reset(bbl_stream_s *stream);
 
