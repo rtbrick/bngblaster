@@ -310,9 +310,11 @@ ospf_interface_init(bbl_network_interface_s *interface,
                 if(version == OSPF_VERSION_2) {
                     interface->ospfv2_interface = ospf_interface;
                     ospf_interface->metric = network_config->ospfv2_metric;
+                    ospf_interface->bfd_profile_id = network_config->ospfv2_bfd_profile_id;
                 } else {
                     interface->ospfv3_interface = ospf_interface;
                     ospf_interface->metric = network_config->ospfv3_metric;
+                    ospf_interface->bfd_profile_id = network_config->ospfv3_bfd_profile_id;
                 }
 
                 ospf_interface->next = ospf->interfaces;

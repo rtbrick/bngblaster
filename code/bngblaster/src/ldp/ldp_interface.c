@@ -34,6 +34,7 @@ ldp_interface_init(bbl_network_interface_s *interface,
     adjacency->instance = instance;
     adjacency->interface = interface;
     adjacency->hold_time = config->hold_time;
+    adjacency->bfd_profile_id = interface_config->ldp_bfd_profile_id;
     interface->ldp_adjacency = adjacency;
     interface->ldp_instance = instance;
 
@@ -109,6 +110,9 @@ ldp_targeted_adjacency_add(ldp_instance_s *instance,
         interface->ldp_instance = instance;
     }
     adjacency->targeted_configured = configured;
+    if(configured) {
+        adjacency->bfd_profile_id = neighbor->bfd_profile_id;
+    }
     if(neighbor->ipv6) {
         adjacency->hello_ipv6 = true;
         memcpy(&adjacency->peer_ipv6_address, &neighbor->ipv6_address, sizeof(ipv6addr_t));

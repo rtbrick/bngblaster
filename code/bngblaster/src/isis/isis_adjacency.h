@@ -20,4 +20,7 @@ isis_adjacency_up(isis_adjacency_s *adjacency);
 void
 isis_adjacency_down(isis_adjacency_s *adjacency, const char *reason);
 
+void
+isis_adjacency_bfd_add(isis_adjacency_s *adjacency);
+
 #endif

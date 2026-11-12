@@ -253,6 +253,44 @@ ospf_neighbor_loading(ospf_neighbor_s *ospf_neighbor)
     UNUSED(ospf_neighbor);
 }
 
+static void
+ospf_neighbor_bfd_cb(void *client, bfd_session_s *session, bfd_event_t event)
+{
+    ospf_neighbor_s *ospf_neighbor = client;
+    UNUSED(session);
+    if(event != BFD_EVENT_DOWN) return;
+
+    LOG(OSPF, "OSPFv%u neighbor %s BFD down on interface %s\n",
+        ospf_neighbor->version,
+        format_ipv4_address(&ospf_neighbor->router_id),
+        ospf_neighbor->interface->interface->name);
+    ospf_neighbor_update_state(ospf_neighbor, OSPF_NBSTATE_DOWN);
+}
+
+/* BFD is bound to neighbors in state 2-Way or higher. */
+static void
+ospf_neighbor_bfd_update(ospf_neighbor_s *ospf_neighbor)
+{
+    ospf_interface_s *ospf_interface = ospf_neighbor->interface;
+
+    if(ospf_neighbor->state >= OSPF_NBSTATE_2WAY) {
+        if(!ospf_neighbor->bfd && ospf_interface->bfd_profile_id) {
+            if(ospf_neighbor->version == OSPF_VERSION_2) {
+                ospf_neighbor->bfd = bfd_session_client_add(ospf_interface->interface, ospf_interface->bfd_profile_id,
+                                                            false, AF_INET, NULL, &ospf_neighbor->ipv4,
+                                                            BFD_CLIENT_OSPFV2, ospf_neighbor, ospf_neighbor_bfd_cb);
+            } else {
+                ospf_neighbor->bfd = bfd_session_client_add(ospf_interface->interface, ospf_interface->bfd_profile_id,
+                                                            false, AF_INET6, NULL, &ospf_neighbor->ipv6,
+                                                            BFD_CLIENT_OSPFV3, ospf_neighbor, ospf_neighbor_bfd_cb);
+            }
+        }
+    } else if(ospf_neighbor->bfd) {
+        bfd_session_client_del(ospf_neighbor->bfd, ospf_neighbor);
+        ospf_neighbor->bfd = NULL;
+    }
+}
+
 void
 ospf_neighbor_update_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
 {
@@ -318,6 +356,7 @@ ospf_neighbor_update_state(ospf_neighbor_s *ospf_neighbor, uint8_t state)
 
     /* NeighborChange if bidirectional communication is established or lost. */
     if((old < OSPF_NBSTATE_2WAY) != (state < OSPF_NBSTATE_2WAY)) {
+        ospf_neighbor_bfd_update(ospf_neighbor);
         ospf_interface_neighbor_change(ospf_interface);
     }
 }

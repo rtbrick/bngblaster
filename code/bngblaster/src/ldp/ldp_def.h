@@ -169,6 +169,7 @@ typedef struct ldp_targeted_neighbor_config_ {
     ipv6addr_t ipv6_address;
     ipv6addr_t ipv6_source_address; /* Zero for transport address. */
     char *network_interface;
+    uint16_t bfd_profile_id; /* 0 for no BFD */
 
     struct ldp_targeted_neighbor_config_ *next;
 } ldp_targeted_neighbor_config_s;
@@ -250,6 +251,14 @@ typedef struct ldp_session_ {
     uint16_t keepalive_time;
 
     bool ipv6; /* True for IPv6 transport session. */
+
+    /* BFD session of the adjacency which initialized the session. */
+    bfd_session_s *bfd;
+    uint16_t bfd_profile_id;
+    bool bfd_multihop;
+    uint8_t bfd_af;
+    uint8_t bfd_local[IPV6_ADDR_LEN];
+    uint8_t bfd_peer[IPV6_ADDR_LEN];
     struct {
         ipv6addr_t ipv6_address;
         uint32_t ipv4_address;
@@ -316,6 +325,7 @@ typedef struct ldp_adjacency_ {
     ipv6addr_t local_ipv6_address;
     uint32_t hello_rx;
     uint32_t hello_tx;
+    uint16_t bfd_profile_id; /* 0 for no BFD */
 
     struct timer_ *hello_timer;
     struct timer_ *hold_timer;

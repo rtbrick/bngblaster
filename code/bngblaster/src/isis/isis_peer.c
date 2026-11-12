@@ -41,10 +41,15 @@ isis_peer_dis_elect(isis_adjacency_s *adjacency)
     return false;
 }
 
+/**
+ * isis_peer_down_p2p
+ *
+ * @param peer P2P peer
+ * @param reason reason for logging
+ */
 void
-isis_peer_hold_timeout_p2p(timer_s *timer)
+isis_peer_down_p2p(isis_peer_s *peer, const char *reason)
 {
-    isis_peer_s *peer = timer->data;
     isis_adjacency_s *adjacency;
     isis_adjacency_p2p_s *adjacency_p2p = peer->adjacency_p2p;
     bbl_network_interface_s *interface = adjacency_p2p->interface;
@@ -55,22 +60,33 @@ isis_peer_hold_timeout_p2p(timer_s *timer)
     peer->state = ISIS_PEER_STATE_DOWN;
     adjacency_p2p->state = ISIS_P2P_ADJACENCY_STATE_DOWN;
 
-    LOG(ISIS, "ISIS P2P hold timeout to %s on interface %s\n",
-        isis_system_id_to_str(peer->system_id), interface->name);
+    LOG(ISIS, "ISIS P2P %s to %s on interface %s\n",
+        reason, isis_system_id_to_str(peer->system_id), interface->name);
 
     for(int i=0; i<ISIS_LEVELS; i++) {
         adjacency = interface->isis_adjacency[i];
         if(adjacency) {
-            isis_adjacency_down(adjacency, "timeout");
+            isis_adjacency_down(adjacency, reason);
             isis_lsp_self_update(adjacency->instance, adjacency->level);
         }
     }
 }
 
 void
-isis_peer_hold_timeout(timer_s *timer)
+isis_peer_hold_timeout_p2p(timer_s *timer)
 {
-    isis_peer_s *peer = timer->data;
+    isis_peer_down_p2p(timer->data, "hold timeout");
+}
+
+/**
+ * isis_peer_down
+ *
+ * @param peer broadcast peer
+ * @param reason reason for logging
+ */
+void
+isis_peer_down(isis_peer_s *peer, const char *reason)
+{
     isis_adjacency_s *adjacency = peer->adjacency;
 
     if(peer->state == ISIS_PEER_STATE_DOWN) {
@@ -78,8 +94,8 @@ isis_peer_hold_timeout(timer_s *timer)
     }
     peer->state = ISIS_PEER_STATE_DOWN;
 
-    LOG(ISIS, "ISIS %s hold timeout to %s on interface %s\n",
-        isis_level_string(adjacency->level), 
+    LOG(ISIS, "ISIS %s %s to %s on interface %s\n",
+        isis_level_string(adjacency->level), reason,
         isis_system_id_to_str(peer->system_id),
         adjacency->interface->name);
 
@@ -98,14 +114,48 @@ isis_peer_hold_timeout(timer_s *timer)
         }
         peer = peer->next;
     }    
-    isis_adjacency_down(adjacency, "timeout");
+    isis_adjacency_down(adjacency, reason);
     isis_peer_dis_elect(adjacency);
     isis_lsp_self_update(adjacency->instance, adjacency->level);
 }
 
 void
+isis_peer_hold_timeout(timer_s *timer)
+{
+    isis_peer_down(timer->data, "hold timeout");
+}
+
+/* Interface addresses of the neighbor used for BFD, which
+ * are IPv4 or link-local IPv6 addresses in hellos. */
+static void
+isis_peer_update_addresses(isis_peer_s *peer, isis_pdu_s *pdu)
+{
+    isis_tlv_s *tlv = isis_pdu_first_tlv(pdu);
+    while(tlv) {
+        if(tlv->type == ISIS_TLV_IPV4_INT_ADDRESS && tlv->len >= IPV4_ADDR_LEN) {
+            memcpy(&peer->ipv4, tlv->value, IPV4_ADDR_LEN);
+        } else if(tlv->type == ISIS_TLV_IPV6_INT_ADDRESS && tlv->len >= IPV6_ADDR_LEN) {
+            memcpy(&peer->ipv6, tlv->value, IPV6_ADDR_LEN);
+        }
+        tlv = isis_pdu_next_tlv(pdu);
+    }
+}
+
+void
 isis_peer_update(isis_peer_s *peer, isis_pdu_s *pdu)
 {
+    bbl_network_interface_s *interface;
+
+    isis_peer_update_addresses(peer, pdu);
+    /* BFD sessions of adjacencies which are already up. */
+    if(peer->adjacency_p2p) {
+        interface = peer->adjacency_p2p->interface;
+        for(int i=0; i<ISIS_LEVELS; i++) {
+            if(interface->isis_adjacency[i]) isis_adjacency_bfd_add(interface->isis_adjacency[i]);
+        }
+    } else if(peer->adjacency && peer->state == ISIS_PEER_STATE_UP) {
+        isis_adjacency_bfd_add(peer->adjacency);
+    }
     peer->level = *ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_LEVEL) & 0x03;
     memcpy(peer->system_id, ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_SYSTEM_ID), ISIS_SYSTEM_ID_LEN);
     peer->hold_time = be16toh(*(uint16_t*)ISIS_PDU_OFFSET(pdu, ISIS_OFFSET_HELLO_HOLD_TIME));

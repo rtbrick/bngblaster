@@ -114,8 +114,70 @@ isis_adjacency_init(bbl_network_interface_s *interface,
 	    adjacency->adjacency_sid = interface_config->isis_adjacency_sid;
 	}
         adjacency->link_attr = interface_config->isis_link_attr;
+        adjacency->bfd_profile_id = interface_config->isis_bfd_profile_id;
     }
     return true;
+}
+
+static void
+isis_adjacency_bfd_cb(void *client, bfd_session_s *session, bfd_event_t event)
+{
+    isis_adjacency_s *adjacency = client;
+    isis_peer_s *peer;
+    UNUSED(session);
+
+    if(event != BFD_EVENT_DOWN || adjacency->state != ISIS_ADJACENCY_STATE_UP) {
+        return;
+    }
+    if(adjacency->p2p) {
+        isis_peer_down_p2p(adjacency->peer, "BFD down");
+        return;
+    }
+    peer = adjacency->peer;
+    while(peer) {
+        if(peer->state == ISIS_PEER_STATE_UP) {
+            isis_peer_down(peer, "BFD down");
+        }
+        peer = peer->next;
+    }
+}
+
+/**
+ * isis_adjacency_bfd_add
+ *
+ * One BFD session per address family of the adjacency (RFC 6213),
+ * to the IPv4 interface address (TLV 132) and the IPv6 link-local
+ * address (TLV 232) of the neighbor. Called for every hello of an
+ * adjacency in state up, as the addresses may be advertised later.
+ *
+ * @param adjacency IS-IS adjacency
+ */
+void
+isis_adjacency_bfd_add(isis_adjacency_s *adjacency)
+{
+    bbl_network_interface_s *interface = adjacency->interface;
+    isis_peer_s *peer = adjacency->peer;
+
+    if(!adjacency->bfd_profile_id || adjacency->state != ISIS_ADJACENCY_STATE_UP ||
+       (adjacency->bfd && adjacency->bfd6)) {
+        return;
+    }
+    while(peer && !adjacency->p2p && peer->state != ISIS_PEER_STATE_UP) {
+        peer = peer->next;
+    }
+    if(!peer) {
+        return;
+    }
+    if(!adjacency->bfd && interface->ip.address && peer->ipv4) {
+        adjacency->bfd = bfd_session_client_add(interface, adjacency->bfd_profile_id, false,
+                                                AF_INET, NULL, &peer->ipv4,
+                                                BFD_CLIENT_ISIS, adjacency, isis_adjacency_bfd_cb);
+    }
+    if(!adjacency->bfd6 && ipv6_addr_not_zero(&peer->ipv6)) {
+        adjacency->bfd6 = bfd_session_client_add(interface, adjacency->bfd_profile_id, false,
+                                                 AF_INET6, NULL, &peer->ipv6,
+                                                 BFD_CLIENT_ISIS, adjacency, isis_adjacency_bfd_cb);
+    }
 }
 
 /**
@@ -163,6 +225,7 @@ isis_adjacency_up(isis_adjacency_s *adjacency)
     }
 
     g_ctx->routing_sessions++;
+    isis_adjacency_bfd_add(adjacency);
 }
 
 /**
@@ -182,6 +245,15 @@ isis_adjacency_down(isis_adjacency_s *adjacency, const char *reason)
         isis_level_string(adjacency->level), 
         isis_system_id_to_str(adjacency->peer->system_id),
         adjacency->interface->name, reason);
+
+    if(adjacency->bfd) {
+        bfd_session_client_del(adjacency->bfd, adjacency);
+        adjacency->bfd = NULL;
+    }
+    if(adjacency->bfd6) {
+        bfd_session_client_del(adjacency->bfd6, adjacency);
+        adjacency->bfd6 = NULL;
+    }
 
     timer_del(adjacency->timer_tx);
     timer_del(adjacency->timer_retry);

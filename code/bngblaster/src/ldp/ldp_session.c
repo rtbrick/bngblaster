@@ -48,6 +48,10 @@ ldp_session_state_change(ldp_session_s *session, ldp_state_t new_state)
             /* The label mappings learned from the session are
              * no longer valid if the session goes down. */
             ldb_db_withdraw_session(session, 0, true);
+            if(session->bfd) {
+                bfd_session_client_del(session->bfd, session);
+                session->bfd = NULL;
+            }
         }
         session->state = new_state;
     }
@@ -192,11 +196,64 @@ ldp_session_restart_keepalive_timeout(ldp_session_s *session)
 }
 
 static void
+ldp_session_bfd_cb(void *client, bfd_session_s *bfd, bfd_event_t event)
+{
+    ldp_session_s *session = client;
+    UNUSED(bfd);
+    if(event != BFD_EVENT_DOWN || session->state != LDP_OPERATIONAL) {
+        return;
+    }
+    LOG(LDP, "LDP (%s - %s) BFD down\n",
+        ldp_id_to_str(session->local.lsr_id, session->local.label_space_id),
+        ldp_id_to_str(session->peer.lsr_id, session->peer.label_space_id));
+    session->error_code = LDP_STATUS_SHUTDOWN|LDP_STATUS_FATAL_ERROR;
+    ldp_session_close(session);
+}
+
+/* Store the BFD parameters of the adjacency which initialized the
+ * session, single-hop to the hello source for link adjacencies or
+ * multi-hop for targeted adjacencies. */
+static void
+ldp_session_bfd_init(ldp_session_s *session, ldp_adjacency_s *adjacency, uint8_t af, void *source)
+{
+    session->bfd_profile_id = adjacency->bfd_profile_id;
+    session->bfd_multihop = adjacency->targeted;
+    session->bfd_af = af;
+    memset(session->bfd_local, 0x0, sizeof(session->bfd_local));
+    memset(session->bfd_peer, 0x0, sizeof(session->bfd_peer));
+    if(af == AF_INET) {
+        if(adjacency->targeted) {
+            memcpy(session->bfd_local, &adjacency->local_ipv4_address, IPV4_ADDR_LEN);
+        }
+        memcpy(session->bfd_peer, source, IPV4_ADDR_LEN);
+    } else {
+        if(adjacency->targeted) {
+            memcpy(session->bfd_local, &adjacency->local_ipv6_address, IPV6_ADDR_LEN);
+        }
+        memcpy(session->bfd_peer, source, IPV6_ADDR_LEN);
+    }
+}
+
+static void
+ldp_session_bfd_add(ldp_session_s *session)
+{
+    if(!session->bfd_profile_id || session->bfd) {
+        return;
+    }
+    session->bfd = bfd_session_client_add(session->interface, session->bfd_profile_id,
+                                          session->bfd_multihop, session->bfd_af,
+                                          session->bfd_multihop ? session->bfd_local : NULL,
+                                          session->bfd_peer,
+                                          BFD_CLIENT_LDP, session, ldp_session_bfd_cb);
+}
+
+static void
 ldp_session_operational(ldp_session_s *session)
 {
     time_t keepalive_interval;
 
     ldp_session_state_change(session, LDP_OPERATIONAL);
+    ldp_session_bfd_add(session);
     clock_gettime(CLOCK_MONOTONIC, &session->operational_timestamp);
 
     /* Select max PDU length. */
@@ -699,6 +756,7 @@ ldp_session_ipv4_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
         session->active = false;
     }
 
+    ldp_session_bfd_init(session, adjacency, AF_INET, &ipv4->src);
     ldp_session_hello(session, adjacency->hold_time);
     ldp_session_connect(session, 0);
 }
@@ -769,6 +827,7 @@ ldp_session_ipv6_init(ldp_session_s *session, ldp_adjacency_s *adjacency,
         session->active = false;
     }
 
+    ldp_session_bfd_init(session, adjacency, AF_INET6, ipv6->src);
     ldp_session_hello(session, adjacency->hold_time);
     ldp_session_connect(session, 0);
 }

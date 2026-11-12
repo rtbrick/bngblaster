@@ -179,6 +179,10 @@ typedef struct bgp_config_ {
     char *network_interface;
     char *raw_update_file;
 
+    uint16_t bfd_profile_id; /* 0 for no BFD */
+    bool bfd_multihop;
+    bool bfd_multihop_set;
+
     /* TCP-AO (RFC 5925/5926, HMAC-SHA-256-128) */
     bool     tcp_ao_enabled;
     char     *tcp_ao_key;
@@ -252,6 +256,7 @@ typedef struct bgp_session_ {
     io_buffer_t write_buf;
 
     bgp_state_t state;
+    bfd_session_s *bfd;
 
     struct {
         uint32_t as;

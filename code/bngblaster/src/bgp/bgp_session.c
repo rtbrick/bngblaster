@@ -480,6 +480,82 @@ bgp_session_state_established(bgp_session_s *session)
               &bgp_session_update_job);
 }
 
+static void
+bgp_session_bfd_cb(void *client, bfd_session_s *bfd, bfd_event_t event)
+{
+    bgp_session_s *session = client;
+    UNUSED(bfd);
+    if(event != BFD_EVENT_DOWN || session->state != BGP_ESTABLISHED) {
+        return;
+    }
+    LOG(BGP, "BGP (%s %s - %s) BFD down\n",
+        session->interface->name,
+        session->local_address_str,
+        session->peer_address_str);
+    /* Cease with subcode BFD Down (RFC 9384). */
+    session->error_code = 6;
+    session->error_subcode = 10;
+    bgp_session_close(session);
+}
+
+static bool
+bgp_ipv6_prefix_contains(ipv6_prefix *prefix, ipv6addr_t *address)
+{
+    uint8_t bytes = prefix->len / 8;
+    uint8_t bits = prefix->len % 8;
+    uint8_t mask;
+
+    if(prefix->len > 128) return false;
+    if(memcmp(prefix->address, address, bytes) != 0) return false;
+    if(bits) {
+        mask = 0xff << (8 - bits);
+        return (prefix->address[bytes] & mask) == ((*address)[bytes] & mask);
+    }
+    return true;
+}
+
+/* BFD is single-hop if the peer is on a connected
+ * network of the interface, if not configured. */
+static bool
+bgp_session_bfd_multihop(bgp_session_s *session)
+{
+    bbl_network_interface_s *interface = session->interface;
+    uint32_t mask;
+
+    if(session->config->bfd_multihop_set) {
+        return session->config->bfd_multihop;
+    }
+    if(session->af == AF_INET) {
+        mask = ipv4_len_to_mask(interface->ip.len);
+        return !interface->ip.address ||
+               (session->ipv4_peer_address & mask) != (interface->ip.address & mask);
+    }
+    if((*session->ipv6_peer_address)[0] == 0xfe && ((*session->ipv6_peer_address)[1] & 0xc0) == 0x80) {
+        return false;
+    }
+    return !ipv6_addr_not_zero(&interface->ip6.address) ||
+           !bgp_ipv6_prefix_contains(&interface->ip6, session->ipv6_peer_address);
+}
+
+static void
+bgp_session_bfd_add(bgp_session_s *session)
+{
+    if(!session->config->bfd_profile_id || session->bfd) {
+        return;
+    }
+    if(session->af == AF_INET) {
+        session->bfd = bfd_session_client_add(session->interface, session->config->bfd_profile_id,
+                                              bgp_session_bfd_multihop(session), AF_INET,
+                                              &session->ipv4_local_address, &session->ipv4_peer_address,
+                                              BFD_CLIENT_BGP, session, bgp_session_bfd_cb);
+    } else {
+        session->bfd = bfd_session_client_add(session->interface, session->config->bfd_profile_id,
+                                              bgp_session_bfd_multihop(session), AF_INET6,
+                                              session->ipv6_local_address, session->ipv6_peer_address,
+                                              BFD_CLIENT_BGP, session, bgp_session_bfd_cb);
+    }
+}
+
 /**
  * bgp_session_state_change
  * 
@@ -495,6 +571,10 @@ bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state)
         bgp_evpn_session_down(session);
         bgp_l2vpn_session_down(session);
         bgp_rib_flush(session);
+        if(session->bfd) {
+            bfd_session_client_del(session->bfd, session);
+            session->bfd = NULL;
+        }
     }
 
     LOG(BGP, "BGP (%s %s - %s) state changed from %s -> %s\n",
@@ -515,6 +595,7 @@ bgp_session_state_change(bgp_session_s *session, bgp_state_t new_state)
             break;
         case BGP_ESTABLISHED:
             bgp_session_state_established(session);
+            bgp_session_bfd_add(session);
             break;
         default:
             break;

@@ -354,6 +354,10 @@ typedef struct isis_peer_ {
     uint16_t hold_time;
     char    *hostname;
 
+    /* Interface addresses (first of TLV 132 and 232) */
+    ipv4addr_t ipv4;
+    ipv6addr_t ipv6;
+
     /* Extended local circuit ID of the P2P neighbor (RFC 5303) */
     uint32_t ext_circuit_id;
     bool     ext_circuit_id_valid;
@@ -402,6 +406,10 @@ typedef struct isis_adjacency_ {
     uint32_t metric;
     uint16_t adjacency_sid;
     isis_link_attr_s link_attr;
+
+    uint16_t bfd_profile_id; /* 0 for no BFD */
+    bfd_session_s *bfd; /* IPv4 */
+    bfd_session_s *bfd6; /* IPv6 link-local */
     uint64_t csnp_start;
 
     struct {

@@ -438,6 +438,7 @@ typedef struct ospf_config_ {
 typedef struct ospf_neighbor_ {
     ospf_interface_s *interface;
     ospf_neighbor_s *next;
+    bfd_session_s *bfd;
 
     uint32_t router_id;
     
@@ -503,6 +504,7 @@ typedef struct ospf_interface_ {
     ipv6addr_t frag_src; /* OSPFv3 only */
 
     uint16_t metric;
+    uint16_t bfd_profile_id; /* 0 for no BFD */
     uint16_t neighbors_count;
     uint16_t neighbors_full;
 
