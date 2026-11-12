@@ -693,7 +693,7 @@ ipv6_prefix_not_zero(ipv6_prefix *prefix)
  * @param source source string
  * @param old subsctring to search for
  * @param new subsctring to replace with
- * @return new string
+ * @return new string or NULL if longer than SUB_STR_LEN - 1 characters
  */
 char *
 replace_substring(const char* source,
@@ -724,20 +724,22 @@ replace_substring(const char* source,
         if(sub) {
             c = sub - cur;
             result_len += c + new_len;
-            if(result_len < SUB_STR_LEN) {
-                memcpy(result_pos, cur, c);
-                result_pos += c;
-                memcpy(result_pos, new, new_len);
-                result_pos += new_len;
+            if(result_len >= SUB_STR_LEN) {
+                return NULL;
             }
+            memcpy(result_pos, cur, c);
+            result_pos += c;
+            memcpy(result_pos, new, new_len);
+            result_pos += new_len;
             cur = sub + old_len;
         } else {
             c = strlen(cur);
             result_len += c;
-            if(result_len < SUB_STR_LEN) {
-                memcpy(result_pos, cur, c);
-                result_pos += c;
+            if(result_len >= SUB_STR_LEN) {
+                return NULL;
             }
+            memcpy(result_pos, cur, c);
+            result_pos += c;
             cur = NULL;
         }
     }

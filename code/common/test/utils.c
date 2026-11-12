@@ -279,6 +279,19 @@ test_replace_substring(void **unused) {
     assert_string_equal(replace_substring("1234{i}90", "{i}", "5678"), "1234567890");
     assert_string_equal(replace_substring("{i1}{i2}{i2}", "{i2}", "2"), "{i1}22");
     assert_string_equal(replace_substring("1234{long-variable-name}567890", "{long-variable-name}", ""), "1234567890");
+
+    /* Results longer than the buffer are rejected instead of truncated. */
+    char s[SUB_STR_LEN + 1];
+    memset(s, 'x', sizeof(s) - 1);
+    s[SUB_STR_LEN - 1] = '\0';
+    assert_int_equal(strlen(replace_substring(s, "{i}", "1")), SUB_STR_LEN - 1);
+    s[SUB_STR_LEN - 1] = 'x';
+    s[SUB_STR_LEN] = '\0';
+    assert_null(replace_substring(s, "{i}", "1"));
+    /* 252 characters and {i}: 255 characters with 3 digits, 256 with 4. */
+    memcpy(s + SUB_STR_LEN - 4, "{i}", 4);
+    assert_int_equal(strlen(replace_substring(s, "{i}", "123")), SUB_STR_LEN - 1);
+    assert_null(replace_substring(s, "{i}", "1234"));
 }
 
 static void

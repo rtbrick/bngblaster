@@ -182,6 +182,7 @@
 #define PAP_CODE_REQUEST                1
 #define PAP_CODE_ACK                    2
 #define PAP_CODE_NAK                    3
+#define PAP_VALUE_LEN_MAX               255 /* peer-id and password (1 octet length) */
 
 #define CHAP_CODE_CHALLENGE             1
 #define CHAP_CODE_RESPONSE              2

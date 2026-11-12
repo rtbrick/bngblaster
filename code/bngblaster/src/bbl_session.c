@@ -1032,7 +1032,9 @@ bbl_session_clear(bbl_session_s *session)
     }
 }
 
-static void
+/* Returns false if the string is longer than SUB_STR_LEN - 1
+ * characters after the expansion of the variables. */
+static bool
 update_strings(char **target, const char *source, uint32_t *i, bbl_access_config_s *access_config)
 {
     static char snum1[32];
@@ -1062,8 +1064,12 @@ update_strings(char **target, const char *source, uint32_t *i, bbl_access_config
         s = replace_substring(s, "{i2}", si2);
         s = replace_substring(s, "{outer-vlan}", vlan1);
         s = replace_substring(s, "{inner-vlan}", vlan2);
-        if(s) *target = strdup(s);
+        if(!s) {
+            return false;
+        }
+        *target = strdup(s);
     }
+    return true;
 }
 
 bool
@@ -1206,23 +1212,20 @@ bbl_sessions_init()
         /* Init string variables/iterators */
         update_strings(NULL, NULL, &i, access_config);
 
-        /* Update username */
-        update_strings(&session->username, access_config->username, NULL, NULL);
-
-        /* Update password */
-        update_strings(&session->password, access_config->password, NULL, NULL);
-
-        /* Update ACI */
-        update_strings(&session->agent_circuit_id, access_config->agent_circuit_id, NULL, NULL);
-
-        /* Update ARI */
-        update_strings(&session->agent_remote_id, access_config->agent_remote_id, NULL, NULL);
-
-        /* Update Access-Aggregation-Circuit-ID */
-        update_strings(&session->access_aggregation_circuit_id, access_config->access_aggregation_circuit_id, NULL, NULL);
-
-        /* Update Vendor Class ID */
-        update_strings(&session->dhcp_vendor_class_id, access_config->dhcp_vendor_class_id, NULL, NULL);
+        /* Update username, password, ACI, ARI, Access-Aggregation-Circuit-ID
+         * and Vendor Class ID. Those are sent with 1 octet length fields
+         * (e.g. PAP), so longer values are rejected instead of truncated. */
+        if(!update_strings(&session->username, access_config->username, NULL, NULL) ||
+           !update_strings(&session->password, access_config->password, NULL, NULL) ||
+           !update_strings(&session->agent_circuit_id, access_config->agent_circuit_id, NULL, NULL) ||
+           !update_strings(&session->agent_remote_id, access_config->agent_remote_id, NULL, NULL) ||
+           !update_strings(&session->access_aggregation_circuit_id, access_config->access_aggregation_circuit_id, NULL, NULL) ||
+           !update_strings(&session->dhcp_vendor_class_id, access_config->dhcp_vendor_class_id, NULL, NULL)) {
+            LOG(ERROR, "Failed to create session %u: username, password, agent-circuit-id, agent-remote-id, "
+                "access-aggregation-circuit-id or dhcp-vendor-class-id longer than %u characters\n",
+                i, SUB_STR_LEN - 1);
+            return false;
+        }
 
         /* Update CFM */
         if(access_config->cfm) {
@@ -1230,10 +1233,10 @@ bbl_sessions_init()
             session->cfm->config = access_config->cfm;
             session->cfm->cc = access_config->cfm->cc;
             if(access_config->cfm->seq) session->cfm->seq = 1;
-            update_strings(&session->cfm->md_name, access_config->cfm->md_name, NULL, NULL);
-            update_strings(&session->cfm->ma_name, access_config->cfm->ma_name, NULL, NULL);
             session->cfm->session = session;
-            if(!bbl_cfm_init(session->cfm)) {
+            if(!update_strings(&session->cfm->md_name, access_config->cfm->md_name, NULL, NULL) ||
+               !update_strings(&session->cfm->ma_name, access_config->cfm->ma_name, NULL, NULL) ||
+               !bbl_cfm_init(session->cfm)) {
                 LOG(ERROR, "Failed to create session %u due CFM config!\n", i);
                 return false;
             }
@@ -2478,6 +2481,12 @@ bbl_session_ctrl_update(int fd, uint32_t session_id, json_t *arguments)
             return bbl_ctrl_status(fd, "error", 400, "invalid ipv6-link-local");
         }
         memcpy(&session->link_local_ipv6_address, &ipv6, sizeof(ipv6addr_t));
+    }
+    if(json_unpack(arguments, "{s:s}", "username", &s) == 0 && strlen(s) > PAP_VALUE_LEN_MAX) {
+        return bbl_ctrl_status(fd, "error", 400, "username too long (max 255)");
+    }
+    if(json_unpack(arguments, "{s:s}", "password", &s) == 0 && strlen(s) > PAP_VALUE_LEN_MAX) {
+        return bbl_ctrl_status(fd, "error", 400, "password too long (max 255)");
     }
     if(json_unpack(arguments, "{s:s}", "username", &s) == 0) {
         if(session->username) free(session->username);

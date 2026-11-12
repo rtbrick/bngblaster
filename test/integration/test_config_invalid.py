@@ -369,3 +369,26 @@ def test_stream_config_loads(tmp_path):
     code, output = run_command_line(tmp_path, ["-T", str(streams_file)])
     assert "Failed to load" not in output
     assert "Failed to add link bbl-it-none" in output
+
+
+@pytest.mark.parametrize("access,ok", [
+    ({"username": "u" * 255, "password": "p" * 255}, True),
+    ({"username": "u" * 256}, False),
+    ({"password": "p" * 256}, False),
+    ({"username": "u" * 255 + "{session-global}"}, False),
+], ids=["max", "username", "password", "expanded"])
+def test_ppp_credentials_length(topology, tmp_path, access, ok):
+    """Username and password are sent with 1 octet length fields (PAP),
+    so longer values (also after the variable expansion) are rejected on
+    start instead of being dropped (an empty username was sent)."""
+    cfg = {"interfaces": {"access": [dict({"interface": topology.if_a, "type": "pppoe"}, **access)]},
+           "sessions": {"count": 1}}
+    instance = BngBlaster(topology.a, tmp_path, "bbl")
+    if ok:
+        instance.start(cfg)
+        assert instance.terminate(30) == 0
+        return
+    with pytest.raises(RuntimeError, match="exited on start"):
+        instance.start(cfg)
+    with open(instance.path("stdout")) as f:
+        assert "dhcp-vendor-class-id longer than 255 characters" in f.read()
