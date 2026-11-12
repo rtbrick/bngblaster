@@ -131,6 +131,19 @@ Functional tests over veth pairs between network namespaces:
   data sizes (`test_icmp_client.py`)
 * Configuration values out of range or of the wrong type rejected on
   start (`test_config_invalid.py`)
+* BFD against FRR bfdd: static single-hop (IPv4, IPv6, link-local) and
+  multi-hop sessions, timer negotiation, poll sequence, AdminDown in both
+  directions, detection timeout, and BFD bound to OSPFv2, OSPFv3, ISIS
+  (IPv4, IPv6, dual-stack) and BGP (single-hop and multi-hop) with protocol
+  down on BFD failure but not on peer AdminDown (`test_bfd_frr.py`)
+* BFD against BIRD: single-hop and multi-hop sessions, all authentication
+  types including mismatches and sequence numbers after a restart, timer
+  negotiation, poll sequence, detection timeout, passive mode and BFD for
+  OSPFv2 (`test_bfd_bird.py`)
+* BFD between two BNG Blaster instances: packet format, timer negotiation,
+  slow start, poll sequence, authentication, AdminDown, detection timeout,
+  teardown, passive mode, control commands, 1000 sessions at 100 ms, BFD
+  for link and targeted LDP and invalid BFD configurations (`test_bfd_bbl.py`)
 
 Each test creates two namespaces `bbl-it-<n>-a` and `bbl-it-<n>-b`
 connected by a veth pair. Configs, logs, pcaps and JSON reports of all
