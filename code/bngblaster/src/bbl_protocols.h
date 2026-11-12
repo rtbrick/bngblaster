@@ -236,7 +236,19 @@
 #define UDP_PROTOCOL_L2TP               3
 #define UDP_PROTOCOL_QMX_LI             4
 #define UDP_PROTOCOL_DHCP               5
-#define UDP_PROTOCOL_LDP                6  
+#define UDP_PROTOCOL_LDP                6
+#define UDP_PROTOCOL_BFD                7
+
+#define BFD_UDP_PORT_SINGLE_HOP         3784 /* RFC 5881 */
+#define BFD_UDP_PORT_MULTI_HOP          4784 /* RFC 5883 */
+#define BFD_HDR_LEN                     24
+#define BFD_AUTH_HDR_LEN                3
+#define BFD_FLAG_POLL                   0x20
+#define BFD_FLAG_FINAL                  0x10
+#define BFD_FLAG_CPI                    0x08
+#define BFD_FLAG_AUTH                   0x04
+#define BFD_FLAG_DEMAND                 0x02
+#define BFD_FLAG_MULTIPOINT             0x01
 
 #define IPV6_NEXT_HEADER_TCP            6
 #define IPV6_NEXT_HEADER_FRAGMENT       44
@@ -635,6 +647,33 @@ typedef struct bbl_ldp_hello_ {
     ipv6addr_t *ipv6_transport_address;
     uint8_t     dual_stack_capability;
 } bbl_ldp_hello_s;
+
+/*
+ * BFD Control Packet (RFC 5880 section 4.1)
+ *
+ * The packet is encoded by the BFD module (incl. authentication)
+ * and copied from pdu, decode sets all fields and pdu to the
+ * received UDP payload for authentication.
+ */
+typedef struct bbl_bfd_ {
+    uint8_t     version;
+    uint8_t     diag;
+    uint8_t     state;
+    uint8_t     flags;
+    uint8_t     detect_mult;
+    uint8_t     length;
+    uint32_t    my_discr;
+    uint32_t    your_discr;
+    uint32_t    desired_min_tx; /* us */
+    uint32_t    required_min_rx; /* us */
+    uint32_t    required_min_echo_rx; /* us */
+    uint8_t     auth_type;
+    uint8_t     auth_len;
+    uint8_t     auth_key_id;
+    uint8_t    *auth; /* authentication section */
+    uint8_t    *pdu;
+    uint16_t    pdu_len;
+} bbl_bfd_s;
 
 typedef struct bbl_bbl_ {
     uint16_t     padding;

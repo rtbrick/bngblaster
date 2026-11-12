@@ -176,6 +176,12 @@ typedef struct bbl_network_config_
 
     uint16_t ldp_instance_id;
 
+    /* BFD profiles of protocols (0 for no BFD) */
+    uint16_t isis_bfd_profile_id;
+    uint16_t ospfv2_bfd_profile_id;
+    uint16_t ospfv3_bfd_profile_id;
+    uint16_t ldp_bfd_profile_id;
+
     /* A10NSP switch emulation */
     bool a10nsp;
     uint32_t a10nsp_tx_label;

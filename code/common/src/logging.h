@@ -40,6 +40,7 @@ enum {
     OSPF,
     LDP,
     BGP,
+    BFD,
     TCP,
     LSDB,
     LSP,

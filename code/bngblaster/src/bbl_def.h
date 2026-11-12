@@ -261,6 +261,7 @@ typedef struct bbl_igmp_group_ bbl_igmp_group_s;
 typedef struct bbl_interface_ bbl_interface_s;
 typedef struct bbl_access_interface_ bbl_access_interface_s;
 typedef struct bbl_network_interface_ bbl_network_interface_s;
+typedef struct bfd_session_ bfd_session_s;
 typedef struct bbl_a10nsp_interface_ bbl_a10nsp_interface_s;
 typedef struct bbl_a10nsp_session_ bbl_a10nsp_session_s;
 typedef struct bbl_session_ bbl_session_s;

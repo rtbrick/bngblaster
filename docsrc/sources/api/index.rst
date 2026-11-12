@@ -383,6 +383,13 @@ This is explained in detail in the
 
 .. include:: ldp.rst
 
+BFD
+---
+This is explained in detail in the
+:ref:`BFD <bfd>` section.
+
+.. include:: bfd.rst
+
 CFM
 ---
 .. include:: cfm.rst

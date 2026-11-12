@@ -85,6 +85,14 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 |                                   | | Not supported for md5.                                             |
 |                                   | | Default: false                                                     |
 +-----------------------------------+----------------------------------------------------------------------+
+| **bfd-profile-id**                | | Enable BFD for this session with this BFD profile.                 |
+|                                   | | The BFD session is started when BGP is established,                |
+|                                   | | BFD down closes BGP with Cease subcode BFD Down (RFC 9384).        |
++-----------------------------------+----------------------------------------------------------------------+
+| **bfd-multihop**                  | | Multi-hop BFD session (RFC 5883).                                  |
+|                                   | | Default: single-hop if the peer address is in a connected          |
+|                                   | | network of the network interface, otherwise multi-hop              |
++-----------------------------------+----------------------------------------------------------------------+
 | **reconnect**                     | | Reconnect BGP session automatically.                               |
 |                                   | | If disabled, connections of the peer are refused after close.      |
 |                                   | | Default: true                                                      |

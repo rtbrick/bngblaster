@@ -10,6 +10,11 @@ target_link_libraries(test-protocols ${LINK_LIBS})
 target_compile_options(test-protocols PRIVATE -Werror -Wall -Wextra)
 add_test(NAME "TestProtocols" COMMAND test-protocols)
 
+add_executable(test-bfd bfd.c ../src/bfd/bfd_packet.c ../src/bbl_protocols.c)
+target_link_libraries(test-bfd ${LINK_LIBS} crypto)
+target_compile_options(test-bfd PRIVATE -Werror -Wall -Wextra -Wno-deprecated-declarations)
+add_test(NAME "TestBfd" COMMAND test-bfd)
+
 add_executable(test-io-capture io_capture.c ../src/io/io_capture.c ../../common/src/logging.c)
 target_include_directories(test-io-capture PRIVATE $<TARGET_PROPERTY:bngblaster,INCLUDE_DIRECTORIES>)
 target_compile_definitions(test-io-capture PRIVATE $<TARGET_PROPERTY:bngblaster,COMPILE_DEFINITIONS>)

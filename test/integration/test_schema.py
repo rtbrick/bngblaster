@@ -81,8 +81,14 @@ def test_schema_doc_config(config):
     ({"ospf": [{"instance-id": 1, "external": {"auto-refresh": True}}]}, True),
     ({"pppoe": {"max-payload": 0}, "igmp": {"zapping-interval": 0, "multicast-traffic-length": 0}}, True),
     ({"igmp": {"multicast-traffic-length": 64}}, False),
+    ({"bfd": [{"bfd-profile-id": 1, "authentication-type": "keyed-sha1", "authentication-key": "k"}],
+      "bfd-sessions": {"network-interface": "eth0", "peer-ipv6-address": "fe80::1", "bfd-profile-id": 1}}, True),
+    ({"bfd": {"bfd-profile-id": 1, "authentication-type": "md5"}}, False),
+    ({"bfd-sessions": [{"peer-ipv4-address": "10.0.0.1", "peer-ipv6-address": "fc00::1"}]}, False),
+    ({"bfd-sessions": [{"peer-ipv4-address": "10.0.0.1", "local-ipv6-address": "fc00::1"}]}, False),
 ], ids=["underscore", "misplaced", "pppoe-deprecated", "misspelled", "lcp-padding-max",
         "lcp-padding-above-max", "pps", "pps-zero", "icmp-interval-zero", "isis-auto-refresh",
-        "ospf-auto-refresh", "zero-disabled", "multicast-traffic-length-small"])
+        "ospf-auto-refresh", "zero-disabled", "multicast-traffic-length-small",
+        "bfd", "bfd-auth-type", "bfd-session-two-peers", "bfd-session-family-mismatch"])
 def test_schema_attributes(config, valid):
     assert (errors(config) == []) == valid, errors(config)

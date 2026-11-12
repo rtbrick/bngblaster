@@ -134,6 +134,17 @@ const schema_arg_s schema_ldp[] = {
     ARG_STR("file"),
     ARG_END
 };
+const schema_arg_s schema_bfd[] = {
+    ARG_NUM("bfd-session-id"), ARG_STR("network-interface"),
+    ARG_STR("peer-address"), ARG_STR("state"),
+    ARG_END
+};
+const schema_arg_s schema_bfd_update[] = {
+    ARG_NUM("bfd-session-id"), ARG_STR("network-interface"),
+    ARG_STR("peer-address"), ARG_STR("state"),
+    ARG_NUM("tx-interval"), ARG_NUM("rx-interval"), ARG_NUM("multiplier"),
+    ARG_END
+};
 const schema_arg_s schema_l2tp[] = {
     ARG_NUM("tunnel-id"), ARG_NUM("session-id"), ARG_ARR_NUM("sessions"),
     ARG_NUM("result-code"), ARG_NUM("error-code"), ARG_STR("error-message"),
@@ -536,6 +547,10 @@ static const struct action actions[] = {
     {"ldp-teardown", ldp_ctrl_teardown, schema_ldp, false},
     {"ldp-raw-update-list", ldp_ctrl_raw_update_list, schema_ldp, true},
     {"ldp-raw-update", ldp_ctrl_raw_update, schema_ldp, false},
+    {"bfd-sessions", bfd_ctrl_sessions, schema_bfd, false},
+    {"bfd-session-enable", bfd_ctrl_session_enable, schema_bfd, false},
+    {"bfd-session-disable", bfd_ctrl_session_disable, schema_bfd, false},
+    {"bfd-session-update", bfd_ctrl_session_update, schema_bfd_update, false},
     {"monkey-start", bbl_ctrl_monkey_start, schema_no_args, false},
     {"monkey-stop", bbl_ctrl_monkey_stop, schema_no_args, false},
     {"lag-info", bbl_lag_ctrl_info, schema_interface, true},

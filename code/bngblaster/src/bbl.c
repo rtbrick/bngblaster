@@ -256,6 +256,7 @@ struct keyval_ log_names[] = {
     { OSPF,          "ospf" },
     { LDP,           "ldp" },
     { BGP,           "bgp" },
+    { BFD,           "bfd" },
     { TCP,           "tcp" },
     { LAG,           "lag" },
     { DPDK,          "dpdk" },
@@ -405,6 +406,7 @@ bbl_ctrl_job(timer_s *timer)
             }
             /* Teardown routing protocols. The IGP withdraw
              * waits for BGP and LDP sessions to be closed. */
+            bfd_teardown();
             bgp_teardown();
             ldp_teardown();
             isis_teardown();
@@ -961,6 +963,12 @@ main(int argc, char *argv[])
         goto CLEANUP;
     }
 
+    /* Init BFD and static BFD sessions. */
+    if(!bfd_init()) {
+        fprintf(stderr, "Error: Failed to init BFD\n");
+        goto CLEANUP;
+    }
+
     /* Init LDP targeted neighbors. */
     if(!ldp_targeted_init()) {
         fprintf(stderr, "Error: Failed to init LDP targeted neighbors\n");
@@ -1057,6 +1065,8 @@ main(int argc, char *argv[])
     bbl_task(BBL_STATUS_RUNNING, "running");
     while(g_teardown_request_count < BBL_TEARDOWN_REQUSTS_MAX) {
         if(g_teardown) {
+            /* Signal AdminDown to all BFD peers first. */
+            bfd_teardown();
             /* If teardown has requested, wait for all L2TP 
              * tunnels and routing sessions to be terminated. */
             if(g_ctx->l2tp_tunnels == 0 && g_ctx->routing_sessions == 0) {

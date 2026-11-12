@@ -19,8 +19,8 @@ the BNG Blaster isn't restricted only to BNG (Broadband Network Gateway) testing
 
 It simulates a massive number of PPPoE and IPoE (DHCP) subscribers, encompassing 
 IPTV and L2TP (LAC and LNS). Additionally, it supports all common routing protocols 
-such as IS-IS, OSPF, LDP and BGP, including BGP EVPN and TCP authentication 
-(TCP-AO and MD5). This allows for comprehensive testing of both BNG and non-BNG 
+such as IS-IS, OSPF, LDP and BGP, including BGP EVPN, TCP authentication 
+(TCP-AO and MD5) and BFD. This allows for comprehensive testing of both BNG and non-BNG 
 routers, enabling end-to-end evaluations.
 
 The included traffic generator serves various functions. It can be used to verify 

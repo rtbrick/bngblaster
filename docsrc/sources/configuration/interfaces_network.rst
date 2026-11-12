@@ -84,6 +84,10 @@
 | **isis-admin-group**              | | ISIS Flex-Algo admin group (32 bit mask).                          |
 |                                   | | Default: 0 (disabled)                                              |
 +-----------------------------------+----------------------------------------------------------------------+
+| **isis-bfd-profile-id**           | | Enable BFD for ISIS adjacencies with this BFD profile.             |
+|                                   | | Single-hop to the IPv4 interface address and to the                |
+|                                   | | IPv6 link-local address of the neighbor.                           |
++-----------------------------------+----------------------------------------------------------------------+
 | **ospfv2-instance-id**            | | Assign the interface to an OSPFv2 instance.                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ospfv2-type**                   | | OSPFv2 interface type (p2p or broadcast).                          |
@@ -91,6 +95,9 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **ospfv2-metric**                 | | OSPFv2 interface metric.                                           |
 |                                   | | Default: 1 Range: 0 - 65535                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **ospfv2-bfd-profile-id**         | | Enable BFD for OSPFv2 neighbors with this BFD profile.             |
+|                                   | | Single-hop to the interface address of the neighbor.               |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ospfv3-instance-id**            | | Assign the interface to an OSPFv3 instance.                        |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -100,7 +107,13 @@
 | **ospfv3-metric**                 | | OSPFv3 interface metric.                                           |
 |                                   | | Default: 1 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
+| **ospfv3-bfd-profile-id**         | | Enable BFD for OSPFv3 neighbors with this BFD profile.             |
+|                                   | | Single-hop to the link-local address of the neighbor.              |
++-----------------------------------+----------------------------------------------------------------------+
 | **ldp-instance-id**               | | Assign the interface to a LDP instance.                            |
++-----------------------------------+----------------------------------------------------------------------+
+| **ldp-bfd-profile-id**            | | Enable BFD for link LDP sessions with this BFD profile.            |
+|                                   | | Single-hop to the hello source address of the peer.                |
 +-----------------------------------+----------------------------------------------------------------------+
 | **cfm-cc**                        | | Enable EOAM CFM CC.                                                |
 |                                   | | Default: false                                                     |

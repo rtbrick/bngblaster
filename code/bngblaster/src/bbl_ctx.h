@@ -108,6 +108,8 @@ typedef struct bbl_ctx_
     ldp_instance_s *ldp_instances;
     ldp_raw_update_s *ldp_raw_updates;
 
+    bfd_ctx_s bfd;
+
     bbl_fragment_s *ipv4_fragments; /* newest first */
     bbl_fragment_s *ipv4_fragments_tail; /* oldest */
     uint64_t ipv4_fragments_evicted;
@@ -224,6 +226,10 @@ typedef struct bbl_ctx_
 
         /* LDP Instances */
         ldp_config_s *ldp_config;
+
+        /* BFD Profiles and Static Sessions */
+        bfd_profile_config_s *bfd_profile_config;
+        bfd_session_config_s *bfd_session_config;
 
         /* ARP Client Instances */
         bbl_arp_client_config_s *arp_client_config;

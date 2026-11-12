@@ -96,6 +96,26 @@ schema_validate(json_t *config, const char *section, const char *const attribute
     return true;
 }
 
+/* Lookup of a BFD profile referenced in the configuration. */
+static bool
+json_parse_bfd_profile_id(json_t *obj, const char *section, const char *key, uint16_t *profile_id)
+{
+    json_t *value = json_object_get(obj, key);
+    if(!value) {
+        return true;
+    }
+    if(!(json_is_number(value) && json_number_value(value) >= 1 && json_number_value(value) <= 65535)) {
+        fprintf(stderr, "JSON config error: Invalid value for %s->%s (1 - 65535)\n", section, key);
+        return false;
+    }
+    *profile_id = json_number_value(value);
+    if(!bfd_profile_get(*profile_id)) {
+        fprintf(stderr, "JSON config error: Profile not found for %s->%s %u\n", section, key, *profile_id);
+        return false;
+    }
+    return true;
+}
+
 static void
 add_secondary_ipv4(uint32_t ipv4)
 {
@@ -990,7 +1010,9 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
         "cfm-cc", "cfm-level", "cfm-interval", "cfm-md-name", "cfm-md-name-format",
         "cfm-ma-id", "cfm-ma-name", "cfm-ma-name-format", "cfm-seq",
         "cfm-vlan-priority",
-        "ldp-instance-id", "a10nsp", "a10nsp-tx-label"
+        "ldp-instance-id", "a10nsp", "a10nsp-tx-label",
+        "isis-bfd-profile-id", "ospfv2-bfd-profile-id",
+        "ospfv3-bfd-profile-id", "ldp-bfd-profile-id"
     };
     if(!schema_validate(network_interface, "network", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1222,6 +1244,13 @@ json_parse_network_interface(json_t *network_interface, bbl_network_config_s *ne
     JSON_OBJ_GET_NUMBER(network_interface, value, "network", "ldp-instance-id", 1, 65535);
     if(value) {
         network_config->ldp_instance_id = json_number_value(value);
+    }
+
+    if(!(json_parse_bfd_profile_id(network_interface, "network", "isis-bfd-profile-id", &network_config->isis_bfd_profile_id) &&
+         json_parse_bfd_profile_id(network_interface, "network", "ospfv2-bfd-profile-id", &network_config->ospfv2_bfd_profile_id) &&
+         json_parse_bfd_profile_id(network_interface, "network", "ospfv3-bfd-profile-id", &network_config->ospfv3_bfd_profile_id) &&
+         json_parse_bfd_profile_id(network_interface, "network", "ldp-bfd-profile-id", &network_config->ldp_bfd_profile_id))) {
+        return false;
     }
 
     JSON_OBJ_GET_BOOL(network_interface, value, "network", "cfm-cc");
@@ -1834,11 +1863,20 @@ json_parse_bgp_config(json_t *bgp, bgp_config_s *bgp_config)
         "teardown-time", "raw-update-file",
         "family", "extended-nexthop",
         "tcp-ao-key", "tcp-ao-key-id", "tcp-ao-rnext-key-id", "tcp-ao-algorithm",
-        "tcp-ao-exclude-options"
+        "tcp-ao-exclude-options", "bfd-profile-id", "bfd-multihop"
     };
     if(!schema_validate(bgp, "bgp", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
         return false;
+    }
+
+    if(!json_parse_bfd_profile_id(bgp, "bgp", "bfd-profile-id", &bgp_config->bfd_profile_id)) {
+        return false;
+    }
+    JSON_OBJ_GET_BOOL(bgp, value, "bgp", "bfd-multihop");
+    if(value) {
+        bgp_config->bfd_multihop = json_boolean_value(value);
+        bgp_config->bfd_multihop_set = true;
     }
 
     JSON_OBJ_GET_STRING(bgp, s, "bgp", "network-interface");
@@ -2974,7 +3012,7 @@ json_parse_ldp_targeted_neighbor(json_t *neighbor, ldp_config_s *ldp_config)
     const char *s = NULL;
 
     const char *schema[] = {
-        "address", "source-address", "network-interface"
+        "address", "source-address", "network-interface", "bfd-profile-id"
     };
     if(!schema_validate(neighbor, "targeted-neighbors", schema,
     sizeof(schema)/sizeof(schema[0]))) {
@@ -3030,6 +3068,10 @@ json_parse_ldp_targeted_neighbor(json_t *neighbor, ldp_config_s *ldp_config)
     JSON_OBJ_GET_STRING(neighbor, s, "ldp->targeted-neighbors", "network-interface");
     if(s) {
         neighbor_config->network_interface = strdup(s);
+    }
+    if(!json_parse_bfd_profile_id(neighbor, "ldp->targeted-neighbors", "bfd-profile-id", &neighbor_config->bfd_profile_id)) {
+        free(neighbor_config);
+        return false;
     }
     neighbor_config->next = ldp_config->targeted_neighbors;
     ldp_config->targeted_neighbors = neighbor_config;
@@ -3177,6 +3219,201 @@ json_parse_ldp_config(json_t *ldp, ldp_config_s *ldp_config)
         }
     }
 
+    return true;
+}
+
+static bool
+json_parse_bfd_profile(json_t *bfd, bfd_profile_config_s *profile)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+    size_t key_len;
+
+    const char *schema[] = {
+        "bfd-profile-id", "tx-interval", "rx-interval",
+        "multiplier", "passive", "min-ttl",
+        "authentication-type", "authentication-key-id",
+        "authentication-key"
+    };
+    if(!schema_validate(bfd, "bfd", schema,
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
+    JSON_OBJ_GET_NUMBER(bfd, value, "bfd", "bfd-profile-id", 1, 65535);
+    if(value) {
+        profile->id = json_number_value(value);
+    } else {
+        fprintf(stderr, "JSON config error: Missing value for bfd->bfd-profile-id\n");
+        return false;
+    }
+    for(bfd_profile_config_s *other = g_ctx->config.bfd_profile_config; other; other = other->next) {
+        if(other != profile && other->id == profile->id) {
+            fprintf(stderr, "JSON config error: Duplicate bfd->bfd-profile-id %u\n", profile->id);
+            return false;
+        }
+    }
+
+    JSON_OBJ_GET_NUMBER(bfd, value, "bfd", "tx-interval", 1, 60000);
+    if(value) {
+        profile->tx_interval = json_number_value(value) * 1000;
+    } else {
+        profile->tx_interval = BFD_DEFAULT_TX_INTERVAL_MS * 1000;
+    }
+    JSON_OBJ_GET_NUMBER(bfd, value, "bfd", "rx-interval", 1, 60000);
+    if(value) {
+        profile->rx_interval = json_number_value(value) * 1000;
+    } else {
+        profile->rx_interval = BFD_DEFAULT_RX_INTERVAL_MS * 1000;
+    }
+    JSON_OBJ_GET_NUMBER(bfd, value, "bfd", "multiplier", 1, 255);
+    if(value) {
+        profile->multiplier = json_number_value(value);
+    } else {
+        profile->multiplier = BFD_DEFAULT_MULTIPLIER;
+    }
+    JSON_OBJ_GET_BOOL(bfd, value, "bfd", "passive");
+    if(value) {
+        profile->passive = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(bfd, value, "bfd", "min-ttl", 1, 255);
+    if(value) {
+        profile->min_ttl = json_number_value(value);
+        profile->min_ttl_set = true;
+    }
+
+    JSON_OBJ_GET_STRING(bfd, s, "bfd", "authentication-type");
+    if(s) {
+        if(strcmp(s, "none") == 0) {
+            profile->auth_type = BFD_AUTH_NONE;
+        } else if(strcmp(s, "simple") == 0) {
+            profile->auth_type = BFD_AUTH_SIMPLE;
+        } else if(strcmp(s, "keyed-md5") == 0) {
+            profile->auth_type = BFD_AUTH_KEYED_MD5;
+        } else if(strcmp(s, "meticulous-keyed-md5") == 0) {
+            profile->auth_type = BFD_AUTH_METICULOUS_KEYED_MD5;
+        } else if(strcmp(s, "keyed-sha1") == 0) {
+            profile->auth_type = BFD_AUTH_KEYED_SHA1;
+        } else if(strcmp(s, "meticulous-keyed-sha1") == 0) {
+            profile->auth_type = BFD_AUTH_METICULOUS_KEYED_SHA1;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for bfd->authentication-type\n");
+            return false;
+        }
+    }
+    JSON_OBJ_GET_NUMBER(bfd, value, "bfd", "authentication-key-id", 0, 255);
+    if(value) {
+        profile->auth_key_id = json_number_value(value);
+    } else {
+        profile->auth_key_id = 1;
+    }
+    JSON_OBJ_GET_STRING(bfd, s, "bfd", "authentication-key");
+    if(profile->auth_type != BFD_AUTH_NONE) {
+        if(!s) {
+            fprintf(stderr, "JSON config error: Missing value for bfd->authentication-key\n");
+            return false;
+        }
+        key_len = strlen(s);
+        if(key_len < 1 || key_len > (profile->auth_type == BFD_AUTH_KEYED_SHA1 ||
+                                     profile->auth_type == BFD_AUTH_METICULOUS_KEYED_SHA1 ?
+                                     BFD_SHA1_DIGEST_LEN : BFD_AUTH_SIMPLE_MAX_LEN)) {
+            fprintf(stderr, "JSON config error: Invalid length of bfd->authentication-key "
+                            "(simple and MD5 1-16, SHA1 1-20 characters)\n");
+            return false;
+        }
+        memcpy(profile->auth_key, s, key_len);
+        profile->auth_key_len = key_len;
+    } else if(s) {
+        fprintf(stderr, "JSON config error: bfd->authentication-key requires bfd->authentication-type\n");
+        return false;
+    }
+    return true;
+}
+
+static bool
+json_parse_bfd_session(json_t *bfd, bfd_session_config_s *config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+    bool local_ipv4 = false;
+    bool local_ipv6 = false;
+    bool peer_ipv4 = false;
+
+    const char *schema[] = {
+        "network-interface", "local-ipv4-address", "peer-ipv4-address",
+        "local-ipv6-address", "peer-ipv6-address", "bfd-profile-id",
+        "multihop", "name"
+    };
+    if(!schema_validate(bfd, "bfd-sessions", schema,
+    sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
+    JSON_OBJ_GET_BOOL(bfd, value, "bfd-sessions", "multihop");
+    if(value) {
+        config->multihop = json_boolean_value(value);
+    }
+    JSON_OBJ_GET_STRING(bfd, s, "bfd-sessions", "network-interface");
+    if(s) {
+        config->network_interface = strdup(s);
+    } else if(!config->multihop) {
+        fprintf(stderr, "JSON config error: Missing value for bfd-sessions->network-interface (required for single-hop)\n");
+        return false;
+    }
+    JSON_OBJ_GET_STRING(bfd, s, "bfd-sessions", "local-ipv4-address");
+    if(s) {
+        if(!inet_pton(AF_INET, s, &config->local_ipv4)) {
+            fprintf(stderr, "JSON config error: Invalid value for bfd-sessions->local-ipv4-address\n");
+            return false;
+        }
+        local_ipv4 = true;
+    }
+    JSON_OBJ_GET_STRING(bfd, s, "bfd-sessions", "peer-ipv4-address");
+    if(s) {
+        if(!inet_pton(AF_INET, s, &config->peer_ipv4)) {
+            fprintf(stderr, "JSON config error: Invalid value for bfd-sessions->peer-ipv4-address\n");
+            return false;
+        }
+        peer_ipv4 = true;
+    }
+    JSON_OBJ_GET_STRING(bfd, s, "bfd-sessions", "local-ipv6-address");
+    if(s) {
+        if(!inet_pton(AF_INET6, s, &config->local_ipv6)) {
+            fprintf(stderr, "JSON config error: Invalid value for bfd-sessions->local-ipv6-address\n");
+            return false;
+        }
+        local_ipv6 = true;
+    }
+    JSON_OBJ_GET_STRING(bfd, s, "bfd-sessions", "peer-ipv6-address");
+    if(s) {
+        if(!inet_pton(AF_INET6, s, &config->peer_ipv6)) {
+            fprintf(stderr, "JSON config error: Invalid value for bfd-sessions->peer-ipv6-address\n");
+            return false;
+        }
+        config->ipv6 = true;
+    }
+    if(peer_ipv4 == config->ipv6) {
+        fprintf(stderr, "JSON config error: Either bfd-sessions->peer-ipv4-address or "
+                        "bfd-sessions->peer-ipv6-address is required\n");
+        return false;
+    }
+    if((config->ipv6 && local_ipv4) || (peer_ipv4 && local_ipv6)) {
+        fprintf(stderr, "JSON config error: Address family of bfd-sessions local and peer address must match\n");
+        return false;
+    }
+    JSON_OBJ_GET_NUMBER(bfd, value, "bfd-sessions", "bfd-profile-id", 1, 65535);
+    if(value) {
+        config->profile_id = json_number_value(value);
+        if(!bfd_profile_get(config->profile_id)) {
+            fprintf(stderr, "JSON config error: Profile not found for bfd-sessions->bfd-profile-id %u\n",
+                    config->profile_id);
+            return false;
+        }
+    }
+    JSON_OBJ_GET_STRING(bfd, s, "bfd-sessions", "name");
+    if(s) {
+        config->name = strdup(s);
+    }
     return true;
 }
 
@@ -4512,6 +4749,9 @@ json_parse_config(json_t *root)
     ospf_config_s               *ospf_config            = NULL;
     ldp_config_s                *ldp_config             = NULL;
 
+    bfd_profile_config_s        *bfd_profile_config     = NULL;
+    bfd_session_config_s        *bfd_session_config     = NULL;
+
     bbl_arp_client_config_s     *arp_client_config      = NULL;
     bbl_icmp_client_config_s    *icmp_client_config     = NULL;
     bbl_http_client_config_s    *http_client_config     = NULL;
@@ -4530,6 +4770,7 @@ json_parse_config(json_t *root)
         "isis", "ospf",
         "bgp", "bgp-raw-update-files", 
         "ldp", "ldp-raw-update-files",
+        "bfd", "bfd-sessions",
         "l2tp-server", "l2tp-client", "icmp-client",
         "http-client", "http-server",
         "arp-client"
@@ -5304,6 +5545,64 @@ json_parse_config(json_t *root)
         fprintf(stderr, "JSON config error: Invalid value for bgp-raw-update-files (list of strings expected)\n");
         return false;
     }
+
+    /* BFD Profiles (referenced by protocols and BFD sessions) */
+    sub = json_object_get(root, "bfd");
+    if(json_is_object(sub)) {
+        sub = json_pack("[O]", sub);
+    } else {
+        json_incref(sub);
+    }
+    if(json_is_array(sub)) {
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!bfd_profile_config) {
+                g_ctx->config.bfd_profile_config = calloc(1, sizeof(bfd_profile_config_s));
+                bfd_profile_config = g_ctx->config.bfd_profile_config;
+            } else {
+                bfd_profile_config->next = calloc(1, sizeof(bfd_profile_config_s));
+                bfd_profile_config = bfd_profile_config->next;
+            }
+            if(!json_parse_bfd_profile(json_array_get(sub, i), bfd_profile_config)) {
+                json_decref(sub);
+                return false;
+            }
+        }
+    } else if(sub) {
+        fprintf(stderr, "JSON config error: Invalid value for bfd (list expected)\n");
+        json_decref(sub);
+        return false;
+    }
+    json_decref(sub);
+
+    /* Static BFD Sessions */
+    sub = json_object_get(root, "bfd-sessions");
+    if(json_is_object(sub)) {
+        sub = json_pack("[O]", sub);
+    } else {
+        json_incref(sub);
+    }
+    if(json_is_array(sub)) {
+        size = json_array_size(sub);
+        for(i = 0; i < size; i++) {
+            if(!bfd_session_config) {
+                g_ctx->config.bfd_session_config = calloc(1, sizeof(bfd_session_config_s));
+                bfd_session_config = g_ctx->config.bfd_session_config;
+            } else {
+                bfd_session_config->next = calloc(1, sizeof(bfd_session_config_s));
+                bfd_session_config = bfd_session_config->next;
+            }
+            if(!json_parse_bfd_session(json_array_get(sub, i), bfd_session_config)) {
+                json_decref(sub);
+                return false;
+            }
+        }
+    } else if(sub) {
+        fprintf(stderr, "JSON config error: Invalid value for bfd-sessions (list expected)\n");
+        json_decref(sub);
+        return false;
+    }
+    json_decref(sub);
 
     /* IS-IS Configuration */
     sub = json_object_get(root, "isis");

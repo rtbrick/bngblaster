@@ -783,6 +783,17 @@ bbl_stats_stdout(bbl_stats_s *stats) {
             stats->min_stream_delay_us, stats->max_stream_delay_us);
     }
 
+    if(g_ctx->bfd.next_id) {
+        printf("\nBFD:");
+        printf("\n------------------------------------------------------------------------------\n");
+        printf("  Sessions: %u (Up: %u)\n", g_ctx->bfd.sessions_count, g_ctx->bfd.sessions_up);
+        printf("  TX Packets: %lu\n", g_ctx->bfd.stats.tx);
+        printf("  RX Packets: %lu (Errors: %lu No Session: %lu)\n",
+            g_ctx->bfd.stats.rx, g_ctx->bfd.stats.rx_error, g_ctx->bfd.stats.rx_no_session);
+        printf("  State Up: %u Down: %u (Detection Timeout: %u)\n",
+            g_ctx->bfd.stats.up, g_ctx->bfd.stats.down, g_ctx->bfd.stats.timeout);
+    }
+
     if(g_ctx->config.igmp_group_count > 1) {
         printf("\nMulticast:");
         printf("\n------------------------------------------------------------------------------\n");
@@ -1194,6 +1205,30 @@ bbl_stats_json(bbl_stats_s * stats)
             json_object_set_new(jobj_sub, "zapping-multicast-not-received", json_integer(stats->mc_not_received));
         }
         json_object_set_new(jobj, "multicast", jobj_sub);
+    }
+
+    if(g_ctx->bfd.next_id) {
+        jobj_array = json_array();
+        for(bfd_session_s *bfd = g_ctx->bfd.sessions; bfd; bfd = bfd->next) {
+            jobj_sub = bfd_session_json(bfd);
+            if(jobj_sub) {
+                json_array_append_new(jobj_array, jobj_sub);
+            }
+        }
+        jobj_sub = json_pack("{si si sI sI sI sI si si si so}",
+                             "sessions", g_ctx->bfd.sessions_count,
+                             "sessions-up", g_ctx->bfd.sessions_up,
+                             "tx-packets", (json_int_t)g_ctx->bfd.stats.tx,
+                             "rx-packets", (json_int_t)g_ctx->bfd.stats.rx,
+                             "rx-errors", (json_int_t)g_ctx->bfd.stats.rx_error,
+                             "rx-no-session", (json_int_t)g_ctx->bfd.stats.rx_no_session,
+                             "up", g_ctx->bfd.stats.up,
+                             "down", g_ctx->bfd.stats.down,
+                             "timeout", g_ctx->bfd.stats.timeout,
+                             "bfd-sessions", jobj_array);
+        if(jobj_sub) {
+            json_object_set_new(jobj, "bfd", jobj_sub);
+        }
     }
 
     if(g_ctx->config.json_report_sessions) {

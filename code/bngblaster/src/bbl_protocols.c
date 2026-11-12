@@ -844,6 +844,11 @@ encode_udp(uint8_t *buf, uint16_t *len,
         case UDP_PROTOCOL_LDP:
             result = encode_ldp_hello(buf, len, (bbl_ldp_hello_s*)udp->next);
             break;
+        case UDP_PROTOCOL_BFD:
+            memcpy(buf, ((bbl_bfd_s*)udp->next)->pdu, ((bbl_bfd_s*)udp->next)->pdu_len);
+            BUMP_WRITE_BUFFER(buf, len, ((bbl_bfd_s*)udp->next)->pdu_len);
+            result = PROTOCOL_SUCCESS;
+            break;
         default:
             result = PROTOCOL_SUCCESS;
             break;
@@ -3467,6 +3472,59 @@ decode_ldp_hello(uint8_t *buf, uint16_t len,
 }
 
 /*
+ * decode_bfd
+ *
+ * Only the packet format is verified here, all
+ * reception checks are done by the BFD module.
+ */
+static protocol_error_t
+decode_bfd(uint8_t *buf, uint16_t len,
+           uint8_t *sp, uint16_t sp_len,
+           bbl_bfd_s **_bfd)
+{
+    bbl_bfd_s *bfd;
+
+    if(len < BFD_HDR_LEN || sp_len < sizeof(bbl_bfd_s)) {
+        return DECODE_ERROR;
+    }
+
+    bfd = (bbl_bfd_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_bfd_s));
+    memset(bfd, 0x0, sizeof(bbl_bfd_s));
+
+    bfd->pdu = buf;
+    bfd->pdu_len = len;
+    bfd->version = *buf >> 5;
+    bfd->diag = *buf & 0x1f;
+    bfd->state = *(buf+1) >> 6;
+    bfd->flags = *(buf+1) & 0x3f;
+    bfd->detect_mult = *(buf+2);
+    bfd->length = *(buf+3);
+    bfd->my_discr = be32toh(*(uint32_t*)(buf+4));
+    bfd->your_discr = be32toh(*(uint32_t*)(buf+8));
+    bfd->desired_min_tx = be32toh(*(uint32_t*)(buf+12));
+    bfd->required_min_rx = be32toh(*(uint32_t*)(buf+16));
+    bfd->required_min_echo_rx = be32toh(*(uint32_t*)(buf+20));
+
+    if(bfd->flags & BFD_FLAG_AUTH &&
+       bfd->length >= BFD_HDR_LEN + BFD_AUTH_HDR_LEN &&
+       bfd->length <= len) {
+        bfd->auth = buf + BFD_HDR_LEN;
+        bfd->auth_type = bfd->auth[0];
+        bfd->auth_len = bfd->auth[1];
+        bfd->auth_key_id = bfd->auth[2];
+        if(bfd->auth_len < BFD_AUTH_HDR_LEN ||
+           bfd->auth_len > bfd->length - BFD_HDR_LEN) {
+            /* Invalid authentication section. */
+            bfd->auth = NULL;
+            bfd->auth_type = 0;
+            bfd->auth_len = 0;
+        }
+    }
+    *_bfd = bfd;
+    return PROTOCOL_SUCCESS;
+}
+
+/*
  * decode_udp
  */
 static protocol_error_t
@@ -3529,6 +3587,11 @@ decode_udp(uint8_t *buf, uint16_t len,
             /* Only the destination port is fixed (RFC 5036 section 2.4). */
             udp->protocol = UDP_PROTOCOL_LDP;
             ret_val = decode_ldp_hello(buf, len, sp, sp_len, (bbl_ldp_hello_s**)&udp->next);
+            break;
+        case BFD_UDP_PORT_SINGLE_HOP:
+        case BFD_UDP_PORT_MULTI_HOP:
+            udp->protocol = UDP_PROTOCOL_BFD;
+            ret_val = decode_bfd(buf, len, sp, sp_len, (bbl_bfd_s**)&udp->next);
             break;
         default:
             if(udp->dst == g_li_udp_port || udp->src == g_li_udp_port) {

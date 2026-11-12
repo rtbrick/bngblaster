@@ -1605,6 +1605,32 @@
             "uniqueItems": true,
             "minItems": 1
         },
+        "bfd": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/bfdProfile"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/bfdProfile"
+                    }
+                }
+            ]
+        },
+        "bfd-sessions": {
+            "oneOf": [
+                {
+                    "$ref": "#/definitions/bfdSession"
+                },
+                {
+                    "type": "array",
+                    "items": {
+                        "$ref": "#/definitions/bfdSession"
+                    }
+                }
+            ]
+        },
         "http-client": {
             "oneOf": [
                 {
@@ -1953,6 +1979,30 @@
                     "default": 0,
                     "minimum": 0,
                     "maximum": 1048575
+                },
+                "isis-bfd-profile-id": {
+                    "type": "integer",
+                    "description": "BFD profile of IS-IS adjacencies (enables BFD)",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "ospfv2-bfd-profile-id": {
+                    "type": "integer",
+                    "description": "BFD profile of OSPFv2 neighbors (enables BFD)",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "ospfv3-bfd-profile-id": {
+                    "type": "integer",
+                    "description": "BFD profile of OSPFv3 neighbors (enables BFD)",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "ldp-bfd-profile-id": {
+                    "type": "integer",
+                    "description": "BFD profile of link LDP sessions (enables BFD)",
+                    "minimum": 1,
+                    "maximum": 65535
                 }
             },
             "patternProperties": {
@@ -3743,6 +3793,12 @@
                             "network-interface": {
                                 "type": "string",
                                 "description": "Network interface used to send targeted hellos and the session (default: first network interface)"
+                            },
+                            "bfd-profile-id": {
+                                "type": "integer",
+                                "description": "BFD profile of the targeted session (enables multi-hop BFD)",
+                                "minimum": 1,
+                                "maximum": 65535
                             }
                         },
                         "patternProperties": {
@@ -3944,6 +4000,16 @@
                             "ipv4-vpn-unicast"
                         ]
                     }
+                },
+                "bfd-profile-id": {
+                    "type": "integer",
+                    "description": "BFD profile (enables BFD)",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "bfd-multihop": {
+                    "type": "boolean",
+                    "description": "Multi-hop BFD session (default: single-hop if the peer is in a connected network of the interface)"
                 }
             },
             "patternProperties": {
@@ -4166,6 +4232,168 @@
                     "maximum": 7
                 }
             },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
+        },
+        "bfdProfile": {
+            "type": "object",
+            "description": "BFD profile referenced by BFD sessions and routing protocols",
+            "required": [
+                "bfd-profile-id"
+            ],
+            "properties": {
+                "bfd-profile-id": {
+                    "type": "integer",
+                    "description": "BFD profile identifier",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "tx-interval": {
+                    "type": "integer",
+                    "description": "Desired min TX interval in milliseconds",
+                    "default": 1000,
+                    "minimum": 1,
+                    "maximum": 60000
+                },
+                "rx-interval": {
+                    "type": "integer",
+                    "description": "Required min RX interval in milliseconds",
+                    "default": 1000,
+                    "minimum": 1,
+                    "maximum": 60000
+                },
+                "multiplier": {
+                    "type": "integer",
+                    "description": "Detect multiplier",
+                    "default": 3,
+                    "minimum": 1,
+                    "maximum": 255
+                },
+                "passive": {
+                    "type": "boolean",
+                    "description": "Passive role, send only after a packet from the peer is received",
+                    "default": false
+                },
+                "min-ttl": {
+                    "type": "integer",
+                    "description": "Minimum received TTL of multi-hop sessions (default 254), single-hop sessions require 255",
+                    "minimum": 1,
+                    "maximum": 255
+                },
+                "authentication-type": {
+                    "type": "string",
+                    "description": "Authentication type",
+                    "default": "none",
+                    "enum": [
+                        "none",
+                        "simple",
+                        "keyed-md5",
+                        "meticulous-keyed-md5",
+                        "keyed-sha1",
+                        "meticulous-keyed-sha1"
+                    ]
+                },
+                "authentication-key-id": {
+                    "type": "integer",
+                    "description": "Authentication key ID",
+                    "default": 1,
+                    "minimum": 0,
+                    "maximum": 255
+                },
+                "authentication-key": {
+                    "type": "string",
+                    "description": "Authentication key (simple and MD5 1-16, SHA1 1-20 characters)",
+                    "minLength": 1,
+                    "maxLength": 20
+                }
+            },
+            "patternProperties": {
+                "^_": {}
+            },
+            "additionalProperties": false
+        },
+        "bfdSession": {
+            "type": "object",
+            "description": "Static BFD session",
+            "properties": {
+                "network-interface": {
+                    "type": "string",
+                    "description": "Network interface (mandatory for single-hop, default for multi-hop: first network interface)"
+                },
+                "local-ipv4-address": {
+                    "type": "string",
+                    "description": "Local IPv4 address (default: network interface address)"
+                },
+                "peer-ipv4-address": {
+                    "type": "string",
+                    "description": "Peer IPv4 address"
+                },
+                "local-ipv6-address": {
+                    "type": "string",
+                    "description": "Local IPv6 address (default: network interface global or link-local address)"
+                },
+                "peer-ipv6-address": {
+                    "type": "string",
+                    "description": "Peer IPv6 address (global or link-local)"
+                },
+                "bfd-profile-id": {
+                    "type": "integer",
+                    "description": "BFD profile (default: built-in defaults)",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "multihop": {
+                    "type": "boolean",
+                    "description": "Multi-hop session (RFC 5883)",
+                    "default": false
+                },
+                "name": {
+                    "type": "string",
+                    "description": "Session name"
+                }
+            },
+            "oneOf": [
+                {
+                    "required": [
+                        "peer-ipv4-address"
+                    ],
+                    "not": {
+                        "anyOf": [
+                            {
+                                "required": [
+                                    "peer-ipv6-address"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "local-ipv6-address"
+                                ]
+                            }
+                        ]
+                    }
+                },
+                {
+                    "required": [
+                        "peer-ipv6-address"
+                    ],
+                    "not": {
+                        "anyOf": [
+                            {
+                                "required": [
+                                    "peer-ipv4-address"
+                                ]
+                            },
+                            {
+                                "required": [
+                                    "local-ipv4-address"
+                                ]
+                            }
+                        ]
+                    }
+                }
+            ],
             "patternProperties": {
                 "^_": {}
             },

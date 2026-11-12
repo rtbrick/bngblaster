@@ -15,3 +15,6 @@
 | **network-interface**             | | Network interface used for the targeted hellos and the session.    |
 |                                   | | Default: first network interface                                   |
 +-----------------------------------+----------------------------------------------------------------------+
+| **bfd-profile-id**                | | Enable multi-hop BFD for the session of this targeted              |
+|                                   | | neighbor with this BFD profile.                                    |
++-----------------------------------+----------------------------------------------------------------------+

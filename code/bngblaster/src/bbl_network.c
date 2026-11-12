@@ -621,7 +621,10 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                 } else if(udp->protocol == UDP_PROTOCOL_L2TP) {
                     bbl_l2tp_handler_rx(interface, eth, (bbl_l2tp_s*)udp->next);
                     return;
-                } 
+                } else if(udp->protocol == UDP_PROTOCOL_BFD) {
+                    bfd_rx(interface, eth, ipv4, NULL, udp);
+                    return;
+                }
             } else if(ipv4->protocol == PROTOCOL_IPV4_ICMP) {
                 if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {
                    /* Drop wrong MAC */
@@ -655,6 +658,11 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                  * processed before check on local MAC address. */
                 if(udp->protocol == UDP_PROTOCOL_LDP) {
                     ldp_hello_ipv6_rx(interface, eth, ipv6, (bbl_ldp_hello_s*)udp->next);
+                    return;
+                }
+                if(udp->protocol == UDP_PROTOCOL_BFD &&
+                   memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) == 0) {
+                    bfd_rx(interface, eth, NULL, ipv6, udp);
                     return;
                 }
             } else if(ipv6->protocol == IPV6_NEXT_HEADER_TCP) {
