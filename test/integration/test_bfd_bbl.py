@@ -738,8 +738,10 @@ def scale_address(i):
 def test_bfd_scale(topology, pair):
     """1000 multi-hop sessions at 100 ms (10 kpps per direction) stay Up
     for 30 s and go Down within the detection time after the peer was
-    killed."""
-    prof = [profile(1, **{"tx-interval": 100, "rx-interval": 100, "multiplier": 3})]
+    killed. The multiplier of 10 (1 s detection time) tolerates scheduling
+    stalls on shared CI runners: with 300 ms, a stall of ~250 ms of one
+    instance lets the peer time out about half of the sessions."""
+    prof = [profile(1, **{"tx-interval": 100, "rx-interval": 100, "multiplier": 10})]
     sessions_a = [{"network-interface": topology.if_a, "local-ipv4-address": IP_A,
                    "peer-ipv4-address": scale_address(i), "multihop": True, "bfd-profile-id": 1}
                   for i in range(SCALE)]
@@ -772,9 +774,9 @@ def test_bfd_scale(topology, pair):
 
     b.kill()
     start = time.monotonic()
-    wait_until(lambda: not sessions(a, state="up"), 3, 0.05, message="all sessions down")
+    wait_until(lambda: not sessions(a, state="up"), 4, 0.05, message="all sessions down")
     elapsed = time.monotonic() - start
-    assert elapsed < 1.0, "all sessions down after %.2f s" % elapsed
+    assert elapsed < 1.5, "all sessions down after %.2f s" % elapsed
     for s in sessions(a):
         assert (s["state"], s["local-diagnostic"]) == ("Down", "control-detection-time-expired"), s
         assert s["stats"]["timeout"] == 1, s
