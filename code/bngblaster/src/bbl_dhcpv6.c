@@ -402,8 +402,11 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
             }
             if(memcmp(&session->delegated_ipv6_prefix, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix)) != 0) {
                 memcpy(&session->delegated_ipv6_prefix, dhcpv6->ia_pd_prefix, sizeof(ipv6_prefix));
-                *(uint64_t*)&session->delegated_ipv6_address[0] = *(uint64_t*)session->delegated_ipv6_prefix.address;
-                session->delegated_ipv6_address[15] = 0x01;
+                /* Use the first address of the delegated prefix (prefix::1). */
+                memcpy(session->delegated_ipv6_address, session->delegated_ipv6_prefix.address, IPV6_ADDR_LEN);
+                if(session->delegated_ipv6_prefix.len < 128) {
+                    session->delegated_ipv6_address[15] = 0x01;
+                }
                 session->version++;
                 if(session->access_type == ACCESS_TYPE_PPPOE ||
                    session->access_type == ACCESS_TYPE_PPPOL2TP) {

@@ -54,7 +54,7 @@ class Setup:
         entries = [json.loads(line) for line in open(self.log)]
         return [e for e in entries if all(e.get(k) == v for k, v in match.items())]
 
-    def start(self, access=None, sessions=1, logging=("info",), **config):
+    def start(self, access=None, sessions=1, logging=("info",), network=None, **config):
         conf = {
             "interfaces": {
                 "access": [dict({"interface": self.topology.if_a, "type": "ipoe", "vlan-mode": "N:1",
@@ -66,6 +66,8 @@ class Setup:
             "dhcpv6": {"enable": False},
             "igmp": {"autostart": False}
         }
+        if network:
+            conf["interfaces"]["network"] = network
         access_conf = conf["interfaces"]["access"][0]
         for key in [k for k, v in access_conf.items() if v is None]:
             del access_conf[key]
@@ -273,6 +275,30 @@ def test_dhcpv6_long_duid_new_xid(ipoe):
     request = ipoe.entries(proto="dhcpv6", type=3)[0]
     assert request["server_id_ok"], request
     assert request["xid"] != solicit["xid"]
+
+
+def test_dhcpv6_pd_longer_than_64(ipoe):
+    """The session traffic address of a delegated prefix longer than /64
+    keeps the prefix bits after the first 64 bits (prefix::1)."""
+    n = helpers.if_id()
+    net_a, net_b = "bbl%da" % n, "bbl%db" % n
+    helpers.veth_pair(ipoe.topology.a, net_a, ipoe.topology.b, net_b)
+    helpers.kernel_address(ipoe.topology.b, net_b, ipv6="fc66::2/64")
+    ipoe.peer("dhcpv6-pd")
+    ipoe.start(access={"ipv4": False, "ipv6": True}, dhcpv6={"enable": True}, logging=("info", "dhcp", "ip"),
+               network=[{"interface": net_a, "address-ipv6": "fc66::1/64", "gateway-ipv6": "fc66::2"}],
+               **{"session-traffic": {"ipv6pd-pps": 1}})
+    ipoe.established(1)
+    assert ipoe.info()["ipv6-delegated-prefix"] == "fc00:2:0:8000:2::/80"
+
+    def addresses():
+        flows = [ipoe.bbl.ctrl("stream-info", **{"flow-id": i})["stream-info"] for i in (1, 2)]
+        return {f["direction"]: f for f in flows}
+    wait_until(lambda: all(":" in f["destination-address"] for f in addresses().values()), 10,
+               message="session traffic built")
+    flows = addresses()
+    assert flows["upstream"]["source-address"] == "fc00:2:0:8000:2::1", flows["upstream"]
+    assert flows["downstream"]["destination-address"] == "fc00:2:0:8000:2::1", flows["downstream"]
 
 
 @pytest.mark.full

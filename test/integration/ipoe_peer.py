@@ -15,6 +15,8 @@ scenarios:
                      carry it, periodic RA
   dhcpv6-release-ra  DHCPv6 server which ignores Release, first RA is sent
                      --ra-delay seconds after the first Reply
+  dhcpv6-pd          DHCPv6 server which delegates a /80 prefix (IA_PD),
+                     periodic RA
   ra                 one RA to all nodes after --ra-delay seconds
   igmp               IGMP log only
   echo6              one RA after --ra-delay seconds, then an ICMPv6 echo
@@ -32,7 +34,8 @@ import time
 
 from scapy.layers.dhcp import BOOTP, DHCP
 from scapy.layers.dhcp6 import (DHCP6_Advertise, DHCP6_Release, DHCP6_Reply, DHCP6_Request, DHCP6_Solicit,
-                                DHCP6OptClientId, DHCP6OptIA_NA, DHCP6OptIAAddress, DHCP6OptServerId)
+                                DHCP6OptClientId, DHCP6OptIA_NA, DHCP6OptIA_PD, DHCP6OptIAAddress,
+                                DHCP6OptIAPrefix, DHCP6OptServerId)
 from scapy.layers.inet import IP, UDP
 from scapy.layers.inet6 import (ICMPv6EchoReply, ICMPv6EchoRequest, ICMPv6ND_RA, ICMPv6NDOptPrefixInfo, ICMPv6NDOptSrcLLAddr, IPv6)
 from scapy.layers.l2 import Ether
@@ -44,6 +47,8 @@ ETH_P_ALL = 0x0003
 SERVER4 = "10.0.0.1"
 SERVER6_LL = "fe80::1"
 PREFIX6 = "fc00:1::"
+PD_PREFIX = "fc00:2:0:8000:2::"
+PD_PREFIX_LEN = 80
 LEASE_ADDRESS = "10.0.0.%d"
 
 
@@ -128,6 +133,10 @@ class Peer:
             reply /= DHCP6OptIA_NA(iaid=msg[DHCP6OptIA_NA].iaid, T1=300, T2=600,
                                    ianaopts=[DHCP6OptIAAddress(addr=PREFIX6 + "%x" % (0x10 + msg.trid % 200),
                                                                preflft=900, validlft=1800)])
+        if DHCP6OptIA_PD in msg and self.args.scenario == "dhcpv6-pd":
+            reply /= DHCP6OptIA_PD(iaid=msg[DHCP6OptIA_PD].iaid, T1=300, T2=600,
+                                   iapdopt=[DHCP6OptIAPrefix(prefix=PD_PREFIX, plen=PD_PREFIX_LEN,
+                                                             preflft=900, validlft=1800)])
         self.send(Ether(src=self.mac, dst=pkt[Ether].src) /
                   IPv6(src=SERVER6_LL, dst=pkt[IPv6].src) / UDP(sport=547, dport=546) / reply)
         if isinstance(reply, DHCP6_Reply) and self.first_reply is None:
@@ -166,7 +175,7 @@ class Peer:
     def timers(self):
         now = time.time()
         scenario = self.args.scenario
-        if scenario == "dhcpv6-long-duid" and now >= self.next_ra:
+        if scenario in ("dhcpv6-long-duid", "dhcpv6-pd") and now >= self.next_ra:
             self.next_ra = now + 1
             self.ra()
         elif scenario == "dhcpv6-release-ra" and not self.ra_sent and self.first_reply and \
