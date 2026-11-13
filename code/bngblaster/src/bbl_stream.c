@@ -2150,33 +2150,35 @@ bbl_stream_io_stop(io_handle_s *io)
     }
 }
 
-/* Number of streams prefetched ahead of the current stream. */
-#define STREAM_TX_PREFETCH_DISTANCE 8
-
 /**
  * Advance the prefetch lookahead of the bucket by one stream.
  *
- * The lookahead stream was prefetched in the previous step, so
- * its pointers to the session (endpoint) and TX buffer can be
- * read and prefetched now, long before the stream is sent. The
- * stream cache lines written by the TX thread are prefetched for
- * the next stream in the list.
+ * The lookahead stream (STREAM_TX_PREFETCH_DISTANCE ahead of the
+ * current stream) was prefetched with the skip pointer of the
+ * current stream, so its pointers to the session (endpoint), TX
+ * buffer and skip stream can be read and prefetched now, long
+ * before the stream is sent. Following the skip pointer instead
+ * of the list avoids a chain of dependent cache misses.
  */
 static inline void
 bbl_stream_io_prefetch_next(io_bucket_s *io_bucket)
 {
     bbl_stream_s *stream = io_bucket->stream_prefetch;
+    bbl_stream_s *skip;
     if(stream) {
         __builtin_prefetch(stream->endpoint);
         if(stream->tx_buf) {
+            __builtin_prefetch(stream->tx_buf);
             __builtin_prefetch(stream->tx_buf + stream->tx_len - 1, 1);
         }
-        stream = stream->io_next;
-        if(stream) {
-            __builtin_prefetch(&stream->tx_packets, 1);
-            __builtin_prefetch(&stream->flow_seq, 1);
+        /* The skip pointer is only a hint and may be outdated
+         * after list changes, but streams are never freed. */
+        skip = stream->io_skip;
+        if(skip) {
+            __builtin_prefetch(&skip->tx_packets, 1);
+            __builtin_prefetch(&skip->flow_seq, 1);
         }
-        io_bucket->stream_prefetch = stream;
+        io_bucket->stream_prefetch = stream->io_next;
     }
 }
 

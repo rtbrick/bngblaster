@@ -63,6 +63,29 @@ io_packet_mmap_tx_to_long(io_handle_s *io, uint8_t *frame, uint16_t len)
     return true;
 }
 
+/* Number of TX frames prefetched ahead of the TX cursor. */
+#define IO_PACKET_MMAP_TX_PREFETCH 8
+
+/* Advance the TX cursor and return the next frame. The frame status
+ * is written by the kernel on TX completion (on another CPU) and each
+ * frame is in its own page, which is not covered by the hardware
+ * prefetcher, so the frame header and the first packet bytes are
+ * prefetched some frames ahead. */
+static inline uint8_t *
+io_packet_mmap_tx_next(io_handle_s *io)
+{
+    uint32_t prefetch;
+    uint8_t *frame;
+
+    if(++io->cursor == io->req.tp_frame_nr) io->cursor = 0;
+    prefetch = io->cursor + IO_PACKET_MMAP_TX_PREFETCH;
+    if(prefetch >= io->req.tp_frame_nr) prefetch -= io->req.tp_frame_nr;
+    frame = io->ring + (prefetch * io->req.tp_frame_size);
+    __builtin_prefetch(frame, 1);
+    __builtin_prefetch(frame + 64, 1);
+    return io->ring + (io->cursor * io->req.tp_frame_size);
+}
+
 static void
 poll_kernel(io_handle_s *io, short events)
 {
@@ -265,8 +288,7 @@ io_packet_mmap_tx_job(timer_s *timer)
             }
 
             /* Get next slot. */
-            io->cursor = (io->cursor + 1) % io->req.tp_frame_nr;
-            frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
+            frame_ptr = io_packet_mmap_tx_next(io);
             tphdr = (struct tpacket2_hdr *)frame_ptr;
         }
         if(pcap) {
@@ -511,8 +533,7 @@ io_packet_mmap_thread_tx_run_fn(io_thread_s *thread)
             burst--;
 
             /* Get next slot. */
-            io->cursor = (io->cursor + 1) % io->req.tp_frame_nr;
-            frame_ptr = io->ring + (io->cursor * io->req.tp_frame_size);
+            frame_ptr = io_packet_mmap_tx_next(io);
             tphdr = (struct tpacket2_hdr *)frame_ptr;
         }
 

@@ -76,16 +76,31 @@ bucket_smear(io_bucket_s *io_bucket)
     uint64_t nsec = 0;
     uint64_t step_nsec;
     bbl_stream_s *stream;
+    bbl_stream_s *trail;
+    uint32_t i = 0;
 
     if(io_bucket && io_bucket->stream_count) {
         step_nsec = io_bucket->nsec / io_bucket->stream_count;
         io_bucket->base = 0;
         io_bucket->stream_cur = NULL;
+        io_bucket->stream_prefetch = NULL;
         stream = io_bucket->stream_head;
+        trail = stream;
         while(stream) {
             nsec += step_nsec;
             stream->expired = nsec;
+            /* Set prefetch skip pointers (see bbl_stream_io_prefetch_next). */
+            if(i < STREAM_TX_PREFETCH_DISTANCE) {
+                i++;
+            } else {
+                trail->io_skip = stream;
+                trail = trail->io_next;
+            }
             stream = stream->io_next;
+        }
+        while(trail) {
+            trail->io_skip = NULL;
+            trail = trail->io_next;
         }
     }
 }

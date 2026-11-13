@@ -104,6 +104,9 @@ typedef struct bbl_stream_config_
 
 #define BBL_STREAM_GROUP_MAX 256
 
+/* Number of streams prefetched ahead of the current stream. */
+#define STREAM_TX_PREFETCH_DISTANCE 8
+
 /* Stream rate limits keeping the TX interval (1/pps) within
  * the nanosecond resolution and range of the timers. */
 #define BBL_STREAM_PPS_MIN 0.0001
@@ -203,14 +206,18 @@ typedef struct bbl_stream_
     uint64_t tx_first_seq;
 
     uint64_t flow_seq;
-    struct timespec wait_start;
-    time_t tx_first_epoch;
-    bbl_interface_s *tx_interface; /* TX link */
+    bbl_stream_s *io_skip; /* Prefetch hint, stream STREAM_TX_PREFETCH_DISTANCE ahead in IO bucket */
     union {
         bbl_access_interface_s *tx_access_interface;
         bbl_network_interface_s *tx_network_interface;
         bbl_a10nsp_interface_s *tx_a10nsp_interface;
     };
+    time_t tx_first_epoch;
+
+    /* 2. cache line (not used per packet) */
+
+    bbl_interface_s *tx_interface; /* TX link */
+    struct timespec wait_start;
 
     /* RX Thread */
     uint64_t rx_packets __attribute__((__aligned__(CACHE_LINE_SIZE)));
