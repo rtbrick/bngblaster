@@ -851,10 +851,13 @@ def test_bfd_ldp(bridged, bbl, mode):
     assert b.ctrl("bfd-session-enable")["code"] == 200
     wait_states([a, b], "Up", 5)
 
-    # BFD failure (BFD dropped, LDP not): the LDP sessions are closed.
+    # BFD failure (BFD dropped, LDP not): the LDP sessions are closed. The
+    # side detecting first closes LDP, and its notification can close the
+    # other side (deleting its BFD session) before that one detects it.
     bridged.drop(True)
-    wait_until(lambda: "BFD down" in log(a), 2, 0.05, message="LDP closed by BFD")
-    assert "state Up -> Down (control-detection-time-expired)" in log(a)
+    detected = wait_until(lambda: [i for i in (a, b) if "BFD down" in log(i)], 2, 0.05,
+                          message="LDP closed by BFD")
+    assert "state Up -> Down (control-detection-time-expired)" in log(detected[0])
     # The BFD session is deleted with the LDP session and added again when the
     # LDP session is operational again, which stays Down while BFD is dropped.
     wait_until(lambda: ldp_session(a).get("state") == "operational" and
