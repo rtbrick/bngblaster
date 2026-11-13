@@ -178,79 +178,120 @@ rx_prefetch_packet(uint8_t *buf, uint16_t len)
  *
  * With only a few streams, stages 2 and 3 are skipped.
  *
+ * Prefetching has no side effects, so the burst can stop
+ * at any packet in stage 4.
+ *
  * @param thread thread handle
  * @param io IO handle
  * @param bufs packet buffers
  * @param lens packet lengths
+ * @param vlans stripped outer VLAN per packet (tpid << 16 | tci, 0 if
+ *        none) or NULL to use io->vlan_tci/vlan_tpid for all packets
  * @param count number of packets (max IO_RX_BURST_MAX)
+ * @param retry stop at the first packet which can't be redirected to
+ *        the main thread (TXQ full) instead of dropping it
+ * @return number of processed packets
  */
-void
-io_thread_rx_burst(io_thread_s *thread, io_handle_s *io,
-                   uint8_t **bufs, uint16_t *lens, uint16_t count)
+static inline __attribute__((always_inline)) uint16_t
+rx_burst(io_thread_s *thread, io_handle_s *io,
+         uint8_t **bufs, uint16_t *lens, uint32_t *vlans,
+         uint16_t count, bool retry)
 {
     uint32_t flow_ids[IO_RX_BURST_MAX];
     uint32_t flow_id;
     bbl_stream_s *stream;
     uint8_t *bbl;
     int i, j;
+    int distance = 3 * IO_RX_PREFETCH_DISTANCE;
+    bool prefetch_streams = true;
 
     assert(count <= IO_RX_BURST_MAX);
 
     if(g_ctx->streams < IO_RX_PREFETCH_STREAMS_MIN) {
-        for(i = 0; i < count + IO_RX_PREFETCH_DISTANCE; i++) {
-            if(i < count) {
-                rx_prefetch_packet(bufs[i], lens[i]);
-            }
-            j = i - IO_RX_PREFETCH_DISTANCE;
-            if(j >= 0) {
-                io->buf = bufs[j];
-                io->buf_len = lens[j];
-                if(rx_handler(thread, io) == IO_FULL) {
-                    io->stats.dropped++;
-                }
-            }
-        }
-        return;
+        distance = IO_RX_PREFETCH_DISTANCE;
+        prefetch_streams = false;
     }
 
-    for(i = 0; i < count + 3 * IO_RX_PREFETCH_DISTANCE; i++) {
+    for(i = 0; i < count + distance; i++) {
         /* Stage 1 */
         if(i < count) {
             rx_prefetch_packet(bufs[i], lens[i]);
         }
-        /* Stage 2 */
-        j = i - IO_RX_PREFETCH_DISTANCE;
-        if(j >= 0 && j < count) {
-            flow_id = 0;
-            if(packet_is_bbl(bufs[j], lens[j])) {
-                bbl = bufs[j] + lens[j] - BBL_HEADER_LEN;
-                flow_id = *(uint32_t*)(bbl + BBL_FLOW_ID_OFFSET);
-                if(g_ctx->stream_index && flow_id <= g_ctx->streams && flow_id > 0) {
-                    __builtin_prefetch(&g_ctx->stream_index[flow_id-1]);
-                } else {
-                    flow_id = 0;
+        if(prefetch_streams) {
+            /* Stage 2 */
+            j = i - IO_RX_PREFETCH_DISTANCE;
+            if(j >= 0 && j < count) {
+                flow_id = 0;
+                if(packet_is_bbl(bufs[j], lens[j])) {
+                    bbl = bufs[j] + lens[j] - BBL_HEADER_LEN;
+                    flow_id = *(uint32_t*)(bbl + BBL_FLOW_ID_OFFSET);
+                    if(g_ctx->stream_index && flow_id <= g_ctx->streams && flow_id > 0) {
+                        __builtin_prefetch(&g_ctx->stream_index[flow_id-1]);
+                    } else {
+                        flow_id = 0;
+                    }
                 }
+                flow_ids[j] = flow_id;
             }
-            flow_ids[j] = flow_id;
-        }
-        /* Stage 3 */
-        j -= IO_RX_PREFETCH_DISTANCE;
-        if(j >= 0 && j < count && flow_ids[j]) {
-            stream = g_ctx->stream_index[flow_ids[j]-1];
-            if(stream) {
-                __builtin_prefetch(&stream->rx_packets, 1);
+            /* Stage 3 */
+            j -= IO_RX_PREFETCH_DISTANCE;
+            if(j >= 0 && j < count && flow_ids[j]) {
+                stream = g_ctx->stream_index[flow_ids[j]-1];
+                if(stream) {
+                    __builtin_prefetch(&stream->rx_packets, 1);
+                }
             }
         }
         /* Stage 4 */
-        j -= IO_RX_PREFETCH_DISTANCE;
+        j = i - distance;
         if(j >= 0) {
             io->buf = bufs[j];
             io->buf_len = lens[j];
+            if(vlans) {
+                io->vlan_tci = vlans[j] & 0xffff;
+                io->vlan_tpid = vlans[j] >> 16;
+            }
             if(rx_handler(thread, io) == IO_FULL) {
+                if(retry) {
+                    /* The packet is retried, count it once. */
+                    io->stats.packets--;
+                    io->stats.bytes -= io->buf_len;
+                    if(io->vlan_tpid) {
+                        io->stats.bytes -= 4;
+                    }
+                    return j;
+                }
                 io->stats.dropped++;
             }
         }
     }
+    return count;
+}
+
+/**
+ * Process a burst of received packets, packets which can't
+ * be redirected to the main thread are dropped.
+ */
+void
+io_thread_rx_burst(io_thread_s *thread, io_handle_s *io,
+                   uint8_t **bufs, uint16_t *lens, uint16_t count)
+{
+    rx_burst(thread, io, bufs, lens, NULL, count, false);
+}
+
+/**
+ * Process a burst of received packets with stripped outer VLAN
+ * per packet, stops at the first packet which can't be redirected
+ * to the main thread, so the caller can retry it.
+ *
+ * @return number of processed packets
+ */
+uint16_t
+io_thread_rx_burst_retry(io_thread_s *thread, io_handle_s *io,
+                         uint8_t **bufs, uint16_t *lens, uint32_t *vlans,
+                         uint16_t count)
+{
+    return rx_burst(thread, io, bufs, lens, vlans, count, true);
 }
 
 /**

@@ -42,4 +42,9 @@ void
 io_thread_rx_burst(io_thread_s *thread, io_handle_s *io,
                    uint8_t **bufs, uint16_t *lens, uint16_t count);
 
+uint16_t
+io_thread_rx_burst_retry(io_thread_s *thread, io_handle_s *io,
+                         uint8_t **bufs, uint16_t *lens, uint32_t *vlans,
+                         uint16_t count);
+
 #endif

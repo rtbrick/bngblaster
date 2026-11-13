@@ -294,10 +294,21 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
     uint32_t cursor = io->cursor;
     uint32_t frame_size = io->req.tp_frame_size; /* 64K with 64K pages */
     uint32_t frame_nr = io->req.tp_frame_nr;
-    uint8_t *frame_ptr;
+    uint32_t next;
     uint8_t *ring = io->ring;
 
     struct tpacket2_hdr *tphdr;
+    struct tpacket2_hdr *tphdrs[IO_RX_BURST_MAX];
+    uint8_t *bufs[IO_RX_BURST_MAX];
+    uint16_t lens[IO_RX_BURST_MAX];
+    uint32_t vlans[IO_RX_BURST_MAX];
+    uint16_t count, done, i;
+
+    /* Frames of a burst are returned to the kernel after the
+     * burst is processed, leave enough frames to the kernel. */
+    uint16_t burst_max = frame_nr / 2;
+    if(burst_max > IO_RX_BURST_MAX) burst_max = IO_RX_BURST_MAX;
+    if(burst_max < 1) burst_max = 1;
 
     assert(io->mode == IO_MODE_PACKET_MMAP);
     assert(io->direction == IO_INGRESS);
@@ -318,8 +329,7 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
     const uint32_t idle_spin_rounds = 10000;
 
     while(thread->active) {
-        frame_ptr = ring + (cursor * frame_size);
-        tphdr = (struct tpacket2_hdr*)frame_ptr;
+        tphdr = (struct tpacket2_hdr*)(ring + (cursor * frame_size));
         if(!(TP_STATUS_LOAD(tphdr) & TP_STATUS_USER)) {
             /* If no buffer is available poll kernel */
             //poll_kernel(io, POLLIN);
@@ -333,33 +343,35 @@ io_packet_mmap_thread_rx_run_fn(io_thread_s *thread)
 
         /* Get RX timestamp */
         clock_gettime(CLOCK_MONOTONIC, &io->timestamp);
-        while(TP_STATUS_LOAD(tphdr) & TP_STATUS_USER) {
-            io->buf = (uint8_t*)tphdr + tphdr->tp_mac;
-            io->buf_len = tphdr->tp_snaplen;
+
+        /* Collect a burst of frames owned by user space, the
+         * burst processing prefetches packets and streams ahead. */
+        count = 0;
+        next = cursor;
+        do {
+            tphdrs[count] = tphdr;
+            bufs[count] = (uint8_t*)tphdr + tphdr->tp_mac;
+            lens[count] = tphdr->tp_snaplen;
             if(tphdr->tp_status & TP_STATUS_VLAN_VALID) {
-                io->vlan_tci = tphdr->tp_vlan_tci;
-                io->vlan_tpid = tphdr->tp_vlan_tpid ? tphdr->tp_vlan_tpid : ETH_TYPE_VLAN;
+                vlans[count] = (uint32_t)(tphdr->tp_vlan_tpid ? tphdr->tp_vlan_tpid : ETH_TYPE_VLAN) << 16 | tphdr->tp_vlan_tci;
             } else {
-                io->vlan_tci = 0;
-                io->vlan_tpid = 0;
+                vlans[count] = 0;
             }
-            /* Process packet */
-            if(io_thread_rx_handler(thread, io) == IO_FULL) {
-                /* The frame is retried, count it once. */
-                io->stats.packets--;
-                io->stats.bytes -= io->buf_len;
-                if(io->vlan_tpid) {
-                    io->stats.bytes -= 4;
-                }
-                break;
-            }
-            /* Return ownership back to kernel */
-            TP_STATUS_STORE(tphdr, TP_STATUS_KERNEL);
-            /* Get next packet */
-            cursor = (cursor + 1) % frame_nr;
-            frame_ptr = ring + (cursor * frame_size);
-            tphdr = (struct tpacket2_hdr*)frame_ptr;
+            count++;
+            if(++next == frame_nr) next = 0;
+            tphdr = (struct tpacket2_hdr*)(ring + (next * frame_size));
+        } while(count < burst_max && (TP_STATUS_LOAD(tphdr) & TP_STATUS_USER));
+
+        /* Process packets */
+        done = io_thread_rx_burst_retry(thread, io, bufs, lens, vlans, count);
+
+        /* Return ownership back to kernel, frames not processed
+         * (TXQ to main thread full) are retried. */
+        for(i = 0; i < done; i++) {
+            TP_STATUS_STORE(tphdrs[i], TP_STATUS_KERNEL);
         }
+        cursor += done;
+        if(cursor >= frame_nr) cursor -= frame_nr;
     }
 }
 
