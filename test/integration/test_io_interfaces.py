@@ -120,8 +120,9 @@ def test_oversized_control_packet(topology, processes, tmp_path, link):
 
 
 def test_icmpv6_echo_destination(topology, processes, tmp_path):
-    """ICMPv6 echo requests are only answered for local destinations, a
-    request to all nodes with a unicast source (RFC 4443 section 4.2)."""
+    """ICMPv6 echo requests are answered for any unicast destination
+    (like IPv4, e.g. routed prefixes), a request to all nodes with a
+    unicast source (RFC 4443 section 4.2)."""
     helpers.kernel_address(topology.b, topology.if_b, PEER4 + "/24", PEER6 + "/64")
     instance = start(topology, processes, tmp_path, {"interfaces": {"network": [network(topology.if_a)]}})
     received, out = ping(topology.b, BBL6)
@@ -132,9 +133,33 @@ def test_icmpv6_echo_destination(topology, processes, tmp_path):
     topology.b.exec(["ip", "-6", "neigh", "add", "fc00::99", "lladdr", mac(topology.a, topology.if_a),
                      "dev", topology.if_b])
     received, out = ping(topology.b, "fc00::99", count=2)
-    assert received == 0, out
+    assert received == 2, out
+    # Off-link destination routed to the BNG Blaster
+    topology.b.exec(["ip", "-6", "route", "add", "2001:db8:5000::/48", "via", BBL6, "dev", topology.if_b])
+    received, out = ping(topology.b, "2001:db8:5000:3::1", count=2)
+    assert received == 2, out
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
+
+
+def test_icmp_echo_foreign_mac(topology, processes, tmp_path):
+    """ICMP and ICMPv6 echo requests sent to a foreign MAC address are not
+    answered."""
+    helpers.kernel_address(topology.b, topology.if_b, PEER4 + "/24", PEER6 + "/64")
+    instance = start(topology, processes, tmp_path, {"interfaces": {"network": [network(topology.if_a)]}})
+    received, out = ping(topology.b, BBL4)
+    assert received == 3, out
+    received, out = ping(topology.b, BBL6)
+    assert received == 3, out
+    topology.b.exec(["ip", "neigh", "replace", BBL4, "lladdr", "02:00:00:00:00:99", "nud", "permanent",
+                     "dev", topology.if_b])
+    topology.b.exec(["ip", "-6", "neigh", "replace", BBL6, "lladdr", "02:00:00:00:00:99", "nud", "permanent",
+                     "dev", topology.if_b])
+    received, out = ping(topology.b, BBL4, count=2)
+    assert received == 0, out
+    received, out = ping(topology.b, BBL6, count=2)
+    assert received == 0, out
+    assert instance.terminate(EXIT_TIMEOUT) == 0
 
 DAD_SCRIPT = """
 import sys

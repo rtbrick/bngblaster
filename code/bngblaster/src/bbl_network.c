@@ -420,42 +420,26 @@ bbl_network_icmpv6_na(bbl_network_interface_s *interface,
     return bbl_txq_to_buffer(interface->txq, eth);
 }
 
-/* Local unicast address for a reply to the destination (NULL if not local). */
-static uint8_t *
-bbl_network_ipv6_local(bbl_network_interface_s *interface, uint8_t *dst)
-{
-    bbl_secondary_ip6_s *secondary_ip6;
-
-    if(dst[0] == 0xff) {
-        /* Multicast: reply from a unicast address (RFC 4443 section 4.2). */
-        if(ipv6_addr_not_zero(&interface->ip6.address)) {
-            return interface->ip6.address;
-        }
-        return interface->ip6_ll;
-    }
-    if(memcmp(dst, interface->ip6.address, IPV6_ADDR_LEN) == 0 ||
-       memcmp(dst, interface->ip6_ll, IPV6_ADDR_LEN) == 0) {
-        return dst;
-    }
-    secondary_ip6 = interface->secondary_ip6_addresses;
-    while(secondary_ip6) {
-        if(memcmp(dst, secondary_ip6->ip, IPV6_ADDR_LEN) == 0) {
-            return dst;
-        }
-        secondary_ip6 = secondary_ip6->next;
-    }
-    return NULL;
-}
-
+/* Echo requests to any unicast destination are answered (like IPv4),
+ * which allows to ping addresses routed to the network interface. */
 static bbl_txq_result_t
 bbl_network_icmpv6_echo_reply(bbl_network_interface_s *interface,
                               bbl_ethernet_header_s *eth,
                               bbl_ipv6_s *ipv6,
                               bbl_icmpv6_s *icmpv6) {
-    uint8_t *src = bbl_network_ipv6_local(interface, ipv6->dst);
-    if(!src || (memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0 && !(eth->dst[0] & 0x01))) {
-        /* Not addressed to this interface. */
+    uint8_t *src = ipv6->dst;
+    if(ipv6->src[0] == 0xff ||
+       (memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0 && !(eth->dst[0] & 0x01))) {
+        /* Multicast source or not addressed to this interface. */
         return BBL_TXQ_OK;
+    }
+    if(src[0] == 0xff) {
+        /* Multicast: reply from a unicast address (RFC 4443 section 4.2). */
+        if(ipv6_addr_not_zero(&interface->ip6.address)) {
+            src = interface->ip6.address;
+        } else {
+            src = interface->ip6_ll;
+        }
     }
     bbl_network_update_eth(interface, eth);
     ipv6->dst = ipv6->src;
