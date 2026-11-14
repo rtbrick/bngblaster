@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -6,21 +8,19 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LDP &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="../_static/jquery.js?v=8dae8fb0"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
-    <link rel="next" title="LSPGEN" href="lspgen.html" />
+    <link rel="next" title="BFD" href="bfd.html" />
     <link rel="prev" title="BGP L2VPN" href="l2vpn.html" /> 
 </head>
 
@@ -36,9 +36,6 @@
             BNG Blaster
               <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -70,6 +67,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#ldp-raw-update-generator">LDP RAW Update Generator</a></li>
 </ul>
 </li>
+<li class="toctree-l2"><a class="reference internal" href="bfd.html">BFD</a></li>
 <li class="toctree-l2"><a class="reference internal" href="lspgen.html">LSPGEN</a></li>
 </ul>
 </li>
@@ -156,11 +154,10 @@ attached to a network interface function.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><strong>instance-id</strong>
-<strong>instance-id</strong></p></td>
+<tr class="row-even"><td><p><strong>instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Mandatory LDP instance identifier.</div>
-<div class="line">Range: 0 - 65535</div>
+<div class="line">Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
@@ -179,20 +176,21 @@ attached to a network interface function.</p>
 <div class="line">calculated by using the effective keepalive time divided</div>
 <div class="line">by 3. Assuming an effective keepalive time of 15</div>
 <div class="line">seconds results in a keepalive interval of 5 seconds.</div>
-<div class="line">Default: 15 Range: 0 - 65535</div>
+<div class="line">Default: 15 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>hold-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">LDP hello hold time in seconds.</div>
-<div class="line">Default: 15 Range: 0 - 65535</div>
+<div class="line">Default: 15 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
 <td><div class="line-block">
-<div class="line">LDP teardown time in seconds.</div>
+<div class="line">Maximum time in seconds to wait for LDP sessions to</div>
+<div class="line">close gracefully on teardown before they are closed.</div>
 <div class="line">Default: 5 Range: 0 - 65535</div>
 </div>
 </td>
@@ -376,6 +374,13 @@ of pseudowires) are ignored.</p>
 </div>
 </td>
 </tr>
+<tr class="row-odd"><td><p><strong>bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable multi-hop BFD for the session of this targeted</div>
+<div class="line">neighbor with this BFD profile.</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -416,6 +421,17 @@ the peer with the larger transport IP address (active peer).</p>
 <p>The LDP transport IP address can be explicitly configured for the
 LDP instance using the option <code class="docutils literal notranslate"><span class="pre">ipv4-transport-address</span></code>. The <code class="docutils literal notranslate"><span class="pre">lsr-id</span></code>
 is used as a transport IP address if not explicitly configured.</p>
+<p>The session is terminated if no hello (link or targeted) of the peer
+is received within the hold time (RFC 5036), and established again with
+the next hello. On teardown, the BNG Blaster stops sending hellos and
+closes all sessions, sessions not closed within <strong>teardown-time</strong> are
+closed without waiting for the peer.</p>
+<p>The BNG Blaster advertises its addresses and the LSR identifier and
+interface prefixes with implicit null label, and with IPv6 transport
+enabled also its IPv6 addresses and prefixes (RFC 7552). A dual-stack
+instance establishes the session with the preferred transport only if
+the peer has the same preference. An IPv4 only instance ignores the
+dual-stack capability of the peer.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
 <p>It is currently not supported to setup multiple links between
@@ -458,7 +474,10 @@ label using the learned label mappings.</p>
 <p>The traffic stream configuration options <code class="docutils literal notranslate"><span class="pre">ldp-ipv4-lookup-address</span></code>
 and <code class="docutils literal notranslate"><span class="pre">ldp-ipv6-lookup-address</span></code> specify the lookup IPv4 or IPv6 address.
 This means that traffic will not start until this address is found in the
-corresponding label database of the sending network interface function.</p>
+corresponding label database of the sending network interface function,
+which is the LDP instance of the interface (<code class="docutils literal notranslate"><span class="pre">ldp-instance-id</span></code>) or
+of a targeted neighbor using this interface. The implicit null label
+(3) is not sent, the stream is sent without this label.</p>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;streams&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
 <span class="w">        </span><span class="p">{</span>
@@ -505,17 +524,23 @@ corresponding label database of the sending network interface function.</p>
 <span class="p">}</span>
 </pre></div>
 </div>
-<p>Labels withdrawn by the peer (label withdraw message) and all labels of a
-session which went down are kept as inactive entries (<code class="docutils literal notranslate"><span class="pre">active</span></code> false) and
-are not used by traffic streams, which stop sending until the label is
-advertised again.</p>
+<p>The database has one entry per prefix (address and prefix length) with
+the label mappings of all sessions. The entry shows the label of the
+selected mapping, which is kept as long as its session advertises the
+prefix, traffic streams prefer the mapping of a session on their network
+interface. Labels withdrawn by the peer (label withdraw message) and all
+labels of a session which went down are removed, entries without mapping
+are kept as inactive entries (<code class="docutils literal notranslate"><span class="pre">active</span></code> false) and are not used by traffic
+streams, which stop sending until the label is advertised again.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">ldp-ipv4-lookup-address</span></code> and <code class="docutils literal notranslate"><span class="pre">ldp-ipv6-lookup-address</span></code> are mutually exclusive
 and must exactly match the prefix address as shown in the LDP database. This means
 that if the prefix is <cite>10.0.0.0/24</cite>, the lookup address should be <cite>10.0.0.0</cite>.</p>
 <div class="admonition note">
 <p class="admonition-title">Note</p>
-<p>There is currently no longest prefix match supported,
-meaning that the actual prefix length is ignored!</p>
+<p>There is currently no longest prefix match supported, if several
+prefixes with this address exist, the active one with the longest
+prefix length is used. Streams switch to another prefix length
+if a longer prefix is learned or the used one is withdrawn.</p>
 </div>
 </section>
 <section id="raw-update-files">
@@ -552,7 +577,8 @@ script <code class="docutils literal notranslate"><span class="pre">ldpupdate</s
 during BNG Blaster startup phase and sent as soon as the session is
 established.</p>
 <p>The <code class="docutils literal notranslate"><span class="pre">ldp-raw-update</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> allows sending further updates during
-the session lifetime.</p>
+the session lifetime. Sessions which are not operational or still sending
+an update are skipped (reported as <code class="docutils literal notranslate"><span class="pre">skipped</span></code> in the response).</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">ldp-raw-update</span> <span class="pre">file</span> <span class="pre">update1.ldp</span></code></p>
 <p>This allows loading label mappings after the LDP session has
 started and manually triggering a series of changes using incremental
@@ -634,7 +660,7 @@ valid LDP update streams.</p>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
         <a href="l2vpn.html" class="btn btn-neutral float-left" title="BGP L2VPN" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
-        <a href="lspgen.html" class="btn btn-neutral float-right" title="LSPGEN" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+        <a href="bfd.html" class="btn btn-neutral float-right" title="BFD" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 
   <hr/>

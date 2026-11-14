@@ -135,6 +135,32 @@ PPP IP6CP (IPv6)
 ^^^^^^^^^^^^^^^^
 .. include:: ../configuration/ppp_ip6cp.rst
 
+PPP Negotiation
+~~~~~~~~~~~~~~~
+
+The PPPoE discovery accepts the first PADO with matching host-uniq and
+service name (one of possibly several Service-Name tags), PADI is sent as
+broadcast until then. Without a configured service name, the first service
+offered is requested. PADS is accepted only from the server of the PADO.
+
+The own LCP MRU is limited to 1492 unless a larger PPP-Max-Payload was
+echoed by the server (RFC 4638). LCP options rejected by the server
+(MRU, Magic-Number) are not requested again. The negotiation of LCP, IPCP
+and IP6CP gives up after 5 configure-nak or configure-reject messages without
+configure-ack (RFC 1661 Max-Failure).
+
+The session is established once no NCP is pending anymore and at least one
+NCP is opened. If all enabled NCPs failed (timeout, Max-Failure, rejected or
+terminated), the session is terminated. IPCP or IP6CP terminate requests of
+the server close the NCP and stop the traffic of this address family, a new
+configure request of the server in opened state renegotiates it.
+
+Packets of unsupported PPP protocols (e.g. CCP) are answered with LCP
+protocol-reject, CHAP challenges after the authentication are answered as
+well (re-authentication). An unsolicited LCP terminate-ack restarts the LCP
+negotiation. If CHAP is negotiated but no challenge is received, the session
+is terminated after the authentication timeout and retries.
+
 DHCPv6
 ~~~~~~
 

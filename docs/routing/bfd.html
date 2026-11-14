@@ -1,0 +1,665 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>BFD &mdash; BNG Blaster 1.1 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+      <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="LSPGEN" href="lspgen.html" />
+    <link rel="prev" title="LDP" href="ldp.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search"  style="background: #fcfcfc" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            BNG Blaster
+              <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="../install.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../quickstart.html">Quickstart Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../interfaces.html">Interfaces</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../access/index.html">Access Protocols</a></li>
+<li class="toctree-l1 current"><a class="reference internal" href="index.html">Routing Protocols</a><ul class="current">
+<li class="toctree-l2"><a class="reference internal" href="isis.html">ISIS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ospf.html">OSPF</a></li>
+<li class="toctree-l2"><a class="reference internal" href="mpls.html">MPLS</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bgp.html">BGP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="evpn.html">EVPN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="l2vpn.html">BGP L2VPN</a></li>
+<li class="toctree-l2"><a class="reference internal" href="ldp.html">LDP</a></li>
+<li class="toctree-l2 current"><a class="current reference internal" href="#">BFD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#routing-protocols">Routing Protocols</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#behavior">Behavior</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#commands">Commands</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="lspgen.html">LSPGEN</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="../streams.html">Traffic Streams</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../icmp.html">ICMP</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../http.html">HTTP Emulation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../nat.html">NAT / CGNAT</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../reports.html">Reports</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../configuration/index.html">Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../api/index.html">API/CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../controller.html">Controller and Web UI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../performance.html">Performance Guide</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../troubleshooting.html">Troubleshooting</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../faq.html">Frequently Asked Questions</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu"  style="background: #fcfcfc" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">BNG Blaster</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+          <li class="breadcrumb-item"><a href="index.html">Routing Protocols</a></li>
+      <li class="breadcrumb-item active">BFD</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/routing/bfd.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="bfd">
+<span id="id1"></span><h1>BFD<a class="headerlink" href="#bfd" title="Link to this heading"></a></h1>
+<p>Bidirectional Forwarding Detection (BFD) detects failures of the forwarding
+path between two systems within milliseconds. Routing protocols use BFD to
+detect a failed neighbor much faster than with their own hello and hold
+timers, which is required for fast convergence and failover.</p>
+<p>The BNG Blaster implements BFD in asynchronous mode as defined in
+<span class="target" id="index-0"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5880.html"><strong>RFC 5880</strong></a> for single-hop sessions (<span class="target" id="index-1"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5881.html"><strong>RFC 5881</strong></a>, UDP port 3784) and
+multi-hop sessions (<span class="target" id="index-2"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5883.html"><strong>RFC 5883</strong></a>, UDP port 4784) over IPv4 and IPv6.
+BFD sessions are either configured statically or created by the routing
+protocols ISIS, OSPFv2, OSPFv3, BGP and LDP. This allows testing of the
+BFD implementation of the device under test (DUT) and of its failover
+behavior, triggered by disabling BFD sessions or changing timers via
+control commands.</p>
+<p>The echo function and demand mode are not supported.</p>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<p>BFD timers and authentication are defined in BFD profiles,
+which are referenced by static sessions and routing protocols.
+The following example shows a static single-hop session with
+100 ms intervals and a multi-hop session with the default profile
+(1000 ms intervals, multiplier 3).</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;bfd&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;bfd-profile-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;multiplier&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;bfd-sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bfd-profile-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DUT&quot;</span>
+<span class="w">        </span><span class="p">},</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;multihop&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p><strong>BFD Profile</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bfd&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>BFD profiles define the timers and authentication of BFD sessions.
+Static BFD sessions and routing protocols refer to a profile by its
+<code class="docutils literal notranslate"><span class="pre">bfd-profile-id</span></code>. Sessions without profile use the defaults.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory BFD profile identifier.</div>
+<div class="line">Range: 1 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>tx-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Desired min TX interval in milliseconds.</div>
+<div class="line">The TX interval is at least one second while the session</div>
+<div class="line">is not up (slow start).</div>
+<div class="line">Default: 1000 Range: 1 - 60000</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>rx-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Required min RX interval in milliseconds.</div>
+<div class="line">Default: 1000 Range: 1 - 60000</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>multiplier</strong></p></td>
+<td><div class="line-block">
+<div class="line">Detect multiplier.</div>
+<div class="line">Default: 3 Range: 1 - 255</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>passive</strong></p></td>
+<td><div class="line-block">
+<div class="line">Passive role, packets are sent only after a packet</div>
+<div class="line">from the peer is received.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>min-ttl</strong></p></td>
+<td><div class="line-block">
+<div class="line">Minimum TTL or hop limit of received packets of</div>
+<div class="line">multi-hop sessions. Single-hop sessions always</div>
+<div class="line">require 255 (RFC 5881).</div>
+<div class="line">Default: 254 Range: 1 - 255</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>authentication-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">Authentication type (none, simple, keyed-md5,</div>
+<div class="line">meticulous-keyed-md5, keyed-sha1 or meticulous-keyed-sha1).</div>
+<div class="line">Default: none</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>authentication-key-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Authentication key ID.</div>
+<div class="line">Default: 1 Range: 0 - 255</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>authentication-key</strong></p></td>
+<td><div class="line-block">
+<div class="line">Authentication key (password), mandatory if</div>
+<div class="line">authentication is enabled.</div>
+<div class="line">Length: simple and MD5 1 - 16, SHA1 1 - 20 characters</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<p><strong>BFD Session</strong></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bfd-sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Static BFD sessions are started with BNG Blaster and kept until the end
+of the test, independent of routing protocols.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>network-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Network interface of the session.</div>
+<div class="line">Mandatory for single-hop sessions.</div>
+<div class="line">Default: first network interface (multi-hop)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>peer-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Peer IPv4 address.</div>
+<div class="line">Either peer-ipv4-address or peer-ipv6-address is mandatory.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>local-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Local IPv4 address.</div>
+<div class="line">Default: network interface address</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>peer-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Peer IPv6 address (global or link-local).</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>local-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Local IPv6 address.</div>
+<div class="line">Default: network interface link-local address for</div>
+<div class="line">link-local peers, otherwise the global address</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">BFD profile.</div>
+<div class="line">Default: built-in defaults (1000 ms, multiplier 3)</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>multihop</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multi-hop session (RFC 5883, UDP port 4784).</div>
+<div class="line">Default: false (single-hop, RFC 5881, UDP port 3784)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>name</strong></p></td>
+<td><div class="line-block">
+<div class="line">Optional session name shown in the session output.</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="routing-protocols">
+<h2>Routing Protocols<a class="headerlink" href="#routing-protocols" title="Link to this heading"></a></h2>
+<p>BFD is enabled for a routing protocol by referencing a BFD profile.
+The BFD session is created when the adjacency or session of the protocol
+comes up and deleted when it goes down. If the BFD session goes from Up to
+Down, the protocol is brought down immediately. A BFD session going down
+because the peer signals AdminDown does not bring the protocol down
+(<span class="target" id="index-3"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5882.html"><strong>RFC 5882</strong></a>).</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Protocol</p></th>
+<th class="head"><p>Configuration</p></th>
+<th class="head"><p>BFD Session</p></th>
+<th class="head"><p>BFD Down</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>ISIS</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">isis-bfd-profile-id</span></code>
+(network interface)</p></td>
+<td><p>Adjacency up,
+single-hop</p></td>
+<td><p>Adjacency down</p></td>
+</tr>
+<tr class="row-odd"><td><p>OSPFv2</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ospfv2-bfd-profile-id</span></code>
+(network interface)</p></td>
+<td><p>Neighbor 2-Way
+or higher,
+single-hop</p></td>
+<td><p>Neighbor down</p></td>
+</tr>
+<tr class="row-even"><td><p>OSPFv3</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ospfv3-bfd-profile-id</span></code>
+(network interface)</p></td>
+<td><p>Neighbor 2-Way
+or higher,
+single-hop</p></td>
+<td><p>Neighbor down</p></td>
+</tr>
+<tr class="row-odd"><td><p>BGP</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bfd-profile-id</span></code>,
+<code class="docutils literal notranslate"><span class="pre">bfd-multihop</span></code> (BGP session)</p></td>
+<td><p>Established,
+single- or multi-hop</p></td>
+<td><p>NOTIFICATION Cease with subcode
+BFD Down (<span class="target" id="index-4"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc9384.html"><strong>RFC 9384</strong></a>)</p></td>
+</tr>
+<tr class="row-even"><td><p>LDP</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ldp-bfd-profile-id</span></code>
+(network interface)</p></td>
+<td><p>Operational,
+single-hop</p></td>
+<td><p>Session closed with
+Shutdown notification</p></td>
+</tr>
+<tr class="row-odd"><td><p>LDP
+(targeted)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">bfd-profile-id</span></code>
+(targeted neighbor)</p></td>
+<td><p>Operational,
+multi-hop</p></td>
+<td><p>Session closed with
+Shutdown notification</p></td>
+</tr>
+</tbody>
+</table>
+<p>The peer address of the BFD session is:</p>
+<ul class="simple">
+<li><p>ISIS: one session per address family (<span class="target" id="index-5"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc6213.html"><strong>RFC 6213</strong></a>) to the IPv4 interface address
+of the neighbor (hello TLV 132, if the network interface has an IPv4 address) and
+to the IPv6 link-local address of the neighbor (hello TLV 232). Implementations
+using only one address family for BFD (e.g. FRR uses IPv6 on dual-stack circuits)
+leave the other session down, which does not affect the adjacency.
+On broadcast circuits, the sessions are bound to each neighbor in state Up, and a
+BFD failure brings down only this neighbor.</p></li>
+<li><p>OSPFv2: the interface address of the neighbor.</p></li>
+<li><p>OSPFv3: the link-local address of the neighbor.</p></li>
+<li><p>BGP: the peer address of the session. Without <code class="docutils literal notranslate"><span class="pre">bfd-multihop</span></code>, the session is
+single-hop if the peer address is in a connected network of the network interface
+(or an IPv6 link-local address), otherwise multi-hop.</p></li>
+<li><p>LDP: the source address of the hello which initialized the LDP session (link
+hellos) or the targeted neighbor address (targeted hellos, multi-hop).</p></li>
+</ul>
+<p>Multiple protocols may share one BFD session to the same peer, for example
+OSPFv2 and ISIS or ISIS level 1 and level 2. A shared session uses the profile
+of the protocol which created it, and all protocols are brought down if it goes
+down. A static session to the same peer is shared as well.</p>
+<p>The sessions follow address changes of OSPF and ISIS neighbors. Single-hop
+sessions of OSPF and ISIS are sent to the MAC address of the neighbor, all
+other single-hop sessions (static, BGP, LDP) to the gateway MAC address of the
+network interface until the first packet of the peer is received.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;isis-instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;isis-bfd-profile-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;ldp-instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;ldp-bfd-profile-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;bfd&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;bfd-profile-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;rx-interval&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">50</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;multiplier&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;system-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1921.6800.1001&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;ldp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;lsr-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.10.10.11&quot;</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">],</span>
+<span class="w">    </span><span class="nt">&quot;bgp&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-ipv4-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-as&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">65001</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;bfd-profile-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="behavior">
+<h2>Behavior<a class="headerlink" href="#behavior" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>Each session has a unique non-zero local discriminator. Received packets are
+demultiplexed by the your discriminator field, or by interface, source and
+destination address if it is zero (<span class="target" id="index-6"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5880.html#section-6.3"><strong>RFC 5880 Section 6.3</strong></a>).</p></li>
+<li><p>All reception checks of <span class="target" id="index-7"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5880.html#section-6.8.6"><strong>RFC 5880 Section 6.8.6</strong></a> are applied. Single-hop
+packets are accepted with TTL or hop limit 255 only, multi-hop packets with
+at least <code class="docutils literal notranslate"><span class="pre">min-ttl</span></code> (default 254). All packets are sent with TTL or hop limit 255
+and a source port between 49152 and 65535, which is unique per session.</p></li>
+<li><p>While a session is not Up, the desired min TX interval is at least one second.
+Changed timers of a session in state Up (e.g. after the session came up or via
+<code class="docutils literal notranslate"><span class="pre">bfd-session-update</span></code>) start a poll sequence. The new TX interval is used after
+the poll sequence terminated if it is longer, a shorter one immediately
+(<span class="target" id="index-8"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5880.html#section-6.8.3"><strong>RFC 5880 Section 6.8.3</strong></a>).</p></li>
+<li><p>The TX interval is reduced by a random jitter of 0 to 25 % (10 to 25 % with
+multiplier 1), the detection time is the remote multiplier times the larger of
+the local required min RX interval and the remote desired min TX interval.</p></li>
+<li><p>The local diagnostic is set to <em>control detection time expired</em> (1),
+<em>neighbor signaled session down</em> (3) or <em>administratively down</em> (7).</p></li>
+<li><p>With authentication, the sequence number of keyed MD5 and SHA1 is incremented
+with every packet. Packets with an unexpected authentication type, key ID,
+key or a sequence number outside of the window of <span class="target" id="index-9"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5880.html#section-6.7"><strong>RFC 5880 Section 6.7</strong></a>
+are dropped and counted as <code class="docutils literal notranslate"><span class="pre">rx-auth-errors</span></code>.</p></li>
+<li><p>At the end of the test, all sessions are set to AdminDown, which is signaled
+to the peers before the routing protocols are torn down.</p></li>
+</ul>
+<p>Interoperability notes:</p>
+<ul class="simple">
+<li><p>BIRD sends multi-hop packets with TTL 64, which requires <code class="docutils literal notranslate"><span class="pre">min-ttl</span></code> 64 or lower.
+BIRD and FRR (when deleting dynamic sessions) do not signal AdminDown, so the
+BNG Blaster detects a timeout.</p></li>
+<li><p>FRR requires <code class="docutils literal notranslate"><span class="pre">local-address</span></code> for single-hop sessions to IPv6 link-local peers,
+otherwise it sends from its global address, which does not match the session.</p></li>
+<li><p>FRR ignores packets with your discriminator zero, which the BNG Blaster sends after
+a detection timeout (<span class="target" id="index-10"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc5880.html#section-6.8.1"><strong>RFC 5880 Section 6.8.1</strong></a>), so FRR detects a timeout as well.</p></li>
+</ul>
+<p>BFD runs in the main thread of the BNG Blaster with one TX and one detection
+timer per session. 1000 sessions with 100 ms intervals (10000 packets per second
+received and sent) are supported.</p>
+</section>
+<section id="commands">
+<h2>Commands<a class="headerlink" href="#commands" title="Link to this heading"></a></h2>
+<p>All sessions are listed by the command <code class="docutils literal notranslate"><span class="pre">bfd-sessions</span></code>,
+which accepts the filters <code class="docutils literal notranslate"><span class="pre">bfd-session-id</span></code>, <code class="docutils literal notranslate"><span class="pre">network-interface</span></code>,
+<code class="docutils literal notranslate"><span class="pre">peer-address</span></code> and <code class="docutils literal notranslate"><span class="pre">state</span></code>.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">bfd-sessions</span></code></p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;status&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;ok&quot;</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;code&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">200</span><span class="p">,</span>
+<span class="w">    </span><span class="nt">&quot;bfd-sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;bfd-session-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;name&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;DUT&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;network-interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;peer-address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;multihop&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Up&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;remote-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Up&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-diagnostic&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;local-discriminator&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1720564481</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;remote-discriminator&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2214</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;remote-diagnostic&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;authentication-type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;none&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;multiplier&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;remote-multiplier&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">3</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;desired-min-tx-interval-us&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;required-min-rx-interval-us&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;remote-desired-min-tx-interval-us&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;remote-required-min-rx-interval-us&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;tx-interval-us&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">100000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;detection-time-us&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">300000</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;state-seconds&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;min-ttl&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">255</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;passive&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;poll&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">false</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;admin-state&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;enabled&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;clients&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">                </span><span class="s2">&quot;static&quot;</span>
+<span class="w">            </span><span class="p">],</span>
+<span class="w">            </span><span class="nt">&quot;stats&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">51</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;tx-errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">53</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;rx-auth-errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;up&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;down&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;poll-sequences&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The commands <code class="docutils literal notranslate"><span class="pre">bfd-session-disable</span></code> and <code class="docutils literal notranslate"><span class="pre">bfd-session-enable</span></code> set all
+matching sessions administratively down (AdminDown) or enable them again,
+for example to verify the behavior of the DUT if a BFD peer signals AdminDown.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">bfd-session-disable</span> <span class="pre">bfd-session-id</span> <span class="pre">1</span></code></p>
+<p>The timers of matching sessions are changed at runtime with <code class="docutils literal notranslate"><span class="pre">bfd-session-update</span></code>,
+which starts a poll sequence for sessions in state Up.</p>
+<p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">bfd-session-update</span> <span class="pre">tx-interval</span> <span class="pre">50</span> <span class="pre">rx-interval</span> <span class="pre">50</span> <span class="pre">multiplier</span> <span class="pre">5</span></code></p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Command</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>bfd-sessions</strong></p></td>
+<td><div class="line-block">
+<div class="line">Display all matching BFD sessions.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">bfd-session-id</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">network-interface</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-address</span></code> IPv4 or IPv6 address</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">state</span></code> e.g. Up, Down, Init or AdminDown</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bfd-session-disable</strong></p></td>
+<td><div class="line-block">
+<div class="line">Set all matching BFD sessions administratively</div>
+<div class="line">down (AdminDown with diagnostic 7).</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">bfd-session-id</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">network-interface</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">state</span></code></div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>bfd-session-enable</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable all matching BFD sessions again.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">bfd-session-id</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">network-interface</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">state</span></code></div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bfd-session-update</strong></p></td>
+<td><div class="line-block">
+<div class="line">Change the timers of all matching BFD sessions,</div>
+<div class="line">which starts a poll sequence for sessions in state Up.</div>
+<div class="line"><br /></div>
+<div class="line"><strong>Arguments:</strong></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">tx-interval</span></code> in milliseconds</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">rx-interval</span></code> in milliseconds</div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">multiplier</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">bfd-session-id</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">network-interface</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">peer-address</span></code></div>
+<div class="line"><code class="docutils literal notranslate"><span class="pre">state</span></code></div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<p>The final JSON report contains the section <code class="docutils literal notranslate"><span class="pre">bfd</span></code> with the totals
+of all sessions and the session details (<code class="docutils literal notranslate"><span class="pre">bfd-sessions</span></code>), see <a class="reference internal" href="../reports.html#reports"><span class="std std-ref">Reports</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="ldp.html" class="btn btn-neutral float-left" title="LDP" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="lspgen.html" class="btn btn-neutral float-right" title="LSPGEN" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2020-2026, RtBrick, Inc..</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

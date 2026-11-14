@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -6,17 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>&lt;no title&gt; &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="../_static/jquery.js?v=8dae8fb0"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -34,9 +34,6 @@
             BNG Blaster
               <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -94,7 +91,7 @@
 <p>Every configured BGP peer both actively connects and passively listens on
 TCP port 179, matching real router behavior. If the peer also connects
 towards BNG Blaster at the same time, the resulting connection collision is
-resolved automatically per <span class="target" id="index-0"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc4271.html#section-6.8"><strong>RFC 4271#section-6.8</strong></a> by comparing BGP
+resolved automatically per <span class="target" id="index-0"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc4271.html#section-6.8"><strong>RFC 4271 Section 6.8</strong></a> by comparing BGP
 Identifiers, with the losing TCP connection closed via a NOTIFICATION
 (Cease, Connection Collision Resolution).</p>
 <table class="docutils align-default">
@@ -118,6 +115,21 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>local-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP local IPv4 address (source address).</div>
+<div class="line">Alternative to <strong>local-address</strong>, which takes precedence.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>local-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP local IPv6 address (source address).</div>
+<div class="line">Alternative to <strong>local-address</strong> and <strong>local-ipv4-address</strong>,</div>
+<div class="line">which take precedence.</div>
+</div>
+</td>
+</tr>
 <tr class="row-even"><td><p><strong>local-as</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP local AS.</div>
@@ -127,21 +139,38 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </tr>
 <tr class="row-odd"><td><p><strong>peer-address</strong></p></td>
 <td><div class="line-block">
-<div class="line">Mandatory BGP peer IPv4/6 address.</div>
+<div class="line">Mandatory BGP peer IPv4/6 address (or <strong>peer-ipv4/ipv6-address</strong>).</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>peer-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP peer IPv4 address.</div>
+<div class="line">Alternative to <strong>peer-address</strong>, which takes precedence.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>peer-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP peer IPv6 address.</div>
+<div class="line">Alternative to <strong>peer-address</strong> and <strong>peer-ipv4-address</strong>,</div>
+<div class="line">which take precedence.</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>peer-as</strong></p></td>
 <td><div class="line-block">
-<div class="line">BGP peer AS.</div>
-<div class="line">Default: <cite>local AS</cite> Range: 0 - 4294967295</div>
+<div class="line">BGP peer AS. If set, the session is rejected with Bad Peer AS</div>
+<div class="line">if the AS in the OPEN of the peer differs.</div>
+<div class="line">Default: 0 (not checked) Range: 0 - 4294967295</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>hold-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP hold-time in seconds.</div>
-<div class="line">Default: 90 Range: 0 - 65535</div>
+<div class="line">Default: 90 Range: 0, 3 - 65535 (0 disables hold timer and</div>
+<div class="line">keepalive). The smaller of the local and peer hold time is used.</div>
 </div>
 </td>
 </tr>
@@ -174,6 +203,7 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 <div class="line">(32 characters for hmac-sha-256-128, 20 for hmac-sha-1-96, 16 for</div>
 <div class="line">aes-128-cmac-96, none for md5) but is not enforced, so shorter</div>
 <div class="line">keys can be used to test interop with peers that accept them.</div>
+<div class="line">Length: 1 - 80 characters</div>
 </div>
 </td>
 </tr>
@@ -216,9 +246,26 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for this session with this BFD profile.</div>
+<div class="line">The BFD session is started when BGP is established,</div>
+<div class="line">BFD down closes BGP with Cease subcode BFD Down (RFC 9384).</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bfd-multihop</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multi-hop BFD session (RFC 5883).</div>
+<div class="line">Default: single-hop if the peer address is in a connected</div>
+<div class="line">network of the network interface, otherwise multi-hop</div>
+</div>
+</td>
+</tr>
 <tr class="row-even"><td><p><strong>reconnect</strong></p></td>
 <td><div class="line-block">
 <div class="line">Reconnect BGP session automatically.</div>
+<div class="line">If disabled, connections of the peer are refused after close.</div>
 <div class="line">Default: true</div>
 </div>
 </td>

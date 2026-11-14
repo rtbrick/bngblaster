@@ -12,6 +12,7 @@
 |                                           | | Range: 1 - 65535                                                  |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **name**                                  | | Mandatory L2TP LAC client name sent as hostname (AVP 7).          |
+|                                           | | Max 255 characters.                                               |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **network-interface**                     | | Mandatory name of the network interface used to reach the LNS.    |
 +-------------------------------------------+---------------------------------------------------------------------+
@@ -26,7 +27,7 @@
 | **secret**                                | | Tunnel secret.                                                    |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **receive-window-size**                   | | Control messages receive window size.                             |
-|                                           | | Default: 16 Range: 1 - 65535                                      |
+|                                           | | Default: 16 Range: 1 - 32767                                      |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **max-retry**                             | | Control messages max retry.                                       |
 |                                           | | Default: 5 Range: 1 - 255                                         |
@@ -61,7 +62,7 @@
 |                                           | | Default: 0 Range: 0 - 255                                         |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **lcp-padding**                           | | Add fixed padding to LCP packets sent from the LAC.               |
-|                                           | | Default: 0 Range: 0 - 65535                                       |
+|                                           | | Default: 0 Range: 0 - 1400                                        |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **lcp-start**                             | | Event which starts the LCP negotiation of a PPPoL2TP session      |
 |                                           | | once the ICCN has been generated (iccn-tx or iccn-ack).           |
@@ -78,8 +79,10 @@
 |                                           | | Default: iccn-tx                                                  |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **calling-number**                        | | Optional Calling Number string sent in ICRQ (AVP 22).             |
+|                                           | | Max 255 characters.                                               |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **called-number**                         | | Optional Called Number string sent in ICRQ (AVP 21).              |
+|                                           | | Max 255 characters.                                               |
 +-------------------------------------------+---------------------------------------------------------------------+
 | **tx-connect-speed**                      | | TX Connect Speed in bits per second sent in ICCN (AVP 24).        |
 |                                           | | Default: 100000000 Range: 1 - 4294967295                          |

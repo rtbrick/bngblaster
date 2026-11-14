@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -6,17 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>&lt;no title&gt; &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="../_static/jquery.js?v=8dae8fb0"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -34,9 +34,6 @@
             BNG Blaster
               <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -180,6 +177,7 @@ session-id for which a connect speed update is requested.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">l2tp-csurq</span> <span class="pre">tunnel-id</span> <span class="pre">1</span> <span class="pre">sessions</span> <span class="pre">[1,2,3,4]</span></code></p>
 <p>The L2TP session terminate command allows testing of result (RFC2661) and disconnect (RFC3145) codes.</p>
 <p><code class="docutils literal notranslate"><span class="pre">$</span> <span class="pre">sudo</span> <span class="pre">bngblaster-cli</span> <span class="pre">run.sock</span> <span class="pre">l2tp-session-terminate</span> <span class="pre">session-id</span> <span class="pre">1</span> <span class="pre">result-code</span> <span class="pre">2</span> <span class="pre">error-message</span> <span class="pre">&quot;LCP</span> <span class="pre">request&quot;</span> <span class="pre">disconnect-code</span> <span class="pre">3</span> <span class="pre">disconnect-message</span> <span class="pre">&quot;LCP</span> <span class="pre">terminate</span> <span class="pre">request&quot;</span></code></p>
+<p>The <code class="docutils literal notranslate"><span class="pre">error-message</span></code> and <code class="docutils literal notranslate"><span class="pre">disconnect-message</span></code> are limited to 244 bytes.</p>
 <p>The L2TP LCP restart command lets the BNG Blaster LNS send a new LCP
 Configure-Request to the client of an established L2TP session,
 which forces LCP renegotiation, for example to test how the BNG behaves

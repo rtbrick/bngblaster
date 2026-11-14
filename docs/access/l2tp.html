@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -6,17 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>L2TP (LNS Mode) &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="../_static/jquery.js?v=8dae8fb0"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -36,9 +36,6 @@
             BNG Blaster
               <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -59,6 +56,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#variable-data-header">Variable Data Header</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#rfc5515">RFC5515</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#proxy-authentication">Proxy Authentication</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#protocol-behavior">Protocol Behavior</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#l2tp-commands">L2TP Commands</a></li>
 </ul>
 </li>
@@ -383,6 +381,7 @@ test.</p>
 <tr class="row-even"><td><p><strong>name</strong></p></td>
 <td><div class="line-block">
 <div class="line">Mandatory L2TP LNS server hostname (AVP 7)</div>
+<div class="line">Max 255 characters.</div>
 </div>
 </td>
 </tr>
@@ -401,7 +400,7 @@ test.</p>
 <tr class="row-odd"><td><p><strong>receive-window-size</strong></p></td>
 <td><div class="line-block">
 <div class="line">Control messages receive window size.</div>
-<div class="line">Default: 16 Range: 1 - 65535</div>
+<div class="line">Default: 16 Range: 1 - 32767</div>
 </div>
 </td>
 </tr>
@@ -472,7 +471,7 @@ test.</p>
 <tr class="row-even"><td><p><strong>lcp-padding</strong></p></td>
 <td><div class="line-block">
 <div class="line">Add fixed padding to LCP packets send from LNS.</div>
-<div class="line">Default: 0 Range: 0 - 65535</div>
+<div class="line">Default: 0 Range: 0 - 1400</div>
 </div>
 </td>
 </tr>
@@ -588,6 +587,22 @@ Credentials are not verified, as with all PAP and CHAP requests
 received by the LNS. This behaviour can be disabled with the
 <code class="docutils literal notranslate"><span class="pre">l2tp-server</span></code> option <code class="docutils literal notranslate"><span class="pre">proxy-auth</span></code>.</p>
 </section>
+<section id="protocol-behavior">
+<h2>Protocol Behavior<a class="headerlink" href="#protocol-behavior" title="Link to this heading"></a></h2>
+<p>Control messages are retransmitted with exponential backoff capped at
+8 seconds (RFC 2661 section 5.8) until <code class="docutils literal notranslate"><span class="pre">max-retry</span></code> is reached. A SCCRQ
+retransmitted by the LAC is detected for the tunnels of all L2TP servers.
+SCCRP without Assigned Tunnel ID, ICRQ and ICRP without Assigned Session ID
+are rejected, the Private Group ID AVP may have any length.</p>
+<p>Calls with the Sequencing Required AVP are rejected with a CDN (result code 2,
+error code 6), as data messages are sent without sequence numbers. CDN
+messages sent by the LNS without an explicit result code carry result code 3
+(administrative reasons), after an LCP echo timeout result code 1 (loss of
+carrier).</p>
+<p>The LNS answers LCP echo requests with its own Magic-Number (zero if it does
+not send an LCP configure-request) and acknowledges an LCP terminate-request
+of the client before the call is cleared.</p>
+</section>
 <section id="l2tp-commands">
 <h2>L2TP Commands<a class="headerlink" href="#l2tp-commands" title="Link to this heading"></a></h2>
 <p>The <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a> <code class="docutils literal notranslate"><span class="pre">l2tp-tunnels</span></code> provides
@@ -672,7 +687,8 @@ under test. This makes it possible to test LNS functionality directly.</p>
 that are tunnelled through the L2TP clients specified in the <code class="docutils literal notranslate"><span class="pre">&quot;l2tp-client&quot;</span></code>
 list. The L2TP sessions are spread across multiple tunnels (the ones whose
 <code class="docutils literal notranslate"><span class="pre">&quot;group-id&quot;</span></code> field match the <code class="docutils literal notranslate"><span class="pre">&quot;l2tp-client-group-id&quot;</span></code> field of the access
-interface).</p>
+interface) in round robin. An <code class="docutils literal notranslate"><span class="pre">&quot;l2tp-client&quot;</span></code> opens another tunnel if all
+65535 session IDs of its tunnel are used.</p>
 <section id="id1">
 <h2>Configuration<a class="headerlink" href="#id1" title="Link to this heading"></a></h2>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
@@ -757,6 +773,7 @@ interface).</p>
 <tr class="row-odd"><td><p><strong>name</strong></p></td>
 <td><div class="line-block">
 <div class="line">Mandatory L2TP LAC client name sent as hostname (AVP 7).</div>
+<div class="line">Max 255 characters.</div>
 </div>
 </td>
 </tr>
@@ -791,7 +808,7 @@ interface).</p>
 <tr class="row-even"><td><p><strong>receive-window-size</strong></p></td>
 <td><div class="line-block">
 <div class="line">Control messages receive window size.</div>
-<div class="line">Default: 16 Range: 1 - 65535</div>
+<div class="line">Default: 16 Range: 1 - 32767</div>
 </div>
 </td>
 </tr>
@@ -862,7 +879,7 @@ interface).</p>
 <tr class="row-odd"><td><p><strong>lcp-padding</strong></p></td>
 <td><div class="line-block">
 <div class="line">Add fixed padding to LCP packets sent from the LAC.</div>
-<div class="line">Default: 0 Range: 0 - 65535</div>
+<div class="line">Default: 0 Range: 0 - 1400</div>
 </div>
 </td>
 </tr>
@@ -887,12 +904,14 @@ interface).</p>
 <tr class="row-odd"><td><p><strong>calling-number</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optional Calling Number string sent in ICRQ (AVP 22).</div>
+<div class="line">Max 255 characters.</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>called-number</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optional Called Number string sent in ICRQ (AVP 21).</div>
+<div class="line">Max 255 characters.</div>
 </div>
 </td>
 </tr>
@@ -913,6 +932,10 @@ interface).</p>
 </tr>
 </tbody>
 </table>
+<p>Traffic streams of PPPoL2TP sessions are sent upstream through the L2TP tunnel
+and downstream as plain IP packets from the network interface to the session
+address, which are routed by the LNS into the tunnel. The ICMP client and TUN
+interfaces of PPPoL2TP sessions are transported through the tunnel as well.</p>
 </section>
 <section id="lac-vs-lns-self-test">
 <h2>LAC vs LNS Self-test<a class="headerlink" href="#lac-vs-lns-self-test" title="Link to this heading"></a></h2>

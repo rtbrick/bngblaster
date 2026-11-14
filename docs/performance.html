@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -6,17 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Performance Guide &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="_static/jquery.js?v=8dae8fb0"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -36,9 +36,6 @@
             BNG Blaster
               <img src="_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -984,6 +981,14 @@ queue’s own RX servicing (they would otherwise share one NAPI/IRQ context).
 <code class="docutils literal notranslate"><span class="pre">rx-threads</span></code> and <code class="docutils literal notranslate"><span class="pre">tx-threads</span></code> are fully independent, e.g. more RX than
 TX threads to spread out RX-side protocol processing without paying for
 extra TX threads.</p>
+<p>Interfaces without RSS indirection table (e.g. <code class="docutils literal notranslate"><span class="pre">veth</span></code>, which receives on
+the TX queue index of the peer) can’t keep received traffic off the TX
+queues. For those, the TX queues are bound for RX as well and polled by an
+additional RX thread (or job in the main loop) per TX queue, which is
+logged with <code class="docutils literal notranslate"><span class="pre">-l</span> <span class="pre">af_xdp</span></code>:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>AF_XDP: interface veth1 has no RSS indirection table, TX queues are also used for RX
+</pre></div>
+</div>
 <div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
 <span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
 <span class="w">        </span><span class="nt">&quot;io-slots&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">4096</span><span class="p">,</span>
@@ -1090,12 +1095,29 @@ RX ring and the RX VLAN offload of the interface. This configuration is saved
 before and restored on exit, also if the initialization failed. The queues are
 restored before the RSS indirection table, which might reference queues that
 do not exist before. An RSS indirection table that was the driver default is
-reset to the default (<code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-X</span> <span class="pre">&lt;interface&gt;</span> <span class="pre">default</span></code>), so that the driver
-still adjusts it to later changes of the number of queues. If the
-configuration can’t be restored completely, this is logged as error and BNG
-Blaster exits with a non-zero exit status. The configuration is not restored
-if BNG Blaster is killed (e.g. <code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code>) or crashes, in which case the next
-test restores the configuration it found at startup.</p>
+reset to the default (<code class="docutils literal notranslate"><span class="pre">ethtool</span> <span class="pre">-X</span> <span class="pre">&lt;interface&gt;</span> <span class="pre">default</span></code>) before the queues are
+restored, so that the driver still adjusts it to later changes of the number of
+queues. Some drivers (e.g. i40e) keep also the reset table and apply it again
+if the number of queues is increased later, until the number of queues is
+decreased. Therefore the number of queues is decreased by one before it is
+restored, if restoring does not decrease it anyway. If the configuration can’t
+be restored completely, this is logged as error and BNG Blaster exits with a
+non-zero exit status.</p>
+<p>The saved configuration is also written to <code class="docutils literal notranslate"><span class="pre">/run/lock/bngblaster_&lt;interface&gt;.af_xdp</span></code>
+(next to the interface lock) and this file is removed after the configuration
+was restored. If BNG Blaster is killed (e.g. <code class="docutils literal notranslate"><span class="pre">SIGKILL</span></code>) or crashes, the next
+test on this interface restores the configuration found by the killed instance
+from this file instead of the configuration left behind:</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Warning: AF_XDP interface eth1 was not restored by a previous BNG Blaster (killed or crashed), the NIC configuration saved in /run/lock/bngblaster_eth1.af_xdp is restored on exit
+</pre></div>
+</div>
+<p>As <code class="docutils literal notranslate"><span class="pre">/run/lock</span></code> is writable by all users, this file is only used if it is a
+regular file (no symbolic link) owned by the same user and not writable by
+group or others, as written by BNG Blaster (mode <code class="docutils literal notranslate"><span class="pre">0600</span></code>). Otherwise, it is
+ignored with a warning and the configuration found at startup is restored.
+This means that the configuration left behind by a killed instance of
+another user (e.g. a test run without <code class="docutils literal notranslate"><span class="pre">sudo</span></code> followed by one with <code class="docutils literal notranslate"><span class="pre">sudo</span></code>)
+is not restored.</p>
 <p>BNG Blaster removes its AF_XDP sockets on exit, which also detaches the XDP
 program from the interface. An XDP program which is still attached after
 the sockets are removed is detached on exit as well, if the interface had no
@@ -1104,9 +1126,12 @@ version 1.0 instead of a BPF link). If BNG Blaster built with libxdp is killed o
 crashes, the XDP program stays attached, as libxdp attaches it via netlink
 and not via a BPF link that is released with the process. Such a program
 does not prevent further tests, but keeps the interface in XDP mode (e.g.
-the MTU can’t be increased beyond the driver limit) and is not removed by
-later tests, as it might also be used by another application. A warning is
-logged at startup if an XDP program is already attached:</p>
+the MTU can’t be increased beyond the driver limit). It is removed on exit
+by the next test, if the saved configuration of the killed instance (see
+above) shows that the interface had no XDP program attached before.
+Otherwise, it is not removed by later tests, as it might also be used by
+another application. A warning is logged at startup if an XDP program is
+already attached:</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>Warning: AF_XDP interface eth1 has XDP program 194 already attached (e.g. left behind by a killed BNG Blaster), please remove it if not used by another application (e.g. &#39;xdp-loader unload eth1 --all&#39;)
 </pre></div>
 </div>

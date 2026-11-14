@@ -34,4 +34,5 @@ live updates can replace the raw update file's contents to mimic link flapping.
    evpn.rst
    l2vpn.rst
    ldp.rst
+   bfd.rst
    lspgen.rst

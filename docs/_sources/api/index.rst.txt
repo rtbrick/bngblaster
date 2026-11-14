@@ -21,6 +21,10 @@ the control socket file with the argument ``-S`` (``bngblaster -S run.sock``).
 Each request must contain at least the ``command`` element which carries
 the actual command with optional arguments.
 
+The control socket handles one connection at a time. A client which does
+not send its request or read the response for 10 seconds is disconnected,
+so that it can not block other clients.
+
 .. code-block:: json
 
     {
@@ -97,6 +101,21 @@ per session added. For example, if the username is configured as
             }
         }
 
+The command ``commands`` lists the commands of the running instance
+with their arguments and argument types (without the aliases below).
+
+.. code-block:: json
+
+    {
+        "command": "commands"
+    }
+
+The following aliases are supported for compatibility:
+``session-traffic-enabled`` and ``session-traffic-disabled`` for
+**session-traffic-start** and **session-traffic-stop**,
+``stream-traffic-enabled`` and ``stream-traffic-start`` for **stream-start**,
+``stream-traffic-disabled`` and ``stream-traffic-stop`` for **stream-stop**.
+
 BNG Blaster CLI
 ---------------
 
@@ -169,8 +188,9 @@ Test
 +-----------------------------------+----------------------------------------------------------------------+
 | **terminate**                     | | Deprecated. Terminate the given ``session-id``, or                 |
 |                                   | | stop/teardown the whole test if no ``session-id`` is               |
-|                                   | | given. Use ``session-start``/``session-stop`` instead              |
-|                                   | | for terminating single sessions.                                   |
+|                                   | | given. A ``session-id`` which matches no session                   |
+|                                   | | is rejected. Use ``session-start``/``session-stop``                |
+|                                   | | instead for terminating single sessions.                           |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |
@@ -362,6 +382,13 @@ This is explained in detail in the
 :ref:`LDP <ldp>` section.
 
 .. include:: ldp.rst
+
+BFD
+---
+This is explained in detail in the
+:ref:`BFD <bfd>` section.
+
+.. include:: bfd.rst
 
 CFM
 ---

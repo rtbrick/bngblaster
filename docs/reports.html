@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="./">
 <head>
@@ -6,17 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Reports &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="_static/jquery.js?v=8dae8fb0"></script>
-        <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="_static/doctools.js?v=888ff710"></script>
-        <script src="_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="_static/js/theme.js"></script>
     <link rel="index" title="Index" href="genindex.html" />
     <link rel="search" title="Search" href="search.html" />
@@ -36,9 +36,6 @@
             BNG Blaster
               <img src="_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -676,6 +673,40 @@ argument <code class="docutils literal notranslate"><span class="pre">-J</span> 
 in the report file. Similar to <code class="docutils literal notranslate"><span class="pre">-j</span> <span class="pre">streams</span></code> which allows for including per stream
 statistics. Both options can be also combined. With <code class="docutils literal notranslate"><span class="pre">-j</span> <span class="pre">sessions</span></code>, the
 top-level <code class="docutils literal notranslate"><span class="pre">sessions</span></code> count is replaced by the array of per session statistics.</p>
+<p>If BFD is used (<a class="reference internal" href="routing/bfd.html#bfd"><span class="std std-ref">BFD</span></a>), the standard output report contains a BFD block
+and the JSON report the section <code class="docutils literal notranslate"><span class="pre">bfd</span></code> with the totals of all sessions and the details
+of each session (<code class="docutils literal notranslate"><span class="pre">bfd-sessions</span></code>), as shown by the command <code class="docutils literal notranslate"><span class="pre">bfd-sessions</span></code>.</p>
+<div class="highlight-none notranslate"><div class="highlight"><pre><span></span>BFD:
+------------------------------------------------------------------------------
+  Sessions: 2 (Up: 0)
+  TX Packets: 412
+  RX Packets: 409 (Errors: 0 No Session: 0)
+  State Up: 2 Down: 0 (Detection Timeout: 0)
+</pre></div>
+</div>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;report&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;bfd&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">      </span><span class="nt">&quot;sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;sessions-up&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;tx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">412</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;rx-packets&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">409</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;rx-errors&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;rx-no-session&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;up&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;down&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;timeout&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">0</span><span class="p">,</span>
+<span class="w">      </span><span class="nt">&quot;bfd-sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">  </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The counters <code class="docutils literal notranslate"><span class="pre">up</span></code> and <code class="docutils literal notranslate"><span class="pre">down</span></code> count the transitions to and from state Up. A local
+AdminDown (<code class="docutils literal notranslate"><span class="pre">bfd-session-disable</span></code> or the teardown) is not counted as <code class="docutils literal notranslate"><span class="pre">down</span></code>, so
+<code class="docutils literal notranslate"><span class="pre">down</span></code> and <code class="docutils literal notranslate"><span class="pre">timeout</span></code> stay zero in a test without BFD failures. The sessions of
+routing protocols, which are deleted with the protocol sessions at the teardown, are
+kept in state AdminDown for the report.</p>
 <p>Those extensive JSON reports could be easily verified with simple python scripts to
 extract the desired results.</p>
 <div class="highlight-python notranslate"><div class="highlight"><pre><span></span><span class="ch">#!/usr/bin/env python3</span>

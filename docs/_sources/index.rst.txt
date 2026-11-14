@@ -62,6 +62,7 @@ RtBrick and many more.
         * Support for LDP and traffic streams with dynamically resolved labels
         * Support for BGP EVPN (L3, E-LINE and E-LAN) and BGP L2VPN (RFC 6624)
         * Support for BGP TCP authentication (TCP-AO and MD5)
+        * Support for BFD (single-hop and multi-hop) with ISIS, OSPFv2/3, BGP and LDP
         * Support all routing protocols with link aggregation (LAG)
         * ...
 
