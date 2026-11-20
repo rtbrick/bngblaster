@@ -1302,7 +1302,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "dhcpv6-ldra", "dhcpv6-ia-na", "ipv6", "igmp-autostart",
         "igmp-version", "session-traffic-autostart", 
         "session-group-id", "stream-group-id",
-        "session-limit", "arp-client-group-id",
+        "autostart", "session-limit", "arp-client-group-id",
         "http-client-group-id", "icmp-client-group-id",
         "cfm-cc", "cfm-level", "cfm-interval", "cfm-md-name", "cfm-md-name-format",
         "cfm-ma-id", "cfm-ma-name", "cfm-ma-name-format", "cfm-seq",
@@ -1683,6 +1683,13 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->session_traffic_autostart = json_boolean_value(value);
     } else {
         access_config->session_traffic_autostart = g_ctx->config.session_traffic_autostart;
+    }
+
+    JSON_OBJ_GET_BOOL(access_interface, value, "access", "autostart");
+    if(value) {
+        access_config->sessions_autostart = json_boolean_value(value);
+    } else {
+        access_config->sessions_autostart = g_ctx->config.sessions_autostart;
     }
 
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "session-group-id", 0, 65535);

@@ -176,6 +176,11 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **session-traffic-autostart**     | | Overwrite session-traffic autostart.                               |
 +-----------------------------------+----------------------------------------------------------------------+
+| **autostart**                     | | Overwrite sessions autostart (sessions->autostart) for the         |
+|                                   | | sessions of this access interface. Sessions which are not started  |
+|                                   | | automatically can be started with the session-start command,       |
+|                                   | | e.g. per session-group-id.                                         |
++-----------------------------------+----------------------------------------------------------------------+
 | **session-group-id**              | | Set session group identifier.                                      |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+

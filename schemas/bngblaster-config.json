@@ -2370,6 +2370,10 @@
                     "type": "boolean",
                     "description": "Overwrite session-traffic autostart"
                 },
+                "autostart": {
+                    "type": "boolean",
+                    "description": "Overwrite sessions autostart"
+                },
                 "session-group-id": {
                     "type": "integer",
                     "description": "Session group identifier",

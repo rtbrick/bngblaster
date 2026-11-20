@@ -71,7 +71,10 @@ class Setup:
         access_conf = conf["interfaces"]["access"][0]
         for key in [k for k, v in access_conf.items() if v is None]:
             del access_conf[key]
+        sessions_override = config.pop("sessions_override", None)
         conf.update(config)
+        if sessions_override:
+            conf["sessions"].update(sessions_override)
         self.bbl = BngBlaster(self.topology.a, self.tmp_path, "bbl").start(conf, logging=logging)
         self.processes.append(self.bbl)
         return self.bbl
@@ -96,6 +99,31 @@ def groups(entries):
         if "group" in e:
             found.append(e["group"])
     return found
+
+
+@pytest.mark.parametrize("global_autostart", [True, False])
+def test_access_autostart(ipoe, global_autostart):
+    """The access interface autostart overrides sessions autostart, sessions
+    which are not started automatically are started per session-group-id."""
+    def access(group, address, autostart):
+        return {"interface": ipoe.topology.if_a, "type": "ipoe", "vlan-mode": "N:1", "outer-vlan": VLAN,
+                "ipv6": False, "address": address, "address-iter": "0.0.0.1", "gateway": GATEWAY,
+                "session-group-id": group, "autostart": autostart}
+    ipoe.start(sessions=4, interfaces={"access": [access(1, "10.0.0.10", global_autostart),
+                                                  access(2, "10.0.0.20", not global_autostart)]},
+               sessions_override={"autostart": global_autostart})
+    auto, manual = (1, 2) if global_autostart else (2, 1)
+    ipoe.established(2)
+    time.sleep(1)
+    groups = []
+    for i in range(1, 5):
+        info = ipoe.info(i)
+        group = 1 if info["ipv4-address"].startswith("10.0.0.1") else 2
+        groups.append(group)
+        assert info["session-state"] == ("Established" if group == auto else "Terminated"), info
+    assert sorted(groups) == [1, 1, 2, 2]
+    assert ipoe.bbl.ctrl("session-start", **{"session-group-id": manual})["code"] == 200
+    ipoe.established(4)
 
 
 def test_igmp_join_iter(ipoe):

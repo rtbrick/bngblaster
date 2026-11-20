@@ -110,6 +110,7 @@ typedef struct bbl_access_config_
     bool dhcpv6_ldra;
     bool dhcpv6_ia_na;
 
+    bool sessions_autostart;
     bool session_traffic_autostart;
 
     bool igmp_autostart;

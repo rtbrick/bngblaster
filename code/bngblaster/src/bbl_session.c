@@ -1357,7 +1357,7 @@ bbl_sessions_init()
             return false;
         }
         
-        if(g_ctx->config.sessions_autostart) {
+        if(access_config->sessions_autostart) {
             session->session_state = BBL_IDLE;
             CIRCLEQ_INSERT_TAIL(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
         } else {

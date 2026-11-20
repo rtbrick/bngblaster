@@ -25,6 +25,7 @@
 |                          | | Default: false                                                 |
 +--------------------------+------------------------------------------------------------------+
 | **autostart**            | | Start sessions automatically.                                  |
+|                          | | This can be overwritten per access interface.                  |
 |                          | | Default: true                                                  |
 +--------------------------+------------------------------------------------------------------+
 | **monkey-autostart**     | | Start monkey testing automatically if enabled.                 |
