@@ -625,6 +625,144 @@ test_protocols_dhcpv6_timer_byte_order(void **unused) {
     free(sp);
 }
 
+typedef struct {
+    const char *address;
+    uint8_t len; /* 0 for IAADDR */
+    uint32_t preferred_lifetime;
+    uint32_t valid_lifetime;
+} dhcpv6_lease_s;
+
+/* Encode a DHCPv6 Reply with the leases in one IA_NA (len 0) or
+ * IA_PD and return the decoded DHCPv6 message. */
+static bbl_dhcpv6_s *
+dhcpv6_reply_leases(uint8_t *sp, uint8_t *buf, const dhcpv6_lease_s *leases, int count, bool pd)
+{
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    static ipv6addr_t src_ip;
+    static ipv6addr_t dst_ip;
+    static uint8_t ia[256];
+    uint16_t ia_len = 12;
+    uint16_t len = 0;
+    bbl_ethernet_header_s eth = {0};
+    bbl_ipv6_s ipv6 = {0};
+    bbl_udp_s udp = {0};
+    bbl_dhcpv6_s dhcpv6 = {0};
+    bbl_ethernet_header_s *decoded;
+
+    inet_pton(AF_INET6, "fe80::1", src_ip);
+    inet_pton(AF_INET6, "fe80::2", dst_ip);
+    memset(ia, 0x0, sizeof(ia));
+    *(uint32_t*)ia = htobe32(1);
+    *(uint32_t*)(ia+4) = htobe32(10);
+    *(uint32_t*)(ia+8) = htobe32(16);
+    for(int i = 0; i < count; i++) {
+        uint8_t *o = ia + ia_len;
+        if(pd) {
+            *(uint16_t*)o = htobe16(DHCPV6_OPTION_IAPREFIX);
+            *(uint16_t*)(o+2) = htobe16(25);
+            *(uint32_t*)(o+4) = htobe32(leases[i].preferred_lifetime);
+            *(uint32_t*)(o+8) = htobe32(leases[i].valid_lifetime);
+            o[12] = leases[i].len;
+            inet_pton(AF_INET6, leases[i].address, o+13);
+            ia_len += 29;
+        } else {
+            *(uint16_t*)o = htobe16(DHCPV6_OPTION_IAADDR);
+            *(uint16_t*)(o+2) = htobe16(24);
+            inet_pton(AF_INET6, leases[i].address, o+4);
+            *(uint32_t*)(o+20) = htobe32(leases[i].preferred_lifetime);
+            *(uint32_t*)(o+24) = htobe32(leases[i].valid_lifetime);
+            ia_len += 28;
+        }
+    }
+    eth.dst = dst;
+    eth.src = src;
+    eth.type = ETH_TYPE_IPV6;
+    eth.next = &ipv6;
+    ipv6.src = src_ip;
+    ipv6.dst = dst_ip;
+    ipv6.protocol = IPV6_NEXT_HEADER_UDP;
+    ipv6.ttl = 64;
+    ipv6.next = &udp;
+    udp.src = DHCPV6_UDP_SERVER;
+    udp.dst = DHCPV6_UDP_CLIENT;
+    udp.protocol = UDP_PROTOCOL_DHCPV6;
+    udp.next = &dhcpv6;
+    dhcpv6.type = DHCPV6_MESSAGE_REPLY;
+    if(pd) {
+        dhcpv6.ia_pd_option = ia;
+        dhcpv6.ia_pd_option_len = ia_len;
+    } else {
+        dhcpv6.ia_na_option = ia;
+        dhcpv6.ia_na_option_len = ia_len;
+    }
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    return (bbl_dhcpv6_s*)((bbl_udp_s*)((bbl_ipv6_s*)decoded->next)->next)->next;
+}
+
+static void
+assert_dhcpv6_lease(bbl_dhcpv6_s *dhcpv6, bool pd, const char *address,
+                    uint32_t preferred_lifetime, uint32_t valid_lifetime)
+{
+    ipv6addr_t expected;
+    if(!address) {
+        if(pd) {
+            assert_null(dhcpv6->ia_pd_prefix);
+        } else {
+            assert_null(dhcpv6->ia_na_address);
+        }
+        return;
+    }
+    inet_pton(AF_INET6, address, expected);
+    if(pd) {
+        assert_non_null(dhcpv6->ia_pd_prefix);
+        assert_memory_equal(dhcpv6->ia_pd_prefix->address, expected, IPV6_ADDR_LEN);
+        assert_int_equal(dhcpv6->ia_pd_preferred_lifetime, preferred_lifetime);
+        assert_int_equal(dhcpv6->ia_pd_valid_lifetime, valid_lifetime);
+    } else {
+        assert_non_null(dhcpv6->ia_na_address);
+        assert_memory_equal(dhcpv6->ia_na_address, expected, IPV6_ADDR_LEN);
+        assert_int_equal(dhcpv6->ia_na_preferred_lifetime, preferred_lifetime);
+        assert_int_equal(dhcpv6->ia_na_valid_lifetime, valid_lifetime);
+    }
+}
+
+/* Lease selection if an IA_NA or IA_PD carries more than one lease:
+ * withdrawn (valid lifetime 0) and invalid (preferred > valid lifetime)
+ * leases are ignored, not deprecated leases are preferred, then the
+ * longest valid lifetime (issue #411). */
+static void
+test_protocols_dhcpv6_lease_select(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[1024];
+    const dhcpv6_lease_s new_old[] = {{"2001:db8:0:40f::", 64, 30, 30}, {"2001:db8:ff00::", 56, 0, 0}};
+    const dhcpv6_lease_s old_new[] = {{"2001:db8:ff00::", 56, 0, 0}, {"2001:db8:0:40f::", 64, 30, 30}};
+    const dhcpv6_lease_s withdrawn[] = {{"2001:db8:ff00::", 56, 0, 0}};
+    const dhcpv6_lease_s deprecated[] = {{"2001:db8:1::", 64, 0, 3600}, {"2001:db8:2::", 64, 900, 1800}};
+    const dhcpv6_lease_s invalid[] = {{"2001:db8:2::", 64, 900, 1800}, {"2001:db8:3::", 64, 4000, 3000}};
+    const dhcpv6_lease_s longest[] = {{"2001:db8:1::", 64, 900, 1800}, {"2001:db8:2::", 64, 900, 3600},
+                                      {"2001:db8:3::", 64, 900, 3600}};
+    const dhcpv6_lease_s only_deprecated[] = {{"2001:db8:1::", 64, 0, 1800}, {"2001:db8:2::", 64, 0, 3600}};
+    const dhcpv6_lease_s infinite[] = {{"2001:db8:1::", 64, 900, 1800}, {"2001:db8:2::", 64, 0xffffffff, 0xffffffff}};
+    const dhcpv6_lease_s na[] = {{"2001:db8::20f", 0, 30, 30}, {"2001:db8::1", 0, 0, 0},
+                                 {"2001:db8::2", 0, 0, 3600}, {"2001:db8::3", 0, 4000, 3000}};
+
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, new_old, 2, true), true, "2001:db8:0:40f::", 30, 30);
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, old_new, 2, true), true, "2001:db8:0:40f::", 30, 30);
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, withdrawn, 1, true), true, NULL, 0, 0);
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, deprecated, 2, true), true, "2001:db8:2::", 900, 1800);
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, invalid, 2, true), true, "2001:db8:2::", 900, 1800);
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, longest, 3, true), true, "2001:db8:2::", 900, 3600);
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, only_deprecated, 2, true), true, "2001:db8:2::", 0, 3600);
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, infinite, 2, true), true, "2001:db8:2::", 0xffffffff, 0xffffffff);
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, na, 4, false), false, "2001:db8::20f", 30, 30);
+    assert_dhcpv6_lease(dhcpv6_reply_leases(sp, buf, withdrawn, 1, false), false, NULL, 0, 0);
+    free(sp);
+}
+
 /* DHCPv6 options of 256 bytes or more are decoded and echoed with
  * their full length (16 bit option length). */
 static void
@@ -1260,6 +1398,7 @@ int main() {
         cmocka_unit_test(test_protocols_isis_jumbo),
         cmocka_unit_test(test_protocols_udp_checksum_zero),
         cmocka_unit_test(test_protocols_dhcpv6_duid),
+        cmocka_unit_test(test_protocols_dhcpv6_lease_select),
         cmocka_unit_test(test_protocols_pppoe_relay_session_id),
         cmocka_unit_test(test_protocols_ospf_fragment_reencode),
         cmocka_unit_test(test_protocols_ipv6_fragment),

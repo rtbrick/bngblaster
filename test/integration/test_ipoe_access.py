@@ -301,6 +301,70 @@ def test_dhcpv6_pd_longer_than_64(ipoe):
     assert flows["downstream"]["destination-address"] == "fc00:2:0:8000:2::1", flows["downstream"]
 
 
+def dhcpv6_renews_after(ipoe, t):
+    """IA_NA and IA_PD leases carried by the Renew and Rebind messages sent after t."""
+    return [e for e in ipoe.entries(proto="dhcpv6") if e["type"] in (5, 6) and e["time"] > t]
+
+
+def wait_dhcpv6_renew(ipoe, after, timeout=10):
+    wait_until(lambda: dhcpv6_renews_after(ipoe, after), timeout, message="DHCPv6 renew")
+    return dhcpv6_renews_after(ipoe, after)[0]
+
+
+def peer_time(ipoe):
+    entries = ipoe.entries()
+    return entries[-1]["time"] if entries else 0
+
+
+@pytest.mark.parametrize("scenario", ["dhcpv6-pd-move", "dhcpv6-pd-move-reverse"])
+def test_dhcpv6_pd_move(ipoe, scenario):
+    """A Reply to Renew with a new prefix and the old one with valid lifetime
+    0 moves the delegated prefix to the new one, independent of the order of
+    the prefixes (RFC 8415 section 18.2.10.1, issue #411)."""
+    ipoe.peer(scenario)
+    ipoe.start(access={"ipv4": False, "ipv6": True}, dhcpv6={"enable": True}, logging=("info", "dhcp", "ip"))
+    ipoe.established(1)
+    assert ipoe.info()["ipv6-delegated-prefix"] == "fc00:2:0:8000:2::/80"
+    wait_until(lambda: ipoe.info().get("ipv6-delegated-prefix") == "fc00:3:0:40f::/64", 10,
+               message="delegated prefix moved")
+    renew = wait_dhcpv6_renew(ipoe, peer_time(ipoe))
+    assert renew["pd"] == ["fc00:3:0:40f::/64 pl=900 vl=1800"], renew
+    assert ipoe.info()["session-state"] == "Established"
+
+
+def test_dhcpv6_pd_withdraw(ipoe):
+    """A Reply to Renew which withdraws the only prefix (valid lifetime 0)
+    removes the delegated prefix while the IA_NA address stays, the next Renew
+    asks for a new prefix and gets it."""
+    ipoe.peer("dhcpv6-pd-withdraw")
+    ipoe.start(access={"ipv4": False, "ipv6": True}, dhcpv6={"enable": True}, logging=("info", "dhcp", "ip"))
+    ipoe.established(1)
+    assert ipoe.info()["ipv6-delegated-prefix"] == "fc00:2:0:8000:2::/80"
+    wait_until(lambda: not ipoe.info().get("ipv6-delegated-prefix"), 10, message="delegated prefix withdrawn")
+    info = ipoe.info()
+    assert info["session-state"] == "Established"
+    assert info["ipv6-prefix"] == "fc00:1::10/128", info
+    renew = wait_dhcpv6_renew(ipoe, peer_time(ipoe))
+    assert renew["pd"] == ["::/0 pl=0 vl=0"], renew
+    wait_until(lambda: ipoe.info().get("ipv6-delegated-prefix") == "fc00:3:0:40f::/64", 10,
+               message="new delegated prefix")
+
+
+def test_dhcpv6_lease_select(ipoe):
+    """Of several leases in an IA_NA or IA_PD the session takes the one which
+    is not deprecated, not invalid (preferred > valid lifetime) and not
+    withdrawn, even if the other leases have a longer valid lifetime."""
+    ipoe.peer("dhcpv6-select")
+    ipoe.start(access={"ipv4": False, "ipv6": True}, dhcpv6={"enable": True}, logging=("info", "dhcp", "ip"))
+    ipoe.established(1)
+    wait_until(lambda: ipoe.info().get("ipv6-delegated-prefix") == "fc00:3:0:40f::/64", 10,
+               message="delegated prefix selected")
+    assert ipoe.info()["ipv6-prefix"] == "fc00:1::20/128"
+    renew = wait_dhcpv6_renew(ipoe, peer_time(ipoe))
+    assert renew["na"] == ["fc00:1::20 pl=900 vl=1800"], renew
+    assert renew["pd"] == ["fc00:3:0:40f::/64 pl=900 vl=1800"], renew
+
+
 @pytest.mark.full
 def test_dhcpv6_release_ra(ipoe):
     """A session which is stopped during the DHCPv6 release does not become

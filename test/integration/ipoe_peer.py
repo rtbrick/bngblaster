@@ -17,6 +17,18 @@ scenarios:
                      --ra-delay seconds after the first Reply
   dhcpv6-pd          DHCPv6 server which delegates a /80 prefix (IA_PD),
                      periodic RA
+  dhcpv6-pd-move     DHCPv6 server (T1 2s) which delegates the /80 prefix and
+                     answers Renew and Rebind with a new /64 prefix followed
+                     by the old one with lifetime 0 (as ISC Kea moves a prefix)
+  dhcpv6-pd-move-reverse
+                     as dhcpv6-pd-move with the old prefix first
+  dhcpv6-pd-withdraw DHCPv6 server (T1 2s) which delegates the /80 prefix,
+                     withdraws it (lifetime 0) with the first Reply to Renew
+                     and delegates the new /64 prefix with the following ones
+  dhcpv6-select      DHCPv6 server (T1 2s) which answers Renew and Rebind with
+                     a deprecated (preferred lifetime 0), an invalid
+                     (preferred > valid lifetime), a withdrawn and the new
+                     lease for IA_NA and IA_PD
   ra                 one RA to all nodes after --ra-delay seconds
   igmp               IGMP log only
   echo6              one RA after --ra-delay seconds, then an ICMPv6 echo
@@ -49,6 +61,11 @@ SERVER6_LL = "fe80::1"
 PREFIX6 = "fc00:1::"
 PD_PREFIX = "fc00:2:0:8000:2::"
 PD_PREFIX_LEN = 80
+NA_FIXED = PREFIX6 + "10"
+NA_NEW = PREFIX6 + "20"
+PD_NEW = "fc00:3:0:40f::"
+PD_NEW_LEN = 64
+LEASE_SCENARIOS = ("dhcpv6-pd-move", "dhcpv6-pd-move-reverse", "dhcpv6-pd-withdraw", "dhcpv6-select")
 LEASE_ADDRESS = "10.0.0.%d"
 
 
@@ -66,6 +83,7 @@ class Peer:
         self.duid = b"\x00\x02\x00\x00\x8a\xc3" + bytes(range(94)) if args.scenario == "dhcpv6-long-duid" \
             else b"\x00\x02\x00\x00\x8a\xc3\x01\x01"
         self.first_reply = None
+        self.renews = 0
         self.ra_sent = False
         self.next_ra = 0
         self.queries = []
@@ -112,8 +130,14 @@ class Peer:
         client = msg[DHCP6OptClientId] if DHCP6OptClientId in msg else None
         server = msg[DHCP6OptServerId] if DHCP6OptServerId in msg else None
         server_ok = server is not None and bytes(server.duid) == self.duid
+        na = ["%s pl=%d vl=%d" % (o.addr, o.preflft, o.validlft) for o in msg[DHCP6OptIA_NA].ianaopts
+              if isinstance(o, DHCP6OptIAAddress)] if DHCP6OptIA_NA in msg else []
+        pd = ["%s/%d pl=%d vl=%d" % (o.prefix, o.plen, o.preflft, o.validlft) for o in msg[DHCP6OptIA_PD].iapdopt
+              if isinstance(o, DHCP6OptIAPrefix)] if DHCP6OptIA_PD in msg else []
         self.write(proto="dhcpv6", type=msg.msgtype, xid=msg.trid, server_id=server is not None,
-                   server_id_ok=server_ok)
+                   server_id_ok=server_ok, na=na, pd=pd)
+        if self.args.scenario in LEASE_SCENARIOS:
+            return self.dhcpv6_leases(pkt, msg, client)
         if isinstance(msg, DHCP6_Solicit):
             reply = DHCP6_Advertise(trid=msg.trid)
         elif isinstance(msg, DHCP6_Request):
@@ -141,6 +165,44 @@ class Peer:
                   IPv6(src=SERVER6_LL, dst=pkt[IPv6].src) / UDP(sport=547, dport=546) / reply)
         if isinstance(reply, DHCP6_Reply) and self.first_reply is None:
             self.first_reply = time.time()
+
+    def dhcpv6_leases(self, pkt, msg, client):
+        """Lease scenarios: (address, preferred, valid) for IA_NA and IA_PD per message."""
+        scenario = self.args.scenario
+        old_pd = (PD_PREFIX, PD_PREFIX_LEN)
+        new_pd = (PD_NEW, PD_NEW_LEN)
+        na = [(NA_FIXED, 900, 1800)]
+        pd = [(old_pd, 900, 1800)]
+        if isinstance(msg, DHCP6_Solicit):
+            reply = DHCP6_Advertise(trid=msg.trid)
+        elif isinstance(msg, (DHCP6_Request, DHCP6_Release)):
+            reply = DHCP6_Reply(trid=msg.trid)
+        else:  # Renew or Rebind
+            reply = DHCP6_Reply(trid=msg.trid)
+            self.renews += 1
+            if scenario == "dhcpv6-pd-move":
+                pd = [(new_pd, 900, 1800), (old_pd, 0, 0)]
+            elif scenario == "dhcpv6-pd-move-reverse":
+                pd = [(old_pd, 0, 0), (new_pd, 900, 1800)]
+            elif scenario == "dhcpv6-pd-withdraw":
+                pd = [(old_pd, 0, 0)] if self.renews == 1 else [(new_pd, 900, 1800)]
+            elif scenario == "dhcpv6-select":
+                na = [(PREFIX6 + "30", 0, 3600), (PREFIX6 + "40", 4000, 3000), (NA_NEW, 900, 1800),
+                      (NA_FIXED, 0, 0)]
+                pd = [(("fc00:4::", 64), 0, 3600), (("fc00:5::", 64), 4000, 3000), (new_pd, 900, 1800),
+                      (old_pd, 0, 0)]
+        reply /= DHCP6OptServerId(duid=Raw(self.duid))
+        if client is not None:
+            reply /= DHCP6OptClientId(duid=client.duid)
+        if DHCP6OptIA_NA in msg:
+            reply /= DHCP6OptIA_NA(iaid=msg[DHCP6OptIA_NA].iaid, T1=2, T2=5,
+                                   ianaopts=[DHCP6OptIAAddress(addr=a, preflft=p, validlft=v) for a, p, v in na])
+        if DHCP6OptIA_PD in msg:
+            reply /= DHCP6OptIA_PD(iaid=msg[DHCP6OptIA_PD].iaid, T1=2, T2=5,
+                                   iapdopt=[DHCP6OptIAPrefix(prefix=a, plen=l, preflft=p, validlft=v)
+                                            for (a, l), p, v in pd])
+        self.send(Ether(src=self.mac, dst=pkt[Ether].src) /
+                  IPv6(src=SERVER6_LL, dst=pkt[IPv6].src) / UDP(sport=547, dport=546) / reply)
 
     def ra(self):
         self.send(Ether(src=self.mac, dst="33:33:00:00:00:01") /
@@ -175,7 +237,7 @@ class Peer:
     def timers(self):
         now = time.time()
         scenario = self.args.scenario
-        if scenario in ("dhcpv6-long-duid", "dhcpv6-pd") and now >= self.next_ra:
+        if (scenario in ("dhcpv6-long-duid", "dhcpv6-pd") or scenario in LEASE_SCENARIOS) and now >= self.next_ra:
             self.next_ra = now + 1
             self.ra()
         elif scenario == "dhcpv6-release-ra" and not self.ra_sent and self.first_reply and \

@@ -108,7 +108,8 @@ Functional tests over veth pairs between network namespaces:
   (`test_io_interfaces.py`, `lacp_peer.py`)
 * IPoE access sessions: IGMP joins, leaves, autostart, rejoin, IGMPv3
   records and querier version, zapping, RA on N:1 sessions, DHCP rebind,
-  DHCPv6 DUID, transaction ID, release and IA-separate
+  DHCPv6 DUID, transaction ID, release, IA-separate and lease
+  selection (prefix moved or withdrawn by the server, issue #411)
   (`test_ipoe_access.py`, `ipoe_peer.py`)
 * Reassembly of fragmented stream traffic through a Linux router, also
   with duplicated fragments (`test_fragments.py`)

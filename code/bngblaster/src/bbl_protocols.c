@@ -2817,11 +2817,36 @@ decode_igmp(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+/*
+ * Select the lease (IAADDR or IAPREFIX) of an IA if a server sends more
+ * than one, e.g. a new prefix and the old one with lifetime 0. Leases with
+ * valid lifetime 0 are withdrawn and leases with a preferred lifetime above
+ * the valid lifetime are invalid (RFC 8415 sections 18.2.10.1, 21.6 and 21.22).
+ * Prefer leases which are not deprecated (preferred lifetime > 0), then the
+ * longest valid lifetime. The selected lease has always a valid lifetime > 0.
+ */
+static bool
+decode_dhcpv6_lease_better(uint32_t preferred_lifetime, uint32_t valid_lifetime,
+                           uint32_t best_preferred_lifetime, uint32_t best_valid_lifetime)
+{
+    if(!valid_lifetime || preferred_lifetime > valid_lifetime) {
+        return false;
+    }
+    if(!best_valid_lifetime) {
+        return true;
+    }
+    if((preferred_lifetime > 0) != (best_preferred_lifetime > 0)) {
+        return preferred_lifetime > 0;
+    }
+    return valid_lifetime > best_valid_lifetime;
+}
+
 static protocol_error_t
 decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
 {
     uint16_t ia_option;
     uint16_t ia_option_len;
+    uint32_t preferred_lifetime;
     uint32_t valid_lifetime;
 
     if(len < 12) {
@@ -2848,10 +2873,13 @@ decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
                 if(ia_option_len < 24) {
                     return DECODE_ERROR;
                 }
+                preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
                 valid_lifetime = be32toh(*(uint32_t*)(buf+20));
-                if(valid_lifetime >= dhcpv6->ia_na_valid_lifetime) {
+                if(decode_dhcpv6_lease_better(preferred_lifetime, valid_lifetime,
+                                              dhcpv6->ia_na_preferred_lifetime,
+                                              dhcpv6->ia_na_valid_lifetime)) {
                     dhcpv6->ia_na_address = (ipv6addr_t*)(buf);
-                    dhcpv6->ia_na_preferred_lifetime = be32toh(*(uint32_t*)(buf+16));
+                    dhcpv6->ia_na_preferred_lifetime = preferred_lifetime;
                     dhcpv6->ia_na_valid_lifetime = valid_lifetime;
                 }
                 break;
@@ -2872,9 +2900,10 @@ decode_dhcpv6_ia_na(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
 static protocol_error_t
 decode_dhcpv6_ia_pd(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
 {
-
     uint16_t ia_option;
     uint16_t ia_option_len;
+    uint32_t preferred_lifetime;
+    uint32_t valid_lifetime;
 
     if(len < 12) {
         return DECODE_ERROR;
@@ -2900,9 +2929,15 @@ decode_dhcpv6_ia_pd(uint8_t *buf, uint16_t len, bbl_dhcpv6_s *dhcpv6)
                 if(ia_option_len < 25) {
                     return DECODE_ERROR;
                 }
-                dhcpv6->ia_pd_preferred_lifetime = be32toh(*(uint32_t*)(buf));
-                dhcpv6->ia_pd_valid_lifetime = be32toh(*(uint32_t*)(buf+4));
-                dhcpv6->ia_pd_prefix = (ipv6_prefix*)(buf+8);
+                preferred_lifetime = be32toh(*(uint32_t*)(buf));
+                valid_lifetime = be32toh(*(uint32_t*)(buf+4));
+                if(decode_dhcpv6_lease_better(preferred_lifetime, valid_lifetime,
+                                              dhcpv6->ia_pd_preferred_lifetime,
+                                              dhcpv6->ia_pd_valid_lifetime)) {
+                    dhcpv6->ia_pd_prefix = (ipv6_prefix*)(buf+8);
+                    dhcpv6->ia_pd_preferred_lifetime = preferred_lifetime;
+                    dhcpv6->ia_pd_valid_lifetime = valid_lifetime;
+                }
                 break;
             case DHCPV6_OPTION_STATUS_CODE:
                 if(ia_option_len < 2) {

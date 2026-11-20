@@ -26,6 +26,45 @@ bbl_dhcpv6_status_code_string(uint16_t status_code)
     }
 }
 
+/* Remove the IA_NA lease from the session. */
+static void
+bbl_dhcpv6_clear_ia_na(bbl_session_s *session)
+{
+    if(session->access_type == ACCESS_TYPE_IPOE) {
+        session->ipv6_prefix.len = 0;
+        memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+        ENABLE_ENDPOINT(session->endpoint.ipv6);
+    } else if(session->ipv6_address_ia_na) {
+        if(session->ipv6_prefix.len) {
+            /* Fall back to the SLAAC address. */
+            *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
+            *(uint64_t*)&session->ipv6_address[8] = session->ip6cp_ipv6_identifier;
+        } else {
+            memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
+            ENABLE_ENDPOINT(session->endpoint.ipv6);
+        }
+    }
+    session->ipv6_address_ia_na = false;
+    session->dhcpv6_ia_na_t1 = 0;
+    session->dhcpv6_ia_na_t2 = 0;
+    session->dhcpv6_ia_na_preferred_lifetime = 0;
+    session->dhcpv6_ia_na_valid_lifetime = 0;
+}
+
+/* Remove the IA_PD lease from the session. */
+static void
+bbl_dhcpv6_clear_ia_pd(bbl_session_s *session)
+{
+    session->delegated_ipv6_prefix.len = 0;
+    memset(&session->delegated_ipv6_prefix.address, 0x0, IPV6_ADDR_LEN);
+    memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
+    ENABLE_ENDPOINT(session->endpoint.ipv6pd);
+    session->dhcpv6_ia_pd_t1 = 0;
+    session->dhcpv6_ia_pd_t2 = 0;
+    session->dhcpv6_ia_pd_preferred_lifetime = 0;
+    session->dhcpv6_ia_pd_valid_lifetime = 0;
+}
+
 /**
  * bbl_dhcpv6_stop
  *
@@ -43,24 +82,8 @@ bbl_dhcpv6_stop(bbl_session_s *session)
     LOG(DHCP, "DHCP (ID: %u) Stop DHCPv6\n", session->session_id);
 
     /* Reset session IP configuration */
-    if(session->access_type == ACCESS_TYPE_IPOE) {
-        session->ipv6_prefix.len = 0;
-        memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
-        ENABLE_ENDPOINT(session->endpoint.ipv6);
-    } else if(session->ipv6_address_ia_na) {
-        if(session->ipv6_prefix.len) {
-            /* Fall back to the SLAAC address. */
-            *(uint64_t*)&session->ipv6_address[0] = *(uint64_t*)session->ipv6_prefix.address;
-            *(uint64_t*)&session->ipv6_address[8] = session->ip6cp_ipv6_identifier;
-        } else {
-            memset(session->ipv6_address, 0x0, IPV6_ADDR_LEN);
-            ENABLE_ENDPOINT(session->endpoint.ipv6);
-        }
-    }
-    session->ipv6_address_ia_na = false;
-    session->delegated_ipv6_prefix.len = 0;
-    memset(session->delegated_ipv6_address, 0x0, IPV6_ADDR_LEN);
-    ENABLE_ENDPOINT(session->endpoint.ipv6pd);
+    bbl_dhcpv6_clear_ia_na(session);
+    bbl_dhcpv6_clear_ia_pd(session);
     /* Reset DHCPv6 */
     timer_del(session->timer_dhcpv6);
     timer_del(session->timer_dhcpv6_t1);
@@ -69,14 +92,6 @@ bbl_dhcpv6_stop(bbl_session_s *session)
     session->version++;
     session->dhcpv6_state = BBL_DHCP_INIT;
     session->dhcpv6_release_restart = false;
-    session->dhcpv6_ia_na_t1 = 0;
-    session->dhcpv6_ia_na_t2 = 0;
-    session->dhcpv6_ia_na_preferred_lifetime = 0;
-    session->dhcpv6_ia_na_valid_lifetime = 0;
-    session->dhcpv6_ia_pd_t1 = 0;
-    session->dhcpv6_ia_pd_t2 = 0;
-    session->dhcpv6_ia_pd_preferred_lifetime = 0;
-    session->dhcpv6_ia_pd_valid_lifetime = 0;
     memset(session->dhcpv6_dns1, 0x0, IPV6_ADDR_LEN);
     memset(session->dhcpv6_dns2, 0x0, IPV6_ADDR_LEN);
     memset(session->dhcpv6_server_duid, 0x0, sizeof(session->dhcpv6_server_duid));
@@ -388,6 +403,14 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_NA address %s/128\n", session->session_id,
                     format_ipv6_address(&session->ipv6_address));
             }
+        } else if(dhcpv6->ia_na_option && !dhcpv6->ia_na_status_code &&
+                  session->dhcpv6_ia_na_valid_lifetime) {
+            /* All addresses of the IA_NA withdrawn (valid lifetime 0). */
+            LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_NA address %s/128 withdrawn\n", session->session_id,
+                format_ipv6_address(&session->ipv6_address));
+            bbl_dhcpv6_clear_ia_na(session);
+            session->dhcpv6_lease_time = 0;
+            session->version++;
         }
         if(dhcpv6->ia_pd_prefix && dhcpv6->ia_pd_prefix->len && dhcpv6->ia_pd_valid_lifetime) {
             /* IA_PD */
@@ -415,6 +438,13 @@ bbl_dhcpv6_rx(bbl_session_s *session, bbl_ethernet_header_s *eth, bbl_dhcpv6_s *
                 LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_PD prefix %s/%d\n", session->session_id,
                     format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
             }
+        } else if(dhcpv6->ia_pd_option && !dhcpv6->ia_pd_status_code &&
+                  session->delegated_ipv6_prefix.len) {
+            /* All prefixes of the IA_PD withdrawn (valid lifetime 0). */
+            LOG(IP, "IPv6 (ID: %u) DHCPv6 IA_PD prefix %s/%d withdrawn\n", session->session_id,
+                format_ipv6_address(&session->delegated_ipv6_prefix.address), session->delegated_ipv6_prefix.len);
+            bbl_dhcpv6_clear_ia_pd(session);
+            session->version++;
         }
 
         session->send_requests &= ~BBL_SEND_DHCPV6_REQUEST;
