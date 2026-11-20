@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -6,17 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>ISIS &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="../_static/jquery.js?v=8dae8fb0"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -36,9 +36,6 @@
             BNG Blaster
               <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -58,6 +55,7 @@
 <li class="toctree-l3"><a class="reference internal" href="#adjacencies">Adjacencies</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#database">Database</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#flooding">Flooding</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#jumbo-frames">Jumbo Frames</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#segment-routing-and-flex-algo">Segment Routing and Flex-Algo</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#limitations">Limitations</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#lsp-update-command">LSP Update Command</a></li>
@@ -72,6 +70,7 @@
 <li class="toctree-l2"><a class="reference internal" href="evpn.html">EVPN</a></li>
 <li class="toctree-l2"><a class="reference internal" href="l2vpn.html">BGP L2VPN</a></li>
 <li class="toctree-l2"><a class="reference internal" href="ldp.html">LDP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bfd.html">BFD</a></li>
 <li class="toctree-l2"><a class="reference internal" href="lspgen.html">LSPGEN</a></li>
 </ul>
 </li>
@@ -324,110 +323,118 @@ attached to two network interfaces.</p>
 </tr>
 <tr class="row-even"><td><p><strong>lsp-buffer-size</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS LSPBufferSize in bytes.</div>
-<div class="line">Default: 1492 Range: 128 - 9192</div>
+<div class="line">ISIS LSPBufferSize in bytes, which limits the size of self</div>
+<div class="line">originated LSPs.</div>
+<div class="line">Default: max-pdu-size Range: 512 - 11997</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-lifetime</strong></p></td>
+<tr class="row-odd"><td><p><strong>max-pdu-size</strong></p></td>
+<td><div class="line-block">
+<div class="line">Maximum size of IS-IS PDUs in bytes (see jumbo frames).</div>
+<div class="line">Default: 1492 Range: 1492 - 11997</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>lsp-lifetime</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP lifetime in seconds.</div>
 <div class="line">Default: 65535 Range: 330 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lsp-refresh-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-refresh-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP refresh interval in seconds.</div>
 <div class="line">Default: 300 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-retry-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>lsp-retry-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP retry interval in seconds.</div>
 <div class="line">Default: 5 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lsp-tx-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-tx-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP TX interval in ms (time between LSP send windows).</div>
 <div class="line">Default: 10 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-tx-window-size</strong></p></td>
+<tr class="row-even"><td><p><strong>lsp-tx-window-size</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP TX window size (LSP send per window).</div>
 <div class="line">Default: 1 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>csnp-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>csnp-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS CSNP interval in seconds.</div>
 <div class="line">Default: 30 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>hostname</strong></p></td>
+<tr class="row-even"><td><p><strong>hostname</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS hostname.</div>
 <div class="line">Default: bngblaster</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>router-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>router-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS router identifier.</div>
 <div class="line">Default: 10.10.10.10</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>system-id</strong></p></td>
+<tr class="row-even"><td><p><strong>system-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS system identifier.</div>
 <div class="line">Default: 0100.1001.0010</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>area</strong></p></td>
+<tr class="row-odd"><td><p><strong>area</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS area(s).</div>
+<div class="line">ISIS area(s), up to 3.</div>
 <div class="line">Default: 49.0001/24</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>sr-algo</strong></p></td>
+<tr class="row-even"><td><p><strong>sr-algo</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR algorithm(s), multiple possible.</div>
 <div class="line">Default: disabled Range: 0 - 255</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>sr-base</strong></p></td>
+<tr class="row-odd"><td><p><strong>sr-base</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR base.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>sr-range</strong></p></td>
+<tr class="row-even"><td><p><strong>sr-range</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR range.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>sr-node-sid</strong></p></td>
+<tr class="row-odd"><td><p><strong>sr-node-sid</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR node SID.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>sr-node-sids</strong></p></td>
+<tr class="row-even"><td><p><strong>sr-node-sids</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR node SIDs, one per SR algorithm, as list</div>
 <div class="line">of <code class="docutils literal notranslate"><span class="pre">index</span></code> (0 - 1048575) and <code class="docutils literal notranslate"><span class="pre">algo</span></code> (default 0), e.g.</div>
@@ -436,7 +443,7 @@ attached to two network interfaces.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>node-msd</strong></p></td>
+<tr class="row-odd"><td><p><strong>node-msd</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS node maximum SID depth (BMI-MSD, RFC 8491).</div>
 <div class="line">Advertised together with <strong>sr-base</strong> and <strong>sr-range</strong>.</div>
@@ -444,7 +451,7 @@ attached to two network interfaces.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>flex-algo</strong></p></td>
+<tr class="row-even"><td><p><strong>flex-algo</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS Flex-Algo definitions (RFC 9350), up to 4</div>
 <div class="line">advertised in dedicated router capability TLVs, as list of</div>
@@ -457,21 +464,21 @@ attached to two network interfaces.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>adjacency-sid-base</strong></p></td>
+<tr class="row-odd"><td><p><strong>adjacency-sid-base</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable Adjacency SID generation.</div>
 <div class="line">Default: disabled Range: 256 - 4096</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
+<tr class="row-even"><td><p><strong>teardown-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS teardown time in seconds.</div>
 <div class="line">Default: 5 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>teardown-delay</strong></p></td>
+<tr class="row-odd"><td><p><strong>teardown-delay</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS teardown delay in seconds before the withdraw</div>
 <div class="line">(purge) of the own and external database entries. The</div>
@@ -573,14 +580,14 @@ advertise the reachability to node <code class="docutils literal notranslate"><s
 <tr class="row-odd"><td><p><strong>l1-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 1 interface metric.</div>
-<div class="line">Default: 10</div>
+<div class="line">Default: 10 Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>l2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 2 interface metric.</div>
-<div class="line">Default: 10</div>
+<div class="line">Default: 10 Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
@@ -693,6 +700,10 @@ learned via MRT files or injected via <code class="docutils literal notranslate"
 newer sequence numbers and a remaining lifetime of 0.
 LSPs of type <code class="docutils literal notranslate"><span class="pre">external</span></code> are purged the same way if
 <code class="docutils literal notranslate"><span class="pre">external-&gt;purge</span></code> is enabled (default <code class="docutils literal notranslate"><span class="pre">true</span></code>).</p>
+<p>With the purge, the BNG Blaster also gives up the DIS role on
+broadcast interfaces, as its pseudonode LSP is purged. The hellos
+are sent with priority 0 from then on, so that the other routers of
+the LAN elect a new DIS.</p>
 <p>On teardown, the purge waits until all BGP and LDP sessions are
 closed plus one second, at the latest until their <strong>teardown-time</strong>
 expired, and additionally for the configured <strong>teardown-delay</strong>.
@@ -707,6 +718,61 @@ leave the sessions pending on the peer for a long time.</p>
 <p>The BNG Blaster floods LSPs received to all other active
 adjacencies of the ISIS instance except to those with peer
 system-id equal to the source system-id of the LSP.</p>
+</section>
+<section id="jumbo-frames">
+<h2>Jumbo Frames<a class="headerlink" href="#jumbo-frames" title="Link to this heading"></a></h2>
+<p>IS-IS PDUs are limited to 1492 bytes by default. The option <code class="docutils literal notranslate"><span class="pre">max-pdu-size</span></code>
+raises this limit for all PDUs built by the BNG Blaster (LSP, CSNP, PSNP and
+hello padding) and for the PDUs accepted from the neighbor. PDUs of up to 1497
+bytes are always accepted. The <code class="docutils literal notranslate"><span class="pre">lsp-buffer-size</span></code> follows
+<code class="docutils literal notranslate"><span class="pre">max-pdu-size</span></code> unless configured explicitly.</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">    </span><span class="nt">&quot;interfaces&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="nt">&quot;jumbo-frames&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">        </span><span class="nt">&quot;network&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">            </span><span class="p">{</span>
+<span class="w">                </span><span class="nt">&quot;interface&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;eth1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;address&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.2/24&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;gateway&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;10.0.1.1&quot;</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;mtu&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">9000</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;isis-instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">                </span><span class="nt">&quot;isis-p2p&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span>
+<span class="w">            </span><span class="p">}</span>
+<span class="w">        </span><span class="p">]</span>
+<span class="w">    </span><span class="p">},</span>
+<span class="w">    </span><span class="nt">&quot;isis&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span>
+<span class="w">        </span><span class="p">{</span>
+<span class="w">            </span><span class="nt">&quot;instance-id&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;area&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[</span><span class="w"> </span><span class="s2">&quot;49.0001/24&quot;</span><span class="w"> </span><span class="p">],</span>
+<span class="w">            </span><span class="nt">&quot;hello-padding&quot;</span><span class="p">:</span><span class="w"> </span><span class="kc">true</span><span class="p">,</span>
+<span class="w">            </span><span class="nt">&quot;max-pdu-size&quot;</span><span class="p">:</span><span class="w"> </span><span class="mi">8997</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">]</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>A <code class="docutils literal notranslate"><span class="pre">max-pdu-size</span></code> above the default requires an <code class="docutils literal notranslate"><span class="pre">mtu</span></code> of at least
+<code class="docutils literal notranslate"><span class="pre">max-pdu-size</span></code> plus 3 bytes (LLC header) on all IS-IS interfaces. Without
+<code class="docutils literal notranslate"><span class="pre">jumbo-frames</span></code> in the interfaces section, the <code class="docutils literal notranslate"><span class="pre">mtu</span></code> is limited to 4000 bytes,
+which allows a <code class="docutils literal notranslate"><span class="pre">max-pdu-size</span></code> of up to 3997 bytes. Larger values require
+<code class="docutils literal notranslate"><span class="pre">jumbo-frames</span></code>, which is not supported with AF_XDP and DPDK and needs three
+times as much memory for the TX queues. The DPDK I/O mode can’t be combined with
+a <code class="docutils literal notranslate"><span class="pre">max-pdu-size</span></code> above the default. With AF_XDP, the kernel drops received frames
+larger than 3840 bytes including Ethernet and VLAN headers, and some drivers don’t
+support native mode with larger interface MTUs (e.g. i40e above 3046 bytes).</p>
+<p>The 802.3 length field can’t describe frames with more than 1500 bytes, so PDUs
+that don’t fit are sent with the LLC header in an Ethernet II frame with ethertype
+0x8870. PDUs up to 1497 bytes are still sent as 802.3 frames. Both formats are
+accepted. This has been tested with FRR and Junos. FRR sizes hellos, CSNP and PSNP based on
+the interface MTU, so <code class="docutils literal notranslate"><span class="pre">max-pdu-size</span></code> must be at least the interface MTU of FRR minus
+3 bytes. Disabling hello padding in FRR is not sufficient, as CSNP and PSNP can still
+exceed the limit of the BNG Blaster, which is the case if a large LSDB is synchronized
+with the default <code class="docutils literal notranslate"><span class="pre">max-pdu-size</span></code> and an interface MTU above 1500. Junos requires
+<code class="docutils literal notranslate"><span class="pre">family</span> <span class="pre">iso</span> <span class="pre">mtu</span></code> as well as <code class="docutils literal notranslate"><span class="pre">max-lsp-size</span></code> and <code class="docutils literal notranslate"><span class="pre">max-hello-size</span></code>. Junos limits its own CSNP and PSNP to
+1400 bytes (<code class="docutils literal notranslate"><span class="pre">max-snp-size</span></code>), but accepts larger CSNP. The neighbor must support the
+format too, and all routers in the area should use the same LSP size, as LSPs are
+flooded unchanged.</p>
+<p>The LSPs generated with <code class="docutils literal notranslate"><span class="pre">lspgen</span></code> are limited by <code class="docutils literal notranslate"><span class="pre">--lsp-buffer-size</span></code>.</p>
 </section>
 <section id="segment-routing-and-flex-algo">
 <h2>Segment Routing and Flex-Algo<a class="headerlink" href="#segment-routing-and-flex-algo" title="Link to this heading"></a></h2>

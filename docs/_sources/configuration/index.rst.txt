@@ -209,6 +209,14 @@ BGP
 ---
 .. include:: bgp.rst
 
+BFD
+---
+.. include:: bfd.rst
+
+BFD Sessions
+~~~~~~~~~~~~
+.. include:: bfd_sessions.rst
+
 HTTP-Client
 -----------
 .. include:: http_client.rst

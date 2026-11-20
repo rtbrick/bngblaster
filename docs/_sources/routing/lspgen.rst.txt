@@ -12,7 +12,11 @@ hence its name. However, with the introduction of OSPF support in BNG Blaster,
 The default protocol is ISIS which can be changed using the argument
 ``-P ospf2`` or ``-P ospf3``. The arguments are processed in the given order
 and the area (``-a``), connector (``-C``), sequence number (``-q``) and level
-(``-V``) depend on the protocol, so ``-P`` must be set before those arguments.
+(``-V``) depend on the protocol, so ``-P`` must be set before those arguments
+and may be given only once. Invalid argument values are rejected. ``lspgen``
+exits with failure if an output file could not be written or the output is
+incomplete, for example if the link state entries of a node do not fit into
+the maximum number of ISIS fragments or OSPF packets.
 
 .. code-block:: none
 
@@ -49,6 +53,7 @@ and the area (``-a``), connector (``-C``), sequence number (``-q``) and level
       -X --ipv6-external-prefix <ip-prefix>
       -u --link-multiplier <args>
       -M --lsp-lifetime <args>
+      -b --lsp-buffer-size <args>
       -z --no-ipv4
       -Z --no-ipv6
       -y --no-sr
@@ -104,6 +109,9 @@ The following defaults are used if not changed by the corresponding arguments.
 | ``-u --link-multiplier``      | 1 (parallel links, maximum 150)              |
 +-------------------------------+----------------------------------------------+
 | ``-M --lsp-lifetime``         | ISIS 65535, OSPF 3600 (minimum 120 seconds)  |
++-------------------------------+----------------------------------------------+
+| ``-b --lsp-buffer-size``      | ISIS 1492 (maximum LSP size, 512 - 11997,    |
+|                               | overrides the value of a config file)        |
 +-------------------------------+----------------------------------------------+
 | ``-q --sequence``             | ISIS 0x1, OSPF 0x80000001                    |
 +-------------------------------+----------------------------------------------+
@@ -384,10 +392,18 @@ The generated link state packets are written to the following files.
   converted into ``<filename>.svg`` if the graphviz command ``dot`` is installed.
 
 The sequence numbers of all nodes are stored in a sequence cache file
-in the current working directory (``isis-level<level>-sequence-cache.json``
-or ``ospf-area<area>-sequence-cache.json``). The next run of ``lspgen`` for
+in the current working directory (``isis-level<level>-sequence-cache.json``,
+``ospf2-area<area>-sequence-cache.json`` or ``ospf3-area<area>-sequence-cache.json``).
+The next run of ``lspgen`` for
 the same level or area increments those sequence numbers by one, so that the
 updated link state packets replace the previous ones in the network.
+An explicit sequence number (``-q``) takes precedence over the sequence cache
+and over the ``sequence`` of the nodes in a configuration file (``-r``).
+Without ``-q``, a node of a configuration file uses the higher of its
+``sequence`` and the cached sequence number incremented by one.
+A sequence number which can not be incremented any more (ISIS 0xffffffff,
+OSPF 0x7fffffff) is not stored, the next run starts again with the initial
+sequence number.
 With the argument ``-G``, all link state packets are generated as purges.
 
 Control Socket
@@ -397,7 +413,7 @@ Instead of loading an MRT file, ``lspgen`` can inject the generated link
 state packets directly into a running BNG Blaster instance using its
 control socket (``-S --control-socket``) with the ``isis-lsp-update``
 or ``ospf-pdu-update`` :ref:`command <api>`. The ISIS or OSPF instance
-of the BNG Blaster is selected with ``-I --control-instance`` (default 0).
+of the BNG Blaster is selected with ``-I --control-instance`` (default 1).
 
 .. code-block:: none
 

@@ -29,6 +29,7 @@ The following list shows all supported logging options.
 * ``ospf``: log OSPF events
 * ``ldp``: log LDP events
 * ``bgp``: log BGP events
+* ``bfd``: log BFD events
 * ``tcp``: log TCP events
 * ``lag``: log link aggregation (LAG) events
 * ``dpdk``: log DPDK events

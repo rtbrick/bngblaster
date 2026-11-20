@@ -48,7 +48,7 @@
 | **third-vlan**                    | | Add a static third VLAN (most inner VLAN).                         |
 |                                   | | Default: 0 (untagged)                                              |
 +-----------------------------------+----------------------------------------------------------------------+
-| **ipv4**                          | | Set false to deactivate IPv4.                                      |
+| **ipv4**                          | | Set false to deactivate IPv4 (also IPCP for PPPoE).                |
 +-----------------------------------+----------------------------------------------------------------------+
 | **address**                       | | Static IPv4 base address (IPoE only).                              |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -60,7 +60,7 @@
 | **gateway-iter**                  | | Static IPv4 gateway address iterator (IPoE only).                  |
 |                                   | | Default: 0.0.0.0                                                   |
 +-----------------------------------+----------------------------------------------------------------------+
-| **ipv6**                          | | Set false to deactivate IPv6.                                      |
+| **ipv6**                          | | Set false to deactivate IPv6 (also IP6CP for PPPoE).               |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ipv6-link-local**               | | Static IPv6 link-local address (IPoE only).                        |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -132,9 +132,11 @@
 | **ppp-mru**                       | | Overwrite PPP MRU (PPPoE only).                                    |
 | **ppp-mru**                       | | Default: **ppp->mru** Range: 64 - 9000                             |
 +-----------------------------------+----------------------------------------------------------------------+
-| **ipcp**                          | | Overwrite PPP IPCP enable option (PPPoE only).                     |
+| **ipcp**                          | | Overwrite PPP IPCP enable option (PPPoE only), IPCP packets of     |
+|                                   | | the peer are answered with protocol-reject if disabled.            |
 +-----------------------------------+----------------------------------------------------------------------+
-| **ip6cp**                         | | Overwrite PPP IP6CP enable option (PPPoE only).                    |
+| **ip6cp**                         | | Overwrite PPP IP6CP enable option (PPPoE only), IP6CP packets of   |
+|                                   | | the peer are answered with protocol-reject if disabled.            |
 +-----------------------------------+----------------------------------------------------------------------+
 | **dhcp**                          | | Overwrite DHCP enable option.                                      |
 +-----------------------------------+----------------------------------------------------------------------+

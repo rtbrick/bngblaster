@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -6,22 +8,20 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>LSPGEN &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="../_static/jquery.js?v=8dae8fb0"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
     <link rel="next" title="Traffic Streams" href="../streams.html" />
-    <link rel="prev" title="LDP" href="ldp.html" /> 
+    <link rel="prev" title="BFD" href="bfd.html" /> 
 </head>
 
 <body class="wy-body-for-nav"> 
@@ -36,9 +36,6 @@
             BNG Blaster
               <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -60,6 +57,7 @@
 <li class="toctree-l2"><a class="reference internal" href="evpn.html">EVPN</a></li>
 <li class="toctree-l2"><a class="reference internal" href="l2vpn.html">BGP L2VPN</a></li>
 <li class="toctree-l2"><a class="reference internal" href="ldp.html">LDP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="bfd.html">BFD</a></li>
 <li class="toctree-l2 current"><a class="current reference internal" href="#">LSPGEN</a><ul>
 <li class="toctree-l3"><a class="reference internal" href="#connector">Connector</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#random-topologies">Random Topologies</a></li>
@@ -119,7 +117,11 @@ hence its name. However, with the introduction of OSPF support in BNG Blaster,
 <p>The default protocol is ISIS which can be changed using the argument
 <code class="docutils literal notranslate"><span class="pre">-P</span> <span class="pre">ospf2</span></code> or <code class="docutils literal notranslate"><span class="pre">-P</span> <span class="pre">ospf3</span></code>. The arguments are processed in the given order
 and the area (<code class="docutils literal notranslate"><span class="pre">-a</span></code>), connector (<code class="docutils literal notranslate"><span class="pre">-C</span></code>), sequence number (<code class="docutils literal notranslate"><span class="pre">-q</span></code>) and level
-(<code class="docutils literal notranslate"><span class="pre">-V</span></code>) depend on the protocol, so <code class="docutils literal notranslate"><span class="pre">-P</span></code> must be set before those arguments.</p>
+(<code class="docutils literal notranslate"><span class="pre">-V</span></code>) depend on the protocol, so <code class="docutils literal notranslate"><span class="pre">-P</span></code> must be set before those arguments
+and may be given only once. Invalid argument values are rejected. <code class="docutils literal notranslate"><span class="pre">lspgen</span></code>
+exits with failure if an output file could not be written or the output is
+incomplete, for example if the link state entries of a node do not fit into
+the maximum number of ISIS fragments or OSPF packets.</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>$ lspgen --help
 
       ____   __   ____         _        __            ,/
@@ -153,6 +155,7 @@ Usage: lspgen [OPTIONS]
   -X --ipv6-external-prefix &lt;ip-prefix&gt;
   -u --link-multiplier &lt;args&gt;
   -M --lsp-lifetime &lt;args&gt;
+  -b --lsp-buffer-size &lt;args&gt;
   -z --no-ipv4
   -Z --no-ipv6
   -y --no-sr
@@ -223,7 +226,11 @@ using configuration files.</p>
 <tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-M</span> <span class="pre">--lsp-lifetime</span></code></p></td>
 <td><p>ISIS 65535, OSPF 3600 (minimum 120 seconds)</p></td>
 </tr>
-<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-q</span> <span class="pre">--sequence</span></code></p></td>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">-b</span> <span class="pre">--lsp-buffer-size</span></code></p></td>
+<td><p>ISIS 1492 (maximum LSP size, 512 - 11997,
+overrides the value of a config file)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">-q</span> <span class="pre">--sequence</span></code></p></td>
 <td><p>ISIS 0x1, OSPF 0x80000001</p></td>
 </tr>
 </tbody>
@@ -465,10 +472,18 @@ list can be used to create the corresponding BNG Blaster traffic streams.</p></l
 converted into <code class="docutils literal notranslate"><span class="pre">&lt;filename&gt;.svg</span></code> if the graphviz command <code class="docutils literal notranslate"><span class="pre">dot</span></code> is installed.</p></li>
 </ul>
 <p>The sequence numbers of all nodes are stored in a sequence cache file
-in the current working directory (<code class="docutils literal notranslate"><span class="pre">isis-level&lt;level&gt;-sequence-cache.json</span></code>
-or <code class="docutils literal notranslate"><span class="pre">ospf-area&lt;area&gt;-sequence-cache.json</span></code>). The next run of <code class="docutils literal notranslate"><span class="pre">lspgen</span></code> for
+in the current working directory (<code class="docutils literal notranslate"><span class="pre">isis-level&lt;level&gt;-sequence-cache.json</span></code>,
+<code class="docutils literal notranslate"><span class="pre">ospf2-area&lt;area&gt;-sequence-cache.json</span></code> or <code class="docutils literal notranslate"><span class="pre">ospf3-area&lt;area&gt;-sequence-cache.json</span></code>).
+The next run of <code class="docutils literal notranslate"><span class="pre">lspgen</span></code> for
 the same level or area increments those sequence numbers by one, so that the
 updated link state packets replace the previous ones in the network.
+An explicit sequence number (<code class="docutils literal notranslate"><span class="pre">-q</span></code>) takes precedence over the sequence cache
+and over the <code class="docutils literal notranslate"><span class="pre">sequence</span></code> of the nodes in a configuration file (<code class="docutils literal notranslate"><span class="pre">-r</span></code>).
+Without <code class="docutils literal notranslate"><span class="pre">-q</span></code>, a node of a configuration file uses the higher of its
+<code class="docutils literal notranslate"><span class="pre">sequence</span></code> and the cached sequence number incremented by one.
+A sequence number which can not be incremented any more (ISIS 0xffffffff,
+OSPF 0x7fffffff) is not stored, the next run starts again with the initial
+sequence number.
 With the argument <code class="docutils literal notranslate"><span class="pre">-G</span></code>, all link state packets are generated as purges.</p>
 </section>
 <section id="control-socket">
@@ -477,7 +492,7 @@ With the argument <code class="docutils literal notranslate"><span class="pre">-
 state packets directly into a running BNG Blaster instance using its
 control socket (<code class="docutils literal notranslate"><span class="pre">-S</span> <span class="pre">--control-socket</span></code>) with the <code class="docutils literal notranslate"><span class="pre">isis-lsp-update</span></code>
 or <code class="docutils literal notranslate"><span class="pre">ospf-pdu-update</span></code> <a class="reference internal" href="../api/index.html#api"><span class="std std-ref">command</span></a>. The ISIS or OSPF instance
-of the BNG Blaster is selected with <code class="docutils literal notranslate"><span class="pre">-I</span> <span class="pre">--control-instance</span></code> (default 0).</p>
+of the BNG Blaster is selected with <code class="docutils literal notranslate"><span class="pre">-I</span> <span class="pre">--control-instance</span></code> (default 1).</p>
 <div class="highlight-none notranslate"><div class="highlight"><pre><span></span>lspgen -C 1921.6800.1001 -S run.sock -I 1
 </pre></div>
 </div>
@@ -707,7 +722,7 @@ lspgen -P ospf3 -w ospf3.json
            </div>
           </div>
           <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
-        <a href="ldp.html" class="btn btn-neutral float-left" title="LDP" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="bfd.html" class="btn btn-neutral float-left" title="BFD" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
         <a href="../streams.html" class="btn btn-neutral float-right" title="Traffic Streams" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
     </div>
 

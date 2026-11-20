@@ -51,6 +51,10 @@
 |                                 | | Default: true                                        |
 +---------------------------------+--------------------------------------------------------+
 | **udp-checksum**                | | Enable UDP checksums.                                |
+|                                 | | Without, IPv6 stream packets have a zero UDP         |
+|                                 | | checksum, which is not allowed by RFC 8200 and may   |
+|                                 | | be dropped by hosts, firewalls or NAT in the path.   |
+|                                 | | Routers forwarding the traffic do not check it.      |
 |                                 | | Default: false                                       |
 +---------------------------------+--------------------------------------------------------+
 | **reassemble-fragments**        | | Enable reassembly of fragmented IPv4 stream packets. |

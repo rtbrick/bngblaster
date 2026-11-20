@@ -146,6 +146,11 @@ by IEEE 802.1AX. The first LACP PDU and changes of the own LACP state are sent
 immediately, without waiting for the next periodic LACP PDU. This also allows to connect two
 BNG Blaster LAG interfaces with LACP back to back.
 
+The option ``lacp-timeout-short`` defines the own timeout (3 seconds instead of
+90 seconds), which the partner signals by sending LACP PDUs every second instead
+of every 30 seconds. The periodic LACP PDUs of the BNG Blaster follow the timeout
+signaled by the partner, independent of the own timeout.
+
 LACP is active by default. With ``lacp-passive``, the member links do not
 send LACP PDUs before an LACP PDU of an active partner is received.
 Two passive partners therefore never form the LAG.

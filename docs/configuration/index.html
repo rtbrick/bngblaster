@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -6,17 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Configuration &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="../_static/jquery.js?v=8dae8fb0"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -36,9 +36,6 @@
             BNG Blaster
               <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -103,6 +100,10 @@
 </ul>
 </li>
 <li class="toctree-l2"><a class="reference internal" href="#bgp">BGP</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bfd">BFD</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#bfd-sessions">BFD Sessions</a></li>
+</ul>
+</li>
 <li class="toctree-l2"><a class="reference internal" href="#http-client">HTTP-Client</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#http-server">HTTP-Server</a></li>
 <li class="toctree-l2"><a class="reference internal" href="#icmp-client">ICMP-Client</a></li>
@@ -648,7 +649,9 @@ for interface links referenced by interface functions.</p>
 <tr class="row-even"><td><p><strong>mtu</strong></p></td>
 <td><div class="line-block">
 <div class="line">MTU size.</div>
-<div class="line">Default: 1500 Range: 64 - 9000</div>
+<div class="line">Values above 4000 require <code class="docutils literal notranslate"><span class="pre">jumbo-frames</span></code>.</div>
+<div class="line">DPDK is limited to 2026.</div>
+<div class="line">Default: 1500 Range: 64 - 12000</div>
 </div>
 </td>
 </tr>
@@ -741,14 +744,14 @@ for interface links referenced by interface functions.</p>
 <tr class="row-even"><td><p><strong>isis-l1-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 1 interface metric.</div>
-<div class="line">Default: 10</div>
+<div class="line">Default: 10 Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>isis-l2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 2 interface metric.</div>
-<div class="line">Default: 10</div>
+<div class="line">Default: 10 Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
@@ -787,23 +790,38 @@ for interface links referenced by interface functions.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv2-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for ISIS adjacencies with this BFD profile.</div>
+<div class="line">Single-hop to the IPv4 interface address and to the</div>
+<div class="line">IPv6 link-local address of the neighbor.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ospfv2-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an OSPFv2 instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv2-type</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv2-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface type (p2p or broadcast).</div>
 <div class="line">Default: broadcast</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv2-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface metric.</div>
-<div class="line">Default: 1</div>
+<div class="line">Default: 1 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ospfv2-bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for OSPFv2 neighbors with this BFD profile.</div>
+<div class="line">Single-hop to the interface address of the neighbor.</div>
 </div>
 </td>
 </tr>
@@ -823,13 +841,27 @@ for interface links referenced by interface functions.</p>
 <tr class="row-even"><td><p><strong>ospfv3-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv3 interface metric.</div>
-<div class="line">Default: 1</div>
+<div class="line">Default: 1 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ldp-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv3-bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for OSPFv3 neighbors with this BFD profile.</div>
+<div class="line">Single-hop to the link-local address of the neighbor.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ldp-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to a LDP instance.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ldp-bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for link LDP sessions with this BFD profile.</div>
+<div class="line">Single-hop to the hello source address of the peer.</div>
 </div>
 </td>
 </tr>
@@ -1056,7 +1088,7 @@ for interface links referenced by interface functions.</p>
 </tr>
 <tr class="row-odd"><td><p><strong>ipv4</strong></p></td>
 <td><div class="line-block">
-<div class="line">Set false to deactivate IPv4.</div>
+<div class="line">Set false to deactivate IPv4 (also IPCP for PPPoE).</div>
 </div>
 </td>
 </tr>
@@ -1088,7 +1120,7 @@ for interface links referenced by interface functions.</p>
 </tr>
 <tr class="row-even"><td><p><strong>ipv6</strong></p></td>
 <td><div class="line-block">
-<div class="line">Set false to deactivate IPv6.</div>
+<div class="line">Set false to deactivate IPv6 (also IP6CP for PPPoE).</div>
 </div>
 </td>
 </tr>
@@ -1263,13 +1295,15 @@ for interface links referenced by interface functions.</p>
 </tr>
 <tr class="row-even"><td><p><strong>ipcp</strong></p></td>
 <td><div class="line-block">
-<div class="line">Overwrite PPP IPCP enable option (PPPoE only).</div>
+<div class="line">Overwrite PPP IPCP enable option (PPPoE only), IPCP packets of</div>
+<div class="line">the peer are answered with protocol-reject if disabled.</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>ip6cp</strong></p></td>
 <td><div class="line-block">
-<div class="line">Overwrite PPP IP6CP enable option (PPPoE only).</div>
+<div class="line">Overwrite PPP IP6CP enable option (PPPoE only), IP6CP packets of</div>
+<div class="line">the peer are answered with protocol-reject if disabled.</div>
 </div>
 </td>
 </tr>
@@ -1659,7 +1693,7 @@ forwarding and header enrichment.</p>
 <tr class="row-even"><td><p><strong>service-name</strong></p></td>
 <td><div class="line-block">
 <div class="line">PPPoE discovery service name.</div>
-<div class="line">Default: none</div>
+<div class="line">Default: none, max 255 characters</div>
 </div>
 </td>
 </tr>
@@ -1673,7 +1707,7 @@ forwarding and header enrichment.</p>
 <tr class="row-even"><td><p><strong>max-payload</strong></p></td>
 <td><div class="line-block">
 <div class="line">PPP-Max-Payload (RFC4638).</div>
-<div class="line">Default: 0 (disabled)</div>
+<div class="line">Default: 0 (disabled) Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
@@ -1747,7 +1781,7 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>retry</strong></p></td>
 <td><div class="line-block">
 <div class="line">Authentication request max retry.</div>
-<div class="line">Default: 30</div>
+<div class="line">Default: 30 Range: 0 - 255</div>
 </div>
 </td>
 </tr>
@@ -1964,7 +1998,7 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>retry</strong></p></td>
 <td><div class="line-block">
 <div class="line">DHCP retry.</div>
-<div class="line">Default: 10</div>
+<div class="line">Default: 10 Range: 1 - 255</div>
 </div>
 </td>
 </tr>
@@ -2191,7 +2225,7 @@ forwarding and header enrichment.</p>
 <tr class="row-even"><td><p><strong>zapping-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">IGMP channel zapping interval in seconds.</div>
-<div class="line">Default: 0 (disabled)</div>
+<div class="line">Default: 0 (disabled) Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
@@ -2254,7 +2288,7 @@ forwarding and header enrichment.</p>
 <td><div class="line-block">
 <div class="line">Multicast traffic IP length.</div>
 <div class="line">Only applicable with <strong>send-multicast-traffic</strong> enabled!</div>
-<div class="line">Default: 0 (minimum stream length) Range: 128 - 1500</div>
+<div class="line">Default: 0 (minimum stream length) Range: 0 or 128 - 1500</div>
 </div>
 </td>
 </tr>
@@ -2270,7 +2304,7 @@ forwarding and header enrichment.</p>
 <td><div class="line-block">
 <div class="line">Multicast traffic PPS (packets-per-second) per group.</div>
 <div class="line">Only applicable with <strong>send-multicast-traffic</strong> enabled!</div>
-<div class="line">Default: 1000</div>
+<div class="line">Default: 1000 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
@@ -2300,6 +2334,7 @@ forwarding and header enrichment.</p>
 <tr class="row-even"><td><p><strong>name</strong></p></td>
 <td><div class="line-block">
 <div class="line">Mandatory L2TP LNS server hostname (AVP 7)</div>
+<div class="line">Max 255 characters.</div>
 </div>
 </td>
 </tr>
@@ -2318,7 +2353,7 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>receive-window-size</strong></p></td>
 <td><div class="line-block">
 <div class="line">Control messages receive window size.</div>
-<div class="line">Default: 16 Range: 1 - 65535</div>
+<div class="line">Default: 16 Range: 1 - 32767</div>
 </div>
 </td>
 </tr>
@@ -2389,7 +2424,7 @@ forwarding and header enrichment.</p>
 <tr class="row-even"><td><p><strong>lcp-padding</strong></p></td>
 <td><div class="line-block">
 <div class="line">Add fixed padding to LCP packets send from LNS.</div>
-<div class="line">Default: 0 Range: 0 - 65535</div>
+<div class="line">Default: 0 Range: 0 - 1400</div>
 </div>
 </td>
 </tr>
@@ -2463,6 +2498,7 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>name</strong></p></td>
 <td><div class="line-block">
 <div class="line">Mandatory L2TP LAC client name sent as hostname (AVP 7).</div>
+<div class="line">Max 255 characters.</div>
 </div>
 </td>
 </tr>
@@ -2497,7 +2533,7 @@ forwarding and header enrichment.</p>
 <tr class="row-even"><td><p><strong>receive-window-size</strong></p></td>
 <td><div class="line-block">
 <div class="line">Control messages receive window size.</div>
-<div class="line">Default: 16 Range: 1 - 65535</div>
+<div class="line">Default: 16 Range: 1 - 32767</div>
 </div>
 </td>
 </tr>
@@ -2568,7 +2604,7 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>lcp-padding</strong></p></td>
 <td><div class="line-block">
 <div class="line">Add fixed padding to LCP packets sent from the LAC.</div>
-<div class="line">Default: 0 Range: 0 - 65535</div>
+<div class="line">Default: 0 Range: 0 - 1400</div>
 </div>
 </td>
 </tr>
@@ -2593,12 +2629,14 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>calling-number</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optional Calling Number string sent in ICRQ (AVP 22).</div>
+<div class="line">Max 255 characters.</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>called-number</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optional Called Number string sent in ICRQ (AVP 21).</div>
+<div class="line">Max 255 characters.</div>
 </div>
 </td>
 </tr>
@@ -2708,6 +2746,10 @@ forwarding and header enrichment.</p>
 <tr class="row-odd"><td><p><strong>udp-checksum</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable UDP checksums.</div>
+<div class="line">Without, IPv6 stream packets have a zero UDP</div>
+<div class="line">checksum, which is not allowed by RFC 8200 and may</div>
+<div class="line">be dropped by hosts, firewalls or NAT in the path.</div>
+<div class="line">Routers forwarding the traffic do not check it.</div>
 <div class="line">Default: false</div>
 </div>
 </td>
@@ -2883,7 +2925,7 @@ forwarding and header enrichment.</p>
 <div class="line">Stream traffic rate in packets per second.</div>
 <div class="line">This value supports also float numbers like 0.1 or 2.5.</div>
 <div class="line">In example 0.1 means one packet every 10 seconds.</div>
-<div class="line">Default: 1.0</div>
+<div class="line">Default: 1.0 Range: 0.0001 - 1000000000</div>
 </div>
 </td>
 </tr>
@@ -3797,110 +3839,118 @@ provided here.</p>
 </tr>
 <tr class="row-even"><td><p><strong>lsp-buffer-size</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS LSPBufferSize in bytes.</div>
-<div class="line">Default: 1492 Range: 128 - 9192</div>
+<div class="line">ISIS LSPBufferSize in bytes, which limits the size of self</div>
+<div class="line">originated LSPs.</div>
+<div class="line">Default: max-pdu-size Range: 512 - 11997</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-lifetime</strong></p></td>
+<tr class="row-odd"><td><p><strong>max-pdu-size</strong></p></td>
+<td><div class="line-block">
+<div class="line">Maximum size of IS-IS PDUs in bytes (see jumbo frames).</div>
+<div class="line">Default: 1492 Range: 1492 - 11997</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>lsp-lifetime</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP lifetime in seconds.</div>
 <div class="line">Default: 65535 Range: 330 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lsp-refresh-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-refresh-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP refresh interval in seconds.</div>
 <div class="line">Default: 300 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-retry-interval</strong></p></td>
+<tr class="row-even"><td><p><strong>lsp-retry-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP retry interval in seconds.</div>
 <div class="line">Default: 5 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>lsp-tx-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>lsp-tx-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP TX interval in ms (time between LSP send windows).</div>
 <div class="line">Default: 10 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>lsp-tx-window-size</strong></p></td>
+<tr class="row-even"><td><p><strong>lsp-tx-window-size</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS LSP TX window size (LSP send per window).</div>
 <div class="line">Default: 1 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>csnp-interval</strong></p></td>
+<tr class="row-odd"><td><p><strong>csnp-interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS CSNP interval in seconds.</div>
 <div class="line">Default: 30 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>hostname</strong></p></td>
+<tr class="row-even"><td><p><strong>hostname</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS hostname.</div>
 <div class="line">Default: bngblaster</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>router-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>router-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS router identifier.</div>
 <div class="line">Default: 10.10.10.10</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>system-id</strong></p></td>
+<tr class="row-even"><td><p><strong>system-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS system identifier.</div>
 <div class="line">Default: 0100.1001.0010</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>area</strong></p></td>
+<tr class="row-odd"><td><p><strong>area</strong></p></td>
 <td><div class="line-block">
-<div class="line">ISIS area(s).</div>
+<div class="line">ISIS area(s), up to 3.</div>
 <div class="line">Default: 49.0001/24</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>sr-algo</strong></p></td>
+<tr class="row-even"><td><p><strong>sr-algo</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR algorithm(s), multiple possible.</div>
 <div class="line">Default: disabled Range: 0 - 255</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>sr-base</strong></p></td>
+<tr class="row-odd"><td><p><strong>sr-base</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR base.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>sr-range</strong></p></td>
+<tr class="row-even"><td><p><strong>sr-range</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR range.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>sr-node-sid</strong></p></td>
+<tr class="row-odd"><td><p><strong>sr-node-sid</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR node SID.</div>
 <div class="line">Default: 0 Range: 0 - 1048575</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>sr-node-sids</strong></p></td>
+<tr class="row-even"><td><p><strong>sr-node-sids</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS SR node SIDs, one per SR algorithm, as list</div>
 <div class="line">of <code class="docutils literal notranslate"><span class="pre">index</span></code> (0 - 1048575) and <code class="docutils literal notranslate"><span class="pre">algo</span></code> (default 0), e.g.</div>
@@ -3909,7 +3959,7 @@ provided here.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>node-msd</strong></p></td>
+<tr class="row-odd"><td><p><strong>node-msd</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS node maximum SID depth (BMI-MSD, RFC 8491).</div>
 <div class="line">Advertised together with <strong>sr-base</strong> and <strong>sr-range</strong>.</div>
@@ -3917,7 +3967,7 @@ provided here.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>flex-algo</strong></p></td>
+<tr class="row-even"><td><p><strong>flex-algo</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS Flex-Algo definitions (RFC 9350), up to 4</div>
 <div class="line">advertised in dedicated router capability TLVs, as list of</div>
@@ -3930,21 +3980,21 @@ provided here.</p>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>adjacency-sid-base</strong></p></td>
+<tr class="row-odd"><td><p><strong>adjacency-sid-base</strong></p></td>
 <td><div class="line-block">
 <div class="line">Enable Adjacency SID generation.</div>
 <div class="line">Default: disabled Range: 256 - 4096</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
+<tr class="row-even"><td><p><strong>teardown-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS teardown time in seconds.</div>
 <div class="line">Default: 5 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>teardown-delay</strong></p></td>
+<tr class="row-odd"><td><p><strong>teardown-delay</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS teardown delay in seconds before the withdraw</div>
 <div class="line">(purge) of the own and external database entries. The</div>
@@ -4014,14 +4064,14 @@ provided here.</p>
 <tr class="row-odd"><td><p><strong>l1-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 1 interface metric.</div>
-<div class="line">Default: 10</div>
+<div class="line">Default: 10 Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>l2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 2 interface metric.</div>
-<div class="line">Default: 10</div>
+<div class="line">Default: 10 Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
@@ -4211,7 +4261,14 @@ provided here.</p>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>mrt-file</strong></p></td>
+<tr class="row-odd"><td><p><strong>auto-refresh</strong></p></td>
+<td><div class="line-block">
+<div class="line">Automatically refresh all external LSA.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>mrt-file</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPF MRT file.</div>
 </div>
@@ -4241,7 +4298,7 @@ provided here.</p>
 <tr class="row-odd"><td><p><strong>metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">Optional interface metric.</div>
-<div class="line">Default: 10 Range: 0 - 4294967295</div>
+<div class="line">Default: 10 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
@@ -4281,11 +4338,10 @@ provided here.</p>
 </tr>
 </thead>
 <tbody>
-<tr class="row-even"><td><p><strong>instance-id</strong>
-<strong>instance-id</strong></p></td>
+<tr class="row-even"><td><p><strong>instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Mandatory LDP instance identifier.</div>
-<div class="line">Range: 0 - 65535</div>
+<div class="line">Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
@@ -4304,20 +4360,21 @@ provided here.</p>
 <div class="line">calculated by using the effective keepalive time divided</div>
 <div class="line">by 3. Assuming an effective keepalive time of 15</div>
 <div class="line">seconds results in a keepalive interval of 5 seconds.</div>
-<div class="line">Default: 15 Range: 0 - 65535</div>
+<div class="line">Default: 15 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>hold-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">LDP hello hold time in seconds.</div>
-<div class="line">Default: 15 Range: 0 - 65535</div>
+<div class="line">Default: 15 Range: 1 - 65535</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>teardown-time</strong></p></td>
 <td><div class="line-block">
-<div class="line">LDP teardown time in seconds.</div>
+<div class="line">Maximum time in seconds to wait for LDP sessions to</div>
+<div class="line">close gracefully on teardown before they are closed.</div>
 <div class="line">Default: 5 Range: 0 - 65535</div>
 </div>
 </td>
@@ -4438,6 +4495,13 @@ provided here.</p>
 </div>
 </td>
 </tr>
+<tr class="row-odd"><td><p><strong>bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable multi-hop BFD for the session of this targeted</div>
+<div class="line">neighbor with this BFD profile.</div>
+</div>
+</td>
+</tr>
 </tbody>
 </table>
 </section>
@@ -4450,7 +4514,7 @@ provided here.</p>
 <p>Every configured BGP peer both actively connects and passively listens on
 TCP port 179, matching real router behavior. If the peer also connects
 towards BNG Blaster at the same time, the resulting connection collision is
-resolved automatically per <span class="target" id="index-0"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc4271.html#section-6.8"><strong>RFC 4271#section-6.8</strong></a> by comparing BGP
+resolved automatically per <span class="target" id="index-0"></span><a class="rfc reference external" href="https://datatracker.ietf.org/doc/html/rfc4271.html#section-6.8"><strong>RFC 4271 Section 6.8</strong></a> by comparing BGP
 Identifiers, with the losing TCP connection closed via a NOTIFICATION
 (Cease, Connection Collision Resolution).</p>
 <table class="docutils align-default">
@@ -4474,6 +4538,21 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>local-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP local IPv4 address (source address).</div>
+<div class="line">Alternative to <strong>local-address</strong>, which takes precedence.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>local-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP local IPv6 address (source address).</div>
+<div class="line">Alternative to <strong>local-address</strong> and <strong>local-ipv4-address</strong>,</div>
+<div class="line">which take precedence.</div>
+</div>
+</td>
+</tr>
 <tr class="row-even"><td><p><strong>local-as</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP local AS.</div>
@@ -4483,21 +4562,38 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </tr>
 <tr class="row-odd"><td><p><strong>peer-address</strong></p></td>
 <td><div class="line-block">
-<div class="line">Mandatory BGP peer IPv4/6 address.</div>
+<div class="line">Mandatory BGP peer IPv4/6 address (or <strong>peer-ipv4/ipv6-address</strong>).</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>peer-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP peer IPv4 address.</div>
+<div class="line">Alternative to <strong>peer-address</strong>, which takes precedence.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>peer-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">BGP peer IPv6 address.</div>
+<div class="line">Alternative to <strong>peer-address</strong> and <strong>peer-ipv4-address</strong>,</div>
+<div class="line">which take precedence.</div>
 </div>
 </td>
 </tr>
 <tr class="row-even"><td><p><strong>peer-as</strong></p></td>
 <td><div class="line-block">
-<div class="line">BGP peer AS.</div>
-<div class="line">Default: <cite>local AS</cite> Range: 0 - 4294967295</div>
+<div class="line">BGP peer AS. If set, the session is rejected with Bad Peer AS</div>
+<div class="line">if the AS in the OPEN of the peer differs.</div>
+<div class="line">Default: 0 (not checked) Range: 0 - 4294967295</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>hold-time</strong></p></td>
 <td><div class="line-block">
 <div class="line">BGP hold-time in seconds.</div>
-<div class="line">Default: 90 Range: 0 - 65535</div>
+<div class="line">Default: 90 Range: 0, 3 - 65535 (0 disables hold timer and</div>
+<div class="line">keepalive). The smaller of the local and peer hold time is used.</div>
 </div>
 </td>
 </tr>
@@ -4530,6 +4626,7 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 <div class="line">(32 characters for hmac-sha-256-128, 20 for hmac-sha-1-96, 16 for</div>
 <div class="line">aes-128-cmac-96, none for md5) but is not enforced, so shorter</div>
 <div class="line">keys can be used to test interop with peers that accept them.</div>
+<div class="line">Length: 1 - 80 characters</div>
 </div>
 </td>
 </tr>
@@ -4572,9 +4669,26 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </div>
 </td>
 </tr>
+<tr class="row-even"><td><p><strong>bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for this session with this BFD profile.</div>
+<div class="line">The BFD session is started when BGP is established,</div>
+<div class="line">BFD down closes BGP with Cease subcode BFD Down (RFC 9384).</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bfd-multihop</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multi-hop BFD session (RFC 5883).</div>
+<div class="line">Default: single-hop if the peer address is in a connected</div>
+<div class="line">network of the network interface, otherwise multi-hop</div>
+</div>
+</td>
+</tr>
 <tr class="row-even"><td><p><strong>reconnect</strong></p></td>
 <td><div class="line-block">
 <div class="line">Reconnect BGP session automatically.</div>
+<div class="line">If disabled, connections of the peer are refused after close.</div>
 <div class="line">Default: true</div>
 </div>
 </td>
@@ -4638,6 +4752,167 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 </tr>
 </tbody>
 </table>
+</section>
+<section id="bfd">
+<h2>BFD<a class="headerlink" href="#bfd" title="Link to this heading"></a></h2>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bfd&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>BFD profiles define the timers and authentication of BFD sessions.
+Static BFD sessions and routing protocols refer to a profile by its
+<code class="docutils literal notranslate"><span class="pre">bfd-profile-id</span></code>. Sessions without profile use the defaults.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Mandatory BFD profile identifier.</div>
+<div class="line">Range: 1 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>tx-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Desired min TX interval in milliseconds.</div>
+<div class="line">The TX interval is at least one second while the session</div>
+<div class="line">is not up (slow start).</div>
+<div class="line">Default: 1000 Range: 1 - 60000</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>rx-interval</strong></p></td>
+<td><div class="line-block">
+<div class="line">Required min RX interval in milliseconds.</div>
+<div class="line">Default: 1000 Range: 1 - 60000</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>multiplier</strong></p></td>
+<td><div class="line-block">
+<div class="line">Detect multiplier.</div>
+<div class="line">Default: 3 Range: 1 - 255</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>passive</strong></p></td>
+<td><div class="line-block">
+<div class="line">Passive role, packets are sent only after a packet</div>
+<div class="line">from the peer is received.</div>
+<div class="line">Default: false</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>min-ttl</strong></p></td>
+<td><div class="line-block">
+<div class="line">Minimum TTL or hop limit of received packets of</div>
+<div class="line">multi-hop sessions. Single-hop sessions always</div>
+<div class="line">require 255 (RFC 5881).</div>
+<div class="line">Default: 254 Range: 1 - 255</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>authentication-type</strong></p></td>
+<td><div class="line-block">
+<div class="line">Authentication type (none, simple, keyed-md5,</div>
+<div class="line">meticulous-keyed-md5, keyed-sha1 or meticulous-keyed-sha1).</div>
+<div class="line">Default: none</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>authentication-key-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Authentication key ID.</div>
+<div class="line">Default: 1 Range: 0 - 255</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>authentication-key</strong></p></td>
+<td><div class="line-block">
+<div class="line">Authentication key (password), mandatory if</div>
+<div class="line">authentication is enabled.</div>
+<div class="line">Length: simple and MD5 1 - 16, SHA1 1 - 20 characters</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+<section id="bfd-sessions">
+<h3>BFD Sessions<a class="headerlink" href="#bfd-sessions" title="Link to this heading"></a></h3>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span><span class="w"> </span><span class="nt">&quot;bfd-sessions&quot;</span><span class="p">:</span><span class="w"> </span><span class="p">[]</span><span class="w"> </span><span class="p">}</span>
+</pre></div>
+</div>
+<p>Static BFD sessions are started with BNG Blaster and kept until the end
+of the test, independent of routing protocols.</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>network-interface</strong></p></td>
+<td><div class="line-block">
+<div class="line">Network interface of the session.</div>
+<div class="line">Mandatory for single-hop sessions.</div>
+<div class="line">Default: first network interface (multi-hop)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>peer-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Peer IPv4 address.</div>
+<div class="line">Either peer-ipv4-address or peer-ipv6-address is mandatory.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>local-ipv4-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Local IPv4 address.</div>
+<div class="line">Default: network interface address</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>peer-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Peer IPv6 address (global or link-local).</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>local-ipv6-address</strong></p></td>
+<td><div class="line-block">
+<div class="line">Local IPv6 address.</div>
+<div class="line">Default: network interface link-local address for</div>
+<div class="line">link-local peers, otherwise the global address</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">BFD profile.</div>
+<div class="line">Default: built-in defaults (1000 ms, multiplier 3)</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>multihop</strong></p></td>
+<td><div class="line-block">
+<div class="line">Multi-hop session (RFC 5883, UDP port 4784).</div>
+<div class="line">Default: false (single-hop, RFC 5881, UDP port 3784)</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>name</strong></p></td>
+<td><div class="line-block">
+<div class="line">Optional session name shown in the session output.</div>
+</div>
+</td>
+</tr>
+</tbody>
+</table>
+</section>
 </section>
 <section id="http-client">
 <h2>HTTP-Client<a class="headerlink" href="#http-client" title="Link to this heading"></a></h2>
@@ -4803,14 +5078,14 @@ Identifiers, with the losing TCP connection closed via a NOTIFICATION
 <tr class="row-even"><td><p><strong>size</strong></p></td>
 <td><div class="line-block">
 <div class="line">ICMP data size.</div>
-<div class="line">Default: 8 Range: 0 - 65507</div>
+<div class="line">Default: 8 Range: 0 - 3974 (11974 with jumbo-frames)</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>interval</strong></p></td>
 <td><div class="line-block">
 <div class="line">ICMP send interval in seconds.</div>
-<div class="line">Default: 1.0</div>
+<div class="line">Default: 1.0 Range: 0.001 - 86400</div>
 </div>
 </td>
 </tr>

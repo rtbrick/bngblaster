@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -6,17 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>&lt;no title&gt; &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="../_static/jquery.js?v=8dae8fb0"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" /> 
@@ -34,9 +34,6 @@
             BNG Blaster
               <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -138,7 +135,9 @@
 <tr class="row-even"><td><p><strong>mtu</strong></p></td>
 <td><div class="line-block">
 <div class="line">MTU size.</div>
-<div class="line">Default: 1500 Range: 64 - 9000</div>
+<div class="line">Values above 4000 require <code class="docutils literal notranslate"><span class="pre">jumbo-frames</span></code>.</div>
+<div class="line">DPDK is limited to 2026.</div>
+<div class="line">Default: 1500 Range: 64 - 12000</div>
 </div>
 </td>
 </tr>
@@ -231,14 +230,14 @@
 <tr class="row-even"><td><p><strong>isis-l1-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 1 interface metric.</div>
-<div class="line">Default: 10</div>
+<div class="line">Default: 10 Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
 <tr class="row-odd"><td><p><strong>isis-l2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">ISIS level 2 interface metric.</div>
-<div class="line">Default: 10</div>
+<div class="line">Default: 10 Range: 0 - 16777215</div>
 </div>
 </td>
 </tr>
@@ -277,23 +276,38 @@
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv2-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>isis-bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for ISIS adjacencies with this BFD profile.</div>
+<div class="line">Single-hop to the IPv4 interface address and to the</div>
+<div class="line">IPv6 link-local address of the neighbor.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ospfv2-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to an OSPFv2 instance.</div>
 </div>
 </td>
 </tr>
-<tr class="row-even"><td><p><strong>ospfv2-type</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv2-type</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface type (p2p or broadcast).</div>
 <div class="line">Default: broadcast</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ospfv2-metric</strong></p></td>
+<tr class="row-even"><td><p><strong>ospfv2-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv2 interface metric.</div>
-<div class="line">Default: 1</div>
+<div class="line">Default: 1 Range: 0 - 65535</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ospfv2-bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for OSPFv2 neighbors with this BFD profile.</div>
+<div class="line">Single-hop to the interface address of the neighbor.</div>
 </div>
 </td>
 </tr>
@@ -313,13 +327,27 @@
 <tr class="row-even"><td><p><strong>ospfv3-metric</strong></p></td>
 <td><div class="line-block">
 <div class="line">OSPFv3 interface metric.</div>
-<div class="line">Default: 1</div>
+<div class="line">Default: 1 Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
-<tr class="row-odd"><td><p><strong>ldp-instance-id</strong></p></td>
+<tr class="row-odd"><td><p><strong>ospfv3-bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for OSPFv3 neighbors with this BFD profile.</div>
+<div class="line">Single-hop to the link-local address of the neighbor.</div>
+</div>
+</td>
+</tr>
+<tr class="row-even"><td><p><strong>ldp-instance-id</strong></p></td>
 <td><div class="line-block">
 <div class="line">Assign the interface to a LDP instance.</div>
+</div>
+</td>
+</tr>
+<tr class="row-odd"><td><p><strong>ldp-bfd-profile-id</strong></p></td>
+<td><div class="line-block">
+<div class="line">Enable BFD for link LDP sessions with this BFD profile.</div>
+<div class="line">Single-hop to the hello source address of the peer.</div>
 </div>
 </td>
 </tr>

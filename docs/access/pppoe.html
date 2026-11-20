@@ -1,3 +1,5 @@
+
+
 <!DOCTYPE html>
 <html class="writer-html5" lang="en" data-content_root="../">
 <head>
@@ -6,17 +8,15 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>PPPoE &mdash; BNG Blaster 1.1 documentation</title>
       <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=80d5e7a1" />
-      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=86f27845" />
-      <link rel="stylesheet" type="text/css" href="../_static/tabs.css?v=a5c4661c" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
       <link rel="stylesheet" type="text/css" href="../_static/custom.css?v=d3fa0a67" />
 
   
-  
-        <script src="../_static/jquery.js?v=8dae8fb0"></script>
-        <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
-        <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
-        <script src="../_static/doctools.js?v=888ff710"></script>
-        <script src="../_static/sphinx_highlight.js?v=dc90522c"></script>
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=56dcb7b8"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
     <script src="../_static/js/theme.js"></script>
     <link rel="index" title="Index" href="../genindex.html" />
     <link rel="search" title="Search" href="../search.html" />
@@ -36,9 +36,6 @@
             BNG Blaster
               <img src="../_static/rtbrick_neu.png" class="logo" alt="Logo"/>
           </a>
-              <div class="version">
-                1.1.X
-              </div>
 <div role="search">
   <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
     <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
@@ -62,6 +59,7 @@
 <li class="toctree-l4"><a class="reference internal" href="#ppp-ip6cp-ipv6">PPP IP6CP (IPv6)</a></li>
 </ul>
 </li>
+<li class="toctree-l3"><a class="reference internal" href="#ppp-negotiation">PPP Negotiation</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#dhcpv6">DHCPv6</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#lcp-vendor-extension">LCP Vendor Extension</a></li>
 <li class="toctree-l3"><a class="reference internal" href="#pppoe-commands">PPPoE Commands</a></li>
@@ -263,7 +261,7 @@ the case, to ensure it fails if the device under test misbehaves.</p>
 <tr class="row-even"><td><p><strong>service-name</strong></p></td>
 <td><div class="line-block">
 <div class="line">PPPoE discovery service name.</div>
-<div class="line">Default: none</div>
+<div class="line">Default: none, max 255 characters</div>
 </div>
 </td>
 </tr>
@@ -277,7 +275,7 @@ the case, to ensure it fails if the device under test misbehaves.</p>
 <tr class="row-even"><td><p><strong>max-payload</strong></p></td>
 <td><div class="line-block">
 <div class="line">PPP-Max-Payload (RFC4638).</div>
-<div class="line">Default: 0 (disabled)</div>
+<div class="line">Default: 0 (disabled) Range: 0 - 65535</div>
 </div>
 </td>
 </tr>
@@ -352,7 +350,7 @@ the case, to ensure it fails if the device under test misbehaves.</p>
 <tr class="row-odd"><td><p><strong>retry</strong></p></td>
 <td><div class="line-block">
 <div class="line">Authentication request max retry.</div>
-<div class="line">Default: 30</div>
+<div class="line">Default: 30 Range: 0 - 255</div>
 </div>
 </td>
 </tr>
@@ -532,6 +530,28 @@ the case, to ensure it fails if the device under test misbehaves.</p>
 </tbody>
 </table>
 </section>
+</section>
+<section id="ppp-negotiation">
+<h2>PPP Negotiation<a class="headerlink" href="#ppp-negotiation" title="Link to this heading"></a></h2>
+<p>The PPPoE discovery accepts the first PADO with matching host-uniq and
+service name (one of possibly several Service-Name tags), PADI is sent as
+broadcast until then. Without a configured service name, the first service
+offered is requested. PADS is accepted only from the server of the PADO.</p>
+<p>The own LCP MRU is limited to 1492 unless a larger PPP-Max-Payload was
+echoed by the server (RFC 4638). LCP options rejected by the server
+(MRU, Magic-Number) are not requested again. The negotiation of LCP, IPCP
+and IP6CP gives up after 5 configure-nak or configure-reject messages without
+configure-ack (RFC 1661 Max-Failure).</p>
+<p>The session is established once no NCP is pending anymore and at least one
+NCP is opened. If all enabled NCPs failed (timeout, Max-Failure, rejected or
+terminated), the session is terminated. IPCP or IP6CP terminate requests of
+the server close the NCP and stop the traffic of this address family, a new
+configure request of the server in opened state renegotiates it.</p>
+<p>Packets of unsupported PPP protocols (e.g. CCP) are answered with LCP
+protocol-reject, CHAP challenges after the authentication are answered as
+well (re-authentication). An unsolicited LCP terminate-ack restarts the LCP
+negotiation. If CHAP is negotiated but no challenge is received, the session
+is terminated after the authentication timeout and retries.</p>
 </section>
 <section id="dhcpv6">
 <h2>DHCPv6<a class="headerlink" href="#dhcpv6" title="Link to this heading"></a></h2>

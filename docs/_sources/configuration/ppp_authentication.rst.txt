@@ -15,7 +15,7 @@
 |                | | Default: 5                                                     |
 +----------------+------------------------------------------------------------------+
 | **retry**      | | Authentication request max retry.                              |
-|                | | Default: 30                                                    |
+|                | | Default: 30 Range: 0 - 255                                     |
 +----------------+------------------------------------------------------------------+
 | **protocol**   | | This value can be set to PAP or CHAP to reject                 |
 |                | | the other protocol.                                            |

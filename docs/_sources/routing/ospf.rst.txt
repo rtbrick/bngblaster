@@ -110,7 +110,13 @@ The BNG Blaster supports P2P and broadcast interfaces only.
 On broadcast interfaces, the DR and BDR are elected after the wait
 timer (dead interval) expires or a neighbor declares itself as BDR,
 as described in RFC 2328. Adjacencies are established with the
-DR and BDR only.
+DR and BDR only. As DR, the BNG Blaster originates the network LSA
+and for OSPFv3 also the intra-area-prefix LSA with the prefixes of
+the link (RFC 5340).
+
+Received packets of another area, with the own router-id or for OSPFv3
+with an instance ID other than 0 are discarded. Neighbors are removed
+one dead interval after they went down.
 
 Opaque LSAs (e.g. segment routing) are sent only to neighbors
 announcing opaque capability (O-bit) as described in RFC 5250.
@@ -144,6 +150,11 @@ learned via MRT files or injected via ``ospf-lsa/pdu-update`` :ref:`command <api
 The BNG Blaster automatically purges all LSAs of type
 ``self`` and ``external`` during teardown. This is done by
 generating LSAs with newer sequence numbers and max age. 
+
+Self originated LSAs of a previous run (e.g. after a restart
+without teardown), which are no longer originated, are flushed
+with max age when received from neighbors (RFC 2328 section 13.4).
+Self originated LSAs are refreshed every 30 minutes.
 
 On teardown, the purge waits until all BGP and LDP sessions are
 closed plus one second, at the latest until their **teardown-time**
@@ -200,6 +211,14 @@ request PDU including OSPF common header  (``| Version | Type |``).
             ]
         }
     }
+
+LSAs which are self originated or not newer than the stored instance
+are skipped, the response of both commands reports their number as
+``lsa-skipped``. With external ``auto-refresh``, the BNG Blaster
+increases the sequence number of external LSAs, so an LSA which
+differs from the stored one is accepted with the next sequence number
+even if its own sequence number is not newer. LSAs loaded with MaxAge
+(purge) are not refreshed.
 
 LSA Update via Scapy
 ~~~~~~~~~~~~~~~~~~~~

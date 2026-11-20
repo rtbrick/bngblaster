@@ -17,10 +17,10 @@
 |                                   | | ``session-id``                                                     |
 |                                   | | ``session-group-id`` (ignored if session-id is present)            |
 +-----------------------------------+----------------------------------------------------------------------+
-| **session-restart**               | | Restart sessions.                                                  |
-|                                   | | The argument ``reconnect-delay`` is only applicable in combination |
-|                                   | | with session reconnect enabled in the configuration. This argument |
-|                                   | | delays the session reconnect by the defined amount of seconds.     |
+| **session-restart**               | | Restart sessions, also without session reconnect enabled in the    |
+|                                   | | configuration and for PPPoL2TP sessions. The argument              |
+|                                   | | ``reconnect-delay`` delays the session reconnect by the defined    |
+|                                   | | amount of seconds.                                                 |
 |                                   | |                                                                    |
 |                                   | | **Arguments:**                                                     |
 |                                   | | ``session-id``                                                     |

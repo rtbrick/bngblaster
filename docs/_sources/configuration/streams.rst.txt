@@ -71,7 +71,7 @@
 | **pps**                        | | Stream traffic rate in packets per second.                     |
 |                                | | This value supports also float numbers like 0.1 or 2.5.        |
 |                                | | In example 0.1 means one packet every 10 seconds.              |
-|                                | | Default: 1.0                                                   |
+|                                | | Default: 1.0 Range: 0.0001 - 1000000000                        |
 +--------------------------------+------------------------------------------------------------------+
 | **bps**                        | | Stream traffic rate in bits per second (layer 3).              |
 |                                | | PPS has priority over bps where the second is only a helper    |
