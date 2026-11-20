@@ -126,6 +126,28 @@ def test_access_autostart(ipoe, global_autostart):
     ipoe.established(4)
 
 
+@pytest.mark.parametrize("iterators, expected", [
+    # {i1} wraps after 3, {i2} steps every 3 sessions and wraps after 10
+    ({"i1-start": 1, "i1-max": 3, "i2-start": 5, "i2-step": 5, "i2-repeat": 3, "i2-max": 10},
+     ["5/1", "5/2", "5/3", "10/1", "10/2", "10/3", "5/1"]),
+    # unsigned 32 bit values, wrap without overflow, step 0 keeps the value
+    ({"i1-start": 4294967290, "i1-step": 3, "i2-start": 4294967295, "i2-step": 0},
+     ["4294967295/4294967290", "4294967295/4294967293", "4294967295/4294967290"]),
+])
+def test_access_iterators(ipoe, iterators, expected):
+    """The variables {i1} and {i2} take each value for repeat sessions and
+    wrap to the start value if the next value would exceed max."""
+    ipoe.start(access=dict({"agent-circuit-id": "eth {i2}/{i1}"}, **iterators), sessions=len(expected),
+               sessions_override={"autostart": False})
+    assert [ipoe.info(i)["agent-circuit-id"] for i in range(1, len(expected) + 1)] == ["eth " + e for e in expected]
+
+
+def test_access_iterator_max_below_start(ipoe):
+    """An iterator max value below the start value is rejected."""
+    with pytest.raises(RuntimeError):
+        ipoe.start(access={"i1-start": 10, "i1-max": 9})
+
+
 def test_igmp_join_iter(ipoe):
     """igmp-join-iter sends the reports right away (RFC 3376 section 5.1)."""
     ipoe.peer("igmp")

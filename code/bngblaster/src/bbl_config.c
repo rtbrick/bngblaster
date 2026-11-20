@@ -1284,8 +1284,8 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
 
     const char *schema[] = {
         "interface", "network-interface", "a10nsp-interface",
-        "i1-start", "i1-step", "i2-start",
-        "i2-step", "type", "vlan-mode",
+        "i1-start", "i1-step", "i1-max", "i1-repeat",
+        "i2-start", "i2-step", "i2-max", "i2-repeat", "type", "vlan-mode",
         "tun", "monkey", "qinq", "outer-vlan",
         "outer-vlan-min", "outer-vlan-max", "outer-vlan-step",
         "inner-vlan", "inner-vlan-min", "inner-vlan-max",
@@ -1336,30 +1336,56 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         access_config->a10nsp_interface = strdup(s);
     }
 
+    access_config->i1.start = 1;
+    access_config->i1.step = 1;
+    access_config->i1.max = UINT32_MAX;
+    access_config->i1.repeat = 1;
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i1-start", 0, 4294967295);
     if(value) {
-        access_config->i1 = json_number_value(value);
-    } else {
-        access_config->i1 = 1;
+        access_config->i1.start = json_number_value(value);
     }
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i1-step", 0, 4294967295);
     if(value) {
-        access_config->i1_step = json_number_value(value);
-    } else {
-        access_config->i1_step = 1;
+        access_config->i1.step = json_number_value(value);
     }
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i1-max", 0, 4294967295);
+    if(value) {
+        access_config->i1.max = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i1-repeat", 1, 4294967295);
+    if(value) {
+        access_config->i1.repeat = json_number_value(value);
+    }
+    if(access_config->i1.max < access_config->i1.start) {
+        fprintf(stderr, "JSON config error: Invalid value for access->i1-max (must not be lower than i1-start)\n");
+        return false;
+    }
+    access_config->i1.value = access_config->i1.start;
+    access_config->i2.start = 1;
+    access_config->i2.step = 1;
+    access_config->i2.max = UINT32_MAX;
+    access_config->i2.repeat = 1;
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i2-start", 0, 4294967295);
     if(value) {
-        access_config->i2 = json_number_value(value);
-    } else {
-        access_config->i2 = 1;
+        access_config->i2.start = json_number_value(value);
     }
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i2-step", 0, 4294967295);
     if(value) {
-        access_config->i2_step = json_number_value(value);
-    } else {
-        access_config->i2_step = 1;
+        access_config->i2.step = json_number_value(value);
     }
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i2-max", 0, 4294967295);
+    if(value) {
+        access_config->i2.max = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "i2-repeat", 1, 4294967295);
+    if(value) {
+        access_config->i2.repeat = json_number_value(value);
+    }
+    if(access_config->i2.max < access_config->i2.start) {
+        fprintf(stderr, "JSON config error: Invalid value for access->i2-max (must not be lower than i2-start)\n");
+        return false;
+    }
+    access_config->i2.value = access_config->i2.start;
 
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "session-limit", 0, 10000000);
     if(value) {

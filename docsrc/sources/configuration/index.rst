@@ -49,7 +49,9 @@ starting from 1 and incremented for every new session. The variable **{session}*
 is incremented per-interface section. The variables **{outer-vlan}** and **{inner-vlan}** 
 will be replaced with the corresponding VLAN identifier or 0 if not defined. 
 The two variables **{i1}** and **{i2}** are configurable per-interface sections 
-with user-defined start values and steps. 
+with user-defined start values and steps. Each value is used for **i1-repeat** / 
+**i2-repeat** sessions before the next step, and the iterator wraps to the start 
+value if the next value would exceed **i1-max** / **i2-max**. 
 
 .. code-block:: json
 

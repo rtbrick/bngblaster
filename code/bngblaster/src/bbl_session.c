@@ -1032,6 +1032,24 @@ bbl_session_clear(bbl_session_s *session)
     }
 }
 
+/* Returns the current iterator value and advances the iterator. The value
+ * is used for repeat sessions before it is incremented by step and wraps
+ * to start if the next value would exceed max. */
+static uint32_t
+iterator_next(bbl_access_iterator_s *iterator)
+{
+    uint32_t value = iterator->value;
+    if(++iterator->count >= iterator->repeat) {
+        iterator->count = 0;
+        if(iterator->value > iterator->max - iterator->step) {
+            iterator->value = iterator->start;
+        } else {
+            iterator->value += iterator->step;
+        }
+    }
+    return value;
+}
+
 /* Returns false if the string is longer than SUB_STR_LEN - 1
  * characters after the expansion of the variables. */
 static bool
@@ -1048,14 +1066,12 @@ update_strings(char **target, const char *source, uint32_t *i, bbl_access_config
 
     if(i && access_config) {
         /* Init iterator */
-        snprintf(snum1, sizeof(snum1), "%d", *i);
-        snprintf(snum2, sizeof(snum2), "%d", access_config->sessions);
-        snprintf(si1, sizeof(si1), "%d", access_config->i1);
-        access_config->i1 += access_config->i1_step;
-        snprintf(si2, sizeof(si2), "%d", access_config->i2);
-        access_config->i2 += access_config->i2_step;
-        snprintf(vlan1, sizeof(si2), "%d", access_config->access_outer_vlan);
-        snprintf(vlan2, sizeof(si2), "%d", access_config->access_inner_vlan);
+        snprintf(snum1, sizeof(snum1), "%u", *i);
+        snprintf(snum2, sizeof(snum2), "%u", access_config->sessions);
+        snprintf(si1, sizeof(si1), "%u", iterator_next(&access_config->i1));
+        snprintf(si2, sizeof(si2), "%u", iterator_next(&access_config->i2));
+        snprintf(vlan1, sizeof(vlan1), "%u", access_config->access_outer_vlan);
+        snprintf(vlan2, sizeof(vlan2), "%u", access_config->access_inner_vlan);
     }
     if(target && source) {
         s = replace_substring(source, "{session-global}", snum1);

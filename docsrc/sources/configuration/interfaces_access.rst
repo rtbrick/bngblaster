@@ -162,11 +162,25 @@
 | **i1-step**                       | | Iterator **{i1}** step per session.                                |
 |                                   | | Default: 1 Range: 0 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
+| **i1-max**                        | | Iterator **{i1}** max value. If the next value would exceed        |
+|                                   | | the max value, the iterator wraps to the start value.              |
+|                                   | | Default: 4294967295 Range: 0 - 4294967295                          |
++-----------------------------------+----------------------------------------------------------------------+
+| **i1-repeat**                     | | Iterator **{i1}** sessions per value before the next step.         |
+|                                   | | Default: 1 Range: 1 - 4294967295                                   |
++-----------------------------------+----------------------------------------------------------------------+
 | **i2-start**                      | | Iterator **{i2}** start value.                                     |
 |                                   | | Default: 1 Range: 0 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
 | **i2-step**                       | | Iterator **{i2}** step per session.                                |
 |                                   | | Default: 1 Range: 0 - 4294967295                                   |
++-----------------------------------+----------------------------------------------------------------------+
+| **i2-max**                        | | Iterator **{i2}** max value. If the next value would exceed        |
+|                                   | | the max value, the iterator wraps to the start value.              |
+|                                   | | Default: 4294967295 Range: 0 - 4294967295                          |
++-----------------------------------+----------------------------------------------------------------------+
+| **i2-repeat**                     | | Iterator **{i2}** sessions per value before the next step.         |
+|                                   | | Default: 1 Range: 1 - 4294967295                                   |
 +-----------------------------------+----------------------------------------------------------------------+
 | **monkey**                        | | Enable monkey testing.                                             |
 |                                   | | Default: false                                                     |

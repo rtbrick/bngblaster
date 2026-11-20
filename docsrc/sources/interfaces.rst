@@ -501,6 +501,21 @@ new session. The variable ``{session}`` is incremented per-interface section. Th
 variables ``{outer-vlan}`` and ``{inner-vlan}`` will be replaced with the corresponding
 VLAN identifier or 0 if not defined. The two variables ``{i1}`` and ``{i2}`` are 
 configurable per-interface sections with user-defined start values and steps. 
+Each value is used for ``i1-repeat`` / ``i2-repeat`` sessions before the next step,
+and the iterator wraps to the start value if the next value would exceed
+``i1-max`` / ``i2-max``. The following example creates the agent-circuit-id
+``eth 1/1/1`` to ``eth 1/1/48`` for the first 48 sessions, followed by
+``eth 1/2/1`` to ``eth 1/2/48`` and so on.
+
+.. code-block:: json
+
+    {
+        "agent-circuit-id": "eth 1/{i2}/{i1}",
+        "i1-start": 1,
+        "i1-max": 48,
+        "i2-start": 1,
+        "i2-repeat": 48
+    }
 
 The BNG Blaster supports the VLAN mode ``1:1`` (default) and ``N:1``. The first one
 assigns a dedicated VLAN per subscriber. The VLAN mode ``N:1`` assigns one VLAN to N 

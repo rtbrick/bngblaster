@@ -21,6 +21,17 @@ typedef struct bbl_secondary_ip6_
     void *next;
 } bbl_secondary_ip6_s;
 
+/* Access interface iterator for the variables {i1} and {i2}. */
+typedef struct bbl_access_iterator_
+{
+    uint32_t value;  /* current value */
+    uint32_t start;
+    uint32_t step;
+    uint32_t max;    /* wrap to start if the next value exceeds max */
+    uint32_t repeat; /* sessions per value */
+    uint32_t count;  /* sessions with the current value */
+} bbl_access_iterator_s;
+
 typedef struct bbl_cfm_config_
 {
     bool     cc;
@@ -119,11 +130,9 @@ typedef struct bbl_access_config_
     /* CFM */
     bbl_cfm_config_s *cfm;
 
-    /* Iterator */
-    uint32_t i1;
-    uint32_t i1_step;
-    uint32_t i2;
-    uint32_t i2_step;
+    /* Iterators {i1} and {i2} */
+    bbl_access_iterator_s i1;
+    bbl_access_iterator_s i2;
 
     uint16_t ppp_mru;
 

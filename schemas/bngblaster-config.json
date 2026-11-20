@@ -2340,6 +2340,20 @@
                     "minimum": 0,
                     "maximum": 4294967295
                 },
+                "i1-max": {
+                    "type": "integer",
+                    "description": "Iterator {i1} max value before wrap to start",
+                    "default": 4294967295,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "i1-repeat": {
+                    "type": "integer",
+                    "description": "Iterator {i1} sessions per value",
+                    "default": 1,
+                    "minimum": 1,
+                    "maximum": 4294967295
+                },
                 "i2-start": {
                     "type": "integer",
                     "description": "Iterator {i2} start value",
@@ -2352,6 +2366,20 @@
                     "description": "Iterator {i2} step per session",
                     "default": 1,
                     "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "i2-max": {
+                    "type": "integer",
+                    "description": "Iterator {i2} max value before wrap to start",
+                    "default": 4294967295,
+                    "minimum": 0,
+                    "maximum": 4294967295
+                },
+                "i2-repeat": {
+                    "type": "integer",
+                    "description": "Iterator {i2} sessions per value",
+                    "default": 1,
+                    "minimum": 1,
                     "maximum": 4294967295
                 },
                 "monkey": {
