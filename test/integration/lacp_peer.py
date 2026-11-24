@@ -10,10 +10,12 @@ an overridden partner key can be changed at runtime with the JSON
 control file, which is read before each PDU:
 
   {"<interface>": {"system": "02:00:00:00:00:01", "key": 1, "port": 1,
-                   "partner_key": null}}
+                   "partner_key": null, "short_timeout": false}}
+
+With short_timeout, the peer requests fast periodic LACPDUs (1s).
 
 Each LACPDU received from the BNG Blaster is written as JSON line to
-the log file.
+the log file, including the frame length.
 
 Copyright (C) 2020-2026, RtBrick, Inc.
 SPDX-License-Identifier: BSD-3-Clause
@@ -73,7 +75,8 @@ def main():
                                         "port_priority": 0, "port": 0, "state": 0}
                 partner_key = c.get("partner_key")
                 pdu = struct.pack("!BB", 1, 1)
-                pdu += tlv(1, 32768, bytes.fromhex(c["system"].replace(":", "")), c["key"], 32768, c["port"], STATE)
+                state = STATE | (0x02 if c.get("short_timeout") else 0)
+                pdu += tlv(1, 32768, bytes.fromhex(c["system"].replace(":", "")), c["key"], 32768, c["port"], state)
                 pdu += tlv(2, p["system_priority"], bytes.fromhex(p["system"].replace(":", "")),
                            p["key"] if partner_key is None else partner_key, p["port_priority"], p["port"],
                            p["state"] & 0x3f)
@@ -88,7 +91,7 @@ def main():
             actor, partner_info = decode(data[14:])
             partner[ifname] = actor
             log.write(json.dumps({"time": round(time.time() - start, 3), "interface": ifname,
-                                  "actor": actor, "partner": partner_info}) + "\n")
+                                  "length": len(data), "actor": actor, "partner": partner_info}) + "\n")
 
 
 if __name__ == "__main__":

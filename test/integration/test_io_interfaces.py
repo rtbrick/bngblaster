@@ -385,6 +385,38 @@ def test_lacp_different_partner_systems(topology, processes, tmp_path):
     assert instance.terminate(EXIT_TIMEOUT) == 0
 
 
+@pytest.mark.parametrize("io_mode", ["packet_mmap", "raw"])
+def test_lacp_pdu_length(topology, processes, tmp_path, io_mode):
+    """Every LACPDU has the fixed length of 124 bytes (Ethernet header and
+    110 byte PDU), also on members that send nothing else. With IO modes
+    that do not reset the TX length after each send (packet_mmap, AF_XDP),
+    it grew by one PDU per send on those members, which BNG Blaster
+    tolerated as receiver but real partners discarded."""
+    n = helpers.if_id()
+    if_a, if_b = "bbl%da" % n, "bbl%db" % n
+    veth(topology.a, if_a, topology.b, if_b)
+    lacp = Lacp(topology, processes, tmp_path, [topology.if_b, if_b])
+    for c in lacp.config.values():
+        c["short_timeout"] = True
+    lacp.write()
+    instance = start(topology, processes, tmp_path, {
+        "interfaces": {
+            "lag": [{"interface": "lag1", "lacp": True, "lacp-timeout-short": True}],
+            "links": [{"interface": topology.if_a, "lag-interface": "lag1", "io-mode": io_mode},
+                      {"interface": if_a, "lag-interface": "lag1", "io-mode": io_mode}],
+            "network": [{"interface": "lag1", "address": BBL4 + "/24", "gateway": PEER4}]}},
+        logging=("info", "lag"))
+    wait_until(lambda: [m["state"] for m in lag_members(instance).values()].count("Up") == 2, 15,
+               message="both members up")
+    time.sleep(4)
+    pdus = lacp.pdus()
+    for ifname in (topology.if_b, if_b):
+        lengths = [p["length"] for p in pdus if p["interface"] == ifname]
+        assert len(lengths) >= 5 and set(lengths) == {124}, (ifname, lengths)
+    assert all(m["state"] == "Up" for m in lag_members(instance).values()), lag_members(instance)
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+
+
 def two_ends(local_veth, link, length=200, vlan=None, mtu=None, qinq=False):
     """One instance on both ends of a local veth pair with a stream in
     each direction."""

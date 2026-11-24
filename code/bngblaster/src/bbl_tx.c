@@ -1775,6 +1775,11 @@ bbl_tx_encode_interface_packet(bbl_interface_s *interface,
     bbl_lacp_s lacp = {0};
     bbl_lag_member_s *member;
 
+    /* The encoders append to *len, which the IO layer reuses between
+     * calls (e.g. io->buf_len), and LAG members that are not primary
+     * send nothing else that would reset it. */
+    *len = 0;
+
     if(interface->send_requests & BBL_SEND_LACP) {
         interface->send_requests &= ~BBL_SEND_LACP;
         member = interface->lag_member;
