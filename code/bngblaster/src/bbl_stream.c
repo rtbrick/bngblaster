@@ -247,6 +247,7 @@ bbl_stream_encode_a10nsp_mpls(bbl_a10nsp_interface_s *interface,
     eth_mpls.vlan_outer = interface->network_interface->vlan;
     eth_mpls.vlan_outer_priority = stream->config->vlan_priority;
     eth_mpls.vlan_inner = interface->network_interface->inner_vlan;
+    eth_mpls.vlan_inner_priority = stream->config->vlan_inner_priority;
     eth_mpls.qinq = interface->network_interface->qinq;
     eth_mpls.type = ETH_TYPE_ETH;
     eth_mpls.next = eth;
@@ -805,6 +806,7 @@ bbl_stream_vxlan_encap(bbl_stream_s *stream, bbl_network_interface_s *network_in
     outer->eth.vlan_outer = network_interface->vlan;
     outer->eth.vlan_outer_priority = config->vlan_priority;
     outer->eth.vlan_inner = network_interface->inner_vlan;
+    outer->eth.vlan_inner_priority = config->vlan_inner_priority;
     outer->eth.qinq = network_interface->qinq;
     outer->eth.type = ETH_TYPE_IPV4;
     outer->eth.next = &outer->ipv4;
@@ -942,6 +944,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     eth.vlan_outer = network_interface->vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = network_interface->inner_vlan;
+    eth.vlan_inner_priority = config->vlan_inner_priority;
     eth.qinq = network_interface->qinq;
 
     bbl_stream_vpn(stream, &vpn);
@@ -1125,7 +1128,9 @@ bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream, bbl_l2tp_session_s *l2tp_
     eth.dst = network_interface->gateway_mac;
     eth.src = network_interface->mac;
     eth.vlan_outer = network_interface->vlan;
+    eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = network_interface->inner_vlan;
+    eth.vlan_inner_priority = config->vlan_inner_priority;
     eth.qinq = network_interface->qinq;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &l2tp_ipv4;
@@ -1270,7 +1275,9 @@ bbl_stream_build_l2tp_packet(bbl_stream_s *stream, bbl_l2tp_session_s *l2tp_sess
     eth.dst = network_interface->gateway_mac;
     eth.src = network_interface->mac;
     eth.vlan_outer = network_interface->vlan;
+    eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = network_interface->inner_vlan;
+    eth.vlan_inner_priority = config->vlan_inner_priority;
     eth.qinq = network_interface->qinq;
     eth.type = ETH_TYPE_IPV4;
     eth.next = &l2tp_ipv4;
@@ -3199,6 +3206,7 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
     eth.vlan_outer = network_interface->vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner = network_interface->inner_vlan;
+    eth.vlan_inner_priority = config->vlan_inner_priority;
     eth.qinq = network_interface->qinq;
     eth.type = ETH_TYPE_ETH;
     eth.next = inner;
