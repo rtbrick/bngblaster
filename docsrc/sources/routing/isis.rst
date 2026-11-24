@@ -286,13 +286,13 @@ support native mode with larger interface MTUs (e.g. i40e above 3046 bytes).
 The 802.3 length field can't describe frames with more than 1500 bytes, so PDUs
 that don't fit are sent with the LLC header in an Ethernet II frame with ethertype
 0x8870. PDUs up to 1497 bytes are still sent as 802.3 frames. Both formats are
-accepted. This has been tested with FRR and Junos. FRR sizes hellos, CSNP and PSNP based on
+accepted. This has been tested with FRR. FRR sizes hellos, CSNP and PSNP based on
 the interface MTU, so ``max-pdu-size`` must be at least the interface MTU of FRR minus
 3 bytes. Disabling hello padding in FRR is not sufficient, as CSNP and PSNP can still
 exceed the limit of the BNG Blaster, which is the case if a large LSDB is synchronized
-with the default ``max-pdu-size`` and an interface MTU above 1500. Junos requires
-``family iso mtu`` as well as ``max-lsp-size`` and ``max-hello-size``. Junos limits its own CSNP and PSNP to
-1400 bytes (``max-snp-size``), but accepts larger CSNP. The neighbor must support the
+with the default ``max-pdu-size`` and an interface MTU above 1500. Other implementations
+may require the IS-IS MTU, the LSP size and the hello size to be configured explicitly,
+and may limit their own CSNP and PSNP to a smaller size. The neighbor must support the
 format too, and all routers in the area should use the same LSP size, as LSPs are
 flooded unchanged.
 

@@ -411,14 +411,12 @@ DUT IP-VRF resolves the IP prefix route of the DUT.
         "bgp-evpn-prefix": "192.168.200.0/24"
     }
 
-EVPN VXLAN was tested with Nokia SR Linux (``mac-vrf`` and ``ip-vrf`` with VXLAN
-interfaces) and Juniper Junos (``mac-vrf`` with ``encapsulation vxlan`` and
-``vrf`` with ``ip-prefix-routes``). SR Linux uses the ``system0`` address as source
-of internal BGP sessions and as VTEP, the BGP session to the network interface
-address of the BNG Blaster requires ``transport local-address`` in the BGP group.
-Junos advertises the local address of the BGP session as next-hop of EVPN routes,
-so the session must be established from the VTEP address (``vtep-source-interface``,
-usually ``lo0``) as ``peer-address`` of the BNG Blaster.
+Some implementations use the loopback (VTEP) address as source of internal BGP
+sessions, so a BGP session to the network interface address of the BNG Blaster
+requires the local address to be set explicitly on the DUT. Others advertise the
+local address of the BGP session as next-hop of EVPN routes, so the session must
+be established from the VTEP address of the DUT as ``peer-address`` of the
+BNG Blaster.
 
 Testing EVPN Services
 ~~~~~~~~~~~~~~~~~~~~~
@@ -660,19 +658,19 @@ Troubleshooting
 |                                    | VXLAN routes need an IPv4 next-hop, VXLAN IP prefix and L3      |
 |                                    | MAC/IP routes the router's MAC extended community.              |
 +------------------------------------+-----------------------------------------------------------------+
-| PE to CE frames are received by    | Control word mismatch. Some implementations (e.g. Junos) use    |
+| PE to CE frames are received by    | Control word mismatch. Some implementations use                 |
 | the CE with 4 additional bytes or  | the control word for EVPN VPWS only if both PEs set the         |
 | are dropped by the DUT             | control word flag (``bgpupdate --control-word``). EVPN E-LAN    |
 |                                    | requires ``tx-control-word`` and ``rx-control-word`` if the     |
 |                                    | DUT uses the control word.                                      |
 +------------------------------------+-----------------------------------------------------------------+
 | E-LINE PE to CE frames are dropped | The DUT may expect the customer VLAN within the service         |
-| by the DUT                         | (e.g. Junos ``vlan-ccc``), add ``vpws-vlan``.                   |
+| by the DUT                         | (VLAN based service), add ``vpws-vlan``.                        |
 +------------------------------------+-----------------------------------------------------------------+
 | VXLAN PE to CE traffic is dropped  | The BGP next-hop of the DUT routes is not the VTEP address of   |
-| by the DUT                         | the DUT (``evpn-vtep`` in ``stream-info``), e.g. Junos with a     |
-|                                    | BGP session from the interface address. Establish the session   |
-|                                    | from the VTEP (loopback) address of the DUT.                    |
+| by the DUT                         | the DUT (``evpn-vtep`` in ``stream-info``), e.g. with a BGP     |
+|                                    | session from the interface address. Establish the session from  |
+|                                    | the VTEP (loopback) address of the DUT.                         |
 +------------------------------------+-----------------------------------------------------------------+
 | E-LAN stream uses route type 3     | The DUT has not learned the CE MAC address yet (no traffic      |
 | instead of 2                       | from the CE). Start the CE to PE stream or enable ``vpws-arp``. |
@@ -681,8 +679,8 @@ Troubleshooting
 | address is not received            | ``destination-mac`` is the MAC address of this interface.       |
 +------------------------------------+-----------------------------------------------------------------+
 | DUT originates no E-LAN routes     | The attachment circuit is down in the EVPN instance of the DUT. |
-|                                    | Junos PTX requires ``family ethernet-switching`` instead of     |
-|                                    | ``encapsulation vlan-bridge`` for the attachment circuit.       |
+|                                    | Some platforms require a switching (bridge) family instead of a |
+|                                    | VLAN bridge encapsulation for the attachment circuit.           |
 +------------------------------------+-----------------------------------------------------------------+
 | BNG Blaster does not start traffic | The CE interfaces wait for the gateway, which is only reachable |
 | (resolve network interfaces)       | through the EVPN service. Disable ``gateway-resolve-wait``.     |
