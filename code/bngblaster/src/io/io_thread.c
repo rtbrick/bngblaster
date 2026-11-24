@@ -752,7 +752,7 @@ io_thread_init(io_handle_s *io)
     io->fanout_type = PACKET_FANOUT_HASH;
 
     /* Allocate thread scratchpad memory */
-    thread->sp = malloc(SCRATCHPAD_LEN);
+    thread->sp = aligned_alloc(CACHE_LINE_SIZE, SCRATCHPAD_LEN);
 
     /* Init thread TXQ */
     thread->txq = bbl_txq_alloc(slots);

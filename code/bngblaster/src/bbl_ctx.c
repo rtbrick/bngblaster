@@ -70,7 +70,7 @@ bbl_ctx_add()
     pthread_rwlockattr_destroy(&attr);
 
     /* Allocate scratchpad memory. */
-    g_ctx->sp = malloc(SCRATCHPAD_LEN);
+    g_ctx->sp = aligned_alloc(CACHE_LINE_SIZE, SCRATCHPAD_LEN);
 
     /* Initialize timer root. */
     timer_init_root(&g_ctx->timer_root);
