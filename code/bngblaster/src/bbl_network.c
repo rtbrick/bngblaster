@@ -608,6 +608,10 @@ bbl_network_rx_handler(bbl_network_interface_s *interface,
                 } else if(udp->protocol == UDP_PROTOCOL_BFD) {
                     bfd_rx(interface, eth, ipv4, NULL, udp);
                     return;
+                } else if(udp->protocol == UDP_PROTOCOL_VXLAN) {
+                    /* EVPN VXLAN frames which are not traffic stream packets. */
+                    bbl_vpws_rx_vxlan(interface, (bbl_ethernet_header_s*)((bbl_vxlan_s*)udp->next)->next);
+                    return;
                 }
             } else if(ipv4->protocol == PROTOCOL_IPV4_ICMP) {
                 if(memcmp(interface->mac, eth->dst, ETH_ADDR_LEN) != 0) {

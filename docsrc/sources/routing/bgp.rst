@@ -149,10 +149,11 @@ EVPN
 With ``learn-routes`` enabled, the BNG Blaster learns all EVPN routes
 received from the peer, which can be displayed with the ``bgp-evpn-routes``
 :ref:`command <api>`. EVPN routes are used to resolve the labels of traffic
-streams for L3 EVPN, EVPN VPWS (E-LINE) and EVPN E-LAN services. The routes
-of an emulated PE are generated with ``bgpupdate --evpn-vpws`` or
-``bgpupdate --evpn-elan``. See :ref:`EVPN <evpn>` for details and how
-to test EVPN services.
+streams for L3 EVPN, EVPN VPWS (E-LINE) and EVPN E-LAN services with MPLS
+or VXLAN encapsulation. The routes of an emulated PE are generated with
+``bgpupdate --evpn-vpws``, ``bgpupdate --evpn-elan`` or
+``bgpupdate --evpn-prefix`` (``--vni`` for VXLAN). See :ref:`EVPN <evpn>`
+for details and how to test EVPN services.
 
 BGP L2VPN
 ~~~~~~~~~
@@ -292,13 +293,14 @@ streams for use with the BNG Blaster.
                      [--rd-increment] [--rt RT] [--rt-increment] [--esi ESI]
                      [--service-id ID] [--service-num N] [--mtu MTU]
                      [--control-word] [--primary] [--backup] [--encap-mpls]
-                     [--stream-ce-interface IFACE] [--stream-ce-vlan VLAN]
-                     [--stream-vpws-vlan VLAN] [--stream-vpws-inner-vlan VLAN]
-                     [--stream-vpws-qinq] [--stream-vpws-arp]
-                     [--stream-evpn-rd RD] [--stream-evpn-service-id ID]
-                     [--stream-destination-mac MAC] [--stream-pe-address ADDRESS]
-                     [--stream-ce-address ADDRESS] [--evpn-elan]
-                     [--ethernet-tag TAG] [--mac MAC] [--l2vpn] [--ce-id ID]
+                     [--vni VNI] [--stream-ce-interface IFACE]
+                     [--stream-ce-vlan VLAN] [--stream-vpws-vlan VLAN]
+                     [--stream-vpws-inner-vlan VLAN] [--stream-vpws-qinq]
+                     [--stream-vpws-arp] [--stream-evpn-rd RD]
+                     [--stream-evpn-service-id ID] [--stream-destination-mac MAC]
+                     [--stream-pe-address ADDRESS] [--stream-ce-address ADDRESS]
+                     [--evpn-elan] [--ethernet-tag TAG] [--mac MAC]
+                     [--evpn-prefix] [--router-mac MAC] [--l2vpn] [--ce-id ID]
                      [--label-block-offset N] [--label-block-size N]
                      [--encapsulation {ethernet-vlan,ethernet}]
                      [--stream-l2vpn-rd RD] [--stream-l2vpn-ce-id ID]
@@ -364,6 +366,8 @@ streams for use with the BNG Blaster.
       --primary             set primary flag (P flag)
       --backup              set backup flag (B flag)
       --encap-mpls          add MPLS encapsulation extended community
+      --vni VNI             VXLAN encapsulation (RFC 8365) with VNI base
+                            (incremented per service) instead of MPLS labels
       --stream-ce-interface IFACE
                             stream CE interface (CE to PE streams)
       --stream-ce-vlan VLAN
@@ -391,13 +395,23 @@ streams for use with the BNG Blaster.
 
     EVPN E-LAN:
       EVPN E-LAN routes use the --rd, --rt, --esi, --service-num, --encap-mpls,
-      --control-word and --stream-* options of EVPN VPWS, where --stream-vpws-*
-      sets the customer VLAN
+      --vni, --control-word and --stream-* options of EVPN VPWS, where --stream-
+      vpws-* sets the customer VLAN
 
       --evpn-elan           generate EVPN E-LAN IMET (route type 3) and MAC/IP
                             routes (route type 2)
       --ethernet-tag TAG    ethernet tag (default 0)
       --mac MAC             MAC address advertised per EVI (e.g. PE interface MAC)
+
+    EVPN IP prefix (L3 EVPN):
+      EVPN IP prefix routes (route type 5) of one IP-VRF for the prefixes -p/-P
+      use the --rd, --rt, --esi, --ethernet-tag, --encap-mpls, --vni and
+      --stream-ce-*, --stream-rx-label options, CE to PE streams are generated
+      per prefix
+
+      --evpn-prefix         generate EVPN IP prefix routes (route type 5)
+      --router-mac MAC      router's MAC extended community (required with --vni,
+                            e.g. PE interface MAC)
 
     BGP L2VPN (RFC 6624):
       BGP L2VPN routes use the --rd, --rt, --rd-increment, --rt-increment,

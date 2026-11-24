@@ -96,6 +96,10 @@ typedef struct bbl_stream_config_
     bool     rx_mpls2;
     uint32_t rx_mpls2_label;
 
+    bool     rx_vxlan; /* expected VXLAN VNI (rx-vni) */
+    uint32_t rx_vxlan_vni;
+    uint32_t vxlan_source; /* outer IPv4 source of EVPN VXLAN streams (VTEP) */
+
     bool     nat;
     bool     raw_tcp; /* Pseudo TCP Streams*/
 
@@ -271,6 +275,9 @@ typedef struct bbl_stream_
 
     uint32_t rx_mpls1_label;
     uint32_t rx_mpls2_label;
+
+    bool     rx_vxlan;
+    uint32_t rx_vxlan_vni;
 
     /* RX packets and loss at the time the RX thread
      * has seen the reset (STREAM_FLAG_RX_RESET). */

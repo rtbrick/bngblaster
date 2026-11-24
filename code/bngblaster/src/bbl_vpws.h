@@ -33,4 +33,7 @@ bbl_vpws_add(bbl_stream_s *stream);
 bool
 bbl_vpws_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth);
 
+bool
+bbl_vpws_rx_vxlan(bbl_network_interface_s *interface, bbl_ethernet_header_s *inner);
+
 #endif

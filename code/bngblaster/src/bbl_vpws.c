@@ -283,3 +283,22 @@ bbl_vpws_rx(bbl_network_interface_s *interface, bbl_ethernet_header_s *eth)
     }
     return false;
 }
+
+/**
+ * bbl_vpws_rx_vxlan
+ *
+ * Handle inner frames of VXLAN packets (EVPN VXLAN) received on
+ * network interfaces which are not traffic stream packets.
+ *
+ * @param interface receiving network interface
+ * @param inner inner ethernet frame
+ * @return true if handled
+ */
+bool
+bbl_vpws_rx_vxlan(bbl_network_interface_s *interface, bbl_ethernet_header_s *inner)
+{
+    if(!(interface->vpws_db && inner)) {
+        return false;
+    }
+    return bbl_vpws_rx_inner(interface, inner);
+}

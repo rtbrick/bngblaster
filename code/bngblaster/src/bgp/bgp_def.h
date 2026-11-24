@@ -433,7 +433,13 @@ typedef struct bgp_evpn_entry_ {
     uint32_t label1; /* MPLS label or VNI */
     uint32_t label2; /* MPLS label or VNI */
 
-    /* Label used for MPLS encapsulated traffic streams (L3 or VPWS). */
+    /* Traffic streams use VXLAN (RFC 8365) to the remote VTEP with the
+     * VNI as label instead of MPLS. The VTEP is the BGP next-hop or the
+     * PMSI tunnel identifier of IMET routes (IPv4 only). */
+    bool     vxlan;
+    uint32_t vxlan_vtep;
+
+    /* Label used for MPLS or VXLAN encapsulated traffic streams (L3 or VPWS). */
     bool     vpn_label_valid;
     uint32_t vpn_label;
 

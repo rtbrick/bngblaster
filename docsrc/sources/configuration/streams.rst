@@ -153,6 +153,10 @@
 | **rx-label2**                  | | Expected receive MPLS label (inner label).                     |
 |                                | | Range: 0 - 1048575                                             |
 +--------------------------------+------------------------------------------------------------------+
+| **rx-vni**                     | | Expected receive VXLAN network identifier (VNI) of traffic     |
+|                                | | received as VXLAN (e.g. EVPN VXLAN).                           |
+|                                | | Range: 0 - 16777215                                            |
++--------------------------------+------------------------------------------------------------------+
 | **ldp-ipv4-lookup-address**    | | Dynamically resolve outer label.                               |
 +--------------------------------+------------------------------------------------------------------+
 | **ldp-ipv6-lookup-address**    | | Dynamically resolve outer label.                               |
@@ -211,6 +215,11 @@
 |                                | | if requested by the remote PE, which is not signaled for EVPN  |
 |                                | | E-LAN.                                                         |
 |                                | | Default: false                                                 |
++--------------------------------+------------------------------------------------------------------+
+| **vxlan-source-address**       | | Outer IPv4 source address (local VTEP) of EVPN streams sent    |
+|                                | | as VXLAN, which should be the BGP next-hop of the routes       |
+|                                | | advertised by the BNG Blaster. Requires bgp-evpn-rd.           |
+|                                | | Default: local address of the BGP session of the route         |
 +--------------------------------+------------------------------------------------------------------+
 | **bgp-evpn-elan**              | | EVPN E-LAN where stream packets are sent as Ethernet over MPLS |
 |                                | | to the destination-mac (required) using label1 of the MAC/IP   |

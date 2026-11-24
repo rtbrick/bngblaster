@@ -9,6 +9,21 @@
  */
 #include "bbl.h"
 
+/* Inner frame of a VXLAN packet (EVPN VXLAN) or NULL. */
+static inline bbl_ethernet_header_s *
+bbl_rx_vxlan_inner(bbl_ethernet_header_s *eth)
+{
+    bbl_ipv4_s *ipv4;
+    bbl_udp_s *udp;
+
+    if(eth->type != ETH_TYPE_IPV4) return NULL;
+    ipv4 = (bbl_ipv4_s*)eth->next;
+    if(ipv4->protocol != PROTOCOL_IPV4_UDP || !ipv4->next) return NULL;
+    udp = (bbl_udp_s*)ipv4->next;
+    if(udp->protocol != UDP_PROTOCOL_VXLAN) return NULL;
+    return (bbl_ethernet_header_s*)((bbl_vxlan_s*)udp->next)->next;
+}
+
 static bool
 bbl_rx_stream_network(bbl_network_interface_s *interface, 
                       bbl_ethernet_header_s *eth) 
@@ -37,6 +52,13 @@ bbl_rx_stream_network(bbl_network_interface_s *interface,
         inner->mpls = eth->mpls;
         inner->timestamp = eth->timestamp;
         /* Verify the outer destination MAC, the inner one is the customer MAC. */
+        inner->dst = eth->dst;
+        eth = inner;
+    } else if(!eth->bbl) {
+        /* EVPN VXLAN, other frames are kept for the VPWS handler (e.g. ARP). */
+        inner = bbl_rx_vxlan_inner(eth);
+        if(!(inner && inner->bbl)) return false;
+        inner->timestamp = eth->timestamp;
         inner->dst = eth->dst;
         eth = inner;
     }
@@ -125,7 +147,7 @@ bbl_rx_thread(bbl_interface_s *interface,
         return bbl_rx_stream_known((bbl_ethernet_header_s*)eth->next) ||
                bbl_rx_stream_known((bbl_ethernet_header_s*)eth->next_cw);
     }
-    return false;
+    return bbl_rx_stream_known(bbl_rx_vxlan_inner(eth));
 }
 
 void

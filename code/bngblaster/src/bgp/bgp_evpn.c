@@ -315,20 +315,33 @@ bgp_evpn_db_add(bgp_session_s *session, bgp_evpn_route_s *route, bgp_evpn_entry_
         update.esi_label = bgp_evpn_label(encap, update.esi_label);
     }
 
+    update.vxlan = false;
+    update.vxlan_vtep = 0;
+    if(encap == BGP_ENCAP_VXLAN) {
+        if(update.key.route_type == BGP_EVPN_ROUTE_IMET && update.pmsi.present &&
+           update.pmsi.tunnel_id_af == AF_INET) {
+            memcpy(&update.vxlan_vtep, update.pmsi.tunnel_id, IPV4_ADDR_LEN);
+        } else if(update.nexthop_af == AF_INET) {
+            memcpy(&update.vxlan_vtep, update.nexthop, IPV4_ADDR_LEN);
+        }
+        update.vxlan = update.vxlan_vtep != 0;
+    }
+
     /* The L3 label of MAC/IP routes (symmetric IRB) or the IP prefix
      * label can be used for IP traffic, the label of per-EVI A-D
      * routes for EVPN VPWS (E-LINE) traffic. */
     update.vpn_label_valid = false;
     update.vpn_label = 0;
-    if(!bgp_evpn_encap_vni(encap)) {
+    if(!bgp_evpn_encap_vni(encap) || update.vxlan) {
         if(update.key.route_type == BGP_EVPN_ROUTE_AD && update.key.ethernet_tag != BGP_EVPN_MAX_ET) {
             update.vpn_label_valid = true;
             update.vpn_label = update.label1;
         } else if(update.key.route_type == BGP_EVPN_ROUTE_MAC_IP && update.labels == 2) {
-            update.vpn_label_valid = true;
+            /* VXLAN L3 traffic is sent to the router's MAC (RFC 9135). */
+            update.vpn_label_valid = !update.vxlan || update.router_mac_present;
             update.vpn_label = update.label2;
         } else if(update.key.route_type == BGP_EVPN_ROUTE_IP_PREFIX) {
-            update.vpn_label_valid = true;
+            update.vpn_label_valid = !update.vxlan || update.router_mac_present;
             update.vpn_label = update.label1;
         }
     }
@@ -337,7 +350,7 @@ bgp_evpn_db_add(bgp_session_s *session, bgp_evpn_route_s *route, bgp_evpn_entry_
      * routes and BUM traffic the ingress replication label of IMET routes. */
     update.elan_label_valid = false;
     update.elan_label = 0;
-    if(!bgp_evpn_encap_vni(encap)) {
+    if(!bgp_evpn_encap_vni(encap) || update.vxlan) {
         if(update.key.route_type == BGP_EVPN_ROUTE_MAC_IP) {
             update.elan_label_valid = true;
             update.elan_label = update.label1;

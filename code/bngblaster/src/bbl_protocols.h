@@ -238,6 +238,11 @@
 #define UDP_PROTOCOL_DHCP               5
 #define UDP_PROTOCOL_LDP                6
 #define UDP_PROTOCOL_BFD                7
+#define UDP_PROTOCOL_VXLAN              8
+
+#define VXLAN_UDP_PORT                  4789 /* RFC 7348 */
+#define VXLAN_HDR_LEN                   8
+#define VXLAN_FLAG_VNI                  0x08 /* I flag, valid VNI */
 
 #define BFD_UDP_PORT_SINGLE_HOP         3784 /* RFC 5881 */
 #define BFD_UDP_PORT_MULTI_HOP          4784 /* RFC 5883 */
@@ -710,11 +715,13 @@ typedef struct bbl_ethernet_header_ {
     bool      lwip;
     bool      qinq; /* ethertype 0x88a8 */
     bool      mpls_cw; /* pseudowire control word after MPLS labels (RFC 4385) */
+    bool      nested; /* inner frame (Ethernet over MPLS or VXLAN), not decapsulated again */
 
     uint8_t    *dst; /* destination MAC address */
     uint8_t    *src; /* source MAC address */
     bbl_bbl_s  *bbl;  /* BBL stream header */
     bbl_mpls_s *mpls; /* MPLS */
+    struct bbl_vxlan_ *vxlan; /* VXLAN header of a decapsulated inner frame */
     void       *next; /* next header */
     void       *next_cw; /* Ethernet over MPLS decoded with control word if ambiguous */
 
@@ -902,6 +909,15 @@ typedef struct bbl_udp_ {
     void       *next; /* next header */
     void       *payload; /* UDP payload */
 } bbl_udp_s;
+
+/*
+ * VXLAN Structure (RFC 7348)
+ */
+typedef struct bbl_vxlan_ {
+    uint8_t     flags;
+    uint32_t    vni;
+    void       *next; /* inner ethernet frame (bbl_ethernet_header_s) */
+} bbl_vxlan_s;
 
 /*
  * TCP Structure

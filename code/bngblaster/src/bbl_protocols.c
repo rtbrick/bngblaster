@@ -817,6 +817,20 @@ encode_bbl(uint8_t *buf, uint16_t *len,
 }
 
 /*
+ * encode_vxlan
+ */
+static protocol_error_t
+encode_vxlan(uint8_t *buf, uint16_t *len,
+             bbl_vxlan_s *vxlan)
+{
+    *(uint32_t*)buf = htobe32((uint32_t)VXLAN_FLAG_VNI << 24);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    *(uint32_t*)buf = htobe32(vxlan->vni << 8);
+    BUMP_WRITE_BUFFER(buf, len, sizeof(uint32_t));
+    return encode_ethernet(buf, len, (bbl_ethernet_header_s*)vxlan->next);
+}
+
+/*
  * encode_udp
  */
 static protocol_error_t
@@ -848,6 +862,9 @@ encode_udp(uint8_t *buf, uint16_t *len,
             break;
         case UDP_PROTOCOL_LDP:
             result = encode_ldp_hello(buf, len, (bbl_ldp_hello_s*)udp->next);
+            break;
+        case UDP_PROTOCOL_VXLAN:
+            result = encode_vxlan(buf, len, (bbl_vxlan_s*)udp->next);
             break;
         case UDP_PROTOCOL_BFD:
             memcpy(buf, ((bbl_bfd_s*)udp->next)->pdu, ((bbl_bfd_s*)udp->next)->pdu_len);
@@ -1297,8 +1314,10 @@ encode_ipv4(uint8_t *buf, uint16_t *len,
             udp_len = *len - udp_len;
             /* Update UDP length */
             *(uint16_t*)(buf + 4) = htobe16(udp_len);
+            /* VXLAN over IPv4 is sent with zero UDP checksum (RFC 7348). */
             if(((bbl_udp_s*)ipv4->next)->protocol != UDP_PROTOCOL_BBL &&
-               ((bbl_udp_s*)ipv4->next)->protocol != UDP_PROTOCOL_L2TP) {
+               ((bbl_udp_s*)ipv4->next)->protocol != UDP_PROTOCOL_L2TP &&
+               ((bbl_udp_s*)ipv4->next)->protocol != UDP_PROTOCOL_VXLAN) {
                 /* Update UDP checksum */
                 *(uint16_t*)(buf + 6) = bbl_ipv4_udp_checksum(ipv4->src, ipv4->dst, buf, udp_len);
             }
@@ -3564,6 +3583,42 @@ decode_bfd(uint8_t *buf, uint16_t len,
     return PROTOCOL_SUCCESS;
 }
 
+static protocol_error_t
+decode_ethernet_frame(uint8_t *buf, uint16_t len,
+                      uint8_t *sp, uint16_t sp_len,
+                      bbl_ethernet_header_s **_eth, bool nested);
+
+/*
+ * decode_vxlan
+ */
+static protocol_error_t
+decode_vxlan(uint8_t *buf, uint16_t len,
+             uint8_t *sp, uint16_t sp_len,
+             bbl_vxlan_s **_vxlan)
+{
+    bbl_vxlan_s *vxlan;
+    bbl_ethernet_header_s *inner;
+
+    /* Other payloads on the VXLAN port are kept as plain UDP. */
+    if(len < VXLAN_HDR_LEN || sp_len < sizeof(bbl_vxlan_s)) {
+        return UNKNOWN_PROTOCOL;
+    }
+    if(!(*buf & VXLAN_FLAG_VNI)) {
+        return UNKNOWN_PROTOCOL;
+    }
+    vxlan = (bbl_vxlan_s*)sp; BUMP_BUFFER(sp, sp_len, sizeof(bbl_vxlan_s));
+    vxlan->flags = *buf;
+    vxlan->vni = be32toh(*(uint32_t*)(buf+4)) >> 8;
+    BUMP_BUFFER(buf, len, VXLAN_HDR_LEN);
+    if(decode_ethernet_frame(buf, len, sp, sp_len, &inner, true) != PROTOCOL_SUCCESS) {
+        return UNKNOWN_PROTOCOL;
+    }
+    inner->vxlan = vxlan;
+    vxlan->next = inner;
+    *_vxlan = vxlan;
+    return PROTOCOL_SUCCESS;
+}
+
 /*
  * decode_udp
  */
@@ -3627,6 +3682,16 @@ decode_udp(uint8_t *buf, uint16_t len,
             /* Only the destination port is fixed (RFC 5036 section 2.4). */
             udp->protocol = UDP_PROTOCOL_LDP;
             ret_val = decode_ldp_hello(buf, len, sp, sp_len, (bbl_ldp_hello_s**)&udp->next);
+            break;
+        case VXLAN_UDP_PORT:
+            if(!eth->nested) {
+                ret_val = decode_vxlan(buf, len, sp, sp_len, (bbl_vxlan_s**)&udp->next);
+                if(ret_val == PROTOCOL_SUCCESS) {
+                    udp->protocol = UDP_PROTOCOL_VXLAN;
+                } else {
+                    udp->next = NULL;
+                }
+            }
             break;
         case BFD_UDP_PORT_SINGLE_HOP:
         case BFD_UDP_PORT_MULTI_HOP:
@@ -4894,6 +4959,7 @@ decode_ethernet_frame(uint8_t *buf, uint16_t len,
     *_eth = eth;
 
     eth->length = len;
+    eth->nested = eompls;
 
     /* Decode ethernet header */
     eth->dst = buf;

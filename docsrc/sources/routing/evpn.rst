@@ -9,17 +9,16 @@ router (PE) and the customer edge router (CE) at the same time.
 
 * Learn all EVPN routes received from the DUT (route types 1 to 5)
 * Advertise EVPN routes of the emulated PE using :ref:`RAW update files <bgp>`
-  generated with ``bgpupdate`` (EVPN VPWS and E-LAN)
-* Send traffic streams with labels dynamically resolved from the
+  generated with ``bgpupdate`` (EVPN VPWS, E-LAN and IP prefix routes)
+* Send traffic streams with labels or VNIs dynamically resolved from the
   EVPN routes of the DUT (L3 EVPN, EVPN VPWS and E-LAN)
-* Verify the traffic received from the DUT including the labels
+* Verify the traffic received from the DUT including the labels or VNIs
   advertised by the BNG Blaster
 * Reply to ARP, IPv6 neighbor solicitation and ICMP echo requests
   of a real CE within EVPN VPWS and E-LAN services
+* MPLS and VXLAN encapsulation (:rfc:`8365`), see :ref:`EVPN VXLAN <evpn-vxlan>`
 
-The following services are supported for MPLS encapsulation. Routes with
-VNI based encapsulation like VXLAN are learned and displayed, but not used
-for traffic streams.
+The following services are supported for MPLS and VXLAN encapsulation.
 
 +---------------+-------------------------------+-----------------------------+---------------------------+
 | Service       | DUT route used by streams     | Routes of the emulated PE   | Stream options            |
@@ -33,9 +32,9 @@ for traffic streams.
 |               | IMET (type 3) ingress         | MAC/IP advertisement        | ``destination-mac``       |
 |               | replication label             | (type 2)                    |                           |
 +---------------+-------------------------------+-----------------------------+---------------------------+
-| L3 EVPN       | MAC/IP advertisement          | not generated (e.g. use     | ``bgp-evpn-rd``           |
-| (IRB, IP-VRF) | (type 2) label2 or            | a :ref:`RAW update file     | ``bgp-evpn-mac``          |
-|               | IP prefix (type 5)            | <bgp>` from another source) | ``bgp-evpn-prefix``       |
+| L3 EVPN       | MAC/IP advertisement          | ``bgpupdate --evpn-prefix`` | ``bgp-evpn-rd``           |
+| (IRB, IP-VRF) | (type 2) label2 or            | IP prefix (type 5)          | ``bgp-evpn-mac``          |
+|               | IP prefix (type 5)            |                             | ``bgp-evpn-prefix``       |
 +---------------+-------------------------------+-----------------------------+---------------------------+
 
 Test Setup
@@ -317,6 +316,110 @@ tag can be set with ``--ethernet-tag`` (default 0 for VLAN-based services).
         --stream-evpn-rd 10.0.0.1:200 --stream-destination-mac 02:00:00:00:00:02 \
         --stream-pe-address 198.51.100.1 --stream-ce-address 198.51.100.2
 
+.. _evpn-vxlan:
+
+EVPN VXLAN
+~~~~~~~~~~
+
+EVPN services with VXLAN encapsulation (:rfc:`8365`) are supported for
+EVPN E-LAN, EVPN VPWS and L3 EVPN, where the BNG Blaster emulates a remote
+VXLAN tunnel endpoint (VTEP). The stream options are the same as for MPLS
+encapsulation, the encapsulation is selected by the resolved route of the DUT.
+
+Routes with the encapsulation extended community of type VXLAN carry a 24 bit
+VXLAN network identifier (VNI) instead of an MPLS label in the label fields and
+the PMSI tunnel attribute. The remote VTEP is the BGP next-hop of the route or
+the tunnel identifier of the PMSI tunnel attribute for IMET routes. Only IPv4
+VTEPs are supported. Routes without encapsulation extended community are
+considered as MPLS routes, other VNI based encapsulations like NVGRE or Geneve
+are learned and displayed, but not used for traffic streams.
+
+Stream packets are sent from the network interface to the remote VTEP as
+follows:
+
+* Outer Ethernet header from the network interface MAC address to the gateway
+  MAC address, including the VLAN tags of the network interface
+* Outer IPv4 header from ``vxlan-source-address`` (default: local address of the
+  BGP session which learned the route) to the remote VTEP with TTL 64
+* UDP header with destination port 4789, a constant source port per stream
+  (49152 + flow-id modulo 16384) and zero checksum
+* VXLAN header with the VNI of the route
+* Inner Ethernet frame: the customer frame to ``destination-mac`` with the
+  ``vpws-*`` VLAN tags for EVPN E-LAN and VPWS, or the IP packet to the router's
+  MAC address of the route for L3 EVPN (IP prefix or MAC/IP routes with label2,
+  routes without router's MAC extended community are not used)
+
+The stream ``length`` is the length of the inner IP packet, VXLAN adds 50 bytes
+(plus the inner VLAN tags) which must fit into the MTU of the network interface
+and the DUT. The transport labels (``tx-label1``, ``ldp-ipv4-lookup-address``) and
+the control word are not used for VXLAN. The BNG Blaster does not route the underlay, the
+remote VTEP must be reachable through the gateway of the network interface and
+the DUT must be able to reach the BGP next-hop of the routes of the emulated
+PE, which is usually the address of the network interface. VXLAN packets are
+accepted with any destination address on the network interface, so a loopback
+VTEP address can be used with a static route on the DUT and ``vxlan-source-address``.
+
+Received VXLAN packets are decapsulated on network interfaces, where ``rx-vni``
+verifies the VNI advertised by the BNG Blaster. The ``stream-info``
+:ref:`command <api>` shows the received VNI (``rx-vni``), the encapsulation
+(``evpn-encapsulation``), the VNI (``evpn-label``) and the remote VTEP
+(``evpn-vtep``) of the resolved route. The option ``vpws-arp`` replies to requests
+received within VXLAN using the VNI and VTEP of the stream.
+
+The routes and streams of the emulated PE are generated with ``bgpupdate`` and
+the option ``--vni``, which replaces the MPLS label (``-m``) and is incremented
+per service. The generated CE to PE streams verify the VNI (``rx-vni``) and the
+PE to CE streams use the next-hop (``-n``) as ``vxlan-source-address``.
+IP prefix routes (type 5) of one IP-VRF are generated for the prefixes
+``-p``/``-P`` with ``--evpn-prefix``, where VXLAN requires the router's MAC address
+(``--router-mac``), usually the MAC address of the network interface.
+
+The following example generates an E-LAN with VNI 10100 and an IP prefix route
+for ``10.99.0.0/24`` with VNI 10200 of the emulated PE ``10.0.1.2``, connected to
+a DUT with the VTEP address ``10.255.0.1``.
+
+.. code-block:: none
+
+    bgpupdate -l 100 -n 10.0.1.2 -f evpn.bgp -s streams.json --evpn-elan \
+        --rd 10.0.1.2:100 --rt 65000:100 --vni 10100 --mac 02:00:00:00:00:01 \
+        --stream-vpws-arp --stream-evpn-rd 10.255.0.1:100 \
+        --stream-destination-mac 02:00:00:00:00:02 \
+        --stream-interface eth1 --stream-ce-interface eth2 --stream-ce-vlan 100 \
+        --stream-pe-address 198.51.100.1 --stream-ce-address 198.51.100.2 \
+        --stream-direction both --stream-pps 1000
+
+    bgpupdate -l 100 -n 10.0.1.2 -f evpn.bgp -s streams.json --append --stream-append \
+        --evpn-prefix --rd 10.0.1.2:200 --rt 65000:200 --vni 10200 \
+        --router-mac 02:00:00:00:00:01 -p 10.99.0.0/24 \
+        --stream-ce-interface eth2 --stream-ce-vlan 200 --stream-direction upstream \
+        --stream-pps 1000 --end-of-rib
+
+The L3 stream from the emulated PE to the CE network ``192.168.200.0/24`` of the
+DUT IP-VRF resolves the IP prefix route of the DUT.
+
+.. code-block:: json
+
+    {
+        "name": "l3-pe-ce",
+        "type": "ipv4",
+        "direction": "downstream",
+        "pps": 1000,
+        "network-interface": "eth1",
+        "network-ipv4-address": "10.99.0.1",
+        "destination-ipv4-address": "192.168.200.2",
+        "bgp-evpn-rd": "10.255.0.1:200",
+        "bgp-evpn-prefix": "192.168.200.0/24"
+    }
+
+EVPN VXLAN was tested with Nokia SR Linux (``mac-vrf`` and ``ip-vrf`` with VXLAN
+interfaces) and Juniper Junos (``mac-vrf`` with ``encapsulation vxlan`` and
+``vrf`` with ``ip-prefix-routes``). SR Linux uses the ``system0`` address as source
+of internal BGP sessions and as VTEP, the BGP session to the network interface
+address of the BNG Blaster requires ``transport local-address`` in the BGP group.
+Junos advertises the local address of the BGP session as next-hop of EVPN routes,
+so the session must be established from the VTEP address (``vtep-source-interface``,
+usually ``lo0``) as ``peer-address`` of the BNG Blaster.
+
 Testing EVPN Services
 ~~~~~~~~~~~~~~~~~~~~~
 
@@ -554,7 +657,8 @@ Troubleshooting
 | Stream ``evpn-resolved`` is false  | The ``bgp-evpn-rd`` must be the route distinguisher of the DUT  |
 |                                    | and ``bgp-evpn-ethernet-tag`` the local service ID of the DUT   |
 |                                    | (E-LINE). Check the learned routes with ``bgp-evpn-routes``.    |
-|                                    | Routes with VXLAN encapsulation are not supported for streams.  |
+|                                    | VXLAN routes need an IPv4 next-hop, VXLAN IP prefix and L3      |
+|                                    | MAC/IP routes the router's MAC extended community.              |
 +------------------------------------+-----------------------------------------------------------------+
 | PE to CE frames are received by    | Control word mismatch. Some implementations (e.g. Junos) use    |
 | the CE with 4 additional bytes or  | the control word for EVPN VPWS only if both PEs set the         |
@@ -564,6 +668,11 @@ Troubleshooting
 +------------------------------------+-----------------------------------------------------------------+
 | E-LINE PE to CE frames are dropped | The DUT may expect the customer VLAN within the service         |
 | by the DUT                         | (e.g. Junos ``vlan-ccc``), add ``vpws-vlan``.                   |
++------------------------------------+-----------------------------------------------------------------+
+| VXLAN PE to CE traffic is dropped  | The BGP next-hop of the DUT routes is not the VTEP address of   |
+| by the DUT                         | the DUT (``evpn-vtep`` in ``stream-info``), e.g. Junos with a     |
+|                                    | BGP session from the interface address. Establish the session   |
+|                                    | from the VTEP (loopback) address of the DUT.                    |
 +------------------------------------+-----------------------------------------------------------------+
 | E-LAN stream uses route type 3     | The DUT has not learned the CE MAC address yet (no traffic      |
 | instead of 2                       | from the CE). Start the CE to PE stream or enable ``vpws-arp``. |

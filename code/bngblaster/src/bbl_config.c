@@ -3795,7 +3795,7 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
         "bgp-l2vpn-rd", "bgp-l2vpn-ce-id", "bgp-l2vpn-local-ce-id",
         "vpws-vlan", "vpws-inner-vlan", "vpws-vlan-priority",
         "vpws-inner-vlan-priority", "vpws-qinq", "vpws-arp", "rx-control-word",
-        "tx-control-word"
+        "tx-control-word", "rx-vni", "vxlan-source-address"
     };
     if(!schema_validate(stream, "streams", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -4222,6 +4222,22 @@ json_parse_stream(json_t *stream, bbl_stream_config_s *stream_config)
     if(value) {
         stream_config->rx_mpls2 = true;
         stream_config->rx_mpls2_label = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(stream, value, "stream", "rx-vni", 0, 16777215);
+    if(value) {
+        stream_config->rx_vxlan = true;
+        stream_config->rx_vxlan_vni = json_number_value(value);
+    }
+    JSON_OBJ_GET_STRING(stream, s, "stream", "vxlan-source-address");
+    if(s) {
+        if(!stream_config->bgp_evpn) {
+            fprintf(stderr, "JSON config error: stream->vxlan-source-address requires EVPN (bgp-evpn-rd)\n");
+            return false;
+        }
+        if(!inet_pton(AF_INET, s, &stream_config->vxlan_source)) {
+            fprintf(stderr, "JSON config error: Invalid value for stream->vxlan-source-address\n");
+            return false;
+        }
     }
 
     /* NAT configuration */

@@ -750,9 +750,13 @@ bbl_stream_l2vpn_resolve(bbl_stream_config_s *config)
  */
 typedef struct bbl_stream_vpn_ {
     bool valid;
-    bool l2; /* Ethernet over MPLS (EVPN VPWS, E-LAN or L2VPN) */
+    bool l2; /* Ethernet over MPLS or VXLAN (EVPN VPWS, E-LAN or L2VPN) */
     bool cw; /* PW control word */
+    bool vxlan; /* VXLAN with the label as VNI instead of MPLS (RFC 8365) */
     uint32_t label;
+    uint32_t vtep; /* VXLAN destination */
+    uint32_t vtep_source; /* VXLAN source */
+    uint8_t router_mac[ETH_ADDR_LEN]; /* VXLAN inner destination MAC of L3 traffic */
 } bbl_stream_vpn_s;
 
 static void
@@ -761,10 +765,74 @@ bbl_stream_vpn_evpn(bbl_stream_config_s *config, bgp_evpn_entry_s *entry, bbl_st
     vpn->valid = true;
     vpn->label = bbl_stream_evpn_label(config, entry);
     vpn->l2 = config->bgp_evpn_elan || entry->key.route_type == BGP_EVPN_ROUTE_AD;
+    if(entry->vxlan) {
+        vpn->vxlan = true;
+        vpn->vtep = entry->vxlan_vtep;
+        /* The VTEP of the emulated PE is the local address of the
+         * BGP session which learned the route by default. */
+        vpn->vtep_source = config->vxlan_source;
+        if(!vpn->vtep_source && entry->source) {
+            vpn->vtep_source = entry->source->ipv4_local_address;
+        }
+        memcpy(vpn->router_mac, entry->router_mac, ETH_ADDR_LEN);
+        return;
+    }
     /* The control word is only signaled for EVPN VPWS (RFC 8214). */
     vpn->cw = config->tx_control_word ||
               (entry->key.route_type == BGP_EVPN_ROUTE_AD &&
                entry->l2_attr_present && (entry->l2_flags & BGP_EVPN_L2_FLAG_CW));
+}
+
+/* Outer headers of EVPN VXLAN packets (RFC 8365) sent from the network
+ * interface to the remote VTEP with the inner frame. */
+typedef struct bbl_stream_vxlan_ {
+    bbl_ethernet_header_s eth;
+    bbl_ipv4_s ipv4;
+    bbl_udp_s udp;
+    bbl_vxlan_s vxlan;
+} bbl_stream_vxlan_s;
+
+static bbl_ethernet_header_s *
+bbl_stream_vxlan_encap(bbl_stream_s *stream, bbl_network_interface_s *network_interface,
+                       bbl_stream_vpn_s *vpn, bbl_stream_vxlan_s *outer,
+                       bbl_ethernet_header_s *inner)
+{
+    bbl_stream_config_s *config = stream->config;
+
+    memset(outer, 0x0, sizeof(bbl_stream_vxlan_s));
+    outer->eth.dst = network_interface->gateway_mac;
+    outer->eth.src = network_interface->mac;
+    outer->eth.vlan_outer = network_interface->vlan;
+    outer->eth.vlan_outer_priority = config->vlan_priority;
+    outer->eth.vlan_inner = network_interface->inner_vlan;
+    outer->eth.qinq = network_interface->qinq;
+    outer->eth.type = ETH_TYPE_IPV4;
+    outer->eth.next = &outer->ipv4;
+    outer->ipv4.src = vpn->vtep_source ? vpn->vtep_source : network_interface->ip.address;
+    outer->ipv4.dst = vpn->vtep;
+    outer->ipv4.ttl = 64;
+    outer->ipv4.tos = config->priority;
+    outer->ipv4.protocol = PROTOCOL_IPV4_UDP;
+    outer->ipv4.next = &outer->udp;
+    /* Constant source port per flow for ECMP entropy without reordering (RFC 7348). */
+    outer->udp.src = 49152 + (stream->flow_id & 0x3fff);
+    outer->udp.dst = VXLAN_UDP_PORT;
+    outer->udp.protocol = UDP_PROTOCOL_VXLAN;
+    outer->udp.next = &outer->vxlan;
+    outer->vxlan.vni = vpn->label;
+    outer->vxlan.next = inner;
+
+    inner->mpls = NULL;
+    inner->mpls_cw = false;
+    if(!vpn->l2) {
+        /* L3 EVPN: IP packet in an Ethernet frame to the router's MAC. */
+        inner->dst = vpn->router_mac;
+        inner->vlan_outer = 0;
+        inner->vlan_inner = 0;
+        inner->vlan_three = 0;
+        inner->qinq = false;
+    }
+    return &outer->eth;
 }
 
 static void
@@ -799,6 +867,11 @@ bbl_stream_network_labels(bbl_stream_s *stream, bbl_stream_vpn_s *vpn,
     ldp_db_entry_s *ldp_entry = __atomic_load_n(&stream->ldp_entry, __ATOMIC_RELAXED);
     uint32_t transport_label = config->tx_mpls1_label;
     bool transport = config->tx_mpls1;
+
+    if(vpn->vxlan) {
+        /* VXLAN is sent over IP without labels. */
+        return;
+    }
 
     if(ldp_entry) {
         transport_label = ldb_db_label(ldp_entry, stream->tx_network_interface);
@@ -855,6 +928,7 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
     bbl_udp_s udp = {0};
     bbl_bbl_s bbl = {0};
     bbl_stream_vpn_s vpn;
+    bbl_stream_vxlan_s vxlan;
 
     uint8_t mac[ETH_ADDR_LEN] = {0};
 
@@ -1001,6 +1075,9 @@ bbl_stream_build_network_packet(bbl_stream_s *stream)
         encode_eth = &eth_vpws;
     } else if(config->destination_mac_overwrite) {
         eth.dst = config->destination_mac;
+    }
+    if(vpn.vxlan) {
+        encode_eth = bbl_stream_vxlan_encap(stream, network_interface, &vpn, &vxlan, &eth);
     }
 
     buf_len = config->length + BBL_MAX_STREAM_OVERHEAD;
@@ -2985,6 +3062,8 @@ bbl_stream_reset(bbl_stream_s *stream)
     stream->rx_mpls2_exp = 0;
     stream->rx_mpls2_ttl = 0;
     stream->rx_mpls2_label = 0;
+    stream->rx_vxlan = false;
+    stream->rx_vxlan_vni = 0;
     stream->rx_source_ip = 0;
     stream->rx_source_port = 0;
     stream->rx_wrong_session = 0;
@@ -3087,6 +3166,7 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
     bbl_ethernet_header_s eth = {0};
     bbl_mpls_s mpls1 = {0};
     bbl_mpls_s mpls2 = {0};
+    bbl_stream_vxlan_s vxlan;
 
     if(!network_interface) {
         return false;
@@ -3134,6 +3214,10 @@ bbl_stream_vpws_send(bbl_stream_s *stream, bbl_ethernet_header_s *inner)
     inner->vlan_three = 0;
     inner->qinq = config->vpws_qinq;
 
+    if(vpn.vxlan) {
+        return bbl_txq_to_buffer(network_interface->txq,
+                                 bbl_stream_vxlan_encap(stream, network_interface, &vpn, &vxlan, inner)) == BBL_TXQ_OK;
+    }
     return bbl_txq_to_buffer(network_interface->txq, &eth) == BBL_TXQ_OK;
 }
 
@@ -3253,7 +3337,15 @@ bbl_stream_rx(bbl_ethernet_header_s *eth, uint8_t *mac)
                     stream->rx_mpls2_ttl = mpls->ttl;
                 }
             }
+            if(eth->vxlan) {
+                stream->rx_vxlan = true;
+                stream->rx_vxlan_vni = eth->vxlan->vni;
+            }
             config = stream->config;
+            if(config->rx_vxlan && !(stream->rx_vxlan && stream->rx_vxlan_vni == config->rx_vxlan_vni)) {
+                /* Wrong VNI received! */
+                return NULL;
+            }
             /* Expected labels, label 0 included, are checked independently. */
             if(config->rx_mpls1 && !(stream->rx_mpls1 && stream->rx_mpls1_label == config->rx_mpls1_label)) {
                 /* Wrong outer label received! */
@@ -3518,6 +3610,12 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
             json_object_set_new(root, "rx-mpls2-exp", json_integer(stream->rx_mpls2_exp));
             json_object_set_new(root, "rx-mpls2-ttl", json_integer(stream->rx_mpls2_ttl));
         }
+        if(stream->config->rx_vxlan) {
+            json_object_set_new(root, "rx-vni-expected", json_integer(stream->config->rx_vxlan_vni));
+        }
+        if(stream->rx_vxlan) {
+            json_object_set_new(root, "rx-vni", json_integer(stream->rx_vxlan_vni));
+        }
         if(stream->rx_source_ip) {
             json_object_set_new(root, "rx-source-ip", json_string(format_ipv4_address(&stream->rx_source_ip)));
             json_object_set_new(root, "rx-source-port", json_integer(stream->rx_source_port));
@@ -3556,6 +3654,10 @@ bbl_stream_json(bbl_stream_s *stream, bool debug)
                 json_object_set_new(root, "evpn-label", json_integer(bbl_stream_evpn_label(stream->config, entry)));
                 /* E-LAN: 2 = known unicast (MAC/IP), 3 = unknown unicast (IMET) */
                 json_object_set_new(root, "evpn-route-type", json_integer(entry->key.route_type));
+                json_object_set_new(root, "evpn-encapsulation", json_string(entry->vxlan ? "vxlan" : "mpls"));
+                if(entry->vxlan) {
+                    json_object_set_new(root, "evpn-vtep", json_string(format_ipv4_address(&entry->vxlan_vtep)));
+                }
             }
             if(stream->config->vpws_arp && !stream->config->destination_mac_overwrite) {
                 json_object_set_new(root, "vpws-mac", stream->vpws_mac_version ?
