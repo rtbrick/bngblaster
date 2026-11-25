@@ -478,6 +478,16 @@ list. The L2TP sessions are spread across multiple tunnels (the ones whose
 interface) in round robin. An ``"l2tp-client"`` opens another tunnel if all
 65535 session IDs of its tunnel are used.
 
+PPPoL2TP sessions are not sent over the access interface, so no VLAN
+configuration is required. Without VLAN ranges, the number of sessions of an
+access interface section is limited only by the session count or
+``session-limit``. If VLAN ranges are configured, they are used like for PPPoE
+and IPoE as session identifiers (e.g. for the ``{outer-vlan}`` and
+``{inner-vlan}`` variables in the username, ``agent-circuit-id`` or
+``agent-remote-id``, and for the session lookup via the control socket), but
+also limit the number of sessions to the VLAN range. The VLANs are never
+added to the L2TP packets.
+
 Configuration
 ~~~~~~~~~~~~~
 
@@ -495,9 +505,6 @@ Configuration
                     "interface": "eth1",
                     "type": "pppol2tp",
                     "l2tp-client-group-id": 1,
-                    "outer-vlan-min": 1,
-                    "outer-vlan-max": 1000,
-                    "inner-vlan": 7,
                     "authentication-protocol": "PAP"
                 }
             ]

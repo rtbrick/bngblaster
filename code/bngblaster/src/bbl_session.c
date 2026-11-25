@@ -1105,6 +1105,7 @@ bbl_sessions_init()
      * is still zero after processing last access profile means
      * that all VLAN ranges are exhausted. */
     int t = 0;
+    bool no_vlan;
 
     /* Init list of sessions */
     g_ctx->session_list = calloc(g_ctx->config.sessions, sizeof(bbl_session_s));
@@ -1121,11 +1122,19 @@ bbl_sessions_init()
      * second over VLAN ranges as per configuration. */
     while(i <= g_ctx->config.sessions) {
         if(access_config->exhausted) goto NEXT;
+        /* PPPoL2TP sessions are not sent over the access interface,
+         * VLANs are optional and used only as session identifiers. */
+        no_vlan = access_config->access_type == ACCESS_TYPE_PPPOL2TP &&
+                  !access_config->access_outer_vlan_max &&
+                  !access_config->access_inner_vlan_max;
         if(access_config->sessions_max && access_config->sessions >= access_config->sessions_max) {
             access_config->exhausted = true;
             goto NEXT;
         }
-        if(access_config->vlan_mode == VLAN_MODE_N1) {
+        if(no_vlan) {
+            /* PPPoL2TP sessions without VLAN ranges, limited only
+             * by the session count or sessions-max. */
+        } else if(access_config->vlan_mode == VLAN_MODE_N1) {
             if(access_config->access_outer_vlan_min) {
                 access_config->access_outer_vlan = access_config->access_outer_vlan_min;
             } else {
@@ -1390,7 +1399,9 @@ bbl_sessions_init()
             g_ctx->sessions_ipoe++;
         }
 
-        if(access_config->vlan_mode == VLAN_MODE_11) {
+        if(no_vlan) {
+            /* No VLAN key for session lookup */
+        } else if(access_config->vlan_mode == VLAN_MODE_11) {
             result = dict_insert(g_ctx->vlan_session_dict, &session->vlan_key);
             if(result.inserted) {
                 *result.datum_ptr = session;

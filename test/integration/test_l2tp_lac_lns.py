@@ -1004,6 +1004,24 @@ def test_tunnel_round_robin_per_group(topology, processes, tmp_path):
 
 
 @pytest.mark.full
+def test_sessions_without_vlan(topology, processes, tmp_path):
+    """PPPoL2TP access interfaces without VLAN ranges create sessions up to
+    the session count or session-limit, the untagged VLAN range allowed only
+    one session per access interface."""
+    def update(config):
+        access = config["interfaces"]["access"][0]
+        for key in ("outer-vlan-min", "outer-vlan-max"):
+            del access[key]
+        config["interfaces"]["access"].append(dict(access, **{"session-limit": 3}))
+    lac, lns = start_pair(topology, processes, tmp_path, sessions=10, update=update)
+    for session_id in range(1, 11):
+        info = lac.ctrl("session-info", **{"session-id": session_id})["session-info"]
+        assert (info["outer-vlan"], info["inner-vlan"]) == (0, 0), info
+    assert len(lns_sessions(lns)) == 10
+    assert_clean_exit(lac, lns)
+
+
+@pytest.mark.full
 def test_sessions_beyond_tunnel_session_ids(topology, processes, tmp_path):
     """More sessions than session IDs of a tunnel open another tunnel, the
     sessions without a free session ID stayed in L2TP Wait forever."""

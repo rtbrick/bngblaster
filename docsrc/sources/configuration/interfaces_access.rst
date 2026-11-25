@@ -210,7 +210,10 @@
 | **l2tp-client-group-id**          | | Set L2TP client group identifier (LAC mode, requires               |
 |                                   | | ``"type": "pppol2tp"``).  Sessions on this access interface are    |
 |                                   | | spread evenly across all ``l2tp-client`` entries with the same     |
-|                                   | | ``group-id``.                                                      |
+|                                   | | ``group-id``. PPPoL2TP sessions are not sent over the access       |
+|                                   | | interface, VLANs are optional and used only as session             |
+|                                   | | identifiers. Without VLAN ranges, the number of sessions is        |
+|                                   | | limited only by the session count or ``session-limit``.            |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **http-client-group-id**          | | Set HTTP group identifier.                                         |
