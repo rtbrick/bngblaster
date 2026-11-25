@@ -209,6 +209,7 @@ typedef struct bbl_a10nsp_config_
 
     uint8_t mac[ETH_ADDR_LEN];
     bool qinq;
+    bool session_lookup_ari;
 
     void *next; /* pointer to next a10nsp config element */
     bbl_a10nsp_interface_s *a10nsp_interface;

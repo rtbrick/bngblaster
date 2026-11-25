@@ -33,6 +33,12 @@ typedef struct bbl_a10nsp_interface_
 
     uint8_t mac[ETH_ADDR_LEN];
     bool qinq;
+    bool session_lookup_ari;
+
+    /* PPPoE session-id to session table, allocated only
+     * with session-lookup agent-remote-id. */
+    bbl_session_s **pppoe_session_table;
+    uint16_t pppoe_session_id_next;
 
     struct {
         uint64_t packets_tx;
@@ -90,6 +96,9 @@ typedef struct bbl_a10nsp_session_
     uint32_t ipv4_address;
     uint32_t label;
 
+    uint8_t peer_mac[ETH_ADDR_LEN];
+    uint16_t pppoe_session_id;
+
     char *pppoe_ari;
     char *pppoe_aci;
     char *dhcp_ari;
@@ -106,6 +115,12 @@ typedef struct bbl_a10nsp_session_
 
 void
 bbl_a10nsp_interface_rate_job(timer_s *timer);
+
+void
+bbl_a10nsp_ari_add(bbl_session_s *session);
+
+void
+bbl_a10nsp_ari_remove(bbl_session_s *session);
 
 bool
 bbl_a10nsp_interfaces_add();

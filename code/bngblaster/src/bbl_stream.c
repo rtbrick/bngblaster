@@ -323,20 +323,27 @@ bbl_stream_build_a10nsp_pppoe_packet(bbl_stream_s *stream)
         eth.qinq = session->access_config->qinq;
         eth.vlan_outer = session->vlan_key.outer_vlan_id;
         eth.vlan_inner = session->vlan_key.inner_vlan_id;
+        pppoe.session_id = session->pppoe_session_id;
     } else {
+        /* The A10NSP PPPoE leg may differ from the access leg
+         * (e.g. LAC translating L2TP to PPPoE). */
         bbl.direction = BBL_DIRECTION_DOWN;
-        eth.dst = session->client_mac;
-        eth.src = session->server_mac;
+        eth.dst = a10nsp_session->peer_mac;
+        eth.src = a10nsp_interface->mac;
         eth.qinq = a10nsp_interface->qinq;
         eth.vlan_outer = a10nsp_session->s_vlan;
         eth.vlan_inner = a10nsp_session->c_vlan;
+        if(a10nsp_session->pppoe_session_id) {
+            pppoe.session_id = a10nsp_session->pppoe_session_id;
+        } else {
+            pppoe.session_id = session->pppoe_session_id;
+        }
     }
     eth.vlan_three = session->access_third_vlan;
     eth.vlan_outer_priority = config->vlan_priority;
     eth.vlan_inner_priority = config->vlan_inner_priority;
     eth.type = ETH_TYPE_PPPOE_SESSION;
     eth.next = &pppoe;
-    pppoe.session_id = session->pppoe_session_id;
     udp.protocol = UDP_PROTOCOL_BBL;
     udp.src = stream->src_port;
     udp.dst = stream->dst_port;

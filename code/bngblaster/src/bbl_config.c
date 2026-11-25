@@ -1797,7 +1797,7 @@ json_parse_a10nsp_interface(json_t *a10nsp_interface, bbl_a10nsp_config_s *a10ns
     json_t *value = NULL;
 
     const char *schema[] = {
-        "interface", "qinq", "mac"
+        "interface", "qinq", "mac", "session-lookup"
     };
     if(!schema_validate(a10nsp_interface, "a10nsp", schema, 
     sizeof(schema)/sizeof(schema[0]))) {
@@ -1831,6 +1831,16 @@ json_parse_a10nsp_interface(json_t *a10nsp_interface, bbl_a10nsp_config_s *a10ns
                 &a10nsp_config->mac[5]) < 6)
         {
             fprintf(stderr, "JSON config error: Invalid value for a10nsp->mac\n");
+            return false;
+        }
+    }
+
+    JSON_OBJ_GET_STRING(a10nsp_interface, s, "a10nsp", "session-lookup");
+    if(s) {
+        if(strcmp(s, "agent-remote-id") == 0) {
+            a10nsp_config->session_lookup_ari = true;
+        } else if(strcmp(s, "mac") != 0) {
+            fprintf(stderr, "JSON config error: Invalid value for a10nsp->session-lookup\n");
             return false;
         }
     }

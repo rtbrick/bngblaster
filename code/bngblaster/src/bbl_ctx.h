@@ -74,6 +74,7 @@ typedef struct bbl_ctx_
     dict *li_flow_dict; /* hashtable for LI flows */
     dict *bgp_session_dict; /* hashtable for BGP sessions by local/peer address */
     dict *ldp_session_dict; /* hashtable for LDP sessions by local/peer address */
+    dict *a10nsp_ari_dict; /* hashtable for A10NSP sessions by agent-remote-id */
 
     bbl_stream_s **stream_index;
     bbl_stream_s *stream_head;

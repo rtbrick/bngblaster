@@ -141,6 +141,9 @@ bbl_ctx_del() {
     dict_free(g_ctx->li_flow_dict, bbl_li_flow_free);
     dict_free(g_ctx->bgp_session_dict, NULL);
     dict_free(g_ctx->ldp_session_dict, NULL);
+    if(g_ctx->a10nsp_ari_dict) {
+        dict_free(g_ctx->a10nsp_ari_dict, NULL);
+    }
 
     pcapng_free();
     pthread_rwlock_destroy(&g_ctx->label_db_lock);

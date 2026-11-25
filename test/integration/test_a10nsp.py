@@ -28,6 +28,8 @@ EXIT_TIMEOUT = 30
 SESSIONS = 2
 VLAN = 10
 RELAY = str(Path(__file__).parent / "a10nsp_relay.py")
+LAC = str(Path(__file__).parent / "a10nsp_lac.py")
+LAC_MAC = "02:1a:c0:00:00:01"
 
 
 def counters(bbl):
@@ -92,6 +94,56 @@ def test_network_interface_vlan(pseudowire, processes, tmp_path, rx_threads):
     stats = json.loads(relay.communicate(timeout=10)[0])
     assert stats["untagged"] == 0, stats
 
+
+
+def test_session_lookup_agent_remote_id(pseudowire, processes, tmp_path):
+    """PPPoE sessions translated by a LAC (L2TP to PPPoE) arrive with the
+    LAC MAC address and another PPPoE session-id than on the access leg.
+    With session-lookup agent-remote-id, discovery is mapped by ARI and
+    session packets by the PPPoE session-id assigned with the PADS, and
+    downstream traffic is sent to the LAC with this session-id."""
+    lac = subprocess.Popen(pseudowire.b.cmd([sys.executable, LAC, pseudowire.acc_b, pseudowire.net_b,
+                                             "--lac-mac", LAC_MAC]),
+                           stdout=subprocess.PIPE, text=True)
+    processes.append(type("Proc", (), {"stop": lac.kill})())
+    config = {
+        "interfaces": {
+            "a10nsp": [{"interface": pseudowire.net_a, "session-lookup": "agent-remote-id"}],
+            "access": [{"interface": pseudowire.acc_a, "type": "pppoe", "outer-vlan-min": 100,
+                        "outer-vlan-max": 200, "inner-vlan": 7,
+                        "agent-remote-id": "ARI-{session-global}"}]
+        },
+        "sessions": {"count": SESSIONS},
+        "session-traffic": {"ipv4-pps": 1},
+        "pppoe": {"host-uniq": True},
+        "dhcpv6": {"enable": False},
+        "ppp": {"ip6cp": {"enable": False}}
+    }
+    instance = BngBlaster(pseudowire.a, tmp_path, "bbl").start(config)
+    processes.append(instance)
+    wait_until(lambda: counters(instance)["sessions-established"] == SESSIONS, 30,
+               message="sessions established")
+    wait_until(lambda: counters(instance)["session-traffic-flows-verified"] == 2 * SESSIONS, 15,
+               message="session traffic verified")
+    for session_id in range(1, SESSIONS + 1):
+        info = instance.ctrl("session-info", **{"session-id": session_id})["session-info"]
+        a10nsp = info["a10nsp"]
+        assert a10nsp["interface"] == pseudowire.net_a, info
+        assert a10nsp["pppoe-ari"] == "ARI-%d" % session_id, info
+        assert a10nsp["peer-mac"] == LAC_MAC, info
+        assert info["pppoe-session-id"] == a10nsp["pppoe-session-id"] + 0x1000, info
+    # A changed agent-remote-id is used for the lookup after reconnect.
+    assert instance.ctrl("session-update", **{"session-id": 1, "agent-remote-id": "NEW-1"})["code"] == 200
+    assert instance.ctrl("session-restart", **{"session-id": 1})["code"] == 200
+
+    def reconnected():
+        info = instance.ctrl("session-info", **{"session-id": 1})["session-info"]
+        return info["session-state"] == "Established" and info.get("a10nsp", {}).get("pppoe-ari") == "NEW-1"
+    wait_until(reconnected, 30, message="session reconnected with new agent-remote-id")
+    assert instance.terminate(EXIT_TIMEOUT) == 0
+    lac.send_signal(signal.SIGTERM)
+    stats = json.loads(lac.communicate(timeout=10)[0])
+    assert stats["upstream"] and stats["downstream"], stats
 
 PADI_INJECT = r"""
 import socket, struct, sys, time

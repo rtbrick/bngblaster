@@ -2500,6 +2500,12 @@
                     "type": "string",
                     "description": "Overwrite the A10NSP MAC address",
                     "pattern": "^([0-9A-Fa-f]{2}:){5}[0-9A-Fa-f]{2}$"
+                },
+                "session-lookup": {
+                    "type": "string",
+                    "description": "Session lookup for received packets, agent-remote-id for PPPoE sessions with a source MAC address not derived from the session (e.g. LAC translating L2TP to PPPoE)",
+                    "enum": ["mac", "agent-remote-id"],
+                    "default": "mac"
                 }
             },
             "patternProperties": {

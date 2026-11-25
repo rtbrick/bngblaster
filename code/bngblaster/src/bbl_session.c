@@ -421,6 +421,7 @@ bbl_session_free(bbl_session_s *session)
         session->agent_circuit_id = NULL;
     }
     if(session->agent_remote_id) {
+        bbl_a10nsp_ari_remove(session);
         free(session->agent_remote_id);
         session->agent_remote_id = NULL;
     }
@@ -1251,6 +1252,7 @@ bbl_sessions_init()
                 i, SUB_STR_LEN - 1);
             return false;
         }
+        bbl_a10nsp_ari_add(session);
 
         /* Update CFM */
         if(access_config->cfm) {
@@ -1666,6 +1668,14 @@ bbl_session_json(bbl_session_s *session, bool debug)
             "dhcpv6-ari", session->a10nsp_session->dhcpv6_ari,
             "tx-packets", (json_int_t)session->a10nsp_session->stats.packets_tx,
             "rx-packets", (json_int_t)session->a10nsp_session->stats.packets_rx);
+        if(a10nsp_session) {
+            json_object_set_new(a10nsp_session, "peer-mac",
+                                json_string(format_mac_address(session->a10nsp_session->peer_mac)));
+            if(session->a10nsp_session->pppoe_session_id) {
+                json_object_set_new(a10nsp_session, "pppoe-session-id",
+                                    json_integer(session->a10nsp_session->pppoe_session_id));
+            }
+        }
     }
     if(session->l2tp_session) {
         l2tp_session = l2tp_session_json(session->l2tp_session);
@@ -2524,8 +2534,12 @@ bbl_session_ctrl_update(int fd, uint32_t session_id, json_t *arguments)
         session->password = strdup(s);
     }
     if(json_unpack(arguments, "{s:s}", "agent-remote-id", &s) == 0) {
-        if(session->agent_remote_id) free(session->agent_remote_id);
+        if(session->agent_remote_id) {
+            bbl_a10nsp_ari_remove(session);
+            free(session->agent_remote_id);
+        }
         session->agent_remote_id = strdup(s);
+        bbl_a10nsp_ari_add(session);
     }
     if(json_unpack(arguments, "{s:s}", "agent-circuit-id", &s) == 0) {
         if(session->agent_circuit_id) free(session->agent_circuit_id);

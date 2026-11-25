@@ -146,6 +146,46 @@ With ``a10nsp-dynamic`` enabled, the A10NSP interface can be learned dynamically
 and streams are automatically moved to the correct interface. This feature is only 
 supported when threading is disabled.
 
+Session Lookup by Agent-Remote-Id
+~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+The A10NSP interface maps received packets to sessions by the client
+MAC address, which contains the BNG Blaster session-id. This does not work if
+the PPPoE session is terminated by the DUT and sent with another MAC address
+to the A10NSP interface, for example by a LAC translating L2TP tunneled
+sessions to PPPoE.
+
+With ``"session-lookup": "agent-remote-id"``, PPPoE discovery packets are
+mapped by the Agent-Remote-Id, which must be unique per session, and PPPoE
+session packets by the PPPoE session-id assigned by the A10NSP interface.
+Downstream traffic is sent to the learned peer MAC address with this PPPoE
+session-id, which may differ from the PPPoE session-id of the access leg.
+This mode supports PPPoE only, with up to 65534 sessions per A10NSP interface.
+
+.. code-block:: json
+
+    {
+        "interfaces": {
+            "a10nsp": [
+                {
+                    "interface": "eth4",
+                    "session-lookup": "agent-remote-id"
+                }
+            ],
+            "access": [
+                {
+                    "interface": "eth1",
+                    "type": "pppoe",
+                    "outer-vlan-min": 1,
+                    "outer-vlan-max": 4000,
+                    "inner-vlan": 7,
+                    "agent-remote-id": "DEU.BNGBLASTER.{session-global}",
+                    "a10nsp-interface": "eth4"
+                }
+            ]
+        }
+    }
+
 
 L2BSA over Network Interfaces
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

@@ -38,6 +38,73 @@ bbl_a10nsp_interface_rate_job(timer_s *timer)
     bbl_compute_avg_rate(&interface->stats.rate_session_ipv6pd_rx, interface->stats.session_ipv6pd_rx, timer->timestamp);
 }
 
+static int
+bbl_a10nsp_ari_compare(const void *key1, const void *key2)
+{
+    return strcmp(key1, key2);
+}
+
+static unsigned
+bbl_a10nsp_ari_hash(const void *key)
+{
+    const uint8_t *s = key;
+    uint32_t hash = 2166136261U;
+    while(*s) {
+        hash ^= *s++;
+        hash *= 16777619U;
+    }
+    return hash;
+}
+
+/**
+ * bbl_a10nsp_ari_add
+ *
+ * Add session to the agent-remote-id lookup table
+ * used by A10NSP interfaces with session-lookup
+ * agent-remote-id.
+ *
+ * @param session session
+ */
+void
+bbl_a10nsp_ari_add(bbl_session_s *session)
+{
+    dict_insert_result result;
+
+    if(!(g_ctx->a10nsp_ari_dict && session->agent_remote_id)) {
+        return;
+    }
+    result = dict_insert(g_ctx->a10nsp_ari_dict, session->agent_remote_id);
+    if(!result.inserted) {
+        LOG(ERROR, "A10NSP (ID: %u) Agent-Remote-Id %s already used by session %u\n",
+            session->session_id, session->agent_remote_id,
+            ((bbl_session_s*)*result.datum_ptr)->session_id);
+        return;
+    }
+    *result.datum_ptr = session;
+}
+
+/**
+ * bbl_a10nsp_ari_remove
+ *
+ * Remove session from the agent-remote-id lookup table,
+ * required before the agent-remote-id is changed or freed.
+ *
+ * @param session session
+ */
+void
+bbl_a10nsp_ari_remove(bbl_session_s *session)
+{
+    void **search;
+
+    if(!(g_ctx->a10nsp_ari_dict && session->agent_remote_id)) {
+        return;
+    }
+    search = dict_search(g_ctx->a10nsp_ari_dict, session->agent_remote_id);
+    if(search && *search == session) {
+        dict_remove(g_ctx->a10nsp_ari_dict, session->agent_remote_id);
+    }
+}
+
 /**
  * bbl_a10nsp_interfaces_add
  */
@@ -83,6 +150,20 @@ bbl_a10nsp_interfaces_add()
 
         /* Init ethernet */
         a10nsp_interface->qinq = a10nsp_config->qinq;
+
+        /* Init session lookup by agent-remote-id */
+        if(a10nsp_config->session_lookup_ari) {
+            a10nsp_interface->session_lookup_ari = true;
+            a10nsp_interface->pppoe_session_table = calloc(UINT16_MAX+1, sizeof(bbl_session_s*));
+            a10nsp_interface->pppoe_session_id_next = 1;
+            if(!g_ctx->a10nsp_ari_dict) {
+                g_ctx->a10nsp_ari_dict = hashtable_dict_new(bbl_a10nsp_ari_compare, bbl_a10nsp_ari_hash, BBL_SESSION_HASHTABLE_SIZE);
+            }
+            if(!(a10nsp_interface->pppoe_session_table && g_ctx->a10nsp_ari_dict)) {
+                LOG(ERROR, "Failed to add a10nsp interface %s (session table allocation failed)\n", a10nsp_config->interface);
+                return false;
+            }
+        }
         if(*(uint32_t*)a10nsp_config->mac) {
             memcpy(a10nsp_interface->mac, a10nsp_config->mac, ETH_ADDR_LEN);
         } else {
@@ -132,7 +213,14 @@ bbl_a10nsp_interface_get(char *interface_name)
 void
 bbl_a10nsp_session_free(bbl_session_s *session)
 {
+    bbl_a10nsp_interface_s *interface;
+
     if(session->a10nsp_session) {
+        interface = session->a10nsp_session->a10nsp_interface;
+        if(interface->pppoe_session_table &&
+           interface->pppoe_session_table[session->a10nsp_session->pppoe_session_id] == session) {
+            interface->pppoe_session_table[session->a10nsp_session->pppoe_session_id] = NULL;
+        }
         if(session->a10nsp_session->pppoe_aci) {
             free(session->a10nsp_session->pppoe_aci);
         }
@@ -241,6 +329,44 @@ bbl_a10nsp_pppoe_send_ra(bbl_a10nsp_interface_s *interface,
     bbl_a10nsp_tx(interface, a10nsp_session, eth);
 }
 
+/**
+ * bbl_a10nsp_pppoe_session_id_alloc
+ *
+ * Allocate a free PPPoE session-id (1..65534) for sessions
+ * on interfaces with session-lookup agent-remote-id, where
+ * session packets can't be mapped by the client MAC address.
+ */
+static bool
+bbl_a10nsp_pppoe_session_id_alloc(bbl_a10nsp_interface_s *interface,
+                                  bbl_session_s *session)
+{
+    bbl_a10nsp_session_s *a10nsp_session = session->a10nsp_session;
+    uint16_t session_id = a10nsp_session->pppoe_session_id;
+    uint32_t i;
+
+    if(a10nsp_session->a10nsp_interface != interface) {
+        LOG(PPPOE, "A10NSP (ID: %u) PADR received on %s, but session is bound to %s\n",
+            session->session_id, interface->name, a10nsp_session->a10nsp_interface->name);
+        return false;
+    }
+    if(session_id && interface->pppoe_session_table[session_id] == session) {
+        /* PADR retry */
+        return true;
+    }
+    for(i = 0; i < 0xfffe; i++) {
+        session_id = interface->pppoe_session_id_next;
+        interface->pppoe_session_id_next = (session_id % 0xfffe) + 1;
+        if(!interface->pppoe_session_table[session_id]) {
+            interface->pppoe_session_table[session_id] = session;
+            a10nsp_session->pppoe_session_id = session_id;
+            return true;
+        }
+    }
+    LOG(ERROR, "A10NSP (ID: %u) No free PPPoE session-id on interface %s\n",
+        session->session_id, interface->name);
+    return false;
+}
+
 static void
 bbl_a10nsp_pppoed_handler(bbl_a10nsp_interface_s *interface,
                           bbl_session_s *session,
@@ -250,6 +376,10 @@ bbl_a10nsp_pppoed_handler(bbl_a10nsp_interface_s *interface,
     bbl_pppoe_discovery_s *pppoed = (bbl_pppoe_discovery_s*)eth->next;
     uint8_t ac_cookie[16];
     uint8_t i;
+
+    /* The peer MAC changes if the session moves
+     * to another LAC (session-lookup agent-remote-id). */
+    memcpy(a10nsp_session->peer_mac, eth->dst, ETH_ADDR_LEN);
 
     switch(pppoed->code) {
         case PPPOE_PADI:
@@ -277,8 +407,15 @@ bbl_a10nsp_pppoed_handler(bbl_a10nsp_interface_s *interface,
             break;
         case PPPOE_PADR:
             pppoed->code = PPPOE_PADS;
-            /* Map to 1..65534, 0 and 0xffff are reserved (RFC 2516). */
-            pppoed->session_id = ((session->session_id - 1) % 0xfffe) + 1;
+            if(interface->session_lookup_ari) {
+                if(!bbl_a10nsp_pppoe_session_id_alloc(interface, session)) {
+                    return;
+                }
+            } else {
+                /* Map to 1..65534, 0 and 0xffff are reserved (RFC 2516). */
+                a10nsp_session->pppoe_session_id = ((session->session_id - 1) % 0xfffe) + 1;
+            }
+            pppoed->session_id = a10nsp_session->pppoe_session_id;
             break;
         default:
             return;
@@ -896,6 +1033,7 @@ bbl_a10nsp_session_init(bbl_a10nsp_interface_s *interface,
     a10nsp_session->s_vlan = eth->vlan_outer;
     a10nsp_session->c_vlan = eth->vlan_inner;
     a10nsp_session->qinq_received = eth->qinq;
+    memcpy(a10nsp_session->peer_mac, eth->src, ETH_ADDR_LEN);
     if(eth->mpls) {
         mpls = eth->mpls;
         while(mpls->next) {
@@ -975,6 +1113,55 @@ bbl_a10nsp_rx(bbl_a10nsp_interface_s *interface,
     return;
 }
 
+static bbl_session_s *
+bbl_a10nsp_session_lookup_pppoe(bbl_a10nsp_interface_s *interface,
+                                bbl_ethernet_header_s *eth,
+                                uint16_t pppoe_session_id)
+{
+    bbl_session_s *session = interface->pppoe_session_table[pppoe_session_id];
+    if(session && session->a10nsp_session &&
+       memcmp(session->a10nsp_session->peer_mac, eth->src, ETH_ADDR_LEN) == 0) {
+        return session;
+    }
+    return NULL;
+}
+
+/**
+ * bbl_a10nsp_session_lookup_ari
+ *
+ * Session lookup for PPPoE sessions received with a source
+ * MAC address not derived from the session (e.g. LAC translating
+ * L2TP to PPPoE). Discovery packets are mapped by agent-remote-id
+ * and session packets or PADT by the assigned PPPoE session-id.
+ */
+static bbl_session_s *
+bbl_a10nsp_session_lookup_ari(bbl_a10nsp_interface_s *interface,
+                              bbl_ethernet_header_s *eth)
+{
+    bbl_pppoe_discovery_s *pppoed;
+    void **search;
+
+    switch(eth->type) {
+        case ETH_TYPE_PPPOE_DISCOVERY:
+            pppoed = (bbl_pppoe_discovery_s*)eth->next;
+            if(pppoed->code == PPPOE_PADI || pppoed->code == PPPOE_PADR) {
+                if(pppoed->access_line && pppoed->access_line->ari) {
+                    search = dict_search(g_ctx->a10nsp_ari_dict, pppoed->access_line->ari);
+                    if(search) {
+                        return *search;
+                    }
+                }
+                return NULL;
+            }
+            return bbl_a10nsp_session_lookup_pppoe(interface, eth, pppoed->session_id);
+        case ETH_TYPE_PPPOE_SESSION:
+            return bbl_a10nsp_session_lookup_pppoe(interface, eth,
+                ((bbl_pppoe_session_s*)eth->next)->session_id);
+        default:
+            return NULL;
+    }
+}
+
 /**
  * bbl_a10nsp_rx_handler
  *
@@ -992,6 +1179,14 @@ bbl_a10nsp_rx_handler(bbl_a10nsp_interface_s *interface,
 
     interface->stats.packets_rx++;
     interface->stats.bytes_rx += eth->length;
+
+    if(unlikely(interface->session_lookup_ari)) {
+        session = bbl_a10nsp_session_lookup_ari(interface, eth);
+        if(session) {
+            bbl_a10nsp_rx(interface, session, eth);
+        }
+        return;
+    }
 
     /* The session-id is mapped into the last 3 bytes of
      * the client MAC address. The original approach using
