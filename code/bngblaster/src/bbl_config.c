@@ -6161,7 +6161,7 @@ json_parse_config(json_t *root)
                 "data-control-priority", "data-length", "data-offset", "control-tos",
                 "data-control-tos", "hello-interval", "lcp-padding", "lcp-start",
                 "calling-number", "called-number", "tx-connect-speed", "rx-connect-speed",
-                "proxy-lcp", "proxy-auth", "proxy-auth-hidden"
+                "proxy-lcp", "proxy-auth", "proxy-auth-hidden", "access-line"
             };
             if(!schema_validate(sub, "l2tp-client", schema, sizeof(schema)/sizeof(schema[0]))) {
                 return false;
@@ -6284,6 +6284,12 @@ json_parse_config(json_t *root)
                !(l2tp_client->proxy_auth && l2tp_client->config.secret)) {
                 fprintf(stderr, "JSON config error: l2tp-client->proxy-auth-hidden requires l2tp-client->proxy-auth and l2tp-client->secret\n");
                 return false;
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "access-line");
+            if(value) {
+                l2tp_client->access_line = json_boolean_value(value);
+            } else {
+                l2tp_client->access_line = true;
             }
         }
     } else if(section) {

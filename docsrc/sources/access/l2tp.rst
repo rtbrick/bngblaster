@@ -317,10 +317,18 @@ four servers as shown in the example below.
 RFC5515
 ~~~~~~~
 
-The Agent-Circuit-Id and Agent-Remote-Id AVPs defined in RFC5515
-are supported and stored for each session if received. Received
-CSUN messages are processed correctly and via the control socket,
-it is also possible to send CSURQ requests to the LAC.
+The access line AVPs defined in RFC5515 (Broadband Forum vendor ID
+3561) are supported and stored for each session if received. The
+Agent-Circuit-Id, Agent-Remote-Id and Access-Aggregation-Circuit-ID
+are shown as ``peer-aci``, ``peer-ari`` and ``peer-aaci``, all other
+received access line attributes in ``peer-access-line`` with the
+attribute names of the :ref:`access line profiles <access-line-profiles>`.
+The data rates sent with 64 bit in bps (RFC5515) are shown in kbps.
+The PON attributes of draft-lihawi-ancp-protocol-access-extension
+are decoded with the attribute types of version 04, plus the types
+of version 00 which are not used by version 04. Received CSUN
+messages are processed correctly and via the control socket, it is
+also possible to send CSURQ requests to the LAC.
 
 Proxy Authentication
 ~~~~~~~~~~~~~~~~~~~~
@@ -429,7 +437,13 @@ of both LNS and LAC tunnels.
                 "peer-proxy-lcp-initial-received": "010405d40506000003e9",
                 "peer-proxy-lcp-last-sent": "010405d40304c0230506fffffc16",
                 "peer-proxy-lcp-last-received": "010405d40506000003e9",
-                "proxy-lcp-accepted": true
+                "proxy-lcp-accepted": true,
+                "peer-aaci": "N/A",
+                "peer-access-line": {
+                    "act-up": 2000,
+                    "act-down": 16000,
+                    "dsl-type": 5
+                }
             }
         ]
     }
@@ -528,6 +542,20 @@ Configuration
     }
 
 .. include:: ../configuration/lac.rst
+
+The LAC sends the access line attributes of the session (see
+:ref:`access line <access-line>` and :ref:`access line profiles
+<access-line-profiles>`) as RFC5515 AVPs with the Broadband Forum
+vendor ID in the ICRQ if ``agent-circuit-id`` or ``agent-remote-id``
+is set, like the access line tags of PPPoE sessions. Data rates are
+sent with 64 bit in bps as defined in RFC5515. The
+Access-Aggregation-Circuit-ID-ASCII (type 3) and the PON attributes
+of draft-lihawi-ancp-protocol-access-extension (version 00 or 04 as
+selected by ``pon-access-line-version``), which are not defined in
+RFC5515, are sent with the same attribute types and values as the
+PPPoE access line tags (32 bit rates in kbps). All access line AVPs
+are sent with the M-bit cleared, which can be disabled with the
+``l2tp-client`` option ``access-line``.
 
 Traffic streams of PPPoL2TP sessions are sent upstream through the L2TP tunnel
 and downstream as plain IP packets from the network interface to the session

@@ -151,6 +151,7 @@ typedef struct bbl_l2tp_client_
     bool proxy_lcp;  /* Send proxy LCP AVPs (26-28) in ICCN, PPP starts with LCP opened */
     bool proxy_auth; /* Send proxy authentication AVPs (29-33) in ICCN */
     bool proxy_auth_hidden; /* Hide proxy authentication AVPs (RFC 2661 section 4.3) */
+    bool access_line; /* Send access line AVPs (RFC 5515) in ICRQ */
 
     void *next; /* Pointer to next L2TP client configuration */
 
@@ -374,6 +375,8 @@ typedef struct bbl_l2tp_session_
     char *peer_sub_address;
     char *peer_ari;
     char *peer_aci;
+    char *peer_aaci;
+    bbl_access_line_profile_s *peer_access_line; /* RFC 5515 access line AVPs, rates in kbps */
 } bbl_l2tp_session_s;
 
 const char*

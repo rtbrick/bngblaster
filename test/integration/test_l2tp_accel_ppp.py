@@ -117,7 +117,7 @@ class Setup:
         except subprocess.TimeoutExpired:
             proc.kill()
 
-    def start_lac(self, auth="PAP", **client):
+    def start_lac(self, auth="PAP", access=None, access_line_profiles=None, **client):
         conf = {
             "interfaces": {
                 "network": {"interface": self.topology.if_a, "address": LAC_ADDRESS + "/24",
@@ -131,6 +131,9 @@ class Setup:
             "l2tp-client": [{"group-id": 1, "name": "LAC1", "network-interface": self.topology.if_a,
                              "server-address": LNS_ADDRESS, "secret": SECRET, **client}]
         }
+        conf["interfaces"]["access"][0].update(access or {})
+        if access_line_profiles:
+            conf["access-line-profiles"] = access_line_profiles
         self.lac = BngBlaster(self.topology.a, self.tmp_path, "lac").start(conf, logging=("info", "l2tp", "pppoe"))
         self.processes.append(self.lac)
         wait_until(lambda: self.lac.ctrl("session-counters")["session-counters"]["sessions-established"]
@@ -201,4 +204,20 @@ def test_hide_avps(accel_ppp):
     accel_ppp.start_lac("CHAP", **{"proxy-lcp": True, "proxy-auth": True, "proxy-auth-hidden": True})
     assert accel_ppp.addresses() == EXPECTED_ADDRESSES
     assert "<Proxy-Authen-Name user1@test>" in accel_ppp.accel_log()
+    accel_ppp.terminate()
+
+
+@pytest.mark.full
+def test_access_line(accel_ppp):
+    """The optional access line AVPs (RFC 5515) in ICRQ, unknown to
+    accel-ppp, are ignored and the sessions are established."""
+    accel_ppp.start_lns()
+    accel_ppp.start_lac("PAP", access={"agent-circuit-id": "0.0.0.0/0.0.0.0 eth 0:{session-global}",
+                                       "agent-remote-id": "DEU.RTBRICK.{session-global}",
+                                       "rate-up": 2000, "rate-down": 16000, "dsl-type": 5,
+                                       "access-line-profile-id": 1},
+                        access_line_profiles=[{"access-line-profile-id": 1, "max-up": 5000,
+                                               "max-down": 50000, "data-link-encaps": 0x010200,
+                                               "pon-type": 2, "etr-down": 1200}])
+    assert accel_ppp.addresses() == EXPECTED_ADDRESSES
     accel_ppp.terminate()

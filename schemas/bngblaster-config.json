@@ -1548,6 +1548,11 @@
                         "type": "boolean",
                         "description": "Send proxy authentication AVPs hidden (RFC 2661 section 4.3), requires proxy-auth and secret",
                         "default": false
+                    },
+                    "access-line": {
+                        "type": "boolean",
+                        "description": "Send access line AVPs (RFC 5515) in ICRQ if agent-circuit-id or agent-remote-id is set",
+                        "default": true
                     }
                 },
                 "patternProperties": {

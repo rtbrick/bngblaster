@@ -253,6 +253,8 @@ bbl_l2tp_session_free(bbl_l2tp_session_s *l2tp_session)
     free(l2tp_session->peer_sub_address);
     free(l2tp_session->peer_ari);
     free(l2tp_session->peer_aci);
+    free(l2tp_session->peer_aaci);
+    free(l2tp_session->peer_access_line);
     free(l2tp_session->peer_private_group_id);
     free(l2tp_session);
 }
@@ -2687,6 +2689,46 @@ l2tp_proxy_lcp_json(uint8_t *options, uint16_t len)
     return json_string(hex);
 }
 
+/* Received access line attributes (RFC 5515) with the keys of the
+ * access line profile configuration, attributes not received are
+ * omitted. */
+static json_t *
+l2tp_access_line_json(bbl_access_line_profile_s *profile)
+{
+    const struct {
+        const char *key;
+        uint32_t value;
+    } attributes[] = {
+        {"act-up", profile->act_up}, {"act-down", profile->act_down},
+        {"min-up", profile->min_up}, {"min-down", profile->min_down},
+        {"att-up", profile->att_up}, {"att-down", profile->att_down},
+        {"max-up", profile->max_up}, {"max-down", profile->max_down},
+        {"min-up-low", profile->min_up_low}, {"min-down-low", profile->min_down_low},
+        {"max-interl-delay-up", profile->max_interl_delay_up},
+        {"act-interl-delay-up", profile->act_interl_delay_up},
+        {"max-interl-delay-down", profile->max_interl_delay_down},
+        {"act-interl-delay-down", profile->act_interl_delay_down},
+        {"data-link-encaps", profile->data_link_encaps}, {"dsl-type", profile->dsl_type},
+        {"pon-type", profile->pon_type},
+        {"etr-up", profile->etr_up}, {"etr-down", profile->etr_down},
+        {"attetr-up", profile->attetr_up}, {"attetr-down", profile->attetr_down},
+        {"gdr-up", profile->gdr_up}, {"gdr-down", profile->gdr_down},
+        {"attgdr-up", profile->attgdr_up}, {"attgdr-down", profile->attgdr_down},
+        {"ont-onu-avg-down", profile->ont_onu_avg_down}, {"ont-onu-peak-down", profile->ont_onu_peak_down},
+        {"ont-onu-max-up", profile->ont_onu_max_up}, {"ont-onu-ass-up", profile->ont_onu_ass_up},
+        {"pon-max-up", profile->pon_max_up}, {"pon-max-down", profile->pon_max_down},
+    };
+    json_t *root = json_object();
+    size_t i;
+
+    for(i = 0; i < sizeof(attributes)/sizeof(attributes[0]); i++) {
+        if(attributes[i].value) {
+            json_object_set_new(root, attributes[i].key, json_integer(attributes[i].value));
+        }
+    }
+    return root;
+}
+
 json_t *
 l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
 {
@@ -2733,6 +2775,10 @@ l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
                             l2tp_proxy_lcp_json(l2tp_session->proxy_lcp_last_received,
                                                 l2tp_session->proxy_lcp_last_received_len));
         json_object_set_new(root, "proxy-lcp-accepted", json_boolean(l2tp_session->proxy_lcp_accepted));
+        json_object_set_new(root, "peer-aaci", bbl_json_cstring(l2tp_session->peer_aaci));
+        if(l2tp_session->peer_access_line) {
+            json_object_set_new(root, "peer-access-line", l2tp_access_line_json(l2tp_session->peer_access_line));
+        }
     }
     return root;
 }

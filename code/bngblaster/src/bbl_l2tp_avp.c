@@ -273,6 +273,90 @@ bbl_l2tp_avp_copy_bytes(uint8_t **dst, uint16_t *dst_len, bbl_l2tp_avp_t *avp)
     }
 }
 
+/**
+ * bbl_l2tp_avp_decode_access_line
+ *
+ * Decode the access line AVPs (RFC 5515) with Broadband Forum vendor
+ * ID into the peer access line of the session. RFC 5515 data rates
+ * (64 bit in bps) are stored in kbps like configured for PPPoE, rates
+ * with 32 bit are expected in kbps. The PON attributes are decoded
+ * with the types of draft-lihawi-ancp-protocol-access-extension-04,
+ * with the types of version 00 not used by version 04 (0x92-0x96, 0x98).
+ *
+ * @return true if the AVP type is an access line attribute.
+ */
+static bool
+bbl_l2tp_avp_decode_access_line(bbl_l2tp_session_s *l2tp_session, bbl_l2tp_avp_t *avp)
+{
+    bbl_access_line_profile_s *profile = l2tp_session->peer_access_line;
+    uint32_t *field;
+    uint64_t rate;
+    size_t offset;
+    bool is_rate = false;
+
+    switch(avp->type) {
+        case ACCESS_LINE_ACT_UP: offset = offsetof(bbl_access_line_profile_s, act_up); is_rate = true; break;
+        case ACCESS_LINE_ACT_DOWN: offset = offsetof(bbl_access_line_profile_s, act_down); is_rate = true; break;
+        case ACCESS_LINE_MIN_UP: offset = offsetof(bbl_access_line_profile_s, min_up); is_rate = true; break;
+        case ACCESS_LINE_MIN_DOWN: offset = offsetof(bbl_access_line_profile_s, min_down); is_rate = true; break;
+        case ACCESS_LINE_ATT_UP: offset = offsetof(bbl_access_line_profile_s, att_up); is_rate = true; break;
+        case ACCESS_LINE_ATT_DOWN: offset = offsetof(bbl_access_line_profile_s, att_down); is_rate = true; break;
+        case ACCESS_LINE_MAX_UP: offset = offsetof(bbl_access_line_profile_s, max_up); is_rate = true; break;
+        case ACCESS_LINE_MAX_DOWN: offset = offsetof(bbl_access_line_profile_s, max_down); is_rate = true; break;
+        case ACCESS_LINE_MIN_UP_LOW: offset = offsetof(bbl_access_line_profile_s, min_up_low); is_rate = true; break;
+        case ACCESS_LINE_MIN_DOWN_LOW: offset = offsetof(bbl_access_line_profile_s, min_down_low); is_rate = true; break;
+        case ACCESS_LINE_MAX_INTERL_DELAY_UP: offset = offsetof(bbl_access_line_profile_s, max_interl_delay_up); break;
+        case ACCESS_LINE_ACT_INTERL_DELAY_UP: offset = offsetof(bbl_access_line_profile_s, act_interl_delay_up); break;
+        case ACCESS_LINE_MAX_INTERL_DELAY_DOWN: offset = offsetof(bbl_access_line_profile_s, max_interl_delay_down); break;
+        case ACCESS_LINE_ACT_INTERL_DELAY_DOWN: offset = offsetof(bbl_access_line_profile_s, act_interl_delay_down); break;
+        case ACCESS_LINE_DSL_TYPE: offset = offsetof(bbl_access_line_profile_s, dsl_type); break;
+        case ACCESS_LINE_PON_TYPE: offset = offsetof(bbl_access_line_profile_s, pon_type); break;
+        case ACCESS_LINE_ETR_UP: offset = offsetof(bbl_access_line_profile_s, etr_up); break;
+        case ACCESS_LINE_ETR_DOWN: offset = offsetof(bbl_access_line_profile_s, etr_down); break;
+        case ACCESS_LINE_ATTETR_UP: offset = offsetof(bbl_access_line_profile_s, attetr_up); break;
+        case ACCESS_LINE_ATTETR_DOWN: offset = offsetof(bbl_access_line_profile_s, attetr_down); break;
+        case ACCESS_LINE_GDR_UP: offset = offsetof(bbl_access_line_profile_s, gdr_up); break;
+        case ACCESS_LINE_GDR_DOWN: offset = offsetof(bbl_access_line_profile_s, gdr_down); break;
+        case ACCESS_LINE_ATTGDR_UP: offset = offsetof(bbl_access_line_profile_s, attgdr_up); break;
+        case ACCESS_LINE_ATTGDR_DOWN: offset = offsetof(bbl_access_line_profile_s, attgdr_down); break;
+        case ACCESS_LINE_ONT_ONU_AVG_DOWN: offset = offsetof(bbl_access_line_profile_s, ont_onu_avg_down); break;
+        case ACCESS_LINE_ONT_ONU_PEAK_DOWN: offset = offsetof(bbl_access_line_profile_s, ont_onu_peak_down); break;
+        case ACCESS_LINE_ONT_ONU_MAX_UP: offset = offsetof(bbl_access_line_profile_s, ont_onu_max_up); break;
+        case ACCESS_LINE_ONT_ONU_ASS_UP: offset = offsetof(bbl_access_line_profile_s, ont_onu_ass_up); break;
+        case ACCESS_LINE_PON_MAX_UP: offset = offsetof(bbl_access_line_profile_s, pon_max_up); break;
+        case ACCESS_LINE_PON_MAX_DOWN: offset = offsetof(bbl_access_line_profile_s, pon_max_down); break;
+        case ACCESS_LINE_PON_TYPE_LIHAWI_00: offset = offsetof(bbl_access_line_profile_s, pon_type); break;
+        case ACCESS_LINE_ONT_ONU_AVG_DOWN_LIHAWI_00: offset = offsetof(bbl_access_line_profile_s, ont_onu_avg_down); break;
+        case ACCESS_LINE_ONT_ONU_PEAK_DOWN_LIHAWI_00: offset = offsetof(bbl_access_line_profile_s, ont_onu_peak_down); break;
+        case ACCESS_LINE_ONT_ONU_MAX_UP_LIHAWI_00: offset = offsetof(bbl_access_line_profile_s, ont_onu_max_up); break;
+        case ACCESS_LINE_ONT_ONU_ASS_UP_LIHAWI_00: offset = offsetof(bbl_access_line_profile_s, ont_onu_ass_up); break;
+        case ACCESS_LINE_PON_MAX_DOWN_LIHAWI_00: offset = offsetof(bbl_access_line_profile_s, pon_max_down); break;
+        case ACCESS_LINE_DATA_LINK_ENCAPS: offset = offsetof(bbl_access_line_profile_s, data_link_encaps); break;
+        default:
+            return false;
+    }
+    if(!profile) {
+        profile = calloc(1, sizeof(bbl_access_line_profile_s));
+        if(!profile) return true;
+        l2tp_session->peer_access_line = profile;
+    }
+    field = (uint32_t*)((uint8_t*)profile + offset);
+    if(avp->type == ACCESS_LINE_DATA_LINK_ENCAPS) {
+        /* Data link, encaps 1 and encaps 2 */
+        if(avp->len == 3) {
+            *field = (avp->value[0] << 16) | (avp->value[1] << 8) | avp->value[2];
+        }
+        return true;
+    }
+    if(is_rate && avp->len == sizeof(uint64_t)) {
+        rate = be64toh(*(uint64_t*)avp->value) / 1000;
+        *field = rate > UINT32_MAX ? UINT32_MAX : rate;
+    } else if(avp->len == sizeof(uint32_t)) {
+        *field = be32toh(*(uint32_t*)avp->value);
+    }
+    return true;
+}
+
 bool
 bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session)
 {
@@ -502,7 +586,17 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                             *(l2tp_session->peer_ari + avp.len) = '\0';
                         }
                         break;
+                    case ACCESS_LINE_AGG_ACC_CIRCUIT_ID_ASCII:
+                        if(!l2tp_session->peer_aaci && avp.len) {
+                            l2tp_session->peer_aaci = malloc(avp.len + 1);
+                            memcpy(l2tp_session->peer_aaci, avp.value, avp.len);
+                            *(l2tp_session->peer_aaci + avp.len) = '\0';
+                        }
+                        break;
                     default:
+                        if(bbl_l2tp_avp_decode_access_line(l2tp_session, &avp)) {
+                            break;
+                        }
                         if(avp.m) {
                             LOG(L2TP, "L2TP Error (%s) Mandatory Broadband Forum AVP with unknown type %u in %s from %s\n",
                                       l2tp_tunnel_hostname(l2tp_tunnel), avp.type,
@@ -1008,6 +1102,131 @@ bbl_l2tp_avp_encode_proxy(uint8_t **buf, uint16_t *len,
     bbl_l2tp_avp_encode_proxy_auth(buf, len, l2tp_client, random_vector, &avp);
 }
 
+static void
+bbl_l2tp_avp_encode_bbf_string(uint8_t **buf, uint16_t *len, uint16_t type, char *value)
+{
+    bbl_l2tp_avp_t avp = {0};
+
+    if(!value) return;
+    avp.vendor = BROADBAND_FORUM_VENDOR_ID;
+    avp.type = type;
+    avp.len = strnlen(value, UINT8_MAX);
+    avp.value_type = L2TP_AVP_VALUE_BYTES;
+    avp.value = (void*)value;
+    bbl_l2tp_avp_encode(buf, len, &avp);
+}
+
+static void
+bbl_l2tp_avp_encode_bbf_uint32(uint8_t **buf, uint16_t *len, uint16_t type, uint32_t value)
+{
+    bbl_l2tp_avp_t avp = {0};
+
+    if(!value) return;
+    avp.vendor = BROADBAND_FORUM_VENDOR_ID;
+    avp.type = type;
+    avp.len = sizeof(uint32_t);
+    avp.value_type = L2TP_AVP_VALUE_UINT32;
+    avp.value = (void*)&value;
+    bbl_l2tp_avp_encode(buf, len, &avp);
+}
+
+/* RFC 5515 data rates are 64 bit in bps, configured in kbps. */
+static void
+bbl_l2tp_avp_encode_bbf_rate(uint8_t **buf, uint16_t *len, uint16_t type, uint32_t kbps)
+{
+    bbl_l2tp_avp_t avp = {0};
+    uint64_t bps = (uint64_t)kbps * 1000;
+
+    if(!kbps) return;
+    avp.vendor = BROADBAND_FORUM_VENDOR_ID;
+    avp.type = type;
+    avp.len = sizeof(uint64_t);
+    avp.value_type = L2TP_AVP_VALUE_UINT64;
+    avp.value = (void*)&bps;
+    bbl_l2tp_avp_encode(buf, len, &avp);
+}
+
+/**
+ * bbl_l2tp_avp_encode_access_line
+ *
+ * Access line AVPs (RFC 5515) with the Broadband Forum vendor ID and
+ * the TR-101 attribute types also used for PPPoE. The PON attributes
+ * of draft-lihawi-ancp-protocol-access-extension are not covered by
+ * RFC 5515 and sent with the 32 bit kbps encoding of the draft. All
+ * AVPs are optional (M-bit 0).
+ */
+static void
+bbl_l2tp_avp_encode_access_line(uint8_t **buf, uint16_t *len, bbl_session_s *session)
+{
+    bbl_access_line_profile_s *profile = session->access_line_profile;
+    uint32_t data_link_encaps;
+    bool lihawi_00;
+
+    bbl_l2tp_avp_encode_bbf_string(buf, len, ACCESS_LINE_ACI, session->agent_circuit_id);
+    bbl_l2tp_avp_encode_bbf_string(buf, len, ACCESS_LINE_ARI, session->agent_remote_id);
+    bbl_l2tp_avp_encode_bbf_string(buf, len, ACCESS_LINE_AGG_ACC_CIRCUIT_ID_ASCII,
+                                   session->access_aggregation_circuit_id);
+    bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_ACT_UP, session->rate_up);
+    bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_ACT_DOWN, session->rate_down);
+    if(profile) {
+        bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_MIN_UP, profile->min_up);
+        bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_MIN_DOWN, profile->min_down);
+        bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_ATT_UP, profile->att_up);
+        bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_ATT_DOWN, profile->att_down);
+        bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_MAX_UP, profile->max_up);
+        bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_MAX_DOWN, profile->max_down);
+        bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_MIN_UP_LOW, profile->min_up_low);
+        bbl_l2tp_avp_encode_bbf_rate(buf, len, ACCESS_LINE_MIN_DOWN_LOW, profile->min_down_low);
+        bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_MAX_INTERL_DELAY_UP, profile->max_interl_delay_up);
+        bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_ACT_INTERL_DELAY_UP, profile->act_interl_delay_up);
+        bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_MAX_INTERL_DELAY_DOWN, profile->max_interl_delay_down);
+        bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_ACT_INTERL_DELAY_DOWN, profile->act_interl_delay_down);
+        if(profile->data_link_encaps) {
+            /* Data link, encaps 1 and encaps 2 (3 octets) */
+            bbl_l2tp_avp_t avp = {0};
+            data_link_encaps = htobe32(profile->data_link_encaps);
+            avp.vendor = BROADBAND_FORUM_VENDOR_ID;
+            avp.type = ACCESS_LINE_DATA_LINK_ENCAPS;
+            avp.len = 3;
+            avp.value_type = L2TP_AVP_VALUE_BYTES;
+            avp.value = (uint8_t*)&data_link_encaps + 1;
+            bbl_l2tp_avp_encode(buf, len, &avp);
+        }
+    }
+    /* 32 bit integer like the PPPoE tag, although the RFC 5515
+     * text describes 1 octet followed by 3 reserved octets. */
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_DSL_TYPE, session->dsl_type);
+    if(!profile) return;
+
+    lihawi_00 = profile->pon_access_line_version == DRAFT_LIHAWI_00;
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, lihawi_00 ? ACCESS_LINE_PON_TYPE_LIHAWI_00 : ACCESS_LINE_PON_TYPE,
+                                   profile->pon_type);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_ETR_UP, profile->etr_up);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_ETR_DOWN, profile->etr_down);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_ATTETR_UP, profile->attetr_up);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_ATTETR_DOWN, profile->attetr_down);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_GDR_UP, profile->gdr_up);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_GDR_DOWN, profile->gdr_down);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_ATTGDR_UP, profile->attgdr_up);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_ATTGDR_DOWN, profile->attgdr_down);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len,
+                                   lihawi_00 ? ACCESS_LINE_ONT_ONU_AVG_DOWN_LIHAWI_00 : ACCESS_LINE_ONT_ONU_AVG_DOWN,
+                                   profile->ont_onu_avg_down);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len,
+                                   lihawi_00 ? ACCESS_LINE_ONT_ONU_PEAK_DOWN_LIHAWI_00 : ACCESS_LINE_ONT_ONU_PEAK_DOWN,
+                                   profile->ont_onu_peak_down);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len,
+                                   lihawi_00 ? ACCESS_LINE_ONT_ONU_MAX_UP_LIHAWI_00 : ACCESS_LINE_ONT_ONU_MAX_UP,
+                                   profile->ont_onu_max_up);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len,
+                                   lihawi_00 ? ACCESS_LINE_ONT_ONU_ASS_UP_LIHAWI_00 : ACCESS_LINE_ONT_ONU_ASS_UP,
+                                   profile->ont_onu_ass_up);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, lihawi_00 ? ACCESS_LINE_PON_MAX_UP_LIHAWI_00 : ACCESS_LINE_PON_MAX_UP,
+                                   profile->pon_max_up);
+    bbl_l2tp_avp_encode_bbf_uint32(buf, len, lihawi_00 ? ACCESS_LINE_PON_MAX_DOWN_LIHAWI_00 : ACCESS_LINE_PON_MAX_DOWN,
+                                   profile->pon_max_down);
+}
+
 void
 bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session,
                                l2tp_message_t l2tp_type, uint8_t *buf, uint16_t *len)
@@ -1265,6 +1484,12 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
                     avp.value_type = L2TP_AVP_VALUE_BYTES;
                     avp.value = (void*)l2tp_tunnel->client->called_number;
                     bbl_l2tp_avp_encode(&buf, len, &avp);
+                }
+                /* Access line AVPs (RFC 5515), like the PPPoE access
+                 * line tags if agent circuit or remote ID is set. */
+                if(l2tp_tunnel->client && l2tp_tunnel->client->access_line && l2tp_session->session &&
+                   (l2tp_session->session->agent_circuit_id || l2tp_session->session->agent_remote_id)) {
+                    bbl_l2tp_avp_encode_access_line(&buf, len, l2tp_session->session);
                 }
             }
             break;

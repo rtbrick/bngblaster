@@ -670,6 +670,108 @@ def test_invalid_icrq(topology, processes, tmp_path):
 
 
 
+BBF_VENDOR_ID = 3561
+ACCESS_LINE_PROFILE = {
+    "act-up": 2000, "act-down": 16000, "min-up": 1000, "min-down": 8000,
+    "att-up": 4000, "att-down": 32000, "max-up": 5000, "max-down": 50000,
+    "min-up-low": 500, "min-down-low": 4000,
+    "max-interl-delay-up": 10, "act-interl-delay-up": 8,
+    "max-interl-delay-down": 20, "act-interl-delay-down": 16,
+    "data-link-encaps": 0x010200, "dsl-type": 5,
+    "pon-type": 2, "etr-up": 1100, "etr-down": 1200, "attetr-up": 1300, "attetr-down": 1400,
+    "gdr-up": 1500, "gdr-down": 1600, "attgdr-up": 1700, "attgdr-down": 1800,
+    "ont-onu-avg-down": 1900, "ont-onu-peak-down": 2100, "ont-onu-max-up": 2200,
+    "ont-onu-ass-up": 2300, "pon-max-up": 2400, "pon-max-down": 2500
+}
+
+
+def bbf_avp(avp_type, fmt, value):
+    """Broadband Forum access line AVP (RFC 5515), M-bit not set."""
+    data = struct.pack(fmt, value) if fmt else value
+    return struct.pack("!HHH", 6 + len(data), BBF_VENDOR_ID, avp_type) + data
+
+
+def access_line_update(profile, access_line=None):
+    def update(config):
+        config["interfaces"]["access"][0].update({
+            "agent-circuit-id": "0.0.0.0/0.0.0.0 eth 0:{session-global}",
+            "agent-remote-id": "DEU.RTBRICK.{session-global}",
+            "access-aggregation-circuit-id": "OLT1 xpon 1/1/{session-global}",
+            "access-line-profile-id": 1})
+        config["access-line-profiles"] = [{"access-line-profile-id": 1, **profile}]
+        if access_line is not None:
+            for client in config["l2tp-client"]:
+                client["access-line"] = access_line
+    return update
+
+
+@pytest.mark.full
+def test_access_line(topology, processes, tmp_path):
+    """The LAC sends the access line attributes of the session as
+    Broadband Forum AVPs (RFC 5515) in the ICRQ, with 64 bit data rates
+    in bps, decoded by the LNS into the access line profile keys."""
+    lac, lns = start_pair(topology, processes, tmp_path,
+                          update=access_line_update(ACCESS_LINE_PROFILE))
+    wait_until(lambda: len(lns_sessions(lns)) == 2, 10, message="LNS sessions established")
+    sessions = {s["peer-aci"]: s for s in lns_sessions(lns)}
+    for i in (1, 2):
+        session = sessions["0.0.0.0/0.0.0.0 eth 0:%d" % i]
+        assert session["peer-ari"] == "DEU.RTBRICK.%d" % i
+        assert session["peer-aaci"] == "OLT1 xpon 1/1/%d" % i
+        assert session["peer-access-line"] == ACCESS_LINE_PROFILE
+    assert_clean_exit(lac, lns)
+
+    with open(lac.path("pcap"), "rb") as f:
+        pcap = f.read()
+    assert bbf_avp(0x01, None, b"0.0.0.0/0.0.0.0 eth 0:1") in pcap
+    assert bbf_avp(0x81, "!Q", 2000000) in pcap
+    assert bbf_avp(0x8a, "!Q", 4000000) in pcap
+    assert bbf_avp(0x8e, "!I", 16) in pcap
+    assert bbf_avp(0x90, None, b"\x01\x02\x00") in pcap
+    assert bbf_avp(0x91, "!I", 5) in pcap
+    assert bbf_avp(0x97, "!I", 2) in pcap
+    assert bbf_avp(0xb5, "!I", 2500) in pcap
+
+
+@pytest.mark.full
+def test_access_line_lihawi_00(topology, processes, tmp_path):
+    """PON attributes use the types of draft-lihawi-...-00 if selected
+    by pon-access-line-version like for PPPoE."""
+    profile = {"pon-access-line-version": "DRAFT-LIHAWI-00", "pon-type": 1,
+               "ont-onu-avg-down": 1900, "ont-onu-peak-down": 2100, "ont-onu-max-up": 2200,
+               "ont-onu-ass-up": 2300, "pon-max-up": 2400, "pon-max-down": 2500}
+    lac, lns = start_pair(topology, processes, tmp_path, update=access_line_update(profile))
+    wait_until(lambda: len(lns_sessions(lns)) == 2, 10, message="LNS sessions established")
+    # The PON-Tree-Maximum-Data-Rate-Upstream type 0x97 of version 00
+    # is decoded as PON-Access-Type of version 04.
+    for session in lns_sessions(lns):
+        assert session["peer-access-line"] == {
+            "pon-type": 2400, "ont-onu-avg-down": 1900, "ont-onu-peak-down": 2100,
+            "ont-onu-max-up": 2200, "ont-onu-ass-up": 2300, "pon-max-down": 2500}
+    assert_clean_exit(lac, lns)
+
+    with open(lac.path("pcap"), "rb") as f:
+        pcap = f.read()
+    for avp_type, value in ((0x92, 1), (0x93, 1900), (0x94, 2100), (0x95, 2200),
+                            (0x96, 2300), (0x97, 2400), (0x98, 2500)):
+        assert bbf_avp(avp_type, "!I", value) in pcap
+    assert bbf_avp(0xb0, "!I", 1900) not in pcap
+
+
+@pytest.mark.full
+def test_access_line_disabled(topology, processes, tmp_path):
+    """No access line AVPs are sent with access-line disabled."""
+    lac, lns = start_pair(topology, processes, tmp_path,
+                          update=access_line_update(ACCESS_LINE_PROFILE, access_line=False))
+    wait_until(lambda: len(lns_sessions(lns)) == 2, 10, message="LNS sessions established")
+    for session in lns_sessions(lns):
+        assert session["peer-aci"] == "N/A" and session["peer-aaci"] == "N/A"
+        assert "peer-access-line" not in session
+    assert_clean_exit(lac, lns)
+    with open(lac.path("pcap"), "rb") as f:
+        assert struct.pack("!HH", BBF_VENDOR_ID, 0x01) not in f.read()
+
+
 def start_pair(topology, processes, tmp_path, sessions=2, update=None):
     """Start LNS and LAC, update modifies the LAC config."""
     lns = BngBlaster(topology.b, tmp_path, "lns").start(

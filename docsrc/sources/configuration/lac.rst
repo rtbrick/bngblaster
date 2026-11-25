@@ -119,3 +119,7 @@
 |                                           | | using the tunnel secret. Requires ``proxy-auth`` and ``secret``.  |
 |                                           | | Default: false                                                    |
 +-------------------------------------------+---------------------------------------------------------------------+
+| **access-line**                           | | Send the access line attributes of the session as RFC5515 AVPs    |
+|                                           | | in ICRQ if agent-circuit-id or agent-remote-id is set.            |
+|                                           | | Default: true                                                     |
++-------------------------------------------+---------------------------------------------------------------------+
