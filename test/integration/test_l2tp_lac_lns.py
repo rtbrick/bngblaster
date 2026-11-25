@@ -803,10 +803,40 @@ def test_session_traffic_both_directions(topology, processes, tmp_path):
                10, message="downstream session traffic sent")
     assert all(s["tx-packets"] >= 10 for s in streams("upstream"))
     lac.ctrl("session-traffic-stop")
+    # Upstream is routed by the LNS to the network interface address.
+    assert all(s["destination-address"] == LAC_ADDRESS for s in streams("upstream")), streams("upstream")
     network = lac.ctrl("network-interfaces")["network-interfaces"][0]
     assert network["tx-packets-streams"] > 0 and network["tx-packets-session-ipv4"] > 0, network
     assert lac.ctrl("session-streams", **{"session-id": 1})["session-streams"]["tx-packets"] > 0
     assert "Failed to build packet" not in open(lac.path("log")).read()
+    assert_clean_exit(lac, lns)
+
+
+@pytest.mark.full
+def test_session_traffic_a10nsp(topology, processes, tmp_path):
+    """PPPoL2TP sessions with an A10NSP interface (LNS translating the
+    sessions to PPPoE) send upstream through the L2TP tunnel of the
+    l2tp-client network interface and downstream from the A10NSP
+    interface (was refused as no network interface was selected)."""
+    a10nsp = "a10%da" % helpers.if_id()
+    helpers.veth_pair(topology.a, a10nsp, topology.a, a10nsp + "p")
+
+    def update(config):
+        config["interfaces"]["a10nsp"] = [{"interface": a10nsp}]
+        config["interfaces"]["access"][0]["a10nsp-interface"] = a10nsp
+
+    lac, lns = start_pair(topology, processes, tmp_path, update=update)
+    lac.ctrl("session-traffic-start")
+
+    def streams(direction):
+        return [s for s in lac.ctrl("session-streams", **{"session-id": 1})["session-streams"]["streams"]
+                if s["direction"] == direction]
+
+    assert streams("downstream") and all(s["tx-interface"] == a10nsp for s in streams("downstream"))
+    wait_until(lambda: all(s["data-ipv4-packets-rx"] >= 10 for s in lns_sessions(lns)), 10,
+               message="upstream session traffic received by the LNS")
+    assert all(s["tx-interface"] == topology.if_a for s in streams("upstream")), streams("upstream")
+    lac.ctrl("session-traffic-stop")
     assert_clean_exit(lac, lns)
 
 
@@ -959,20 +989,20 @@ def test_lac_lns_same_instance(local_veth, processes, tmp_path):
     assert bbl.terminate(EXIT_TIMEOUT) == 0
 
 
-def test_stream_a10nsp_config_error(local_veth, processes, tmp_path):
-    """A PPPoL2TP upstream stream without network interface (A10NSP
-    selected) is a configuration error instead of a crash."""
+def test_stream_a10nsp_upstream(local_veth, processes, tmp_path):
+    """A PPPoL2TP upstream stream with A10NSP selected is sent through
+    the L2TP tunnel of the l2tp-client network interface (was refused,
+    before that a crash)."""
     config = lac_config(local_veth.if1, sessions=1)
     config["interfaces"]["a10nsp"] = [{"interface": local_veth.if2}]
     config["interfaces"]["access"][0]["stream-group-id"] = 1
     config["streams"] = [{"name": "S1", "stream-group-id": 1, "type": "ipv4", "direction": "upstream",
                           "pps": 1, "a10nsp-interface": local_veth.if2}]
-    bbl = BngBlaster(local_veth.ns, tmp_path, "lac")
+    bbl = BngBlaster(local_veth.ns, tmp_path, "lac").start(config)
     processes.append(bbl)
-    with pytest.raises(RuntimeError) as error:
-        bbl.start(config)
-    assert bbl.proc.returncode > 0, str(error.value)
-    assert "requires a network interface" in open(bbl.path("log")).read()
+    assert bbl.alive()
+    assert "requires a network interface" not in open(bbl.path("log")).read()
+    assert bbl.terminate(EXIT_TIMEOUT) == 0
 
 
 @pytest.mark.parametrize("group_id", [2, None], ids=["unknown-group", "no-group"])

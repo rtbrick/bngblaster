@@ -1180,10 +1180,14 @@ bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream, bbl_l2tp_session_s *l2tp_
             } else {
                 ipv4.src = session->ip_address;
             }
+            /* Upstream is routed by the LNS to the network
+             * interface address, as for PPPoE sessions. */
             if(stream->config->ipv4_destination_address) {
                 ipv4.dst = stream->config->ipv4_destination_address;
             } else if(stream->config->ipv4_network_address) {
                 ipv4.dst = stream->config->ipv4_network_address;
+            } else if(network_interface->ip.address) {
+                ipv4.dst = network_interface->ip.address;
             } else {
                 ipv4.dst = MOCK_IP_LOCAL;
             }
@@ -1219,6 +1223,8 @@ bbl_stream_build_pppol2tp_packet(bbl_stream_s *stream, bbl_l2tp_session_s *l2tp_
                 ipv6.dst = stream->config->ipv6_destination_address;
             } else if(*(uint64_t*)stream->config->ipv6_network_address) {
                 ipv6.dst = stream->config->ipv6_network_address;
+            } else if(*(uint64_t*)network_interface->ip6.address) {
+                ipv6.dst = network_interface->ip6.address;
             } else {
                 ipv6.dst = (void*)mock_ipv6_local;
             }
@@ -1445,6 +1451,10 @@ bbl_stream_build_packet(bbl_stream_s *stream)
                 if(l2tp_session) {
                     return bbl_stream_build_pppol2tp_packet(stream, l2tp_session);
                 }
+            } else if(stream->tx_flags & STREAM_FLAG_A10NSP) {
+                /* Downstream to sessions translated by the LNS
+                 * to PPPoE towards the A10NSP interface. */
+                return bbl_stream_build_a10nsp_pppoe_packet(stream);
             } else {
                 /* Downstream is routed by the LNS to the session address. */
                 return bbl_stream_build_network_packet(stream);
@@ -2537,11 +2547,32 @@ bbl_stream_config_port_iterate(bbl_stream_config_s *config)
     }
 }
 
+/* Network interface of PPPoL2TP upstream streams, which is the selected
+ * network interface or the network interface of the L2TP client group. */
+static bbl_network_interface_s *
+bbl_stream_pppol2tp_network_interface(bbl_session_s *session,
+                                      bbl_network_interface_s *network_interface)
+{
+    bbl_l2tp_client_s *l2tp_client = g_ctx->config.l2tp_client;
+
+    if(network_interface) {
+        return network_interface;
+    }
+    while(l2tp_client) {
+        if(l2tp_client->group_id == session->access_config->l2tp_client_group_id) {
+            return bbl_network_interface_get(l2tp_client->network_interface);
+        }
+        l2tp_client = l2tp_client->next;
+    }
+    return NULL;
+}
+
 static bool
 bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
 {
     bbl_access_interface_s *access_interface = NULL;
     bbl_network_interface_s *network_interface = NULL;
+    bbl_network_interface_s *l2tp_network_interface = NULL;
     bbl_a10nsp_interface_s *a10nsp_interface = NULL;
     bbl_stream_s *stream_up = NULL;
     bbl_stream_s *stream_down = NULL;
@@ -2578,10 +2609,14 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
     }
 
     if(config->direction & BBL_DIRECTION_UP) {
-        if(session->access_config->access_type == ACCESS_TYPE_PPPOL2TP && !network_interface) {
-            /* PPPoL2TP upstream is sent through the L2TP tunnel. */
-            LOG(ERROR, "Failed to add stream %s (upstream) because PPPoL2TP requires a network interface\n", config->name);
-            return false;
+        if(session->access_config->access_type == ACCESS_TYPE_PPPOL2TP) {
+            /* PPPoL2TP upstream is sent through the L2TP tunnel, also if
+             * downstream is sent from an A10NSP interface. */
+            l2tp_network_interface = bbl_stream_pppol2tp_network_interface(session, network_interface);
+            if(!l2tp_network_interface) {
+                LOG(ERROR, "Failed to add stream %s (upstream) because PPPoL2TP requires a network interface\n", config->name);
+                return false;
+            }
         }
         if(config->type == BBL_SUB_TYPE_IPV4) {
             if(!(session->access_config->access_type == ACCESS_TYPE_PPPOL2TP ||
@@ -2633,8 +2668,8 @@ bbl_stream_session_add(bbl_stream_config_s *config, bbl_session_s *session)
         if(session->access_type == ACCESS_TYPE_PPPOL2TP) {
             /* PPPoL2TP upstream goes through the L2TP tunnel's network interface */
             stream_up->tx_flags |= (STREAM_FLAG_NETWORK|STREAM_FLAG_UPSTREAM);
-            stream_up->tx_network_interface = network_interface;
-            stream_up->tx_interface = network_interface->interface;
+            stream_up->tx_network_interface = l2tp_network_interface;
+            stream_up->tx_interface = l2tp_network_interface->interface;
         } else {
             stream_up->tx_flags |= (STREAM_FLAG_ACCESS|STREAM_FLAG_UPSTREAM);
             stream_up->tx_access_interface = access_interface;
