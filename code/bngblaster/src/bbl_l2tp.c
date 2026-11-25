@@ -366,6 +366,32 @@ bbl_l2tp_tunnel_free_job(timer_s *timer)
 }
 
 /**
+ * bbl_l2tp_client_pending_terminate
+ *
+ * Terminate the PPP sessions queued for a LAC tunnel which is
+ * not established (e.g. tunnel setup failed), so that they can
+ * reconnect with a new tunnel.
+ *
+ * @param l2tp_tunnel L2TP tunnel
+ */
+static void
+bbl_l2tp_client_pending_terminate(bbl_l2tp_tunnel_s *l2tp_tunnel)
+{
+    bbl_session_s *session;
+
+    while(!CIRCLEQ_EMPTY(&l2tp_tunnel->pending_session_qhead)) {
+        session = CIRCLEQ_FIRST(&l2tp_tunnel->pending_session_qhead);
+        CIRCLEQ_REMOVE(&l2tp_tunnel->pending_session_qhead, session, session_l2tp_qnode);
+        session->l2tp_tunnel = NULL;
+        if(l2tp_tunnel->lac_sessions) l2tp_tunnel->lac_sessions--;
+        if(session->session_state != BBL_TERMINATED &&
+           session->session_state != BBL_IDLE) {
+            bbl_session_update_state(session, BBL_TERMINATED);
+        }
+    }
+}
+
+/**
  * bbl_l2tp_tunnel_delete
  *
  * This function will free all dynamic memory for the given
@@ -392,18 +418,8 @@ bbl_l2tp_tunnel_delete(bbl_l2tp_tunnel_s *l2tp_tunnel)
         while (!CIRCLEQ_EMPTY(&l2tp_tunnel->session_qhead)) {
             bbl_l2tp_session_delete(CIRCLEQ_FIRST(&l2tp_tunnel->session_qhead));
         }
-        /* Terminate any PPP sessions still queued for this tunnel
-         * (e.g. the tunnel failed before reaching ESTABLISHED). */
-        while (!CIRCLEQ_EMPTY(&l2tp_tunnel->pending_session_qhead)) {
-            bbl_session_s *session = CIRCLEQ_FIRST(&l2tp_tunnel->pending_session_qhead);
-            CIRCLEQ_REMOVE(&l2tp_tunnel->pending_session_qhead, session, session_l2tp_qnode);
-            session->l2tp_tunnel = NULL;
-            if(l2tp_tunnel->lac_sessions) l2tp_tunnel->lac_sessions--;
-            if(session->session_state != BBL_TERMINATED &&
-               session->session_state != BBL_IDLE) {
-                bbl_session_update_state(session, BBL_TERMINATED);
-            }
-        }
+        /* Terminate any PPP sessions still queued for this tunnel. */
+        bbl_l2tp_client_pending_terminate(l2tp_tunnel);
         /* Remove tunnel from server/client object */
         if(CIRCLEQ_NEXT(l2tp_tunnel, tunnel_qnode) != NULL) {
             if(l2tp_tunnel->is_lac) {
@@ -475,6 +491,13 @@ bbl_l2tp_tunnel_update_state(bbl_l2tp_tunnel_s *l2tp_tunnel, l2tp_tunnel_state_t
         /* Set new state and reset state seconds */
         l2tp_tunnel->state = state;
         l2tp_tunnel->state_seconds = 0;
+
+        if(l2tp_tunnel->is_lac && state >= BBL_L2TP_TUNNEL_SEND_STOPCCN) {
+            /* Pending sessions have no L2TP session to be released with
+             * the StopCCN, they are terminated now instead of with the
+             * tunnel deletion after the StopCCN timeout. */
+            bbl_l2tp_client_pending_terminate(l2tp_tunnel);
+        }
     }
 }
 

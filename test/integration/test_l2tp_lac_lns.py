@@ -887,6 +887,31 @@ def test_session_restart(topology, processes, tmp_path):
 
 
 @pytest.mark.full
+@pytest.mark.parametrize("section", ["sessions", "pppoe"])
+def test_reconnect_after_setup_failure(topology, processes, tmp_path, section):
+    """PPPoL2TP sessions reconnect with sessions->reconnect or pppoe->reconnect
+    (default sessions->reconnect) after the session setup failed, here as
+    no LNS answers the tunnel setup (was terminated without reconnect)."""
+    # The kernel answers ARP for the LNS address, but not the tunnel setup.
+    address = [LNS_ADDRESS + "/24", "dev", topology.if_b]
+    topology.b.exec(["ip", "address", "add"] + address)
+    config = lac_config(topology.if_a, sessions=2)
+    config.setdefault(section, {})["reconnect"] = True
+    lac = BngBlaster(topology.a, tmp_path, "lac").start(config, logging=("info", "l2tp", "pppoe"))
+    processes.append(lac)
+
+    def flapped():
+        return min(lac.ctrl("session-info", **{"session-id": i})["session-info"]["flapped"] for i in (1, 2))
+    wait_until(lambda: flapped() >= 1, 60, message="session setup failed")
+    topology.b.exec(["ip", "address", "del"] + address)
+    lns = BngBlaster(topology.b, tmp_path, "lns").start(lns_config(topology.if_b), logging=("info", "l2tp"))
+    processes.append(lns)
+    wait_until(lambda: lac_counters(lac)["sessions-established"] == 2, 60,
+               message="LAC sessions reconnected")
+    assert_clean_exit(lac, lns)
+
+
+@pytest.mark.full
 def test_lns_lcp_padding(topology, processes, tmp_path):
     """LCP packets of the LNS with the maximum lcp-padding fit into an L2TP
     data frame (MTU 1500), larger values are rejected (up to 65535 broke

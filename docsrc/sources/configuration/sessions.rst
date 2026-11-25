@@ -21,7 +21,7 @@
 |                          | | before starting sessions.                                      |
 |                          | | Default: 0                                                     |
 +--------------------------+------------------------------------------------------------------+
-| **reconnect**            | | Automatically reconnect sessions (PPPoE and IPoE).             |
+| **reconnect**            | | Automatically reconnect sessions (PPPoE, PPPoL2TP and IPoE).   |
 |                          | | Default: false                                                 |
 +--------------------------+------------------------------------------------------------------+
 | **autostart**            | | Start sessions automatically.                                  |

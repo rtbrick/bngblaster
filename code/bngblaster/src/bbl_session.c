@@ -691,7 +691,9 @@ bbl_session_reconnect_enabled(bbl_session_s *session)
     if(session->restart) {
         return true;
     }
-    return (session->access_type == ACCESS_TYPE_PPPOE && g_ctx->config.pppoe_reconnect) ||
+    /* PPPoL2TP sessions are PPP sessions like PPPoE (pppoe->reconnect). */
+    return ((session->access_type == ACCESS_TYPE_PPPOE ||
+             session->access_type == ACCESS_TYPE_PPPOL2TP) && g_ctx->config.pppoe_reconnect) ||
            (session->access_type == ACCESS_TYPE_IPOE && g_ctx->config.sessions_reconnect);
 }
 
