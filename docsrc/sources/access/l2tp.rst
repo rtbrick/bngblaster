@@ -425,10 +425,19 @@ of both LNS and LAC tunnels.
                 "data-packets-rx": 79,
                 "data-packets-tx": 79,
                 "data-ipv4-packets-rx": 15,
-                "data-ipv4-packets-tx": 15
+                "data-ipv4-packets-tx": 15,
+                "peer-proxy-lcp-initial-received": "010405d40506000003e9",
+                "peer-proxy-lcp-last-sent": "010405d40304c0230506fffffc16",
+                "peer-proxy-lcp-last-received": "010405d40506000003e9",
+                "proxy-lcp-accepted": true
             }
         ]
     }
+
+The ``peer-proxy-lcp-*`` fields of LNS sessions show the options of
+the proxied LCP configuration requests received in ICCN (AVP 26 to 28)
+as hex string, ``proxy-lcp-accepted`` shows if LCP was opened with
+them (see ``proxy-lcp`` of the ``l2tp-server`` configuration).
 
 This output can also be filtered to return only sessions
 of a given tunnel.

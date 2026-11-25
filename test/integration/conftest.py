@@ -9,7 +9,7 @@ import os
 import pytest
 
 import helpers
-from helpers import BgpSink, Bird, BngBlaster, Frr, GoBgp, Netns
+from helpers import BngBlaster, Netns
 
 def pytest_configure(config):
     """Keep artifacts in the (git ignored) repository tmp directory
@@ -113,7 +113,8 @@ def processes():
     for proc in started:
         if isinstance(proc, BngBlaster):
             proc.kill()
-        elif isinstance(proc, (GoBgp, BgpSink, Frr, Bird)):
+        elif hasattr(proc, "stop"):
+            # GoBgp, BgpSink, Frr, Bird and ad-hoc LNS wrappers (xl2tpd, accel-ppp)
             proc.stop()
 
 

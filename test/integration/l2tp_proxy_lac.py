@@ -9,6 +9,12 @@ PPP packet itself, but writes every PPP packet received from the LNS
 within the given time as JSON list of (protocol, code, identifier) to
 stdout.
 
+With --proxy-lcp, the ICCN carries proxy LCP AVPs with the given options
+(hex) as Last Sent LCP CONFREQ (AVP 27) and fixed client options as
+Initial and Last Received LCP CONFREQ (AVP 26 and 28). With
+--lcp-conf-request, the LAC sends an LCP Conf-Request of the client
+after the ICCN.
+
 With --icrq, the LAC sends an invalid ICRQ (call serial number of 3
 bytes) and a valid ICRQ with the Broadband Forum ACI and ARI AVPs, which
 it clears with a CDN, and a third ICRQ which it clears with a CDN with
@@ -43,6 +49,9 @@ AVP_ASSIGNED_SESSION_ID = 14
 AVP_CALL_SERIAL_NUMBER = 15
 AVP_FRAMING_TYPE = 19
 AVP_TX_CONNECT_SPEED = 24
+AVP_INITIAL_RECEIVED_CONFREQ = 26
+AVP_LAST_SENT_CONFREQ = 27
+AVP_LAST_RECEIVED_CONFREQ = 28
 AVP_PROXY_AUTHEN_TYPE = 29
 AVP_PROXY_AUTHEN_NAME = 30
 AVP_PROXY_AUTHEN_CHALLENGE = 31
@@ -53,6 +62,10 @@ PROXY_AUTH_TYPE = {"chap": 2, "pap": 3}
 
 LOCAL_TUNNEL_ID = 100
 LOCAL_SESSION_ID = 200
+
+# Client LCP options: MRU 1492, magic number 0x0000abcd
+CLIENT_LCP_OPTIONS = bytes.fromhex("010405d405060000abcd")
+PROTOCOL_LCP = 0xc021
 
 
 def avp(avp_type, value, mandatory=True, vendor=0):
@@ -185,7 +198,13 @@ class Lac:
         time.sleep(1)
         return result
 
-    def connect(self, auth, auth_id):
+    def send_lcp_conf_request(self):
+        """Send an LCP Conf-Request of the client (data message)."""
+        lcp = struct.pack("!BBH", 1, 1, 4 + len(CLIENT_LCP_OPTIONS)) + CLIENT_LCP_OPTIONS
+        header = struct.pack("!HHH", 0x0002, self.peer_tunnel_id, self.peer_session_id)
+        self.sock.sendto(header + b"\xff\x03" + struct.pack("!H", PROTOCOL_LCP) + lcp, self.server)
+
+    def connect(self, auth, auth_id, proxy_lcp=None):
         self.connect_tunnel()
 
         self.send_ctrl(0, avp16(AVP_MESSAGE_TYPE, ICRQ) +
@@ -206,6 +225,10 @@ class Lac:
             iccn += avp(AVP_PROXY_AUTHEN_RESPONSE, b"secret")
         if auth_id is not None:
             iccn += avp16(AVP_PROXY_AUTHEN_ID, auth_id)
+        if proxy_lcp is not None:
+            iccn += avp(AVP_INITIAL_RECEIVED_CONFREQ, CLIENT_LCP_OPTIONS, mandatory=False)
+            iccn += avp(AVP_LAST_SENT_CONFREQ, proxy_lcp, mandatory=False)
+            iccn += avp(AVP_LAST_RECEIVED_CONFREQ, CLIENT_LCP_OPTIONS, mandatory=False)
         self.send_ctrl(self.peer_session_id, iccn)
 
     def ppp_received(self, duration):
@@ -233,6 +256,10 @@ def main():
     parser.add_argument("--auth", choices=sorted(PROXY_AUTH_TYPE), default="pap")
     parser.add_argument("--auth-id", type=int, help="Proxy Authen ID (AVP omitted if not set)")
     parser.add_argument("--duration", type=float, default=2)
+    parser.add_argument("--proxy-lcp", type=bytes.fromhex,
+                        help="LAC LCP options (hex) sent as proxy LCP (see above)")
+    parser.add_argument("--lcp-conf-request", action="store_true",
+                        help="send an LCP Conf-Request after ICCN")
     parser.add_argument("--icrq", action="store_true", help="invalid and valid ICRQ (see above)")
     args = parser.parse_args()
 
@@ -240,8 +267,12 @@ def main():
     if args.icrq:
         print(json.dumps(lac.icrq()))
         return
-    lac.connect(args.auth, args.auth_id)
-    print(json.dumps(lac.ppp_received(args.duration)))
+    lac.connect(args.auth, args.auth_id, args.proxy_lcp)
+    packets = lac.ppp_received(0.5)
+    if args.lcp_conf_request:
+        lac.send_lcp_conf_request()
+    packets += lac.ppp_received(args.duration)
+    print(json.dumps(packets))
 
 
 if __name__ == "__main__":

@@ -19,6 +19,12 @@ bbl_l2tp_send(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session, 
 static void
 bbl_l2tp_lcp_echo(timer_s *timer);
 
+static void
+bbl_l2tp_lcp_conf_request_tx(bbl_l2tp_session_s *l2tp_session, uint8_t identifier);
+
+static void
+bbl_l2tp_lcp_opened(bbl_l2tp_session_s *l2tp_session);
+
 const char*
 l2tp_tunnel_hostname(bbl_l2tp_tunnel_s *l2tp_tunnel)
 {
@@ -239,6 +245,9 @@ bbl_l2tp_session_free(bbl_l2tp_session_s *l2tp_session)
     free(l2tp_session->proxy_auth_name);
     free(l2tp_session->proxy_auth_challenge);
     free(l2tp_session->proxy_auth_response);
+    free(l2tp_session->proxy_lcp_initial_received);
+    free(l2tp_session->proxy_lcp_last_sent);
+    free(l2tp_session->proxy_lcp_last_received);
     free(l2tp_session->peer_called_number);
     free(l2tp_session->peer_calling_number);
     free(l2tp_session->peer_sub_address);
@@ -1260,11 +1269,15 @@ bbl_l2tp_icrq_rx(bbl_network_interface_s *interface,
  *
  * Magic-Number of the LNS, as sent in its LCP configure-request,
  * or zero if not negotiated by the LNS (RFC 1661 section 6.4).
+ * With accepted proxy LCP, this is the magic number of the LAC.
  */
 static uint32_t
 bbl_l2tp_lcp_magic(bbl_l2tp_session_s *l2tp_session)
 {
     uint32_t magic;
+    if(l2tp_session->proxy_lcp_accepted) {
+        return l2tp_session->proxy_lcp_magic;
+    }
     if(!(l2tp_session->tunnel->server && l2tp_session->tunnel->server->lcp_conf_request)) {
         return 0;
     }
@@ -1340,13 +1353,13 @@ bbl_l2tp_auth_success_tx(bbl_l2tp_session_s *l2tp_session, uint16_t protocol, ui
  * or CHAP Success with the identifier of the Proxy Authen ID AVP,
  * instead of waiting for the client to retransmit its request.
  */
-static void
+static bool
 bbl_l2tp_proxy_auth(bbl_l2tp_session_s *l2tp_session)
 {
     uint16_t protocol;
 
     if(!l2tp_session->proxy_auth_id_received) {
-        return;
+        return false;
     }
     switch(l2tp_session->proxy_auth_type) {
         case L2TP_PROXY_AUTH_TYPE_PAP:
@@ -1356,7 +1369,7 @@ bbl_l2tp_proxy_auth(bbl_l2tp_session_s *l2tp_session)
             protocol = PROTOCOL_CHAP;
             break;
         default:
-            return;
+            return false;
     }
     LOG(L2TP, "L2TP Info (%s) Tunnel (%u) session (%u) accept proxy %s authentication of %s\n",
         l2tp_tunnel_hostname(l2tp_session->tunnel), l2tp_session->key.tunnel_id,
@@ -1364,6 +1377,111 @@ bbl_l2tp_proxy_auth(bbl_l2tp_session_s *l2tp_session)
         string_or_na(l2tp_session->proxy_auth_name));
     /* The ID is carried in the low order octet. */
     bbl_l2tp_auth_success_tx(l2tp_session, protocol, l2tp_session->proxy_auth_id & 0xff);
+    return true;
+}
+
+/**
+ * bbl_l2tp_proxy_lcp_options
+ *
+ * Get the authentication protocol and magic number from the
+ * options of the proxied LCP configure-request sent by the LAC.
+ *
+ * @return false if malformed or the authentication protocol
+ *         is not supported (PAP or CHAP with MD5)
+ */
+static bool
+bbl_l2tp_proxy_lcp_options(uint8_t *options, uint16_t len, uint16_t *auth, uint32_t *magic)
+{
+    uint8_t option_len;
+
+    *auth = 0;
+    *magic = 0;
+    while(len) {
+        if(len < 2 || options[1] < 2 || options[1] > len) {
+            return false;
+        }
+        option_len = options[1];
+        switch(options[0]) {
+            case PPP_LCP_OPTION_AUTH:
+                if(option_len == 4 && be16toh(*(uint16_t*)(options+2)) == PROTOCOL_PAP) {
+                    *auth = PROTOCOL_PAP;
+                } else if(option_len == 5 && be16toh(*(uint16_t*)(options+2)) == PROTOCOL_CHAP &&
+                          options[4] == PROTOCOL_CHAP_ALG_MD5) {
+                    *auth = PROTOCOL_CHAP;
+                } else {
+                    return false;
+                }
+                break;
+            case PPP_LCP_OPTION_MAGIC:
+                if(option_len != 6) {
+                    return false;
+                }
+                *magic = *(uint32_t*)(options+2);
+                break;
+            default:
+                break;
+        }
+        options += option_len;
+        len -= option_len;
+    }
+    return true;
+}
+
+/**
+ * bbl_l2tp_proxy_lcp
+ *
+ * Handle proxy LCP (AVP 27 and 28) and proxy authentication received
+ * in ICCN (RFC 2661 section 4.4.5). The proxied LCP is accepted (LCP
+ * opened with authentication protocol and magic number of the LAC)
+ * or the LNS renegotiates LCP by sending its own configure-request,
+ * which requires a new authentication of the client as well.
+ */
+static void
+bbl_l2tp_proxy_lcp(bbl_l2tp_session_s *l2tp_session)
+{
+    bbl_l2tp_tunnel_s *l2tp_tunnel = l2tp_session->tunnel;
+    bbl_l2tp_server_s *l2tp_server = l2tp_tunnel->server;
+    uint16_t auth;
+    uint32_t magic;
+
+    if(!(l2tp_session->proxy_lcp_last_sent && l2tp_session->proxy_lcp_last_received)) {
+        /* No proxy LCP */
+        if(l2tp_server->proxy_auth) {
+            bbl_l2tp_proxy_auth(l2tp_session);
+        }
+        return;
+    }
+    if(l2tp_server->proxy_lcp == BBL_L2TP_PROXY_LCP_ACCEPT) {
+        if(bbl_l2tp_proxy_lcp_options(l2tp_session->proxy_lcp_last_sent,
+                                      l2tp_session->proxy_lcp_last_sent_len,
+                                      &auth, &magic)) {
+            LOG(L2TP, "L2TP Info (%s) Tunnel (%u) session (%u) accept proxy LCP\n",
+                l2tp_server->host_name, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
+            l2tp_session->proxy_lcp_accepted = true;
+            l2tp_session->proxy_lcp_magic = magic;
+            l2tp_session->lcp_auth = auth;
+            l2tp_session->lcp_state = BBL_PPP_OPENED;
+            if(l2tp_server->proxy_auth && bbl_l2tp_proxy_auth(l2tp_session)) {
+                return;
+            }
+            /* Authenticate the client, the CHAP challenge
+             * is sent by the LNS (PAP is started by the client). */
+            bbl_l2tp_lcp_opened(l2tp_session);
+            return;
+        }
+        LOG(L2TP, "L2TP Warning (%s) Tunnel (%u) session (%u) invalid or unsupported proxy LCP\n",
+            l2tp_server->host_name, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
+    }
+    LOG(L2TP, "L2TP Info (%s) Tunnel (%u) session (%u) renegotiate proxy LCP\n",
+        l2tp_server->host_name, l2tp_session->key.tunnel_id, l2tp_session->key.session_id);
+    /* Request the authentication protocol of the LAC if valid. */
+    if(bbl_l2tp_proxy_lcp_options(l2tp_session->proxy_lcp_last_sent,
+                                  l2tp_session->proxy_lcp_last_sent_len,
+                                  &auth, &magic) && auth) {
+        l2tp_session->lcp_auth = auth;
+    }
+    l2tp_session->lcp_state = BBL_PPP_INIT;
+    bbl_l2tp_lcp_conf_request_tx(l2tp_session, 1);
 }
 
 static void
@@ -1417,8 +1535,8 @@ bbl_l2tp_iccn_rx(bbl_network_interface_s *interface,
                                 l2tp_tunnel->server->lcp_keepalive_interval, 1,
                                 l2tp_session, &bbl_l2tp_lcp_echo);
         }
-        if(!l2tp_tunnel->is_lac && l2tp_tunnel->server->proxy_auth) {
-            bbl_l2tp_proxy_auth(l2tp_session);
+        if(!l2tp_tunnel->is_lac) {
+            bbl_l2tp_proxy_lcp(l2tp_session);
         }
     }
 }
@@ -1574,6 +1692,7 @@ bbl_l2tp_lcp_conf_request_tx(bbl_l2tp_session_s *l2tp_session, uint8_t identifie
     if(!l2tp_session->lcp_auth) {
         l2tp_session->lcp_auth = PROTOCOL_PAP;
     }
+    l2tp_session->lcp_request_sent = true;
     lcp_tx.code = PPP_CODE_CONF_REQUEST;
     lcp_tx.identifier = identifier;
     lcp_tx.auth = l2tp_session->lcp_auth;
@@ -1591,6 +1710,7 @@ bbl_l2tp_lcp_opened(bbl_l2tp_session_s *l2tp_session)
     size_t i;
 
     l2tp_session->lcp_state = BBL_PPP_OPENED;
+    l2tp_session->lcp_request_sent = false;
     if(l2tp_session->lcp_auth == PROTOCOL_CHAP) {
         for(i = 0; i < sizeof(challenge); i++) {
             challenge[i] = rand();
@@ -1686,10 +1806,21 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
                 /* Accept whatever the peer proposes. */
                 lcp_rx->code = PPP_CODE_CONF_ACK;
                 bbl_l2tp_send_data(l2tp_session, PROTOCOL_LCP, lcp_rx);
+                if(l2tp_session->lcp_state == BBL_PPP_OPENED) {
+                    /* Renegotiation by the peer (RFC 1661 Opened + RCR),
+                     * e.g. after accepted proxy LCP. */
+                    l2tp_session->lcp_state = BBL_PPP_INIT;
+                    l2tp_session->proxy_lcp_accepted = false;
+                }
                 if(l2tp_session->lcp_state == BBL_PPP_LOCAL_ACK) {
                     bbl_l2tp_lcp_opened(l2tp_session);
-                } else if(l2tp_session->lcp_state != BBL_PPP_OPENED &&
+                } else if(l2tp_session->lcp_state == BBL_PPP_INIT && l2tp_session->lcp_request_sent) {
+                    /* Own request (proxy LCP renegotiation or
+                     * l2tp-lcp-restart) is still outstanding. */
+                    l2tp_session->lcp_state = BBL_PPP_PEER_ACK;
+                } else if(l2tp_session->lcp_request_sent ||
                           l2tp_session->tunnel->server->lcp_conf_request) {
+                    /* Send or retransmit the own request. */
                     l2tp_session->lcp_state = BBL_PPP_PEER_ACK;
                     bbl_l2tp_lcp_conf_request_tx(l2tp_session, 1);
                 }
@@ -1706,7 +1837,7 @@ bbl_l2tp_data_rx(bbl_network_interface_s *interface,
             } else if(lcp_rx->code == PPP_CODE_CONF_NAK) {
                 /* Peer requests another authentication protocol
                  * than proposed in our Conf-Request. */
-                if(l2tp_session->lcp_state == BBL_PPP_PEER_ACK &&
+                if(l2tp_session->lcp_request_sent &&
                    lcp_rx->auth != l2tp_session->lcp_auth &&
                    (lcp_rx->auth == PROTOCOL_PAP ||
                     (lcp_rx->auth == PROTOCOL_CHAP && lcp_rx->alg == PROTOCOL_CHAP_ALG_MD5))) {
@@ -1969,6 +2100,51 @@ bbl_l2tp_sccrp_rx(bbl_network_interface_s *interface,
 }
 
 /**
+ * bbl_l2tp_client_proxy_lcp
+ *
+ * Act as if the LAC had negotiated LCP (and optionally authenticated)
+ * with the PPP client before the ICCN is sent (RFC 2661 section 4.4.5).
+ * The LAC requests the authentication protocol of the access interface
+ * (default PAP), its MRU is equal to the client MRU and its magic number
+ * is derived from the client magic number. The values are encoded as
+ * proxy LCP and authentication AVPs into the ICCN.
+ */
+static void
+bbl_l2tp_client_proxy_lcp(bbl_l2tp_session_s *l2tp_session)
+{
+    bbl_session_s *session = l2tp_session->session;
+    bool proxy_auth = l2tp_session->tunnel->client->proxy_auth;
+    uint16_t auth_protocol = PROTOCOL_PAP;
+    uint32_t lac_magic = ~session->magic_number;
+
+    if(session->access_config->authentication_protocol == PROTOCOL_CHAP) {
+        auth_protocol = PROTOCOL_CHAP;
+    }
+    if(!lac_magic) lac_magic = htobe32(1);
+
+    if(proxy_auth) {
+        if(auth_protocol == PROTOCOL_CHAP) {
+            if(!l2tp_session->proxy_auth_challenge) {
+                l2tp_session->proxy_auth_challenge = malloc(CHALLENGE_LEN);
+            }
+            if(l2tp_session->proxy_auth_challenge) {
+                RAND_bytes(l2tp_session->proxy_auth_challenge, CHALLENGE_LEN);
+                l2tp_session->proxy_auth_challenge_len = CHALLENGE_LEN;
+                session->chap_identifier++;
+            } else {
+                /* The ICCN is sent without proxy authentication. */
+                proxy_auth = false;
+            }
+        } else {
+            session->pap_identifier++;
+        }
+    }
+    bbl_access_lcp_proxy(session, session->mru, lac_magic, auth_protocol,
+                         l2tp_session->proxy_auth_challenge, CHALLENGE_LEN,
+                         proxy_auth);
+}
+
+/**
  * bbl_l2tp_icrp_rx
  *
  * Handle ICRP received from LNS (LAC mode).
@@ -1998,6 +2174,10 @@ bbl_l2tp_icrp_rx(bbl_network_interface_s *interface,
         return;
     }
     if(l2tp_session->state == BBL_L2TP_SESSION_WAIT_CONN) {
+        if(l2tp_session->session && l2tp_tunnel->client->proxy_lcp) {
+            /* Must be done before the ICCN is encoded. */
+            bbl_l2tp_client_proxy_lcp(l2tp_session);
+        }
         /* Send ICCN */
         bbl_l2tp_send(l2tp_tunnel, l2tp_session, L2TP_MESSAGE_ICCN);
         l2tp_session->state = BBL_L2TP_SESSION_ESTABLISHED;
@@ -2017,10 +2197,12 @@ bbl_l2tp_icrp_rx(bbl_network_interface_s *interface,
          * is started exactly once. */
         if(l2tp_session->session) {
             bbl_session_s *session = l2tp_session->session;
-            bbl_session_update_state(session, BBL_PPP_LINK);
-            session->lcp_state        = BBL_PPP_INIT;
-            session->lcp_request_code = PPP_CODE_CONF_REQUEST;
-            session->send_requests   |= BBL_SEND_LCP_REQUEST;
+            if(!l2tp_tunnel->client->proxy_lcp) {
+                bbl_session_update_state(session, BBL_PPP_LINK);
+                session->lcp_state        = BBL_PPP_INIT;
+                session->lcp_request_code = PPP_CODE_CONF_REQUEST;
+                session->send_requests   |= BBL_SEND_LCP_REQUEST;
+            }
             bbl_l2tp_queue_s *iccn_q = CIRCLEQ_LAST(&l2tp_tunnel->tx_qhead);
             if(iccn_q != (void *)&l2tp_tunnel->tx_qhead) {
                 iccn_q->ppp_session = session;
@@ -2486,10 +2668,30 @@ bbl_l2tp_stop_all_tunnel()
     }
 }
 
+/* Proxied LCP configure-request options as hex string or N/A. */
+static json_t *
+l2tp_proxy_lcp_json(uint8_t *options, uint16_t len)
+{
+    static const char digits[] = "0123456789abcdef";
+    char hex[2*L2TP_AVP_MAX_LEN+1];
+    uint16_t i;
+
+    if(!options) {
+        return json_string("N/A");
+    }
+    for(i = 0; i < len && i < L2TP_AVP_MAX_LEN; i++) {
+        hex[2*i] = digits[options[i] >> 4];
+        hex[2*i+1] = digits[options[i] & 0xf];
+    }
+    hex[2*i] = 0;
+    return json_string(hex);
+}
+
 json_t *
 l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
 {
     char *proxy_auth_response = NULL;
+    json_t *root;
 
     if(l2tp_session->proxy_auth_response) {
         if(l2tp_session->proxy_auth_type == L2TP_PROXY_AUTH_TYPE_PAP) {
@@ -2500,7 +2702,7 @@ l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
     }
 
     /* Strings received from the peer may not be valid UTF-8. */
-    return json_pack("{ss si si si si si so so so so so sI sI so so sI sI sI sI}",
+    root = json_pack("{ss si si si si si so so so so so sI sI so so sI sI sI sI}",
                      "state", l2tp_session_state_string(l2tp_session->state),
                      "tunnel-id", l2tp_session->key.tunnel_id,
                      "session-id", l2tp_session->key.session_id,
@@ -2520,6 +2722,19 @@ l2tp_session_json(bbl_l2tp_session_s *l2tp_session)
                      "data-packets-tx", (json_int_t)l2tp_session->stats.data_tx,
                      "data-ipv4-packets-rx", (json_int_t)l2tp_session->stats.data_ipv4_rx,
                      "data-ipv4-packets-tx", (json_int_t)l2tp_session->stats.data_ipv4_tx);
+    if(root && !l2tp_session->tunnel->is_lac) {
+        json_object_set_new(root, "peer-proxy-lcp-initial-received",
+                            l2tp_proxy_lcp_json(l2tp_session->proxy_lcp_initial_received,
+                                                l2tp_session->proxy_lcp_initial_received_len));
+        json_object_set_new(root, "peer-proxy-lcp-last-sent",
+                            l2tp_proxy_lcp_json(l2tp_session->proxy_lcp_last_sent,
+                                                l2tp_session->proxy_lcp_last_sent_len));
+        json_object_set_new(root, "peer-proxy-lcp-last-received",
+                            l2tp_proxy_lcp_json(l2tp_session->proxy_lcp_last_received,
+                                                l2tp_session->proxy_lcp_last_received_len));
+        json_object_set_new(root, "proxy-lcp-accepted", json_boolean(l2tp_session->proxy_lcp_accepted));
+    }
+    return root;
 }
 
 static json_t *
@@ -2903,6 +3118,12 @@ bbl_l2tp_ctrl_lcp_restart(int fd, uint32_t session_id, json_t *arguments __attri
         if(l2tp_session->state != BBL_L2TP_SESSION_ESTABLISHED) {
             return bbl_ctrl_status(fd, "warning", 400, "session not established");
         }
+        /* The client answers with configure-ack and its own
+         * configure-request, which opens LCP again. */
+        l2tp_session->lcp_state = BBL_PPP_INIT;
+        l2tp_session->lcp_request_sent = true;
+        l2tp_session->lcp_auth = PROTOCOL_PAP;
+        l2tp_session->proxy_lcp_accepted = false;
         lcp.code = PPP_CODE_CONF_REQUEST;
         lcp.identifier = rand();
         lcp.auth = PROTOCOL_PAP;

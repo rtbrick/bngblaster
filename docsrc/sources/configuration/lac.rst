@@ -91,3 +91,31 @@
 |                                           | | (AVP 38), not sent if not configured.                             |
 |                                           | | Range: 1 - 4294967295                                             |
 +-------------------------------------------+---------------------------------------------------------------------+
+| **proxy-lcp**                             | | Send proxy LCP AVPs in ICCN (AVP 26, 27 and 28) as if the LAC     |
+|                                           | | had already negotiated LCP with the client. The client request    |
+|                                           | | (AVP 26 and 28) contains MRU and magic number of the session.     |
+|                                           | | The LAC request (AVP 27) contains the same MRU, a magic number    |
+|                                           | | derived from the session magic number and the authentication      |
+|                                           | | protocol of the access interface (default PAP). The session       |
+|                                           | | starts with LCP opened. Without ``proxy-auth``, the session       |
+|                                           | | sends the PAP request or waits for the CHAP challenge of the LNS  |
+|                                           | | after ICCN. If the LNS sends an LCP configuration request, LCP    |
+|                                           | | is renegotiated.                                                  |
+|                                           | | Default: false                                                    |
++-------------------------------------------+---------------------------------------------------------------------+
+| **proxy-auth**                            | | Send proxy authentication AVPs in ICCN (AVP 29 to 33) using       |
+|                                           | | username and password of the session. For PAP, the clear text     |
+|                                           | | password is sent as response with the identifier of the           |
+|                                           | | authenticate-request. For CHAP, the LAC challenge, identifier     |
+|                                           | | and the MD5 response of the client are sent. The session waits    |
+|                                           | | for PAP authenticate-ack or CHAP success from the LNS, which      |
+|                                           | | counts as first authentication attempt. The request is            |
+|                                           | | retransmitted after authentication timeout. Requires              |
+|                                           | | ``proxy-lcp``.                                                    |
+|                                           | | Default: false                                                    |
++-------------------------------------------+---------------------------------------------------------------------+
+| **proxy-auth-hidden**                     | | Send the proxy authentication AVPs (AVP 29 to 33) hidden          |
+|                                           | | (RFC 2661 section 4.3) with a preceding Random Vector AVP,        |
+|                                           | | using the tunnel secret. Requires ``proxy-auth`` and ``secret``.  |
+|                                           | | Default: false                                                    |
++-------------------------------------------+---------------------------------------------------------------------+

@@ -69,6 +69,19 @@
 |                                           | | If disabled, the LNS waits for the request of the client.         |
 |                                           | | Default: true                                                     |
 +-------------------------------------------+---------------------------------------------------------------------+
+| **proxy-lcp**                             | | Handling of proxy LCP received from the LAC in ICCN (AVP 27       |
+|                                           | | and 28), either ``accept`` or ``renegotiate``.                    |
+|                                           | | With ``accept``, LCP is opened with the authentication protocol   |
+|                                           | | and magic number of the LAC configuration request (AVP 27). The   |
+|                                           | | LNS then accepts the proxy authentication (``proxy-auth``) or     |
+|                                           | | sends the CHAP challenge if CHAP was negotiated by the LAC.       |
+|                                           | | Invalid or unsupported proxy LCP is renegotiated.                 |
+|                                           | | With ``renegotiate``, the LNS sends its own LCP configuration     |
+|                                           | | request immediately after ICCN and ignores proxy authentication.  |
+|                                           | | An LCP configuration request of the client after accepted proxy   |
+|                                           | | LCP starts a new LCP negotiation as well.                         |
+|                                           | | Default: accept                                                   |
++-------------------------------------------+---------------------------------------------------------------------+
 | **client-auth-id**                        | | Add optional check based on client-auth-id to support multiple    |
 |                                           | | LNS server configurations with the same IP address.               |
 +-------------------------------------------+---------------------------------------------------------------------+

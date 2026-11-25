@@ -316,6 +316,220 @@ def test_lcp_conf_request_disabled(topology, processes, tmp_path):
     assert_clean_exit(lac, lns)
 
 
+def proxy_avp(avp_type, value):
+    """L2TP proxy LCP or authentication AVP (RFC 2661 section 4.4.5)
+    as sent in ICCN, the M-bit must be 0."""
+    return struct.pack("!HHH", 6 + len(value), 0, avp_type) + value
+
+
+def start_proxy_lac(topology, processes, tmp_path, auth, proxy_auth, sessions=2,
+                    hidden=False, lns_proxy_lcp=None, lcp_conf_request=False):
+    """Start an LNS which does not start LCP itself (unless lcp_conf_request
+    or renegotiation) and an LAC with proxy LCP (and optional proxy
+    authentication)."""
+    config = lns_config(topology.if_b, lcp_conf_request=lcp_conf_request)
+    if lns_proxy_lcp:
+        config["l2tp-server"][0]["proxy-lcp"] = lns_proxy_lcp
+    lns = BngBlaster(topology.b, tmp_path, "lns").start(config, logging=("info", "l2tp"))
+    processes.append(lns)
+    options = {"proxy-lcp": True, "proxy-auth": proxy_auth, "proxy-auth-hidden": hidden}
+    lac = BngBlaster(topology.a, tmp_path, "lac").start(
+        lac_config(topology.if_a, sessions=sessions, auth=auth,
+                   client_options={1: options, 2: options}),
+        logging=("info", "l2tp", "pppoe"))
+    processes.append(lac)
+    wait_until(lambda: lac_counters(lac)["sessions-established"] == sessions,
+               15, message="LAC sessions established")
+    wait_until(lambda: len(lns_sessions(lns)) == sessions,
+               10, message="LNS sessions established")
+    return lac, lns
+
+
+def lac_protocol_stats(lac):
+    return lac.ctrl("access-protocol-stats")["access-protocol-stats"][0]
+
+
+def lac_lcp_auth(auth):
+    if auth == "PAP":
+        return struct.pack("!BBH", 3, 4, PAP)
+    return struct.pack("!BBHB", 3, 5, CHAP, 5)
+
+
+@pytest.mark.parametrize("auth", ["PAP", "CHAP"])
+def test_proxy_lcp_auth(topology, processes, tmp_path, auth):
+    """With proxy LCP and proxy authentication, the sessions are
+    established without any LCP negotiation and authentication request
+    of the client. The LNS accepts proxy LCP and the proxy authentication
+    with the identifier of the Proxy Authen ID AVP."""
+    lac, lns = start_proxy_lac(topology, processes, tmp_path, auth, True)
+    names = sorted(s["peer-proxy-auth-name"] for s in lns_sessions(lns))
+    assert names == ["user1@test", "user2@test"]
+    mru = struct.pack("!BBH", 1, 4, 1492)
+    for session in lns_sessions(lns):
+        assert session["proxy-lcp-accepted"] is True
+        last_sent = bytes.fromhex(session["peer-proxy-lcp-last-sent"])
+        assert last_sent[:4 + len(lac_lcp_auth(auth))] == mru + lac_lcp_auth(auth)
+        assert len(last_sent) == 4 + len(lac_lcp_auth(auth)) + 6
+        assert session["peer-proxy-lcp-initial-received"] == session["peer-proxy-lcp-last-received"]
+        assert bytes.fromhex(session["peer-proxy-lcp-last-received"])[:4] == mru
+        if auth == "PAP":
+            assert session["peer-proxy-auth-response"] == "test"
+
+    stats = lac_protocol_stats(lac)
+    assert stats["tx-pap"] == 0 and stats["tx-chap"] == 0, stats
+    # LCP is not negotiated, LCP packets are sent for termination only.
+    assert stats["tx-lcp"] == 0, stats
+    assert_clean_exit(lac, lns)
+
+    with open(lac.path("pcap"), "rb") as f:
+        pcap = f.read()
+    lac_auth = lac_lcp_auth(auth)
+    auth_type = 3 if auth == "PAP" else 2
+    # Client CONFREQ (MRU + magic) and LAC CONFREQ (MRU + auth + magic)
+    for avp_type in (26, 28):
+        assert struct.pack("!HHH", 6 + 10, 0, avp_type) + mru + b"\x05\x06" in pcap
+    assert struct.pack("!HHH", 6 + 10 + len(lac_auth), 0, 27) + mru + lac_auth + b"\x05\x06" in pcap
+    assert proxy_avp(29, struct.pack("!H", auth_type)) in pcap
+    assert proxy_avp(30, b"user1@test") in pcap
+    assert proxy_avp(32, struct.pack("!H", 1)) in pcap
+    if auth == "PAP":
+        assert proxy_avp(33, b"test") in pcap
+        assert struct.pack("!HHH", 6 + 16, 0, 31) not in pcap
+    else:
+        assert struct.pack("!HHH", 6 + 16, 0, 31) in pcap
+        assert struct.pack("!HHH", 6 + 16, 0, 33) in pcap
+
+
+@pytest.mark.parametrize("auth", ["PAP", "CHAP"])
+def test_proxy_auth_hidden(topology, processes, tmp_path, auth):
+    """Hidden proxy authentication AVPs (RFC 2661 section 4.3) are
+    decrypted by the LNS with the tunnel secret."""
+    lac, lns = start_proxy_lac(topology, processes, tmp_path, auth, True, hidden=True)
+    sessions = lns_sessions(lns)
+    assert sorted(s["peer-proxy-auth-name"] for s in sessions) == ["user1@test", "user2@test"]
+    assert all(s["peer-proxy-auth-type"] == (3 if auth == "PAP" else 2) for s in sessions)
+    if auth == "PAP":
+        assert all(s["peer-proxy-auth-response"] == "test" for s in sessions)
+    stats = lac_protocol_stats(lac)
+    assert stats["tx-pap"] == 0 and stats["tx-chap"] == 0, stats
+    assert_clean_exit(lac, lns)
+
+    with open(lac.path("pcap"), "rb") as f:
+        pcap = f.read()
+    # Random Vector AVP (M-bit) and hidden Proxy Authen Type (H-bit)
+    assert struct.pack("!HHH", 0x8000 | 22, 0, 36) in pcap
+    assert struct.pack("!HHH", 0x4000 | 10, 0, 29) in pcap
+    assert b"user1@test" not in pcap
+    assert proxy_avp(29, struct.pack("!H", 3 if auth == "PAP" else 2)) not in pcap
+
+
+def test_proxy_lcp_lns_chap_challenge(topology, processes, tmp_path):
+    """With accepted proxy LCP (CHAP) but without proxy authentication,
+    the LNS sends the CHAP challenge after ICCN."""
+    lac, lns = start_proxy_lac(topology, processes, tmp_path, "CHAP", False)
+    assert all(s["proxy-lcp-accepted"] for s in lns_sessions(lns))
+    stats = lac_protocol_stats(lac)
+    assert stats["tx-lcp"] == 0 and stats["rx-chap"] >= 4 and stats["tx-chap"] == 2, stats
+    assert_clean_exit(lac, lns)
+
+
+@pytest.mark.parametrize("auth", ["PAP", "CHAP"])
+@pytest.mark.parametrize("lcp_conf_request", [True, False])
+def test_proxy_lcp_renegotiate(topology, processes, tmp_path, auth, lcp_conf_request):
+    """With proxy-lcp renegotiate, the LNS ignores proxy LCP and proxy
+    authentication, sends its own LCP Conf-Request with the authentication
+    protocol of the LAC and the client authenticates again."""
+    lac, lns = start_proxy_lac(topology, processes, tmp_path, auth, True,
+                               lns_proxy_lcp="renegotiate", lcp_conf_request=lcp_conf_request)
+    for session in lns_sessions(lns):
+        assert session["proxy-lcp-accepted"] is False
+        assert session["peer-proxy-lcp-last-sent"] != "N/A"
+    stats = lac_protocol_stats(lac)
+    assert stats["tx-lcp"] >= 2 and stats["rx-lcp"] >= 2, stats
+    assert stats["tx-pap" if auth == "PAP" else "tx-chap"] >= 2, stats
+    assert_clean_exit(lac, lns)
+
+
+LAC_LCP_PAP = "010405d40304c0230506fffffc16"
+
+
+@pytest.mark.parametrize("proxy_lcp,lcp_conf_request,expected,accepted", [
+    # Accepted proxy LCP with proxy authentication.
+    (LAC_LCP_PAP, False, [(0xc023, 2, 7)], True),
+    # Conf-Request of the client after accepted proxy LCP: Conf-Ack and
+    # the own Conf-Request of the LNS (RFC 1661 Opened + RCR).
+    (LAC_LCP_PAP, True, [(0xc023, 2, 7), (0xc021, 2, 1), (0xc021, 1, 1)], False),
+    # Unsupported authentication protocol (EAP) or malformed options are
+    # renegotiated, the proxy authentication is ignored.
+    ("010405d40304c2270506fffffc16", False, [(0xc021, 1, 1)], False),
+    ("010405d40302", False, [(0xc021, 1, 1)], False),
+])
+def test_lns_proxy_lcp(topology, processes, tmp_path, proxy_lcp, lcp_conf_request, expected, accepted):
+    """Proxy LCP received by the LNS from a scripted LAC."""
+    config = lns_config(topology.if_b)
+    del config["l2tp-server"][0]["secret"]
+    lns = BngBlaster(topology.b, tmp_path, "lns").start(config, logging=("info", "l2tp"))
+    processes.append(lns)
+    helpers.kernel_address(topology.a, topology.if_a, LAC_ADDRESS + "/24")
+
+    cmd = [sys.executable, "-I", str(Path(__file__).parent / "l2tp_proxy_lac.py"),
+           "--local", LAC_ADDRESS, "--server", LNS_ADDRESS, "--auth", "pap",
+           "--auth-id", "7", "--proxy-lcp", proxy_lcp]
+    if lcp_conf_request:
+        cmd.append("--lcp-conf-request")
+    result = subprocess.run(topology.a.cmd(cmd), capture_output=True, text=True, timeout=30)
+    assert result.returncode == 0, result.stderr
+    assert [tuple(p) for p in json.loads(result.stdout)] == expected
+
+    session = lns_sessions(lns)[0]
+    assert session["proxy-lcp-accepted"] is accepted
+    assert session["peer-proxy-lcp-last-sent"] == proxy_lcp
+    assert session["peer-proxy-lcp-initial-received"] == "010405d405060000abcd"
+    assert session["peer-proxy-lcp-last-received"] == "010405d405060000abcd"
+
+
+def test_lns_proxy_lcp_invalid(topology, tmp_path):
+    config = lns_config(topology.if_b)
+    config["l2tp-server"][0]["proxy-lcp"] = "ignore"
+    lns = BngBlaster(topology.b, tmp_path, "lns")
+    with pytest.raises(RuntimeError, match="exited on start"):
+        lns.start(config)
+    with open(lns.path("stdout")) as f:
+        assert "Invalid value for l2tp-server->proxy-lcp" in f.read()
+
+
+def test_proxy_lcp_without_auth(topology, processes, tmp_path):
+    """With proxy LCP only, the client sends the PAP request
+    after ICCN without LCP negotiation."""
+    lac, lns = start_proxy_lac(topology, processes, tmp_path, "PAP", False)
+    assert all(s["peer-proxy-auth-name"] == "N/A" for s in lns_sessions(lns))
+    stats = lac.ctrl("access-protocol-stats")["access-protocol-stats"][0]
+    assert stats["tx-pap"] == 2 and stats["tx-lcp"] == 0, stats
+    assert_clean_exit(lac, lns)
+    with open(lac.path("pcap"), "rb") as f:
+        pcap = f.read()
+    assert struct.pack("!HHH", 8, 0, 29) not in pcap
+
+
+def test_proxy_auth_hidden_requires_secret(topology, tmp_path):
+    lac = BngBlaster(topology.a, tmp_path, "lac")
+    config = lac_config(topology.if_a, sessions=1, client_options={
+        1: {"proxy-lcp": True, "proxy-auth": True, "proxy-auth-hidden": True}})
+    del config["l2tp-client"][0]["secret"]
+    with pytest.raises(RuntimeError, match="exited on start"):
+        lac.start(config)
+    with open(lac.path("stdout")) as f:
+        assert "proxy-auth-hidden requires l2tp-client->proxy-auth and l2tp-client->secret" in f.read()
+
+
+def test_proxy_auth_requires_proxy_lcp(topology, tmp_path):
+    lac = BngBlaster(topology.a, tmp_path, "lac")
+    with pytest.raises(RuntimeError, match="exited on start"):
+        lac.start(lac_config(topology.if_a, sessions=1, client_options={1: {"proxy-auth": True}}))
+    with open(lac.path("stdout")) as f:
+        assert "l2tp-client->proxy-auth requires l2tp-client->proxy-lcp" in f.read()
+
+
 PAP, CHAP = 0xc023, 0xc223
 PAP_ACK, CHAP_SUCCESS = 2, 3
 

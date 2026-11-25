@@ -183,3 +183,19 @@ def test_session_restart(xl2tpd):
     wait_until(lambda: xl2tpd.lac.ctrl("session-counters")["session-counters"]["sessions-established"]
                == SESSIONS, 30, message="session established again")
     assert xl2tpd.lac.terminate(EXIT_TIMEOUT) == 0
+
+
+@pytest.mark.full
+def test_proxy_lcp_renegotiation(xl2tpd):
+    """pppd ignores proxy LCP and authentication of the LAC and starts
+    its own LCP negotiation, which is answered by a restart of LCP in
+    the PPPoL2TP sessions followed by PAP authentication."""
+    xl2tpd.start_lns()
+    xl2tpd.start_lac(**{"l2tp-client": [{
+        "group-id": 1, "name": "LAC1", "network-interface": xl2tpd.topology.if_a,
+        "server-address": LNS_ADDRESS, "proxy-lcp": True, "proxy-auth": True}]})
+    # The LAC answers the LCP negotiation of pppd with its own
+    # Conf-Request after the restart and authenticates with PAP.
+    assert xl2tpd.pppd().count("rcvd [LCP ConfReq") >= SESSIONS
+    assert xl2tpd.pppd().count("rcvd [PAP AuthReq") >= SESSIONS
+    assert xl2tpd.lac.terminate(EXIT_TIMEOUT) == 0

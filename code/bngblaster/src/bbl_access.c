@@ -2002,6 +2002,74 @@ bbl_access_lcp_opened(bbl_session_s *session)
     }
 }
 
+/**
+ * bbl_access_lcp_proxy
+ *
+ * Open LCP without negotiation, as already negotiated by the LAC on
+ * behalf of the PPP client (L2TP proxy LCP, RFC 2661 section 4.4.5).
+ * With proxy authentication, the authentication request is considered
+ * as sent with the current PAP or CHAP identifier and the session waits
+ * for the result of the LNS. Otherwise, the authentication starts as
+ * after a regular LCP negotiation. The LNS may still renegotiate LCP.
+ *
+ * The session is not inserted into the TX queue, this is done
+ * by the caller once the ICCN has been sent.
+ *
+ * @param session session
+ * @param peer_mru MRU of the LAC
+ * @param peer_magic magic number of the LAC
+ * @param auth_protocol PAP or CHAP
+ * @param challenge CHAP challenge of the LAC (proxy CHAP only)
+ * @param challenge_len CHAP challenge length
+ * @param proxy_auth true if authentication is proxied
+ */
+void
+bbl_access_lcp_proxy(bbl_session_s *session, uint16_t peer_mru, uint32_t peer_magic,
+                     uint16_t auth_protocol, uint8_t *challenge, uint8_t challenge_len,
+                     bool proxy_auth)
+{
+    MD5_CTX md5_ctx;
+
+    bbl_session_update_state(session, BBL_PPP_AUTH);
+    session->lcp_state = BBL_PPP_OPENED;
+    session->lcp_retries = 0;
+    session->lcp_failures = 0;
+    session->peer_mru = peer_mru;
+    session->peer_magic_number = peer_magic;
+    session->auth_protocol = auth_protocol;
+    session->auth_retries = 0;
+    session->send_requests = 0;
+
+    if(proxy_auth) {
+        /* The proxied request counts as first attempt. */
+        session->auth_retries = 1;
+        if(auth_protocol == PROTOCOL_CHAP) {
+            MD5_Init(&md5_ctx);
+            MD5_Update(&md5_ctx, &session->chap_identifier, 1);
+            MD5_Update(&md5_ctx, session->password, strlen(session->password));
+            MD5_Update(&md5_ctx, challenge, challenge_len);
+            MD5_Final(session->chap_response, &md5_ctx);
+            timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout",
+                      g_ctx->config.authentication_timeout, 0, session, &bbl_tx_chap_timeout);
+        } else {
+            timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout",
+                      g_ctx->config.authentication_timeout, 0, session, &bbl_tx_pap_timeout);
+        }
+    } else if(auth_protocol == PROTOCOL_CHAP) {
+        /* Wait for the challenge of the LNS. */
+        timer_add(&g_ctx->timer_root, &session->timer_auth, "Authentication Timeout",
+                  g_ctx->config.authentication_timeout, 0, session, &bbl_access_chap_challenge_timeout);
+    } else {
+        session->send_requests = BBL_SEND_PAP_REQUEST;
+    }
+
+    if(g_ctx->config.lcp_keepalive_interval) {
+        timer_add_periodic(&g_ctx->timer_root, &session->timer_lcp_echo, "LCP ECHO",
+                           g_ctx->config.lcp_keepalive_interval, 1,
+                           session, &bbl_access_lcp_echo);
+    }
+}
+
 static void
 bbl_access_rx_lcp(bbl_access_interface_s *interface,
                   bbl_session_s *session, 

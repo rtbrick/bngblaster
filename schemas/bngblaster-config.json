@@ -1377,6 +1377,12 @@
                         "description": "Accept PAP or CHAP proxy authentication from LAC by sending authentication success immediately after ICCN",
                         "default": true
                     },
+                    "proxy-lcp": {
+                        "type": "string",
+                        "description": "Handling of proxy LCP AVPs (26-28) received in ICCN",
+                        "enum": ["accept", "renegotiate"],
+                        "default": "accept"
+                    },
                     "client-auth-id": {
                         "type": "string",
                         "description": "Optional check for client-auth-id"
@@ -1527,6 +1533,21 @@
                         "description": "RX connect speed in bits per second sent in ICCN (AVP 38), not sent if not configured",
                         "minimum": 1,
                         "maximum": 4294967295
+                    },
+                    "proxy-lcp": {
+                        "type": "boolean",
+                        "description": "Send proxy LCP AVPs (26-28) in ICCN and start PPP sessions with LCP opened",
+                        "default": false
+                    },
+                    "proxy-auth": {
+                        "type": "boolean",
+                        "description": "Send proxy authentication AVPs (29-33) in ICCN, requires proxy-lcp",
+                        "default": false
+                    },
+                    "proxy-auth-hidden": {
+                        "type": "boolean",
+                        "description": "Send proxy authentication AVPs hidden (RFC 2661 section 4.3), requires proxy-auth and secret",
+                        "default": false
                     }
                 },
                 "patternProperties": {

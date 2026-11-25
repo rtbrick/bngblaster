@@ -13,6 +13,12 @@
 void
 bbl_arp_timeout(timer_s *timer);
 
+void
+bbl_tx_pap_timeout(timer_s *timer);
+
+void
+bbl_tx_chap_timeout(timer_s *timer);
+
 protocol_error_t
 bbl_tx(bbl_interface_s *interface, uint8_t *buf, uint16_t *len);
 

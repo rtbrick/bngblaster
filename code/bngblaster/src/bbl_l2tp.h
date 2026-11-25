@@ -26,6 +26,7 @@
 
 #define L2TP_PROXY_AUTH_TYPE_CHAP   2
 #define L2TP_PROXY_AUTH_TYPE_PAP    3
+#define L2TP_PROXY_RANDOM_VECTOR_LEN 16
 
 #define L2TP_REPLY_MESSAGE          "BNG Blaster L2TP LNS %d:%d"
 
@@ -74,6 +75,12 @@ typedef enum {
     BBL_L2TP_LCP_START_MAX
 } l2tp_lcp_start_t;
 
+/* LNS: handling of proxy LCP AVPs (26-28) received in ICCN. */
+typedef enum {
+    BBL_L2TP_PROXY_LCP_ACCEPT       = 0, /* LCP opened with the proxied values */
+    BBL_L2TP_PROXY_LCP_RENEGOTIATE  = 1, /* LNS sends its own LCP Conf-Request */
+    BBL_L2TP_PROXY_LCP_MAX
+} l2tp_proxy_lcp_t;
 
 /* L2TP tunnel-level configuration shared between the LNS (server)
  * and LAC (client) roles, so tunnel state-machine code can read
@@ -110,6 +117,7 @@ typedef struct bbl_l2tp_server_
     uint8_t  lcp_keepalive_retry;
     bool     lcp_conf_request;
     bool     proxy_auth;
+    l2tp_proxy_lcp_t proxy_lcp;
 
     char *host_name;
     char *client_auth_id;
@@ -140,6 +148,9 @@ typedef struct bbl_l2tp_client_
     char *called_number;  /* Optional ICRQ Called Number (AVP 21) */
     uint32_t tx_connect_speed; /* ICCN TX Connect Speed in bps (AVP 24) */
     uint32_t rx_connect_speed; /* Optional ICCN RX Connect Speed in bps (AVP 38), 0 if not sent */
+    bool proxy_lcp;  /* Send proxy LCP AVPs (26-28) in ICCN, PPP starts with LCP opened */
+    bool proxy_auth; /* Send proxy authentication AVPs (29-33) in ICCN */
+    bool proxy_auth_hidden; /* Hide proxy authentication AVPs (RFC 2661 section 4.3) */
 
     void *next; /* Pointer to next L2TP client configuration */
 
@@ -307,6 +318,8 @@ typedef struct bbl_l2tp_session_
     bool data_sequencing;
     bool connect_speed_update_enabled;
     bool proxy_auth_id_received;
+    bool proxy_lcp_accepted; /* LNS: LCP opened with proxy LCP of the LAC */
+    bool lcp_request_sent; /* LNS: own LCP Conf-Request sent, waiting for Conf-Ack */
 
     uint32_t peer_tx_bps;
     uint32_t peer_rx_bps;
@@ -321,6 +334,10 @@ typedef struct bbl_l2tp_session_
     uint16_t proxy_auth_name_len;
     uint16_t proxy_auth_challenge_len;
     uint16_t proxy_auth_response_len;
+    uint16_t proxy_lcp_initial_received_len;
+    uint16_t proxy_lcp_last_sent_len;
+    uint16_t proxy_lcp_last_received_len;
+    uint32_t proxy_lcp_magic; /* LNS: magic number of the LAC (AVP 27) */
 
     uint8_t lcp_state;
     uint16_t lcp_auth; /* authentication protocol requested by LNS */
@@ -348,6 +365,9 @@ typedef struct bbl_l2tp_session_
     char *proxy_auth_name;
     uint8_t *proxy_auth_challenge;
     uint8_t *proxy_auth_response;
+    uint8_t *proxy_lcp_initial_received; /* AVP 26 */
+    uint8_t *proxy_lcp_last_sent; /* AVP 27 */
+    uint8_t *proxy_lcp_last_received; /* AVP 28 */
 
     char *peer_called_number;
     char *peer_calling_number;

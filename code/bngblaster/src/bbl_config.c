@@ -6059,7 +6059,7 @@ json_parse_config(json_t *root)
                 "data-control-priority", "data-length", "data-offset",
                 "control-tos", "data-control-tos", "hello-interval",
                 "lcp-padding", "lcp-keepalive-interval", "lcp-keepalive-retry",
-                "lcp-conf-request", "proxy-auth"
+                "lcp-conf-request", "proxy-auth", "proxy-lcp"
             };
             if(!schema_validate(sub, "l2tp-server", schema, 
             sizeof(schema)/sizeof(schema[0]))) {
@@ -6127,6 +6127,17 @@ json_parse_config(json_t *root)
             } else {
                 l2tp_server->proxy_auth = true;
             }
+            JSON_OBJ_GET_STRING(sub, s, "l2tp-server", "proxy-lcp");
+            if(s) {
+                if(strcmp(s, "accept") == 0) {
+                    l2tp_server->proxy_lcp = BBL_L2TP_PROXY_LCP_ACCEPT;
+                } else if(strcmp(s, "renegotiate") == 0) {
+                    l2tp_server->proxy_lcp = BBL_L2TP_PROXY_LCP_RENEGOTIATE;
+                } else {
+                    fprintf(stderr, "JSON config error: Invalid value for l2tp-server->proxy-lcp\n");
+                    return false;
+                }
+            }
         }
     } else if(section) {
         fprintf(stderr, "JSON config error: Invalid value for l2tp-server (list expected)\n");
@@ -6149,7 +6160,8 @@ json_parse_config(json_t *root)
                 "network-interface", "receive-window-size", "max-retry", "congestion-mode",
                 "data-control-priority", "data-length", "data-offset", "control-tos",
                 "data-control-tos", "hello-interval", "lcp-padding", "lcp-start",
-                "calling-number", "called-number", "tx-connect-speed", "rx-connect-speed"
+                "calling-number", "called-number", "tx-connect-speed", "rx-connect-speed",
+                "proxy-lcp", "proxy-auth", "proxy-auth-hidden"
             };
             if(!schema_validate(sub, "l2tp-client", schema, sizeof(schema)/sizeof(schema[0]))) {
                 return false;
@@ -6251,6 +6263,27 @@ json_parse_config(json_t *root)
             JSON_OBJ_GET_NUMBER(sub, value, "l2tp-client", "rx-connect-speed", 1, 4294967295);
             if(value) {
                 l2tp_client->rx_connect_speed = json_number_value(value);
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "proxy-lcp");
+            if(value) {
+                l2tp_client->proxy_lcp = json_boolean_value(value);
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "proxy-auth");
+            if(value) {
+                l2tp_client->proxy_auth = json_boolean_value(value);
+            }
+            if(l2tp_client->proxy_auth && !l2tp_client->proxy_lcp) {
+                fprintf(stderr, "JSON config error: l2tp-client->proxy-auth requires l2tp-client->proxy-lcp\n");
+                return false;
+            }
+            JSON_OBJ_GET_BOOL(sub, value, "l2tp-client", "proxy-auth-hidden");
+            if(value) {
+                l2tp_client->proxy_auth_hidden = json_boolean_value(value);
+            }
+            if(l2tp_client->proxy_auth_hidden &&
+               !(l2tp_client->proxy_auth && l2tp_client->config.secret)) {
+                fprintf(stderr, "JSON config error: l2tp-client->proxy-auth-hidden requires l2tp-client->proxy-auth and l2tp-client->secret\n");
+                return false;
             }
         }
     } else if(section) {

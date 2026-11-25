@@ -9,6 +9,7 @@
 #include "bbl.h"
 #include "bbl_l2tp.h"
 #include "bbl_l2tp_avp.h"
+#include "bbl_session.h"
 #include <openssl/md5.h>
 #include <openssl/rand.h>
 
@@ -69,10 +70,9 @@ bbl_l2tp_avp_encode(uint8_t **_buf, uint16_t *len, bbl_l2tp_avp_t *avp)
         return;
     }
 
-    /* TODO: Currently we do not support to hide (H) AVP values! */
-
     avp_len_field = avp->len + L2TP_AVP_HDR_LEN;
     if(avp->m) avp_len_field |= L2TP_AVP_M_BIT_MASK;
+    if(avp->h) avp_len_field |= L2TP_AVP_H_BIT_MASK;
     *(uint16_t*)buf = htobe16(avp_len_field);
     BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
     *(uint16_t*)buf = htobe16(avp->vendor);
@@ -259,6 +259,20 @@ bbl_l2tp_avp_copy_name(char *name, const uint8_t *value, uint16_t len)
     name[len] = 0;
 }
 
+/* Copy the value of the first received AVP of a type. */
+static void
+bbl_l2tp_avp_copy_bytes(uint8_t **dst, uint16_t *dst_len, bbl_l2tp_avp_t *avp)
+{
+    if(*dst || !avp->len) {
+        return;
+    }
+    *dst = malloc(avp->len);
+    if(*dst) {
+        memcpy(*dst, avp->value, avp->len);
+        *dst_len = avp->len;
+    }
+}
+
 bool
 bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session)
 {
@@ -388,9 +402,16 @@ bbl_l2tp_avp_decode_session(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel, bb
                         l2tp_session->data_sequencing = true;
                         break;
                     case L2TP_AVP_INITIAL_RECEIVED_CONFREQ:
+                        bbl_l2tp_avp_copy_bytes(&l2tp_session->proxy_lcp_initial_received,
+                                                &l2tp_session->proxy_lcp_initial_received_len, &avp);
+                        break;
                     case L2TP_AVP_LAST_SENT_CONFREQ:
+                        bbl_l2tp_avp_copy_bytes(&l2tp_session->proxy_lcp_last_sent,
+                                                &l2tp_session->proxy_lcp_last_sent_len, &avp);
+                        break;
                     case L2TP_AVP_LAST_RECEIVED_CONFREQ:
-                        /* Currently not needed! */
+                        bbl_l2tp_avp_copy_bytes(&l2tp_session->proxy_lcp_last_received,
+                                                &l2tp_session->proxy_lcp_last_received_len, &avp);
                         break;
                     case L2TP_AVP_PROXY_AUTHEN_TYPE:
                         if(avp.len != 2) {
@@ -774,6 +795,219 @@ bbl_l2tp_avp_decode_csun(bbl_l2tp_s *l2tp, bbl_l2tp_tunnel_s *l2tp_tunnel)
     return true;
 }
 
+/**
+ * bbl_l2tp_avp_encode_hidden
+ *
+ * Encode an AVP with hidden value (RFC 2661 section 4.3) using the
+ * tunnel secret and the random vector of the preceding Random Vector
+ * AVP. The hidden subformat is the original value length followed by
+ * the value without padding, XOR-ed with MD5(type + secret + vector)
+ * for the first 16 octets and MD5(secret + previous ciphertext block)
+ * for each following block.
+ */
+static void
+bbl_l2tp_avp_encode_hidden(uint8_t **buf, uint16_t *len, char *secret,
+                           uint8_t *random_vector, uint16_t random_vector_len,
+                           bbl_l2tp_avp_t *avp)
+{
+    static uint8_t hidden[L2TP_AVP_MAX_LEN];
+    uint8_t digest[L2TP_MD5_DIGEST_LEN];
+    uint16_t type = htobe16(avp->type);
+    uint16_t secret_len = strlen(secret);
+    uint16_t hidden_len = avp->len + 2;
+    uint16_t i;
+    MD5_CTX ctx;
+
+    if(hidden_len > sizeof(hidden)) {
+        LOG(ERROR, "L2TP AVP %u with length %u can't be hidden\n", avp->type, avp->len);
+        return;
+    }
+    *(uint16_t*)hidden = htobe16(avp->len);
+    switch(avp->value_type) {
+        case L2TP_AVP_VALUE_UINT16:
+            *(uint16_t*)(hidden+2) = htobe16(*(uint16_t*)avp->value);
+            break;
+        case L2TP_AVP_VALUE_UINT32:
+            *(uint32_t*)(hidden+2) = htobe32(*(uint32_t*)avp->value);
+            break;
+        case L2TP_AVP_VALUE_UINT64:
+            *(uint64_t*)(hidden+2) = htobe64(*(uint64_t*)avp->value);
+            break;
+        default:
+            memcpy(hidden+2, avp->value, avp->len);
+            break;
+    }
+
+    MD5_Init(&ctx);
+    MD5_Update(&ctx, &type, L2TP_AVP_TYPE_LEN);
+    MD5_Update(&ctx, secret, secret_len);
+    MD5_Update(&ctx, random_vector, random_vector_len);
+    MD5_Final(digest, &ctx);
+    for(i = 0; i < hidden_len; i++) {
+        if(i && (i % L2TP_MD5_DIGEST_LEN) == 0) {
+            MD5_Init(&ctx);
+            MD5_Update(&ctx, secret, secret_len);
+            MD5_Update(&ctx, hidden + i - L2TP_MD5_DIGEST_LEN, L2TP_MD5_DIGEST_LEN);
+            MD5_Final(digest, &ctx);
+        }
+        hidden[i] ^= digest[i % L2TP_MD5_DIGEST_LEN];
+    }
+
+    avp->h = true;
+    avp->len = hidden_len;
+    avp->value = hidden;
+    avp->value_type = L2TP_AVP_VALUE_BYTES;
+    bbl_l2tp_avp_encode(buf, len, avp);
+    avp->h = false;
+}
+
+/**
+ * bbl_l2tp_avp_encode_lcp_options
+ *
+ * Encode the body of an LCP configure-request starting
+ * at the first option (RFC 2661 section 4.4.5).
+ */
+static uint16_t
+bbl_l2tp_avp_encode_lcp_options(uint8_t *buf, uint16_t mru, uint16_t auth, uint32_t magic)
+{
+    uint16_t len = 0;
+
+    if(mru) {
+        buf[len++] = PPP_LCP_OPTION_MRU;
+        buf[len++] = 4;
+        *(uint16_t*)(buf+len) = htobe16(mru);
+        len += 2;
+    }
+    if(auth == PROTOCOL_CHAP) {
+        buf[len++] = PPP_LCP_OPTION_AUTH;
+        buf[len++] = 5;
+        *(uint16_t*)(buf+len) = htobe16(PROTOCOL_CHAP);
+        len += 2;
+        buf[len++] = PROTOCOL_CHAP_ALG_MD5;
+    } else if(auth == PROTOCOL_PAP) {
+        buf[len++] = PPP_LCP_OPTION_AUTH;
+        buf[len++] = 4;
+        *(uint16_t*)(buf+len) = htobe16(PROTOCOL_PAP);
+        len += 2;
+    }
+    if(magic) {
+        buf[len++] = PPP_LCP_OPTION_MAGIC;
+        buf[len++] = 6;
+        *(uint32_t*)(buf+len) = magic; /* network byte order */
+        len += 4;
+    }
+    return len;
+}
+
+/* Encode a proxy authentication AVP, hidden if configured. */
+static void
+bbl_l2tp_avp_encode_proxy_auth(uint8_t **buf, uint16_t *len, bbl_l2tp_client_s *l2tp_client,
+                               uint8_t *random_vector, bbl_l2tp_avp_t *avp)
+{
+    if(l2tp_client->proxy_auth_hidden) {
+        bbl_l2tp_avp_encode_hidden(buf, len, l2tp_client->config.secret,
+                                   random_vector, L2TP_PROXY_RANDOM_VECTOR_LEN, avp);
+    } else {
+        bbl_l2tp_avp_encode(buf, len, avp);
+    }
+}
+
+/**
+ * bbl_l2tp_avp_encode_proxy
+ *
+ * Encode the proxy LCP and optional proxy authentication AVPs
+ * of the ICCN (LAC). The values are taken from the PPP session
+ * set up by bbl_access_lcp_proxy(). The M-bit of all these AVPs
+ * must be 0 (RFC 2661 section 4.4.5).
+ */
+static void
+bbl_l2tp_avp_encode_proxy(uint8_t **buf, uint16_t *len,
+                          bbl_l2tp_client_s *l2tp_client,
+                          bbl_l2tp_session_s *l2tp_session)
+{
+    bbl_session_s *session = l2tp_session->session;
+    bbl_l2tp_avp_t avp = {0};
+    uint8_t client_options[16];
+    uint8_t lac_options[16];
+    uint8_t random_vector[L2TP_PROXY_RANDOM_VECTOR_LEN];
+    uint16_t v16;
+
+    /* Initial and last received LCP CONFREQ of the client */
+    avp.value_type = L2TP_AVP_VALUE_BYTES;
+    avp.len = bbl_l2tp_avp_encode_lcp_options(client_options, session->mru, 0, session->magic_number);
+    avp.value = client_options;
+    avp.type = L2TP_AVP_INITIAL_RECEIVED_CONFREQ;
+    bbl_l2tp_avp_encode(buf, len, &avp);
+    avp.type = L2TP_AVP_LAST_RECEIVED_CONFREQ;
+    bbl_l2tp_avp_encode(buf, len, &avp);
+    /* Last sent LCP CONFREQ of the LAC */
+    avp.len = bbl_l2tp_avp_encode_lcp_options(lac_options, session->peer_mru,
+                                              session->auth_protocol, session->peer_magic_number);
+    avp.value = lac_options;
+    avp.type = L2TP_AVP_LAST_SENT_CONFREQ;
+    bbl_l2tp_avp_encode(buf, len, &avp);
+
+    if(!l2tp_client->proxy_auth) {
+        return;
+    }
+    if(session->auth_protocol == PROTOCOL_CHAP && !l2tp_session->proxy_auth_challenge) {
+        return;
+    }
+    if(l2tp_client->proxy_auth_hidden) {
+        /* Random Vector AVP preceding the hidden AVPs (RFC 2661 section 4.4.3) */
+        RAND_bytes(random_vector, L2TP_PROXY_RANDOM_VECTOR_LEN);
+        avp.m = true;
+        avp.type = L2TP_AVP_RANDOM_VECTOR;
+        avp.len = L2TP_PROXY_RANDOM_VECTOR_LEN;
+        avp.value_type = L2TP_AVP_VALUE_BYTES;
+        avp.value = random_vector;
+        bbl_l2tp_avp_encode(buf, len, &avp);
+        avp.m = false;
+    }
+    /* Proxy Authen Type */
+    v16 = session->auth_protocol == PROTOCOL_CHAP ? L2TP_PROXY_AUTH_TYPE_CHAP : L2TP_PROXY_AUTH_TYPE_PAP;
+    avp.type = L2TP_AVP_PROXY_AUTHEN_TYPE;
+    avp.len = 2;
+    avp.value_type = L2TP_AVP_VALUE_UINT16;
+    avp.value = (void*)&v16;
+    bbl_l2tp_avp_encode_proxy_auth(buf, len, l2tp_client, random_vector, &avp);
+    /* Proxy Authen Name */
+    avp.type = L2TP_AVP_PROXY_AUTHEN_NAME;
+    avp.len = strlen(session->username);
+    avp.value_type = L2TP_AVP_VALUE_BYTES;
+    avp.value = (void*)session->username;
+    bbl_l2tp_avp_encode_proxy_auth(buf, len, l2tp_client, random_vector, &avp);
+    if(session->auth_protocol == PROTOCOL_CHAP) {
+        /* Proxy Authen Challenge */
+        avp.type = L2TP_AVP_PROXY_AUTHEN_CHALLENGE;
+        avp.len = l2tp_session->proxy_auth_challenge_len;
+        avp.value_type = L2TP_AVP_VALUE_BYTES;
+        avp.value = l2tp_session->proxy_auth_challenge;
+        bbl_l2tp_avp_encode_proxy_auth(buf, len, l2tp_client, random_vector, &avp);
+        /* Proxy Authen ID (identifier of the challenge) */
+        v16 = session->chap_identifier;
+    } else {
+        /* Proxy Authen ID (identifier of the authenticate-request) */
+        v16 = session->pap_identifier;
+    }
+    avp.type = L2TP_AVP_PROXY_AUTHEN_ID;
+    avp.len = 2;
+    avp.value_type = L2TP_AVP_VALUE_UINT16;
+    avp.value = (void*)&v16;
+    bbl_l2tp_avp_encode_proxy_auth(buf, len, l2tp_client, random_vector, &avp);
+    /* Proxy Authen Response, clear text password for PAP */
+    avp.type = L2TP_AVP_PROXY_AUTHEN_RESPONSE;
+    avp.value_type = L2TP_AVP_VALUE_BYTES;
+    if(session->auth_protocol == PROTOCOL_CHAP) {
+        avp.len = CHALLENGE_LEN;
+        avp.value = session->chap_response;
+    } else {
+        avp.len = strlen(session->password);
+        avp.value = (void*)session->password;
+    }
+    bbl_l2tp_avp_encode_proxy_auth(buf, len, l2tp_client, random_vector, &avp);
+}
+
 void
 bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_s *l2tp_session,
                                l2tp_message_t l2tp_type, uint8_t *buf, uint16_t *len)
@@ -1074,6 +1308,10 @@ bbl_l2tp_avp_encode_attributes(bbl_l2tp_tunnel_s *l2tp_tunnel, bbl_l2tp_session_
                 avp.value_type = L2TP_AVP_VALUE_UINT32;
                 avp.value = (void*)&v32;
                 bbl_l2tp_avp_encode(&buf, len, &avp);
+                /* Proxy LCP and authentication (LAC) */
+                if(l2tp_tunnel->client && l2tp_tunnel->client->proxy_lcp && l2tp_session->session) {
+                    bbl_l2tp_avp_encode_proxy(&buf, len, l2tp_tunnel->client, l2tp_session);
+                }
             }
             break;
         case L2TP_MESSAGE_CDN:

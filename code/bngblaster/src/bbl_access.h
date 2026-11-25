@@ -160,6 +160,11 @@ void
 bbl_access_lcp_restart(bbl_session_s *session, bool peer);
 
 void
+bbl_access_lcp_proxy(bbl_session_s *session, uint16_t peer_mru, uint32_t peer_magic,
+                     uint16_t auth_protocol, uint8_t *challenge, uint8_t challenge_len,
+                     bool proxy_auth);
+
+void
 bbl_ppp_rx(bbl_access_interface_s *interface,
            bbl_session_s *session,
            bbl_ethernet_header_s *eth,
