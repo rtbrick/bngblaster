@@ -1769,6 +1769,17 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
             BUMP_WRITE_BUFFER(buf, len, pppoe->service_name_len);
             pppoe_len += pppoe->service_name_len;
         }
+        if(pppoe->ac_name) {
+            /* A PADO must contain exactly one AC-Name (RFC 2516 section 5.2). */
+            *(uint16_t*)buf = htobe16(PPPOE_TAG_AC_NAME);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            *(uint16_t*)buf = htobe16(pppoe->ac_name_len);
+            BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
+            pppoe_len += 4;
+            memcpy(buf, pppoe->ac_name, pppoe->ac_name_len);
+            BUMP_WRITE_BUFFER(buf, len, pppoe->ac_name_len);
+            pppoe_len += pppoe->ac_name_len;
+        }
         if(pppoe->host_uniq_len) {
             *(uint16_t*)buf = htobe16(PPPOE_TAG_HOST_UNIQ);
             BUMP_WRITE_BUFFER(buf, len, sizeof(uint16_t));
@@ -4761,6 +4772,10 @@ decode_pppoe_discovery(uint8_t *buf, uint16_t len,
                     pppoe->service_names[pppoe->service_names_count] = buf;
                     pppoe->service_names_len[pppoe->service_names_count++] = pppoe_tag_len;
                 }
+                break;
+            case PPPOE_TAG_AC_NAME:
+                pppoe->ac_name = buf;
+                pppoe->ac_name_len = pppoe_tag_len;
                 break;
             case PPPOE_TAG_HOST_UNIQ:
                 pppoe->host_uniq = buf;

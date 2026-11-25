@@ -124,6 +124,7 @@
 
 #define PPPOE_TAG_SERVICE_NAME          0x0101
 #define PPPOE_MAX_SERVICE_NAME_LEN      255 /* Configured service name */
+#define PPPOE_TAG_AC_NAME               0x0102
 #define PPPOE_TAG_HOST_UNIQ             0x0103
 #define PPPOE_TAG_AC_COOKIE             0x0104
 #define PPPOE_TAG_RELAY_SESSION_ID      0x0110

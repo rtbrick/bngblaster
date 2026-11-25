@@ -974,6 +974,61 @@ test_protocols_pppoe_max_payload(void **unused) {
     free(sp);
 }
 
+/* AC-Name tag (RFC 2516 section 5.2) encoded after Service-Name
+ * in PADO, and not encoded if not set (e.g. PADI). */
+static void
+test_protocols_pppoe_ac_name(void **unused) {
+    (void) unused;
+
+    uint8_t *sp = calloc(1, SCRATCHPAD_LEN);
+    uint8_t buf[512];
+    uint16_t len = 0;
+    uint8_t dst[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x01};
+    uint8_t src[ETH_ADDR_LEN] = {0x02, 0x00, 0x00, 0x00, 0x00, 0x02};
+    uint8_t ac_cookie[4] = {0x01, 0x02, 0x03, 0x04};
+    /* Service-Name "access" followed by AC-Name "BNG-Blaster-A10NSP" */
+    uint8_t tags[] = {0x01, 0x01, 0x00, 0x06, 'a', 'c', 'c', 'e', 's', 's',
+                      0x01, 0x02, 0x00, 0x12, 'B', 'N', 'G', '-', 'B', 'l', 'a', 's',
+                      't', 'e', 'r', '-', 'A', '1', '0', 'N', 'S', 'P'};
+    bbl_ethernet_header_s eth = {0};
+    bbl_pppoe_discovery_s pppoe = {0};
+    bbl_ethernet_header_s *decoded;
+    bbl_pppoe_discovery_s *decoded_pppoe;
+
+    eth.dst = dst;
+    eth.src = src;
+    eth.vlan_outer = 100;
+    eth.type = ETH_TYPE_PPPOE_DISCOVERY;
+    eth.next = &pppoe;
+    pppoe.code = PPPOE_PADO;
+    pppoe.service_name = (uint8_t*)"access";
+    pppoe.service_name_len = 6;
+    pppoe.ac_name = (uint8_t*)"BNG-Blaster-A10NSP";
+    pppoe.ac_name_len = 18;
+    pppoe.ac_cookie = ac_cookie;
+    pppoe.ac_cookie_len = sizeof(ac_cookie);
+
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    /* Ethernet (14) + VLAN (4) + PPPoE header (6) */
+    assert_int_equal(len, 24 + sizeof(tags) + 4 + sizeof(ac_cookie));
+    assert_memory_equal(buf + 24, tags, sizeof(tags));
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    decoded_pppoe = (bbl_pppoe_discovery_s*)decoded->next;
+    assert_int_equal(decoded_pppoe->code, PPPOE_PADO);
+    assert_int_equal(decoded_pppoe->ac_name_len, 18);
+    assert_memory_equal(decoded_pppoe->ac_name, "BNG-Blaster-A10NSP", 18);
+    assert_int_equal(decoded_pppoe->ac_cookie_len, sizeof(ac_cookie));
+
+    memset(&pppoe, 0x0, sizeof(pppoe));
+    pppoe.code = PPPOE_PADI;
+    len = 0;
+    assert_int_equal(encode_ethernet(buf, &len, &eth), PROTOCOL_SUCCESS);
+    assert_int_equal(len, 24 + 4);
+    assert_int_equal(decode_ethernet(buf, len, sp, SCRATCHPAD_LEN, &decoded), PROTOCOL_SUCCESS);
+    assert_null(((bbl_pppoe_discovery_s*)decoded->next)->ac_name);
+    free(sp);
+}
+
 /* The option length must not be truncated to 8 bit. */
 static void
 test_protocols_ppp_options_len(void **unused) {
@@ -1392,6 +1447,7 @@ int main() {
         cmocka_unit_test(test_protocols_gratuitous_arp),
         cmocka_unit_test(test_protocols_unsolicited_na),
         cmocka_unit_test(test_protocols_pppoe_max_payload),
+        cmocka_unit_test(test_protocols_pppoe_ac_name),
         cmocka_unit_test(test_protocols_ppp_options_len),
         cmocka_unit_test(test_protocols_lacp_invalid_tlv),
         cmocka_unit_test(test_protocols_igmpv3_query_short),
