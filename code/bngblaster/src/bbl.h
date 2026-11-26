@@ -102,4 +102,14 @@ void
 bbl_ancp_session_state_change(bbl_session_s *session, session_state_t old_state,
                               session_state_t new_state);
 
+bool
+bbl_ancp_session_ready(bbl_session_s *session);
+
+int bbl_ancp_ctrl_sessions(int fd, uint32_t session_id, json_t *arguments);
+int bbl_ancp_ctrl_port_up(int fd, uint32_t session_id, json_t *arguments);
+int bbl_ancp_ctrl_port_down(int fd, uint32_t session_id, json_t *arguments);
+int bbl_ancp_ctrl_port_auto(int fd, uint32_t session_id, json_t *arguments);
+int bbl_ancp_ctrl_adjacency_up(int fd, uint32_t session_id, json_t *arguments);
+int bbl_ancp_ctrl_adjacency_down(int fd, uint32_t session_id, json_t *arguments);
+
 #endif

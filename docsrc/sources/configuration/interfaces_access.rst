@@ -159,7 +159,8 @@
 |                                   | | Default: 0 Range: 0 - 65535                                        |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ancp-session-id**               | | Select the ANCP adjacency configured in **ancp-sessions**.         |
-|                                   | | Requires IPoE, **agent-circuit-id**, and an ANCP line profile.      |
+|                                   | | Requires IPoE or PPPoE, **agent-circuit-id**, and an ANCP line      |
+|                                   | | profile.                                                            |
 +-----------------------------------+----------------------------------------------------------------------+
 | **ancp-line-profile-id**          | | Select the ANCP line attributes configured in                       |
 |                                   | | **ancp-line-profiles**.                                             |

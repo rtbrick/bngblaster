@@ -207,9 +207,26 @@ typedef struct bbl_network_config_
     bbl_network_interface_s *network_interface;
 } bbl_network_config_s;
 
+typedef enum {
+    ANCP_PORT_UP_TRIGGER_ADJACENCY = 0,
+    ANCP_PORT_UP_TRIGGER_ESTABLISHED,
+    ANCP_PORT_UP_TRIGGER_ALL_ESTABLISHED,
+    ANCP_PORT_UP_TRIGGER_COUNT,
+    ANCP_PORT_UP_TRIGGER_DELAY,
+} ancp_port_up_trigger_t;
+
+typedef enum {
+    ANCP_PORT_ADMIN_AUTO = 0,
+    ANCP_PORT_ADMIN_UP,
+    ANCP_PORT_ADMIN_DOWN,
+} ancp_port_admin_t;
+
 typedef struct bbl_ancp_config_
 {
     uint16_t ancp_session_id;
+    ancp_port_up_trigger_t port_up_trigger;
+    uint32_t port_up_count;
+    uint32_t port_up_delay;
     char *network_interface;
     ipv4addr_t peer_address;
     ipv4addr_t source_address;

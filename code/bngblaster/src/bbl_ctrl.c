@@ -66,6 +66,12 @@ const schema_arg_s schema_interface[] = {
 const schema_arg_s schema_session_id[] = {
     ARG_NUM("session-id"), ARG_END
 };
+const schema_arg_s schema_ancp_session_id[] = {
+    ARG_NUM("ancp-session-id"), ARG_END
+};
+const schema_arg_s schema_ancp_port[] = {
+    ARG_NUM("session-id"), ARG_NUM("ancp-session-id"), ARG_END
+};
 const schema_arg_s schema_session_id_debug[] = {
     ARG_NUM("session-id"), ARG_BOOL("debug"), ARG_END
 };
@@ -492,6 +498,12 @@ static const struct action actions[] = {
     {"sessions-pending", bbl_session_ctrl_pending, schema_no_args, true},
     {"session-info", bbl_session_ctrl_info, schema_session_id_debug, false},
     {"session-counters", bbl_session_ctrl_counters, schema_no_args, true},
+    {"ancp-sessions", bbl_ancp_ctrl_sessions, schema_no_args, false},
+    {"ancp-port-up", bbl_ancp_ctrl_port_up, schema_ancp_port, false},
+    {"ancp-port-down", bbl_ancp_ctrl_port_down, schema_ancp_port, false},
+    {"ancp-port-auto", bbl_ancp_ctrl_port_auto, schema_ancp_port, false},
+    {"ancp-adjacency-up", bbl_ancp_ctrl_adjacency_up, schema_ancp_session_id, false},
+    {"ancp-adjacency-down", bbl_ancp_ctrl_adjacency_down, schema_ancp_session_id, false},
     {"session-start", bbl_session_ctrl_start, schema_session_group_id, false},
     {"session-stop", bbl_session_ctrl_stop, schema_session_group_id, false},
     {"session-restart", bbl_session_ctrl_restart, schema_session_terminate, false},

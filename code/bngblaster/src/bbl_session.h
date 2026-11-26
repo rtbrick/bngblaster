@@ -127,6 +127,7 @@ typedef struct bbl_session_
     bbl_ancp_config_s *ancp_config;
     bbl_access_line_profile_s *ancp_line_profile;
     bool ancp_port_up;
+    ancp_port_admin_t ancp_port_admin;
 
     /* ARP */
     bbl_arp_client_s *arp_client;

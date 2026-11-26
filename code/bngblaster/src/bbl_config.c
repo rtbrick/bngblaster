@@ -562,7 +562,8 @@ json_parse_ancp_config(json_t *config, bbl_ancp_config_s *ancp_config)
     const char *s = NULL;
 
     const char *schema[] = {
-        "ancp-session-id", "network-interface", "peer-address", "source-address", "port"
+        "ancp-session-id", "network-interface", "peer-address", "source-address", "port",
+        "port-up-trigger", "port-up-count", "port-up-delay"
     };
     if(!schema_validate(config, "ancp-sessions", schema, sizeof(schema)/sizeof(schema[0]))) {
         return false;
@@ -598,6 +599,38 @@ json_parse_ancp_config(json_t *config, bbl_ancp_config_s *ancp_config)
     JSON_OBJ_GET_NUMBER(config, value, "ancp-sessions", "port", 1, 65535);
     if(value) {
         ancp_config->port = json_number_value(value);
+    }
+
+    JSON_OBJ_GET_STRING(config, s, "ancp-sessions", "port-up-trigger");
+    if(s) {
+        if(strcmp(s, "adjacency") == 0) {
+            ancp_config->port_up_trigger = ANCP_PORT_UP_TRIGGER_ADJACENCY;
+        } else if(strcmp(s, "established") == 0) {
+            ancp_config->port_up_trigger = ANCP_PORT_UP_TRIGGER_ESTABLISHED;
+        } else if(strcmp(s, "all-established") == 0) {
+            ancp_config->port_up_trigger = ANCP_PORT_UP_TRIGGER_ALL_ESTABLISHED;
+        } else if(strcmp(s, "count") == 0) {
+            ancp_config->port_up_trigger = ANCP_PORT_UP_TRIGGER_COUNT;
+        } else if(strcmp(s, "delay") == 0) {
+            ancp_config->port_up_trigger = ANCP_PORT_UP_TRIGGER_DELAY;
+        } else {
+            fprintf(stderr, "JSON config error: Invalid value for ancp-sessions->port-up-trigger\n");
+            return false;
+        }
+    }
+
+    JSON_OBJ_GET_NUMBER(config, value, "ancp-sessions", "port-up-count", 1, UINT32_MAX);
+    if(value) {
+        ancp_config->port_up_count = json_number_value(value);
+    }
+    if(ancp_config->port_up_trigger == ANCP_PORT_UP_TRIGGER_COUNT && !ancp_config->port_up_count) {
+        fprintf(stderr, "JSON config error: Missing value for ancp-sessions->port-up-count\n");
+        return false;
+    }
+
+    JSON_OBJ_GET_NUMBER(config, value, "ancp-sessions", "port-up-delay", 0, 86400);
+    if(value) {
+        ancp_config->port_up_delay = json_number_value(value);
     }
 
     g_ctx->tcp = true;

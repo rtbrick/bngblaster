@@ -1200,6 +1200,24 @@
                         "default": 6068,
                         "minimum": 1,
                         "maximum": 65535
+                    },
+                    "port-up-trigger": {
+                        "type": "string",
+                        "description": "When Port-Up messages are sent for bound access sessions",
+                        "enum": ["adjacency", "established", "all-established", "count", "delay"],
+                        "default": "adjacency"
+                    },
+                    "port-up-count": {
+                        "type": "integer",
+                        "description": "Established sessions required before Port-Up (trigger count)",
+                        "minimum": 1
+                    },
+                    "port-up-delay": {
+                        "type": "integer",
+                        "description": "Seconds after adjacency up before Port-Up (trigger delay)",
+                        "default": 0,
+                        "minimum": 0,
+                        "maximum": 86400
                     }
                 },
                 "patternProperties": {

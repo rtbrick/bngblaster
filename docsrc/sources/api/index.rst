@@ -390,6 +390,12 @@ This is explained in detail in the
 
 .. include:: bfd.rst
 
+ANCP
+----
+The ANCP configuration is explained in the configuration section.
+
+.. include:: ancp.rst
+
 CFM
 ---
 .. include:: cfm.rst

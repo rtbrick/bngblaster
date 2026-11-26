@@ -350,6 +350,7 @@ bbl_ctrl_job(timer_s *timer)
 {
     UNUSED(timer);
     bbl_session_s *session;
+    bbl_session_s *session_next;
     bbl_interface_s *interface;
     bbl_network_interface_s *network_interface;
     bbl_l2tp_tunnel_s *l2tp_tunnel;
@@ -449,12 +450,19 @@ bbl_ctrl_job(timer_s *timer)
         if(g_ctx->sessions_start_credits < g_ctx->config.sessions_start_period_ns) {
             g_ctx->sessions_start_credits += ctrl_job_period_ns;
         }
-        while(!CIRCLEQ_EMPTY(&g_ctx->sessions_idle_qhead)) {
-            session = CIRCLEQ_FIRST(&g_ctx->sessions_idle_qhead);
+        session_next = CIRCLEQ_FIRST(&g_ctx->sessions_idle_qhead);
+        while(session_next != (void *)&g_ctx->sessions_idle_qhead) {
+            session = session_next;
+            session_next = CIRCLEQ_NEXT(session, session_idle_qnode);
             if(session->session_state != BBL_IDLE) {
                 CIRCLEQ_REMOVE(&g_ctx->sessions_idle_qhead, session, session_idle_qnode);
                 CIRCLEQ_NEXT(session, session_idle_qnode) = NULL;
                 CIRCLEQ_PREV(session, session_idle_qnode) = NULL;
+                continue;
+            }
+            if(!bbl_ancp_session_ready(session)) {
+                /* Wait for ANCP adjacency (and Port-Up) without
+                 * blocking sessions of other ANCP adjacencies. */
                 continue;
             }
             if(g_ctx->sessions_start_credits >= g_ctx->config.sessions_start_period_ns) {

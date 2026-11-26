@@ -42,8 +42,8 @@ network interface with a static IPv4 address and connects to an ANCP peer over T
         ]
     }
 
-An IPoE access entry selects an adjacency with **ancp-session-id** and its
-attributes with **ancp-line-profile-id**:
+An IPoE or PPPoE access entry selects an adjacency with **ancp-session-id** and
+its attributes with **ancp-line-profile-id**:
 
 .. code-block:: json
 
@@ -62,12 +62,48 @@ attributes with **ancp-line-profile-id**:
         }
     }
 
-The access entry's rendered
-**agent-circuit-id** is sent unchanged as the ANCP Access-Loop-Circuit-ID; no
-separate ANCP circuit identifier is configured. Multiple access entries can select
-different adjacencies, including adjacencies on different VLANs of the same
-physical interface.
+The access entry's rendered **agent-circuit-id** is sent unchanged as the ANCP
+Access-Loop-Circuit-ID; no separate ANCP circuit identifier is configured.
+Access sessions bound to an adjacency start only after this adjacency is
+established. **port-up-trigger** in **ancp-sessions** selects when Port-Up
+is sent for the bound sessions:
+
+``adjacency`` (default)
+    Port-Up for all bound sessions directly after adjacency up; each session
+    starts (e.g. PPPoE PADI) only after its Port-Up was sent.
+``established``
+    Port-Up per session when it is established, Port-Down when it leaves that
+    state.
+``all-established``
+    Port-Up for all bound sessions once all of them are established.
+``count``
+    Port-Up for all bound sessions once **port-up-count** of them are established.
+``delay``
+    Port-Up for all bound sessions **port-up-delay** seconds after adjacency up.
+
+Except for ``established``, a port stays up if its session is terminated and
+reconnects. On teardown, Port-Down is sent for all ports that are up. If the
+adjacency fails, all ports are considered down; after the adjacency is up
+again, the trigger is evaluated again.
+
+The subscriber IP may be assigned dynamically by
+RADIUS; ANCP uses the configured Circuit-ID and line profile, not a static
+access IP. Multiple access entries can select different adjacencies, including
+adjacencies on different VLANs of the same physical interface.
 
 The attributes supported by **ancp-line-profiles** are the same as those listed
 for **access-line-profiles**, including the PON extension attributes. Draft 01 and
 Draft 04 are selectable through **pon-access-line-version**.
+
+The access node also advertises RFC 6320 capability **0x0004** for DSL remote
+loopback. A Port Management request using function **9** is matched to an established
+IPoE or PPPoE session by its Access-Loop-Circuit-ID and ANCP session. A
+successful response is simulated locally and explicitly states that no physical
+loopback was performed; the OAM-Loopback-Test-Parameters TLV is removed as
+required by RFC 6320. Requests for an unknown circuit ID or invalid loop count
+receive the corresponding failure response. This supports the RFC 6320 DSL
+technology type; PON-specific OAM is not emulated. For interoperability with
+BNGJ08, OAM requests also accept its observed wire encodings: a zero-valued
+repeated Port Management message-type subfield, a general-header length of 12,
+and zero alignment padding counted in the Access-Loop-Circuit-ID and
+OAM-Loopback-Test-Parameters TLV lengths.
