@@ -963,6 +963,11 @@ main(int argc, char *argv[])
         goto CLEANUP;
     }
 
+    if(!bbl_ancp_init()) {
+        fprintf(stderr, "Error: Failed to init ANCP sessions\n");
+        goto CLEANUP;
+    }
+
     if(bbl_startup_aborted()) {
         exit_status = BBL_EXIT_STARTUP_ABORTED;
         goto CLEANUP;

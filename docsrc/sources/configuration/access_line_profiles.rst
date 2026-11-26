@@ -1,6 +1,7 @@
-Attributes within the **access-line-profiles** are treated analogous to those within the 
-**access-line** section but they provide the capability to apply different profiles to 
-each access interface.
+Attributes within the **access-line-profiles** are treated analogous to those within the
+**access-line** section but they provide the capability to apply different profiles to
+each access interface. ANCP line attributes are configured separately in
+**ancp-line-profiles** and selected with **ancp-line-profile-id**.
 
 .. code-block:: json
 

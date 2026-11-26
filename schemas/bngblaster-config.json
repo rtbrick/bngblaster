@@ -888,13 +888,28 @@
             "description": "Access line profile configurations",
             "items": {
                 "type": "object",
-                "required": [
-                    "access-line-profile-id"
+                "oneOf": [
+                    {
+                        "required": [
+                            "access-line-profile-id"
+                        ]
+                    },
+                    {
+                        "required": [
+                            "ancp-line-profile-id"
+                        ]
+                    }
                 ],
                 "properties": {
                     "access-line-profile-id": {
                         "type": "integer",
                         "description": "Access line profile identifier",
+                        "minimum": 1,
+                        "maximum": 65535
+                    },
+                    "ancp-line-profile-id": {
+                        "type": "integer",
+                        "description": "ANCP line profile identifier",
                         "minimum": 1,
                         "maximum": 65535
                     },
@@ -1120,9 +1135,71 @@
                         "description": "RFC draft version",
                         "enum": [
                             "DRAFT-LIHAWI-00",
+                            "DRAFT-LIHAWI-01",
                             "DRAFT-LIHAWI-04"
                         ],
                         "default": "DRAFT-LIHAWI-04"
+                    }
+                },
+                "patternProperties": {
+                    "^_": {}
+                },
+                "additionalProperties": false
+            }
+        },
+        "ancp-line-profiles": {
+            "type": "array",
+            "description": "ANCP access line attribute profiles",
+            "items": {
+                "allOf": [
+                    {
+                        "$ref": "#/properties/access-line-profiles/items"
+                    },
+                    {
+                        "required": [
+                            "ancp-line-profile-id"
+                        ]
+                    }
+                ]
+            }
+        },
+        "ancp-sessions": {
+            "type": "array",
+            "description": "ANCP adjacencies to ANCP peers",
+            "items": {
+                "type": "object",
+                "required": [
+                    "ancp-session-id",
+                    "network-interface",
+                    "peer-address"
+                ],
+                "properties": {
+                    "ancp-session-id": {
+                        "type": "integer",
+                        "description": "ANCP adjacency identifier referenced by an access interface",
+                        "minimum": 1,
+                        "maximum": 65535
+                    },
+                    "network-interface": {
+                        "type": "string",
+                        "description": "Network interface/VLAN used for this ANCP adjacency"
+                    },
+                    "peer-address": {
+                        "type": "string",
+                        "description": "IPv4 address of the ANCP peer",
+                        "format": "ipv4"
+                    },
+                    "source-address": {
+                        "type": "string",
+                        "description": "Optional local IPv4 address (defaults to network-interface address)",
+                        "format": "ipv4"
+                    },
+                    "port": {
+                        "type": "integer",
+                        "description": "ANCP TCP port",
+                        "default": 6068,
+                        "minimum": 1,
+                        "maximum": 65535
                     }
                 },
                 "patternProperties": {
@@ -1710,6 +1787,19 @@
             ]
         }
     },
+    "allOf": [
+        {
+            "properties": {
+                "access-line-profiles": {
+                    "items": {
+                        "required": [
+                            "access-line-profile-id"
+                        ]
+                    }
+                }
+            }
+        }
+    ],
     "patternProperties": {
         "^_": {}
     },
@@ -2271,6 +2361,18 @@
                 "agent-circuit-id": {
                     "type": "string",
                     "description": "Overwrite agent-circuit-id (supports variables)"
+                },
+                "ancp-session-id": {
+                    "type": "integer",
+                    "description": "ANCP adjacency used for this customer session",
+                    "minimum": 1,
+                    "maximum": 65535
+                },
+                "ancp-line-profile-id": {
+                    "type": "integer",
+                    "description": "Access line profile used for ANCP Port-Up attributes",
+                    "minimum": 1,
+                    "maximum": 65535
                 },
                 "agent-remote-id": {
                     "type": "string",

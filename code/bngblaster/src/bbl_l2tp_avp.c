@@ -1198,7 +1198,8 @@ bbl_l2tp_avp_encode_access_line(uint8_t **buf, uint16_t *len, bbl_session_s *ses
     bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_DSL_TYPE, session->dsl_type);
     if(!profile) return;
 
-    lihawi_00 = profile->pon_access_line_version == DRAFT_LIHAWI_00;
+    lihawi_00 = profile->pon_access_line_version == DRAFT_LIHAWI_00 ||
+                profile->pon_access_line_version == DRAFT_LIHAWI_01;
     bbl_l2tp_avp_encode_bbf_uint32(buf, len, lihawi_00 ? ACCESS_LINE_PON_TYPE_LIHAWI_00 : ACCESS_LINE_PON_TYPE,
                                    profile->pon_type);
     bbl_l2tp_avp_encode_bbf_uint32(buf, len, ACCESS_LINE_ETR_UP, profile->etr_up);

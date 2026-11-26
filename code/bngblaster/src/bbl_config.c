@@ -377,12 +377,14 @@ json_parse_cfm_config(json_t *config, bbl_cfm_config_s *cfm)
 }
 
 static bool
-json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profile)
+json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profile,
+                               const char *profile_id_key, const char *profile_section)
 {
     json_t *value = NULL;
 
     const char *schema[] = {
-        "access-line-profile-id", "pon-access-line-version", "act-up", "act-down",
+        "access-line-profile-id", "ancp-line-profile-id",
+        "pon-access-line-version", "act-up", "act-down",
         "min-up", "min-down", "att-up", "max-up", "max-down",
         "att-down", "min-up-low", "min-down-low",
         "max-interl-delay-up", "act-interl-delay-up", "max-interl-delay-down",
@@ -393,18 +395,19 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
         "ont-onu-avg-down", "ont-onu-peak-down", "ont-onu-max-up",
         "ont-onu-ass-up", "pon-max-up", "pon-max-down"
     };
-    if(!schema_validate(config, "access-line-profiles", schema, 
+    if(!schema_validate(config, profile_section, schema,
     sizeof(schema)/sizeof(schema[0]))) {
         return false;
     }
 
-    JSON_OBJ_GET_NUMBER(config, value, "access-line-profiles", "access-line-profile-id", 1, 65535);
-    if(value) {
-        profile->access_line_profile_id = json_number_value(value);
-    } else {
-        fprintf(stderr, "JSON config error: Missing value for access-line-profiles->access-line-profile-id\n");
+    value = json_object_get(config, profile_id_key);
+    if(!(json_is_number(value) && json_number_value(value) >= 1 &&
+         json_number_value(value) <= 65535)) {
+        fprintf(stderr, "JSON config error: Missing or invalid %s->%s\n",
+                profile_section, profile_id_key);
         return false;
     }
+    profile->access_line_profile_id = json_number_value(value);
 
     value = json_object_get(config, "pon-access-line-version");
     if(value) {
@@ -414,6 +417,8 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
         }
         if(!strcmp(json_string_value(value), "DRAFT-LIHAWI-00")){
            profile->pon_access_line_version = DRAFT_LIHAWI_00;
+        } else if(!strcmp(json_string_value(value), "DRAFT-LIHAWI-01")){
+           profile->pon_access_line_version = DRAFT_LIHAWI_01;
         } else if(!strcmp(json_string_value(value), "DRAFT-LIHAWI-04")){
             profile->pon_access_line_version = DRAFT_LIHAWI_04;
         } else{
@@ -547,6 +552,55 @@ json_parse_access_line_profile(json_t *config, bbl_access_line_profile_s *profil
     if(value) {
         profile->pon_max_down = json_number_value(value);
     }
+    return true;
+}
+
+static bool
+json_parse_ancp_config(json_t *config, bbl_ancp_config_s *ancp_config)
+{
+    json_t *value = NULL;
+    const char *s = NULL;
+
+    const char *schema[] = {
+        "ancp-session-id", "network-interface", "peer-address", "source-address", "port"
+    };
+    if(!schema_validate(config, "ancp-sessions", schema, sizeof(schema)/sizeof(schema[0]))) {
+        return false;
+    }
+
+    JSON_OBJ_GET_NUMBER(config, value, "ancp-sessions", "ancp-session-id", 1, 65535);
+    if(!value) {
+        fprintf(stderr, "JSON config error: Missing value for ancp-sessions->ancp-session-id\n");
+        return false;
+    }
+    ancp_config->ancp_session_id = json_number_value(value);
+
+    JSON_OBJ_GET_STRING(config, s, "ancp-sessions", "network-interface");
+    if(!s) {
+        fprintf(stderr, "JSON config error: Missing value for ancp-sessions->network-interface\n");
+        return false;
+    }
+    ancp_config->network_interface = strdup(s);
+
+    JSON_OBJ_GET_STRING(config, s, "ancp-sessions", "peer-address");
+    if(!s || !inet_pton(AF_INET, s, &ancp_config->peer_address)) {
+        fprintf(stderr, "JSON config error: Invalid or missing ancp-sessions->peer-address\n");
+        return false;
+    }
+
+    JSON_OBJ_GET_STRING(config, s, "ancp-sessions", "source-address");
+    if(s && !inet_pton(AF_INET, s, &ancp_config->source_address)) {
+        fprintf(stderr, "JSON config error: Invalid value for ancp-sessions->source-address\n");
+        return false;
+    }
+
+    ancp_config->port = 6068;
+    JSON_OBJ_GET_NUMBER(config, value, "ancp-sessions", "port", 1, 65535);
+    if(value) {
+        ancp_config->port = json_number_value(value);
+    }
+
+    g_ctx->tcp = true;
     return true;
 }
 
@@ -1296,7 +1350,7 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
         "agent-circuit-id", "agent-remote-id",
         "access-aggregation-circuit-id",
         "rate-up", "rate-down", "dsl-type",
-        "access-line-profile-id", "ipcp", "dhcp",
+        "access-line-profile-id", "ancp-session-id", "ancp-line-profile-id", "ipcp", "dhcp",
         "dhcp-vendor-class-id",
         "ipv4", "ip6cp", "dhcpv6",
         "dhcpv6-ldra", "dhcpv6-ia-na", "ipv6", "igmp-autostart",
@@ -1638,6 +1692,14 @@ json_parse_access_interface(json_t *access_interface, bbl_access_config_s *acces
     JSON_OBJ_GET_NUMBER(access_interface, value, "access", "access-line-profile-id", 0, 65535);
     if(value) {
         access_config->access_line_profile_id = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "ancp-session-id", 1, 65535);
+    if(value) {
+        access_config->ancp_session_id = json_number_value(value);
+    }
+    JSON_OBJ_GET_NUMBER(access_interface, value, "access", "ancp-line-profile-id", 1, 65535);
+    if(value) {
+        access_config->ancp_line_profile_id = json_number_value(value);
     }
 
     /* IPv4 settings */
@@ -4794,6 +4856,8 @@ json_parse_config(json_t *root)
     int i, size;
 
     bbl_access_line_profile_s   *access_line_profile    = NULL;
+    bbl_access_line_profile_s   *ancp_line_profile      = NULL;
+    bbl_ancp_config_s           *ancp_config            = NULL;
     bbl_l2tp_server_s           *l2tp_server            = NULL;
     bbl_l2tp_client_s           *l2tp_client            = NULL;
 
@@ -4824,7 +4888,7 @@ json_parse_config(json_t *root)
     const char *const root_schema[] = {
         "interfaces", "sessions", 
         "ipoe", "pppoe", "ppp", "dhcp", "dhcpv6", "igmp",
-        "access-line", "access-line-profiles", 
+        "access-line", "access-line-profiles", "ancp-line-profiles", "ancp-sessions",
         "traffic", "session-traffic", "streams",
         "isis", "ospf",
         "bgp", "bgp-raw-update-files", 
@@ -5460,12 +5524,56 @@ json_parse_config(json_t *root)
                 access_line_profile->next = calloc(1, sizeof(bbl_access_line_profile_s));
                 access_line_profile = access_line_profile->next;
             }
-            if(!json_parse_access_line_profile(json_array_get(section, i), access_line_profile)) {
+            if(!json_parse_access_line_profile(json_array_get(section, i), access_line_profile,
+                                               "access-line-profile-id", "access-line-profiles")) {
                 return false;
             }
         }
     } else if(section) {
         fprintf(stderr, "JSON config error: Invalid value for access-line-profiles (list expected)\n");
+        return false;
+    }
+
+    /* ANCP Line Profiles Configuration */
+    section = json_object_get(root, "ancp-line-profiles");
+    if(json_is_array(section)) {
+        size = json_array_size(section);
+        for(i = 0; i < size; i++) {
+            if(!ancp_line_profile) {
+                g_ctx->config.ancp_line_profile = calloc(1, sizeof(bbl_access_line_profile_s));
+                ancp_line_profile = g_ctx->config.ancp_line_profile;
+            } else {
+                ancp_line_profile->next = calloc(1, sizeof(bbl_access_line_profile_s));
+                ancp_line_profile = ancp_line_profile->next;
+            }
+            if(!json_parse_access_line_profile(json_array_get(section, i), ancp_line_profile,
+                                               "ancp-line-profile-id", "ancp-line-profiles")) {
+                return false;
+            }
+        }
+    } else if(section) {
+        fprintf(stderr, "JSON config error: Invalid value for ancp-line-profiles (list expected)\n");
+        return false;
+    }
+
+    /* ANCP Adjacency Configuration */
+    section = json_object_get(root, "ancp-sessions");
+    if(json_is_array(section)) {
+        size = json_array_size(section);
+        for(i = 0; i < size; i++) {
+            if(!ancp_config) {
+                g_ctx->config.ancp_config = calloc(1, sizeof(bbl_ancp_config_s));
+                ancp_config = g_ctx->config.ancp_config;
+            } else {
+                ancp_config->next = calloc(1, sizeof(bbl_ancp_config_s));
+                ancp_config = ancp_config->next;
+            }
+            if(!json_parse_ancp_config(json_array_get(section, i), ancp_config)) {
+                return false;
+            }
+        }
+    } else if(section) {
+        fprintf(stderr, "JSON config error: Invalid value for ancp-sessions (list expected)\n");
         return false;
     }
 

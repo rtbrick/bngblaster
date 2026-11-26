@@ -95,4 +95,11 @@ test_duration();
 void
 global_traffic_enable(bool status);
 
+bool
+bbl_ancp_init(void);
+
+void
+bbl_ancp_session_state_change(bbl_session_s *session, session_state_t old_state,
+                              session_state_t new_state);
+
 #endif

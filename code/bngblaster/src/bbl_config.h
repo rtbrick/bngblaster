@@ -108,6 +108,10 @@ typedef struct bbl_access_config_
     uint32_t dsl_type;
 
     uint16_t access_line_profile_id;
+    uint16_t ancp_session_id;
+    uint16_t ancp_line_profile_id;
+    struct bbl_ancp_config_ *ancp_config;
+    bbl_access_line_profile_s *ancp_line_profile;
 
     /* Protocols */
     bool ipv4_enable;
@@ -202,6 +206,18 @@ typedef struct bbl_network_config_
     void *next; /* pointer to next network config element */
     bbl_network_interface_s *network_interface;
 } bbl_network_config_s;
+
+typedef struct bbl_ancp_config_
+{
+    uint16_t ancp_session_id;
+    char *network_interface;
+    ipv4addr_t peer_address;
+    ipv4addr_t source_address;
+    uint16_t port;
+    struct bbl_network_interface_ *interface;
+    struct bbl_ancp_connection_ *connection;
+    void *next;
+} bbl_ancp_config_s;
 
 typedef struct bbl_a10nsp_config_
 {
