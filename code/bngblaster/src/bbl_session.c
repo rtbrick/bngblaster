@@ -753,6 +753,7 @@ bbl_session_update_state(bbl_session_s *session, session_state_t new_state)
         session->session_state = new_state;
         session->version++;
         assert(session->session_state > BBL_IDLE && session->session_state < BBL_MAX);
+        bbl_ancp_session_state_change(session, old_state, new_state);
 
         if(old_state == BBL_ESTABLISHED) {
             /* Decrement sessions established if old state is established. */
@@ -1200,6 +1201,8 @@ bbl_sessions_init()
         session->vlan_key.inner_vlan_id = access_config->access_inner_vlan;
         session->access_third_vlan = access_config->access_third_vlan;
         session->access_config = access_config;
+        session->ancp_config = access_config->ancp_config;
+        session->ancp_line_profile = access_config->ancp_line_profile;
 
         /* Set client OUI to locally administered */
         session->client_mac[0] = 0x02;
@@ -1252,6 +1255,13 @@ bbl_sessions_init()
             LOG(ERROR, "Failed to create session %u: username, password, agent-circuit-id, agent-remote-id, "
                 "access-aggregation-circuit-id or dhcp-vendor-class-id longer than %u characters\n",
                 i, SUB_STR_LEN - 1);
+            return false;
+        }
+        if(session->ancp_config &&
+           (!session->agent_circuit_id || strlen(session->agent_circuit_id) > 63 ||
+            (session->agent_remote_id && strlen(session->agent_remote_id) > 63) ||
+            (session->access_aggregation_circuit_id && strlen(session->access_aggregation_circuit_id) > 63))) {
+            LOG(ERROR, "Failed to create session %u: ANCP circuit identifiers must not exceed 63 characters\n", i);
             return false;
         }
         bbl_a10nsp_ari_add(session);

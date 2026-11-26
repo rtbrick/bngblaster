@@ -600,6 +600,7 @@ typedef enum access_line_attr_lihawi_00_ {
 
 typedef enum pon_access_line_version{
     DRAFT_LIHAWI_00 = 0,
+    DRAFT_LIHAWI_01 = 1,
     DRAFT_LIHAWI_04 = 4,
 } __attribute__ ((__packed__)) pon_access_line_version_t;
 

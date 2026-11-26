@@ -2017,6 +2017,7 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 if(access_line_profile->pon_type) {
                     switch(access_line_profile->pon_access_line_version) {
                       case DRAFT_LIHAWI_00:
+                      case DRAFT_LIHAWI_01:
                           *buf = ACCESS_LINE_PON_TYPE_LIHAWI_00;
                            break;
                       default:
@@ -2105,6 +2106,7 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 if(access_line_profile->ont_onu_avg_down) {
                     switch(access_line_profile->pon_access_line_version) {
                       case DRAFT_LIHAWI_00:
+                      case DRAFT_LIHAWI_01:
                           *buf = ACCESS_LINE_ONT_ONU_AVG_DOWN_LIHAWI_00;
                            break;
                       default:
@@ -2121,6 +2123,7 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 if(access_line_profile->ont_onu_peak_down) {
                     switch(access_line_profile->pon_access_line_version) {
                       case DRAFT_LIHAWI_00:
+                      case DRAFT_LIHAWI_01:
                           *buf = ACCESS_LINE_ONT_ONU_PEAK_DOWN_LIHAWI_00;
                            break;
                       default:
@@ -2137,6 +2140,7 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 if(access_line_profile->ont_onu_max_up) {
                     switch(access_line_profile->pon_access_line_version) {
                       case DRAFT_LIHAWI_00:
+                      case DRAFT_LIHAWI_01:
                           *buf = ACCESS_LINE_ONT_ONU_MAX_UP_LIHAWI_00;
                            break;
                       default:
@@ -2153,6 +2157,7 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 if(access_line_profile->ont_onu_ass_up) {
                     switch(access_line_profile->pon_access_line_version) {
                       case DRAFT_LIHAWI_00:
+                      case DRAFT_LIHAWI_01:
                           *buf = ACCESS_LINE_ONT_ONU_ASS_UP_LIHAWI_00;
                            break;
                       default:
@@ -2169,6 +2174,7 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 if(access_line_profile->pon_max_up) {
                     switch(access_line_profile->pon_access_line_version) {
                       case DRAFT_LIHAWI_00:
+                      case DRAFT_LIHAWI_01:
                           *buf = ACCESS_LINE_PON_MAX_UP_LIHAWI_00;
                            break;
                       default:
@@ -2185,6 +2191,7 @@ encode_pppoe_discovery(uint8_t *buf, uint16_t *len,
                 if(access_line_profile->pon_max_down) {
                     switch(access_line_profile->pon_access_line_version) {
                       case DRAFT_LIHAWI_00:
+                      case DRAFT_LIHAWI_01:
                           *buf = ACCESS_LINE_PON_MAX_DOWN_LIHAWI_00;
                            break;
                       default:

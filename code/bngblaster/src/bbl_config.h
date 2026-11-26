@@ -108,6 +108,10 @@ typedef struct bbl_access_config_
     uint32_t dsl_type;
 
     uint16_t access_line_profile_id;
+    uint16_t ancp_session_id;
+    uint16_t ancp_line_profile_id;
+    struct bbl_ancp_config_ *ancp_config;
+    bbl_access_line_profile_s *ancp_line_profile;
 
     /* Protocols */
     bool ipv4_enable;
@@ -202,6 +206,35 @@ typedef struct bbl_network_config_
     void *next; /* pointer to next network config element */
     bbl_network_interface_s *network_interface;
 } bbl_network_config_s;
+
+typedef enum {
+    ANCP_PORT_UP_TRIGGER_ADJACENCY = 0,
+    ANCP_PORT_UP_TRIGGER_ESTABLISHED,
+    ANCP_PORT_UP_TRIGGER_ALL_ESTABLISHED,
+    ANCP_PORT_UP_TRIGGER_COUNT,
+    ANCP_PORT_UP_TRIGGER_DELAY,
+} ancp_port_up_trigger_t;
+
+typedef enum {
+    ANCP_PORT_ADMIN_AUTO = 0,
+    ANCP_PORT_ADMIN_UP,
+    ANCP_PORT_ADMIN_DOWN,
+} ancp_port_admin_t;
+
+typedef struct bbl_ancp_config_
+{
+    uint16_t ancp_session_id;
+    ancp_port_up_trigger_t port_up_trigger;
+    uint32_t port_up_count;
+    uint32_t port_up_delay;
+    char *network_interface;
+    ipv4addr_t peer_address;
+    ipv4addr_t source_address;
+    uint16_t port;
+    struct bbl_network_interface_ *interface;
+    struct bbl_ancp_connection_ *connection;
+    void *next;
+} bbl_ancp_config_s;
 
 typedef struct bbl_a10nsp_config_
 {

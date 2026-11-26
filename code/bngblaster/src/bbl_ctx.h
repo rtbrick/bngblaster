@@ -200,11 +200,15 @@ typedef struct bbl_ctx_
         /* Network Interfaces */
         bbl_network_config_s *network_config;
 
+        /* ANCP sessions */
+        bbl_ancp_config_s *ancp_config;
+
         /* A10NSP Interfaces */
         bbl_a10nsp_config_s *a10nsp_config;
 
         /* Access Line Profiles */
         void *access_line_profile;
+        void *ancp_line_profile;
 
         /* Traffic Streams */
         bbl_stream_config_s *stream_config;

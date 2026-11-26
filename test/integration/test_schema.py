@@ -70,6 +70,12 @@ def test_schema_doc_config(config):
 @pytest.mark.parametrize("config,valid", [
     ({"sessions": {"count": 1, "_comment": "ignored"}}, True),
     ({"sessions": {"count": 1, "session-time": 0}}, False),
+    ({"ancp-line-profiles": [{"ancp-line-profile-id": 1,
+                              "pon-access-line-version": "DRAFT-LIHAWI-01"}]}, True),
+    ({"ancp-line-profiles": [{"access-line-profile-id": 1}]}, False),
+    ({"ancp-line-profiles": [{"ancp-line-profile-id": 1, "access-line-profile-id": 2}]}, False),
+    ({"access-line-profiles": [{"access-line-profile-id": 1}]}, True),
+    ({"access-line-profiles": [{"ancp-line-profile-id": 1}]}, False),
     ({"pppoe": {"sessions": 1, "max-outstanding": 1, "start-rate": 1, "stop-rate": 1}}, True),
     ({"interfaces": {"network": [{"interface": "eth0", "adress": "10.0.0.1/24"}]}}, False),
     ({"l2tp-server": [{"name": "LNS", "address": "10.0.0.1", "lcp-padding": 1400}]}, True),
@@ -86,9 +92,11 @@ def test_schema_doc_config(config):
     ({"bfd": {"bfd-profile-id": 1, "authentication-type": "md5"}}, False),
     ({"bfd-sessions": [{"peer-ipv4-address": "10.0.0.1", "peer-ipv6-address": "fc00::1"}]}, False),
     ({"bfd-sessions": [{"peer-ipv4-address": "10.0.0.1", "local-ipv6-address": "fc00::1"}]}, False),
-], ids=["underscore", "misplaced", "pppoe-deprecated", "misspelled", "lcp-padding-max",
-        "lcp-padding-above-max", "pps", "pps-zero", "icmp-interval-zero", "isis-auto-refresh",
-        "ospf-auto-refresh", "zero-disabled", "multicast-traffic-length-small",
-        "bfd", "bfd-auth-type", "bfd-session-two-peers", "bfd-session-family-mismatch"])
+], ids=["underscore", "misplaced", "ancp-line-profile", "ancp-profile-wrong-id",
+        "ancp-profile-two-ids", "access-line-profile", "access-profile-wrong-id",
+        "pppoe-deprecated", "misspelled", "lcp-padding-max", "lcp-padding-above-max",
+        "pps", "pps-zero", "icmp-interval-zero", "isis-auto-refresh", "ospf-auto-refresh",
+        "zero-disabled", "multicast-traffic-length-small", "bfd", "bfd-auth-type",
+        "bfd-session-two-peers", "bfd-session-family-mismatch"])
 def test_schema_attributes(config, valid):
     assert (errors(config) == []) == valid, errors(config)

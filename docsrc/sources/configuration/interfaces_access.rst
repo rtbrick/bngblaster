@@ -117,6 +117,8 @@
 | **authentication-protocol**       | | Overwrite the protocol from the authentication section.            |
 +-----------------------------------+----------------------------------------------------------------------+
 | **agent-circuit-id**              | | Overwrite the agent-circuit-id from the access-line section.       |
+|                                   | | ANCP uses this exact value as the Access-Loop-Circuit-ID.          |
+|                                   | | Use a distinct rendered value for each ANCP-enabled customer.      |
 +-----------------------------------+----------------------------------------------------------------------+
 | **agent-remote-id**               | | Overwrite the agent-remote-id from the access-line section.        |
 +-----------------------------------+----------------------------------------------------------------------+
@@ -155,6 +157,13 @@
 +-----------------------------------+----------------------------------------------------------------------+
 | **access-line-profile-id**        | | Set access-line-profile identifier.                                |
 |                                   | | Default: 0 Range: 0 - 65535                                        |
++-----------------------------------+----------------------------------------------------------------------+
+| **ancp-session-id**               | | Select the ANCP adjacency configured in **ancp-sessions**.         |
+|                                   | | Requires IPoE or PPPoE, **agent-circuit-id**, and an ANCP line      |
+|                                   | | profile.                                                            |
++-----------------------------------+----------------------------------------------------------------------+
+| **ancp-line-profile-id**          | | Select the ANCP line attributes configured in                       |
+|                                   | | **ancp-line-profiles**.                                             |
 +-----------------------------------+----------------------------------------------------------------------+
 | **i1-start**                      | | Iterator **{i1}** start value.                                     |
 |                                   | | Default: 1 Range: 0 - 4294967295                                   |
